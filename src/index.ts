@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { initializeDatabase } from './db/client.js';
 import { runMigrations } from './db/migrations.js';
+import { loadCloudModule } from './extension/loader.js';
 import { createLogger } from './logger.js';
 
 async function main(): Promise<void> {
@@ -10,8 +11,9 @@ async function main(): Promise<void> {
   const logger = createLogger(config);
   const database = await initializeDatabase(config, logger);
   await runMigrations(database, logger);
+  const cloudModule = await loadCloudModule(config, { db: database, logger });
 
-  const app = createApp({ config, logger });
+  const app = createApp({ config, logger, db: database, cloudModule });
   serve(
     {
       fetch: app.fetch,

@@ -2,8 +2,12 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { nanoid } from 'nanoid';
 import type { AppConfig } from './config.js';
+import type { DatabaseHandle } from './db/client.js';
+import type { CloudModule } from './extension/cloud-module.js';
 import type { Logger } from './logger.js';
 import { healthRoute } from './routes/health.js';
+import { registerPublicRoutes } from './routes/public.js';
+import { registerV1Routes } from './routes/v1/index.js';
 import { createWebRoute } from './routes/web.js';
 
 interface AppVariables {
@@ -14,9 +18,16 @@ interface AppVariables {
 export interface CreateAppOptions {
   config: AppConfig;
   logger: Logger;
+  db?: DatabaseHandle;
+  cloudModule?: CloudModule;
 }
 
-export function createApp({ config, logger }: CreateAppOptions): Hono<{ Variables: AppVariables }> {
+export function createApp({
+  config,
+  logger,
+  db,
+  cloudModule,
+}: CreateAppOptions): Hono<{ Variables: AppVariables }> {
   const app = new Hono<{ Variables: AppVariables }>();
 
   app.use('*', async (context, next) => {
@@ -60,6 +71,14 @@ export function createApp({ config, logger }: CreateAppOptions): Hono<{ Variable
   // Route mounting order is deliberate: static/literal routes before future parameterized routers.
   app.get('/assets/*', serveStatic({ root: './public' }));
   app.route('/healthz', healthRoute);
+  const routesContext = {
+    config,
+    logger,
+    ...(db ? { db } : {}),
+    ...(cloudModule ? { cloudModule } : {}),
+  };
+  registerV1Routes(app, routesContext);
+  registerPublicRoutes(app, routesContext);
   app.route('/', createWebRoute(config));
 
   app.notFound((context) =>
