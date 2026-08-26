@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import type { AppConfig } from './config.js';
 import type { DatabaseHandle } from './db/client.js';
 import type { CloudModule } from './extension/cloud-module.js';
+import { AppError, errorEnvelope, internalErrorEnvelope } from './lib/errors.js';
 import type { Logger } from './logger.js';
 import { healthRoute } from './routes/health.js';
 import { registerPublicRoutes } from './routes/public.js';
@@ -96,18 +97,17 @@ export function createApp({
   app.onError((error, context) => {
     const requestId = context.get('requestId');
     const requestLogger = context.get('logger') ?? logger;
-    requestLogger.error({ err: error }, 'request.error');
 
-    return context.json(
-      {
-        error: {
-          code: 'internal_error',
-          message: 'Internal server error',
-          request_id: requestId,
-        },
-      },
-      500
-    );
+    if (error instanceof AppError) {
+      for (const [name, value] of Object.entries(error.headers)) {
+        context.header(name, value);
+      }
+      requestLogger.warn({ err: error, status: error.status, code: error.code }, 'request.error');
+      return context.json(errorEnvelope(error, requestId), error.status);
+    }
+
+    requestLogger.error({ err: error }, 'request.error');
+    return context.json(internalErrorEnvelope(requestId), 500);
   });
 
   return app;
