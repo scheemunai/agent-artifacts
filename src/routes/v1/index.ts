@@ -1,5 +1,6 @@
 import type { Context, Env, Hono, MiddlewareHandler } from 'hono';
 import { Hono as HonoApp } from 'hono';
+import { z } from 'zod';
 import type { AppConfig } from '../../config.js';
 import type { DatabaseHandle } from '../../db/client.js';
 import type { CloudModule } from '../../extension/cloud-module.js';
@@ -627,35 +628,237 @@ content is sensitive. Share the url with your human.
 }
 
 function openApiDocument(config: AppConfig): Record<string, unknown> {
+  const json = { 'application/json': { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } };
+  const errorResponses = {
+    '400': { description: 'Validation failed', content: json },
+    '401': { description: 'Unauthorized', content: json },
+    '403': { description: 'Forbidden or quota exceeded', content: json },
+    '404': { description: 'Not found', content: json },
+    '405': { description: 'Method not allowed', content: json },
+    '409': { description: 'Slug conflict', content: json },
+    '413': { description: 'Payload too large', content: json },
+    '429': { description: 'Rate limited', content: json },
+    '500': { description: 'Internal error', content: json },
+  };
+  const security = [{ BotAuth: [] }];
+
   return {
     openapi: '3.1.0',
     info: { title: 'Agent Artifacts API', version: '0.1.0' },
     servers: [{ url: `${config.baseUrl}/v1` }],
     paths: {
-      '/contract': { get: { summary: 'API contract' } },
-      '/openapi.json': { get: { summary: 'OpenAPI document' } },
+      '/contract': {
+        get: {
+          summary: 'API contract',
+          responses: {
+            '200': {
+              description: 'Markdown contract for agents',
+              content: { 'text/markdown': { schema: { type: 'string' } } },
+            },
+          },
+        },
+      },
+      '/openapi.json': {
+        get: {
+          summary: 'OpenAPI document',
+          responses: { '200': { description: 'OpenAPI 3.1 JSON document' } },
+        },
+      },
       '/artifacts': {
-        get: { summary: 'List artifacts' },
-        post: { summary: 'Create or upsert artifact' },
+        get: {
+          summary: 'List artifacts',
+          security,
+          parameters: queryParameters(['bot', 'type', 'updated_since', 'q', 'limit', 'cursor']),
+          responses: { '200': { description: 'Artifact page' }, ...errorResponses },
+        },
+        post: {
+          summary: 'Create or upsert artifact',
+          security,
+          requestBody: requestBodyRef('PublishArtifactRequest'),
+          responses: {
+            '200': { description: 'Artifact updated or unchanged' },
+            '201': { description: 'Artifact created' },
+            ...errorResponses,
+          },
+        },
       },
       '/artifacts/{id_or_slug}': {
-        get: { summary: 'Get artifact' },
-        put: { summary: 'Update artifact' },
-        delete: { summary: 'Soft-delete artifact' },
+        get: {
+          summary: 'Get artifact',
+          security,
+          parameters: pathParameters(['id_or_slug']),
+          responses: { '200': { description: 'Artifact' }, ...errorResponses },
+        },
+        put: {
+          summary: 'Update artifact',
+          security,
+          parameters: pathParameters(['id_or_slug']),
+          requestBody: requestBodyRef('UpdateArtifactRequest'),
+          responses: { '200': { description: 'Artifact updated or unchanged' }, ...errorResponses },
+        },
+        delete: {
+          summary: 'Soft-delete artifact',
+          security,
+          parameters: pathParameters(['id_or_slug']),
+          responses: { '200': { description: 'Delete result' }, ...errorResponses },
+        },
       },
-      '/artifacts/{id_or_slug}/versions': { get: { summary: 'List versions' } },
-      '/artifacts/{id_or_slug}/versions/{n}': { get: { summary: 'Get version' } },
-      '/artifacts/{id_or_slug}/versions/{n}/restore': { post: { summary: 'Restore version' } },
+      '/artifacts/{id_or_slug}/versions': {
+        get: {
+          summary: 'List versions',
+          security,
+          parameters: [...pathParameters(['id_or_slug']), ...queryParameters(['limit', 'cursor'])],
+          responses: { '200': { description: 'Version page' }, ...errorResponses },
+        },
+      },
+      '/artifacts/{id_or_slug}/versions/{n}': {
+        get: {
+          summary: 'Get version',
+          security,
+          parameters: [...pathParameters(['id_or_slug', 'n'])],
+          responses: { '200': { description: 'Artifact version' }, ...errorResponses },
+        },
+      },
+      '/artifacts/{id_or_slug}/versions/{n}/restore': {
+        post: {
+          summary: 'Restore version',
+          security,
+          parameters: [...pathParameters(['id_or_slug', 'n'])],
+          requestBody: requestBodyRef('RestoreVersionRequest'),
+          responses: { '201': { description: 'Restored version' }, ...errorResponses },
+        },
+      },
       '/artifacts/{id_or_slug}/share': {
-        post: { summary: 'Create or reuse share' },
-        patch: { summary: 'Set or remove share password' },
-        delete: { summary: 'Revoke share' },
+        post: {
+          summary: 'Create or reuse share',
+          security,
+          parameters: pathParameters(['id_or_slug']),
+          requestBody: requestBodyRef('CreateShareRequest'),
+          responses: {
+            '200': { description: 'Existing share reused' },
+            '201': { description: 'Share created' },
+            ...errorResponses,
+          },
+        },
+        patch: {
+          summary: 'Set or remove share password',
+          security,
+          parameters: pathParameters(['id_or_slug']),
+          requestBody: requestBodyRef('PatchShareRequest'),
+          responses: { '200': { description: 'Share updated' }, ...errorResponses },
+        },
+        delete: {
+          summary: 'Revoke share',
+          security,
+          parameters: pathParameters(['id_or_slug']),
+          responses: { '200': { description: 'Share revoke result' }, ...errorResponses },
+        },
       },
-      '/templates': { get: { summary: 'List templates' } },
-      '/templates/{slug}': { get: { summary: 'Get template' } },
-      '/artifacts/{id_or_slug}/download': { get: { summary: 'Download artifact content' } },
+      '/templates': {
+        get: {
+          summary: 'List templates',
+          security,
+          parameters: queryParameters(['limit', 'cursor']),
+          responses: { '200': { description: 'Template page' }, ...errorResponses },
+        },
+      },
+      '/templates/{slug}': {
+        get: {
+          summary: 'Get template',
+          security,
+          parameters: pathParameters(['slug']),
+          responses: { '200': { description: 'Template' }, ...errorResponses },
+        },
+      },
+      '/artifacts/{id_or_slug}/download': {
+        get: {
+          summary: 'Download artifact content',
+          security,
+          parameters: pathParameters(['id_or_slug']),
+          responses: {
+            '200': {
+              description: 'Raw markdown or HTML content',
+              content: {
+                'text/markdown': { schema: { type: 'string' } },
+                'text/html': { schema: { type: 'string' } },
+              },
+            },
+            ...errorResponses,
+          },
+        },
+      },
+    },
+    components: {
+      securitySchemes: {
+        BotAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'aa_bot_<nanoid32>',
+        },
+      },
+      schemas: {
+        ErrorEnvelope: {
+          type: 'object',
+          required: ['error'],
+          properties: {
+            error: {
+              type: 'object',
+              required: ['code', 'message'],
+              properties: {
+                code: { type: 'string' },
+                message: { type: 'string' },
+                details: { type: 'object', additionalProperties: true },
+                request_id: { type: 'string' },
+              },
+              additionalProperties: false,
+            },
+          },
+          additionalProperties: false,
+        },
+        PublishArtifactRequest: jsonSchema(publishArtifactSchema),
+        UpdateArtifactRequest: jsonSchema(updateArtifactSchema),
+        RestoreVersionRequest: jsonSchema(restoreVersionSchema),
+        CreateShareRequest: jsonSchema(createShareSchema),
+        PatchShareRequest: jsonSchema(patchShareSchema),
+        ArtifactListQuery: jsonSchema(artifactListQuerySchema),
+        VersionListQuery: jsonSchema(versionListQuerySchema),
+        TemplateListQuery: jsonSchema(templateListQuerySchema),
+      },
     },
   };
+}
+
+function jsonSchema(schema: z.ZodType): Record<string, unknown> {
+  return z.toJSONSchema(schema, { unrepresentable: 'any' }) as Record<string, unknown>;
+}
+
+function requestBodyRef(schemaName: string): Record<string, unknown> {
+  return {
+    required: true,
+    content: {
+      'application/json': {
+        schema: { $ref: `#/components/schemas/${schemaName}` },
+      },
+    },
+  };
+}
+
+function pathParameters(names: string[]): Array<Record<string, unknown>> {
+  return names.map((name) => ({
+    name,
+    in: 'path',
+    required: true,
+    schema: { type: name === 'n' ? 'integer' : 'string' },
+  }));
+}
+
+function queryParameters(names: string[]): Array<Record<string, unknown>> {
+  return names.map((name) => ({
+    name,
+    in: 'query',
+    required: false,
+    schema: { type: name === 'limit' ? 'integer' : 'string' },
+  }));
 }
 
 function methodNotAllowed(app: Hono<V1Env>, path: string, allow: string): void {
