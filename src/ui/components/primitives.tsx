@@ -1,0 +1,711 @@
+import type { Child } from 'hono/jsx';
+
+export type ComponentState =
+  | 'default'
+  | 'hover'
+  | 'focus'
+  | 'active'
+  | 'disabled'
+  | 'loading'
+  | 'error';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type BadgeTone = 'neutral' | 'accent' | 'success' | 'warn' | 'danger' | 'info';
+export type BadgeSize = 'sm' | 'md';
+
+const stateData = (state?: ComponentState) => (state ? { 'data-aa-state': state } : {});
+
+export function cx(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(' ');
+}
+
+interface ButtonProps {
+  children: Child;
+  variant?: ButtonVariant;
+  size?: 'sm' | 'md' | 'lg' | undefined;
+  state?: ComponentState | undefined;
+  type?: 'button' | 'submit' | 'reset' | undefined;
+  disabled?: boolean | undefined;
+  loading?: boolean | undefined;
+  href?: string | undefined;
+  class?: string | undefined;
+  id?: string | undefined;
+  ariaLabel?: string | undefined;
+  dataAttrs?: Record<string, string>;
+}
+
+export function Button({
+  children,
+  variant = 'secondary',
+  size = 'md',
+  state,
+  type = 'button',
+  disabled = false,
+  loading = false,
+  href,
+  class: className,
+  id,
+  ariaLabel,
+  dataAttrs = {},
+}: ButtonProps) {
+  const isDisabled = disabled || loading || state === 'disabled';
+  const classes = cx('aa-btn', `aa-btn--${variant}`, size !== 'md' && `aa-btn--${size}`, className);
+  const content = (
+    <>
+      {loading ? <Spinner label="Loading" size="sm" /> : null}
+      <span>{children}</span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        id={id}
+        class={classes}
+        href={isDisabled ? undefined : href}
+        aria-disabled={isDisabled ? 'true' : undefined}
+        aria-label={ariaLabel}
+        tabindex={isDisabled ? -1 : undefined}
+        {...stateData(loading ? 'loading' : state)}
+        {...dataAttrs}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      id={id}
+      class={classes}
+      type={type}
+      disabled={isDisabled}
+      aria-busy={loading ? 'true' : undefined}
+      aria-label={ariaLabel}
+      {...stateData(loading ? 'loading' : state)}
+      {...dataAttrs}
+    >
+      {content}
+    </button>
+  );
+}
+
+interface FieldDescription {
+  id: string;
+  label: string;
+  hint?: string | undefined;
+  error?: string | undefined;
+  optional?: boolean | undefined;
+  children: Child;
+}
+
+function FieldShell({ id, label, hint, error, optional = false, children }: FieldDescription) {
+  return (
+    <div class="aa-field">
+      <div class="aa-label-row">
+        <label class="aa-label" for={id}>
+          {label}
+        </label>
+        {optional ? <span class="aa-optional">Optional</span> : null}
+      </div>
+      {children}
+      {hint ? (
+        <p class="aa-hint" id={`${id}-hint`}>
+          {hint}
+        </p>
+      ) : null}
+      {error ? (
+        <p class="aa-error" id={`${id}-error`}>
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function describedBy(id: string, hint?: string, error?: string): string | undefined {
+  return (
+    [hint ? `${id}-hint` : undefined, error ? `${id}-error` : undefined]
+      .filter(Boolean)
+      .join(' ') || undefined
+  );
+}
+
+interface InputProps {
+  id: string;
+  label: string;
+  type?: string | undefined;
+  value?: string | undefined;
+  placeholder?: string | undefined;
+  hint?: string | undefined;
+  error?: string | undefined;
+  optional?: boolean | undefined;
+  disabled?: boolean | undefined;
+  state?: ComponentState | undefined;
+  name?: string | undefined;
+}
+
+export function Input({
+  id,
+  label,
+  type = 'text',
+  value,
+  placeholder,
+  hint,
+  error,
+  optional,
+  disabled,
+  state,
+  name,
+}: InputProps) {
+  return (
+    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+      <input
+        class="aa-control"
+        id={id}
+        name={name ?? id}
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        disabled={disabled || state === 'disabled'}
+        aria-invalid={error || state === 'error' ? 'true' : undefined}
+        aria-describedby={describedBy(id, hint, error)}
+        {...stateData(state)}
+      />
+    </FieldShell>
+  );
+}
+
+interface TextareaProps extends Omit<InputProps, 'type'> {
+  rows?: number;
+}
+
+export function Textarea({
+  id,
+  label,
+  value,
+  placeholder,
+  hint,
+  error,
+  optional,
+  disabled,
+  state,
+  name,
+  rows = 5,
+}: TextareaProps) {
+  return (
+    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+      <textarea
+        class="aa-control"
+        id={id}
+        name={name ?? id}
+        rows={rows}
+        placeholder={placeholder}
+        disabled={disabled || state === 'disabled'}
+        aria-invalid={error || state === 'error' ? 'true' : undefined}
+        aria-describedby={describedBy(id, hint, error)}
+        {...stateData(state)}
+      >
+        {value}
+      </textarea>
+    </FieldShell>
+  );
+}
+
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
+interface SelectProps extends Omit<InputProps, 'type' | 'placeholder' | 'value'> {
+  value?: string | undefined;
+  options: SelectOption[];
+}
+
+export function Select({
+  id,
+  label,
+  value,
+  options,
+  hint,
+  error,
+  optional,
+  disabled,
+  state,
+  name,
+}: SelectProps) {
+  return (
+    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+      <select
+        class="aa-control"
+        id={id}
+        name={name ?? id}
+        disabled={disabled || state === 'disabled'}
+        aria-invalid={error || state === 'error' ? 'true' : undefined}
+        aria-describedby={describedBy(id, hint, error)}
+        {...stateData(state)}
+      >
+        {options.map((option) => (
+          <option value={option.value} selected={option.value === value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </FieldShell>
+  );
+}
+
+interface BadgeProps {
+  children: Child;
+  tone?: BadgeTone;
+  size?: BadgeSize;
+}
+
+export function Badge({ children, tone = 'neutral', size = 'sm' }: BadgeProps) {
+  return (
+    <span class={cx('aa-badge', `aa-badge--${tone}`, size === 'md' && 'aa-badge--md')}>
+      {children}
+    </span>
+  );
+}
+
+interface CardProps {
+  title?: string;
+  description?: string | undefined;
+  children: Child;
+  footer?: Child | undefined;
+  raised?: boolean | undefined;
+}
+
+export function Card({ title, description, children, footer, raised = false }: CardProps) {
+  return (
+    <section class={cx('aa-card', raised && 'aa-card--raised')}>
+      {title || description ? (
+        <header class="aa-card__header">
+          {title ? <h3 class="aa-card__title">{title}</h3> : null}
+          {description ? <p class="aa-card__description">{description}</p> : null}
+        </header>
+      ) : null}
+      <div class="aa-card__body">{children}</div>
+      {footer ? <footer class="aa-card__footer">{footer}</footer> : null}
+    </section>
+  );
+}
+
+interface TableProps {
+  caption?: string | undefined;
+  columns: string[];
+  rows: Child[][];
+}
+
+export function Table({ caption, columns, rows }: TableProps) {
+  return (
+    <div class="aa-table-scroll" tabindex={0}>
+      <table class="aa-table">
+        {caption ? <caption>{caption}</caption> : null}
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th scope="col">{column}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr>
+              {row.map((cell) => (
+                <td>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+interface DialogProps {
+  id: string;
+  title: string;
+  description?: string | undefined;
+  children: Child;
+  actions: Child;
+  destructive?: boolean | undefined;
+}
+
+export function Dialog({
+  id,
+  title,
+  description,
+  children,
+  actions,
+  destructive = false,
+}: DialogProps) {
+  return (
+    <dialog
+      class={cx('aa-dialog', destructive && 'aa-dialog--destructive')}
+      id={id}
+      aria-labelledby={`${id}-title`}
+      aria-describedby={description ? `${id}-description` : undefined}
+      data-aa-dialog="true"
+    >
+      <div class="aa-dialog__panel">
+        <header class="aa-dialog__header">
+          <h2 class="aa-dialog__title" id={`${id}-title`}>
+            {title}
+          </h2>
+          {description ? (
+            <p class="aa-dialog__description" id={`${id}-description`}>
+              {description}
+            </p>
+          ) : null}
+        </header>
+        <div class="aa-dialog__body">{children}</div>
+        <footer class="aa-dialog__actions">{actions}</footer>
+      </div>
+    </dialog>
+  );
+}
+
+interface ConfirmationDialogProps {
+  id: string;
+  title: string;
+  description: string;
+  confirmLabel: string;
+}
+
+export function ConfirmationDialog({
+  id,
+  title,
+  description,
+  confirmLabel,
+}: ConfirmationDialogProps) {
+  return (
+    <Dialog
+      id={id}
+      title={title}
+      description={description}
+      destructive
+      actions={
+        <>
+          <Button
+            variant="secondary"
+            dataAttrs={{ 'data-aa-close-dialog': 'true', 'data-aa-cancel': 'true' }}
+          >
+            Cancel
+          </Button>
+          <Button variant="danger" dataAttrs={{ 'data-aa-close-dialog': 'true' }}>
+            {confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      <p class="aa-hint">
+        Safe default: Cancel receives initial focus; the destructive action is styled separately.
+      </p>
+    </Dialog>
+  );
+}
+
+interface ToastProps {
+  tone?: BadgeTone;
+  children: Child;
+}
+
+export function Toast({ tone = 'neutral', children }: ToastProps) {
+  return (
+    <div class={cx('aa-toast', tone !== 'neutral' && `aa-toast--${tone}`)} role="status">
+      <span>{children}</span>
+      <button class="aa-btn aa-btn--ghost aa-btn--sm" type="button" aria-label="Dismiss toast">
+        ×
+      </button>
+    </div>
+  );
+}
+
+export function ToastRegion() {
+  return (
+    <div
+      class="aa-toast-region"
+      aria-live="polite"
+      aria-atomic="true"
+      data-aa-toast-region="true"
+    />
+  );
+}
+
+interface EmptyStateProps {
+  title: string;
+  description: string;
+  action?: Child;
+}
+
+export function EmptyState({ title, description, action }: EmptyStateProps) {
+  return (
+    <section class="aa-empty" aria-labelledby="empty-title">
+      <div class="aa-empty__icon" aria-hidden="true">
+        ◆
+      </div>
+      <h3 class="aa-empty__title" id="empty-title">
+        {title}
+      </h3>
+      <p class="aa-empty__description">{description}</p>
+      {action ? <div>{action}</div> : null}
+    </section>
+  );
+}
+
+interface CopyBlockProps {
+  id: string;
+  label: string;
+  value: string;
+}
+
+export function CopyBlock({ id, label, value }: CopyBlockProps) {
+  return (
+    <section class="aa-copy">
+      <header class="aa-copy__header">
+        <span class="aa-copy__label">{label}</span>
+        <span class="aa-specimen-row">
+          <span class="aa-copy__status" id={`${id}-status`} aria-live="polite" />
+          <Button
+            variant="secondary"
+            size="sm"
+            dataAttrs={{
+              'data-aa-copy': id,
+              'data-aa-copy-status': `${id}-status`,
+            }}
+          >
+            Copy
+          </Button>
+        </span>
+      </header>
+      <pre id={id} tabindex={0}>
+        <code>{value}</code>
+      </pre>
+    </section>
+  );
+}
+
+interface TabItem {
+  id: string;
+  label: string;
+  content: Child;
+}
+
+interface TabsProps {
+  id: string;
+  tabs: TabItem[];
+}
+
+export function Tabs({ id, tabs }: TabsProps) {
+  return (
+    <section class="aa-tabs" data-aa-tabs="true">
+      <div class="aa-tabs__list" role="tablist" aria-label="Style guide sections">
+        {tabs.map((tab, index) => (
+          <button
+            class="aa-tab"
+            id={`${id}-${tab.id}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={index === 0 ? 'true' : 'false'}
+            aria-controls={`${id}-${tab.id}-panel`}
+            tabindex={index === 0 ? 0 : -1}
+            data-aa-tab={`${id}-${tab.id}-panel`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {tabs.map((tab, index) => (
+        <div
+          class="aa-tab-panel"
+          id={`${id}-${tab.id}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${id}-${tab.id}-tab`}
+          hidden={index !== 0}
+        >
+          {tab.content}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+interface PaginationProps {
+  label: string;
+  pageDescription: string;
+  previousDisabled?: boolean | undefined;
+  nextDisabled?: boolean | undefined;
+}
+
+export function Pagination({
+  label,
+  pageDescription,
+  previousDisabled = false,
+  nextDisabled = false,
+}: PaginationProps) {
+  return (
+    <nav class="aa-pagination" aria-label={label}>
+      <span class="aa-pagination__meta">{pageDescription}</span>
+      <div class="aa-pagination__actions">
+        <Button size="sm" variant="secondary" disabled={previousDisabled}>
+          Previous
+        </Button>
+        <Button size="sm" variant="secondary" disabled={nextDisabled}>
+          Next
+        </Button>
+      </div>
+    </nav>
+  );
+}
+
+interface AvatarProps {
+  name: string;
+  size?: 'sm' | 'md' | 'lg' | undefined;
+}
+
+export function Avatar({ name, size = 'md' }: AvatarProps) {
+  return (
+    <span
+      class={cx('aa-avatar', size !== 'md' && `aa-avatar--${size}`)}
+      aria-label={name}
+      role="img"
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+export function ProductMark() {
+  return (
+    <span class="aa-mark" aria-hidden="true">
+      ◆
+    </span>
+  );
+}
+
+interface SpinnerProps {
+  label?: string;
+  size?: 'sm' | 'md';
+}
+
+export function Spinner({ label = 'Loading', size = 'md' }: SpinnerProps) {
+  return (
+    <span
+      class={cx('aa-spinner', size === 'sm' && 'aa-spinner--sm')}
+      role="status"
+      aria-label={label}
+    >
+      <span class="sr-only">{label}</span>
+    </span>
+  );
+}
+
+interface SkeletonProps {
+  variant?: 'line' | 'block';
+  label?: string;
+}
+
+export function Skeleton({ variant = 'line', label = 'Loading content' }: SkeletonProps) {
+  return <span class={`aa-skeleton aa-skeleton--${variant}`} role="status" aria-label={label} />;
+}
+
+interface NavItem {
+  label: string;
+  href: string;
+  current?: boolean;
+}
+
+interface NavShellProps {
+  items: NavItem[];
+  children?: Child | undefined;
+}
+
+export function NavShell({ items, children }: NavShellProps) {
+  const drawerId = 'aa-mobile-drawer';
+
+  return (
+    <>
+      <header class="aa-app-header">
+        <div class="aa-shell aa-app-nav">
+          <a class="aa-brand" href="/">
+            <ProductMark />
+            <span>Agent Artifacts</span>
+          </a>
+          <nav class="aa-desktop-nav" aria-label="Main">
+            {items.map((item) => (
+              <a
+                class="aa-nav-link"
+                href={item.href}
+                aria-current={item.current ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+          <Button
+            variant="ghost"
+            class="aa-mobile-trigger"
+            ariaLabel="Open navigation"
+            dataAttrs={{
+              'data-aa-drawer-open': drawerId,
+              'aria-controls': drawerId,
+            }}
+          >
+            Menu
+          </Button>
+        </div>
+      </header>
+      <div class="aa-drawer" id={drawerId} hidden data-aa-drawer="true" data-state="closed">
+        <aside
+          class="aa-drawer__panel"
+          aria-label="Mobile navigation"
+          role="dialog"
+          aria-modal="true"
+          tabindex={-1}
+          data-aa-drawer-panel="true"
+        >
+          <header class="aa-drawer__header aa-specimen-row">
+            <a class="aa-brand" href="/">
+              <ProductMark />
+              <span>Agent Artifacts</span>
+            </a>
+            <Button
+              variant="ghost"
+              size="sm"
+              ariaLabel="Close navigation"
+              dataAttrs={{ 'data-aa-drawer-close': drawerId }}
+            >
+              Close
+            </Button>
+          </header>
+          <nav class="aa-drawer__body" aria-label="Mobile main">
+            {items.map((item) => (
+              <a
+                class="aa-nav-link"
+                href={item.href}
+                aria-current={item.current ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+          <footer class="aa-drawer__footer">{children}</footer>
+        </aside>
+        <button
+          class="aa-drawer__scrim"
+          type="button"
+          aria-label="Close navigation"
+          data-aa-drawer-close={drawerId}
+        />
+      </div>
+    </>
+  );
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? 'A';
+  const second = parts.length > 1 ? parts[parts.length - 1]?.[0] : parts[0]?.[1];
+  return `${first}${second ?? ''}`.toUpperCase();
+}

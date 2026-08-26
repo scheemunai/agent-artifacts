@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import type { AppConfig } from './config.js';
 import type { Logger } from './logger.js';
 import { healthRoute } from './routes/health.js';
+import { createWebRoute } from './routes/web.js';
 
 interface AppVariables {
   requestId: string;
@@ -59,6 +60,7 @@ export function createApp({ config, logger }: CreateAppOptions): Hono<{ Variable
   // Route mounting order is deliberate: static/literal routes before future parameterized routers.
   app.get('/assets/*', serveStatic({ root: './public' }));
   app.route('/healthz', healthRoute);
+  app.route('/', createWebRoute(config));
 
   app.notFound((context) =>
     context.json(
