@@ -5,7 +5,7 @@ export default defineConfig({
   out: './drizzle/sqlite',
   dialect: 'sqlite',
   dbCredentials: {
-    url: process.env.AA_SQLITE_PATH ?? './data/agent-artifacts.db',
+    url: './data/agent-artifacts.db',
   },
   strict: true,
   verbose: true,
