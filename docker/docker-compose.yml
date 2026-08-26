@@ -2,7 +2,7 @@ services:
   app:
     image: ghcr.io/zeropointrepo/agent-artifacts:latest
     build:
-      context: .
+      context: ..
       dockerfile: docker/Dockerfile
     ports:
       - "3000:3000"
