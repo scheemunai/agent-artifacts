@@ -16,7 +16,10 @@
     "typecheck": "tsc --noEmit",
     "check": "biome ci . && pnpm run typecheck",
     "test": "vitest run",
-    "db:generate": "drizzle-kit generate --config drizzle.config.ts"
+    "db:generate": "pnpm run db:generate:sqlite && pnpm run db:generate:postgres",
+    "db:generate:sqlite": "drizzle-kit generate --dialect sqlite --schema ./src/db/schema.sqlite.ts --out ./drizzle/sqlite --name init",
+    "db:generate:postgres": "drizzle-kit generate --dialect postgresql --schema ./src/db/schema.postgres.ts --out ./drizzle/postgres --name init",
+    "migrate": "tsx src/db/migrate-cli.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",
