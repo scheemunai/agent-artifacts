@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { Resvg } from '@resvg/resvg-js';
-import satori, { type FontWeight } from 'satori';
+import satori, { type FontWeight, init as initSatori } from 'satori/standalone';
 import { LruCache, type LruCacheStats } from './render-cache.js';
 
 export const OG_IMAGE_WIDTH = 1200;
@@ -13,6 +14,7 @@ export const OG_CACHE_MAX_BYTES = 64 * 1024 * 1024;
 const PRODUCT_MARK = '◆ Agent Artifacts';
 const TITLE_FONT_WEIGHT = 650 as unknown as FontWeight;
 const FONT_DIR_FROM_MODULE = new URL('../ui/assets/fonts/', import.meta.url);
+const requireFromHere = createRequire(import.meta.url);
 const REGULAR_FONT_FILENAME = 'inter-latin-regular.ttf';
 const SEMIBOLD_FONT_FILENAME = 'inter-latin-semibold.ttf';
 
@@ -46,11 +48,13 @@ const ogImageCache = new LruCache<Buffer>({
 });
 
 let fontBuffers: { regular: Buffer; semibold: Buffer } | undefined;
+let satoriInitPromise: Promise<void> | undefined;
 
 export async function generateOgImage(input: OgImageInput): Promise<Buffer> {
   const title = normalizeOgText(input.title, 'Untitled artifact', 92);
   const byline = normalizeOgText(formatByline(input), OG_DEFAULT_DESCRIPTION, 120);
   const fonts = loadInterFonts();
+  await ensureSatoriInitialized();
 
   const svg = await satori(createOgTree({ title, byline }), {
     width: OG_IMAGE_WIDTH,
@@ -213,6 +217,11 @@ function element(type: string, props: Record<string, unknown>, ...children: OgCh
       children: children.length === 1 ? children[0] : children,
     },
   };
+}
+
+function ensureSatoriInitialized(): Promise<void> {
+  satoriInitPromise ??= initSatori(readFileSync(requireFromHere.resolve('satori/yoga.wasm')));
+  return satoriInitPromise;
 }
 
 function loadInterFonts(): { regular: Buffer; semibold: Buffer } {

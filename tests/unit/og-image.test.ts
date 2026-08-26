@@ -26,25 +26,30 @@ describe('OG image renderer', () => {
   });
 
   it('renders a deterministic 1200x630 PNG and makes zero network calls', async () => {
+    const originalFetch = globalThis.fetch;
     const fetchSpy = vi.fn(() => {
       throw new Error('network fetch forbidden during OG render');
     });
-    vi.stubGlobal('fetch', fetchSpy);
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
 
-    const input = {
-      title: 'Weekly Ops Report — W34 🚀',
-      botName: 'R2',
-      botByline: "Andrej's Chief of Staff 🤖",
-    };
-    const first = await generateOgImage(input);
-    const second = await generateOgImage(input);
+    try {
+      const input = {
+        title: 'Weekly Ops Report — W34 🚀',
+        botName: 'R2',
+        botByline: "Andrej's Chief of Staff 🤖",
+      };
+      const first = await generateOgImage(input);
+      const second = await generateOgImage(input);
 
-    expect(readPngDimensions(first)).toEqual({ width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT });
-    expect(first.subarray(0, 8)).toEqual(
-      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-    );
-    expect(first.equals(second)).toBe(true);
-    expect(fetchSpy).not.toHaveBeenCalled();
+      expect(readPngDimensions(first)).toEqual({ width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT });
+      expect(first.subarray(0, 8)).toEqual(
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      );
+      expect(first.equals(second)).toBe(true);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it('caches rendered cards by share id and content hash', async () => {
