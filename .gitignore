@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+coverage/
+.scratch/
+public/assets/app-*.css
+public/assets/manifest.json
+
+# Runtime state / secrets
+.env
+.env.*
+!.env.example
+data/
+*.log
+ecosystem.config.cjs
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

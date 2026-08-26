@@ -1,0 +1,35 @@
+services:
+  app:
+    image: ghcr.io/zeropointrepo/agent-artifacts:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DEPLOYMENT: ${DEPLOYMENT:-self-hosted}
+      PORT: "3000"
+      BASE_URL: ${BASE_URL:-http://localhost:3000}
+      AA_SQLITE_PATH: /data/agent-artifacts.db
+      DATABASE_URL: ${DATABASE_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - aa_data:/data
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_DB: agent_artifacts
+      POSTGRES_USER: agent_artifacts
+      POSTGRES_PASSWORD: agent_artifacts
+    volumes:
+      - aa_pg_data:/var/lib/postgresql/data
+
+volumes:
+  aa_data:
+  aa_pg_data:

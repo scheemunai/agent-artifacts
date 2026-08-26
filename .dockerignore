@@ -1,0 +1,11 @@
+.git
+node_modules
+.pnpm-store
+.scratch
+dist
+coverage
+data
+.env
+.env.*
+*.log
+ecosystem.config.cjs
