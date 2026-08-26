@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { renderMarkdown } from '../../src/lib/markdown.js';
 import { isSafeHref, isSafeImageSrc, sanitizeMarkdownHtml } from '../../src/lib/sanitize.js';
 
-const hostileCases = [
+type HostileCase = {
+  name: string;
+  input: string;
+  forbidden: RegExp[];
+  assertNeutralized?: (html: string) => void;
+};
+
+const hostileCases: HostileCase[] = [
   {
     name: 'script tag',
     input: '<script>alert(1)</script><p>safe</p>',
@@ -43,15 +50,26 @@ const hostileCases = [
     input: '<div id="aa-boot" name="constructor" class="aa-md safe aa-card">ok</div>',
     forbidden: [/id="aa-boot"/i, /name=/i, /class="safe aa-/i],
   },
+  {
+    name: 'deep blockquote nesting bomb',
+    input: `${'> '.repeat(80)}deep`,
+    forbidden: [],
+    assertNeutralized: (html) => {
+      const blockquoteCount = html.match(/<blockquote>/g)?.length ?? 0;
+      expect(blockquoteCount).toBeLessThanOrEqual(32);
+      expect(html).toContain('<article class="aa-md">');
+    },
+  },
 ] as const;
 
 describe('markdown sanitizer hostile input suite', () => {
-  it.each(hostileCases)('neutralizes $name', ({ input, forbidden }) => {
+  it.each(hostileCases)('neutralizes $name', ({ input, forbidden, assertNeutralized }) => {
     const html = renderMarkdown(input, { contentHash: `hostile:${input}` });
 
     for (const pattern of forbidden) {
       expect(html).not.toMatch(pattern);
     }
+    assertNeutralized?.(html);
   });
 
   it('prefixes content IDs while preserving non-reserved content classes', () => {
@@ -60,15 +78,6 @@ describe('markdown sanitizer hostile input suite', () => {
     expect(html).toContain('id="user-content-aa-boot"');
     expect(html).toContain('class="safe also-safe"');
     expect(html).not.toContain('class="safe aa-md');
-  });
-
-  it('caps block nesting depth at 32 for deep blockquote bombs', () => {
-    const markdown = `${'> '.repeat(80)}deep`;
-    const html = renderMarkdown(markdown, { contentHash: 'deep-blockquote-bomb' });
-    const blockquoteCount = html.match(/<blockquote>/g)?.length ?? 0;
-
-    expect(blockquoteCount).toBeLessThanOrEqual(32);
-    expect(html).toContain('<article class="aa-md">');
   });
 
   it('forces GFM task-list inputs to disabled checkboxes only', () => {
