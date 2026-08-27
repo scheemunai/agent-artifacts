@@ -49,6 +49,8 @@ describe('protected download answers humans and machines differently', () => {
       });
       const shareId = created.share?.shareId as string;
 
+      const bodies: string[] = [];
+
       for (const headers of [{ Accept: 'application/json' }, { Accept: '*/*' }, {}]) {
         const response = await ctx.app.request(`/a/${shareId}/download`, { headers });
 
@@ -56,10 +58,17 @@ describe('protected download answers humans and machines differently', () => {
         expect(response.headers.get('content-type'), JSON.stringify(headers)).toContain(
           'application/json'
         );
-        expect(await response.json()).toEqual({
-          error: { code: 'password_required', message: 'Password required' },
-        });
+        bodies.push(await response.text());
       }
+
+      // Compared as text, because "byte-identical" is what this test is named for and what an API
+      // client can actually depend on. Parsing first and deep-comparing proves the three callers
+      // agree on a *value*; it accepts a different key order, added whitespace, or a re-serialised
+      // envelope — all of which are visible to anyone diffing responses or matching on the raw body.
+      expect(new Set(bodies).size, `envelopes differ:\n${bodies.join('\n')}`).toBe(1);
+      expect(bodies[0]).toBe(
+        '{"error":{"code":"password_required","message":"Password required"}}'
+      );
     } finally {
       await ctx.cleanup();
     }
