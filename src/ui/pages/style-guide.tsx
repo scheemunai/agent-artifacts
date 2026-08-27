@@ -801,10 +801,12 @@ function listRowSection() {
       <p class="aa-hint">
         <code>.aa-list</code> owns the columns and each <code>.aa-list-row</code> borrows them with{' '}
         <code>subgrid</code>, so badge and meta line up down the whole list instead of every row
-        sizing itself. Titles are ink: a list where every title is coloured has no emphasis left for
-        the one under the cursor, so accent is spent on hover and focus only. The whole row is the
-        click target via a stretched link, and the row — not the invisible overlay — is what shows
-        the focus ring.
+        sizing itself. Below 480px they stop sharing a line — the title takes its own and the badge
+        and meta sit under it, because three columns on a phone leave the title about forty pixels
+        and alignment buys nothing when only one row is being read. Titles are ink: a list where
+        every title is coloured has no emphasis left for the one under the cursor, so accent is
+        spent on hover and focus only. The whole row is the click target via a stretched link, and
+        the row — not the invisible overlay — is what shows the focus ring.
       </p>
     </Card>
   );
