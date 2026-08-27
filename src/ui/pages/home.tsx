@@ -28,7 +28,7 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
             <ProductMark />
             <span>Agent Artifacts</span>
           </a>
-          <nav class="aa-specimen-row" aria-label="Primary">
+          <nav class="aa-specimen-row aa-home-actions" aria-label="Primary">
             {authenticated ? (
               <Button variant="primary" href="/dashboard">
                 Dashboard →
@@ -58,11 +58,7 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
           </section>
 
           <div class="aa-home-body aa-stack">
-            <section
-              class="aa-empty"
-              aria-label="Demo video placeholder"
-              style="aspect-ratio: 16 / 10; width: 100%; min-height: 14rem;"
-            >
+            <section class="aa-empty aa-home-demo-slot" aria-label="Demo video placeholder">
               <div class="aa-empty__icon" aria-hidden="true">
                 ◆
               </div>

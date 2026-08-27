@@ -89,7 +89,10 @@ const typeTokens: TokenSpec[] = [
 
 const spaceTokens: TokenSpec[] = [
   { name: '--spacing-aa-1 → --spacing-aa-16', intent: 'A compact, predictable spacing ramp.' },
-  { name: '--spacing-aa-touch', intent: 'Minimum interactive height for touch targets.' },
+  {
+    name: '--spacing-aa-touch',
+    intent: 'Minimum 44px interactive height inherited by every button size and form control.',
+  },
   {
     name: '--radius-aa-xs → --radius-aa-xl',
     intent: 'Restrained radii for code, controls, cards.',
@@ -158,7 +161,7 @@ export function StyleGuidePage() {
         <div class="aa-shell aa-stack">
           <header>
             <p class="aa-page-kicker">UI Foundation</p>
-            <h1 class="aa-page-title">Super solid, simple, and reusable.</h1>
+            <h1 class="aa-page-title">Agent Artifacts Style Guide</h1>
             <p class="aa-page-lede">
               This page is the design contract for Agent Artifacts: every token, primitive, state,
               and the public markdown content theme in one place.
@@ -234,9 +237,9 @@ export function StyleGuidePage() {
             note="Scoped to .aa-md so public artifact typography cannot leak into app chrome or be affected by it."
           >
             <div class="aa-usage">
-              Render markdown as sanitized HTML inside <code>article.aa-md</code>. Tables must be
-              wrapped in <code>.aa-md-table-scroll</code> after rendering so mobile pages never
-              overflow.
+              Render markdown as sanitized HTML inside <code>article.aa-md</code>. Markdown tables
+              and code blocks own their horizontal scrolling so mobile pages never overflow; the
+              optional <code>.aa-md-table-scroll</code> wrapper uses the same contract.
             </div>
             <MarkdownSample />
           </StyleGuideSection>
@@ -297,7 +300,7 @@ function buttonSection() {
   return (
     <Card
       title="Button"
-      description="Primary, secondary, ghost, and danger variants with every interaction state."
+      description="Primary, secondary, ghost, and danger variants with every interaction state. Small buttons keep compact type but retain the 44px touch target."
     >
       <div class="aa-stack">
         {variants.map((variant) => (
@@ -639,7 +642,7 @@ function dialogExamples() {
 function MarkdownSample() {
   return (
     <article class="aa-md" aria-labelledby="markdown-sample-title">
-      <h1 id="markdown-sample-title">Weekly Ops Report</h1>
+      <h3 id="markdown-sample-title">Weekly Ops Report</h3>
       <p>
         This is the public artifact theme: a centered content column, readable rhythm, and focused
         typographic hierarchy. Links use the <a href="/style-guide">single accent</a> and underline
@@ -664,9 +667,29 @@ function MarkdownSample() {
       <pre>
         <code>{`curl -X POST https://agentartifact.ai/v1/artifacts \
   -H "Authorization: Bearer aa_bot_YOUR_KEY" \
-  -H "Content-Type: application/json"`}</code>
+  -H "Content-Type: application/json" \
+  -d "long_unbroken_value=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`}</code>
       </pre>
       <h2>Status table</h2>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Very long unwrapped markdown-rendered heading</th>
+            <th scope="col">Another wide heading</th>
+            <th scope="col">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Plain markdown output</td>
+            <td>Scrollable table surface</td>
+            <td>
+              This unwrapped table proves raw markdown tables scroll inside themselves at 375px.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <h2>Wrapped table</h2>
       <div class="aa-md-table-scroll" tabindex={0}>
         <table>
           <thead>

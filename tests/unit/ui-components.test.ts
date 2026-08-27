@@ -103,8 +103,32 @@ describe('ui css contract', () => {
   it('has mobile-safe table and drawer rules', () => {
     expect(css).toContain('.aa-table-scroll');
     expect(css).toContain('overflow-x: auto');
+    expect(css).toMatch(/\.aa-section\s*{[\s\S]*?min-width: 0;/);
+    expect(css).toMatch(
+      /\.aa-section > \*,[\s\S]*?\.aa-section-header > \*\s*{[\s\S]*?min-width: 0;/
+    );
+    expect(css).toMatch(/\.aa-stack\s*{[\s\S]*?min-width: 0;/);
+    expect(css).toMatch(/\.aa-stack > \*\s*{[\s\S]*?min-width: 0;/);
+    expect(css).toMatch(/\.aa-grid\s*{[\s\S]*?min-width: 0;/);
+    expect(css).toMatch(/\.aa-grid > \*\s*{[\s\S]*?min-width: 0;/);
     expect(css).toContain('grid-template-columns: minmax(0, 80vw) 1fr');
     expect(css).toContain('scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface)');
+  });
+
+  it('keeps markdown-rendered code and tables inside their own scroll surfaces', () => {
+    expect(css).toContain('.aa-md pre');
+    expect(css).toMatch(/\.aa-md pre\s*{[\s\S]*?overflow-x: auto;/);
+    expect(css).toMatch(/\.aa-md pre code\s*{[\s\S]*?width: max-content;/);
+    expect(css).toMatch(/\.aa-md table\s*{[\s\S]*?display: block;[\s\S]*?overflow-x: auto;/);
+    expect(css).toContain('.aa-md .aa-md-table-scroll table');
+    expect(css).toMatch(
+      /@media \(max-width: 480px\)[\s\S]*?\.aa-md[\s\S]*?padding-inline: var\(--spacing-aa-4\)/
+    );
+  });
+
+  it('keeps compact controls at the shared 44px touch target floor', () => {
+    expect(css).toMatch(/\.aa-btn--sm\s*{[\s\S]*?min-height: var\(--spacing-aa-touch\)/);
+    expect(css).toContain('--spacing-aa-touch: 2.75rem;');
   });
 
   it('makes copy blocks scrollable with a visible affordance', () => {
@@ -138,7 +162,10 @@ describe('style guide page', () => {
       expect(html).toContain(text);
     }
 
+    expect(html).toContain('Agent Artifacts Style Guide');
+    expect(html.match(/<h1\b/g) ?? []).toHaveLength(1);
     expect(html).toContain('class="aa-md"');
+    expect(html).toContain('raw markdown tables scroll inside themselves at 375px');
     expect(html).toContain('<script type="module" src="/assets/ui-foundation-');
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)[\s\S]*?>[\s\S]*?<\/script>/i);
     expect(html).not.toMatch(/https?:\/\/(cdn|unpkg|jsdelivr|fonts\.googleapis)/i);

@@ -15,7 +15,7 @@ describe('cloud marketing homepage', () => {
     expect(html).toContain(HOME_HERO);
     expect(html).toContain(HOME_SUBLINE.replace("agent's", 'agent&#39;s'));
     expect(html).toContain('Demo GIF/video placeholder');
-    expect(html).toContain('aspect-ratio: 16 / 10');
+    expect(html).toContain('aa-home-demo-slot');
     expect(html).toContain('Sign up to get your key.');
     expect(html).toContain('Your API key: [KEY]');
     expect(html).toContain('Hello from [BOT NAME]');

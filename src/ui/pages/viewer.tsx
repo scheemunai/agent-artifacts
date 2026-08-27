@@ -150,7 +150,11 @@ function PasswordGate({ visible }: { visible: boolean }) {
     >
       <div class="aa-viewer-gate-card">
         <ProductMark />
-        <h1>This artifact is password-protected.</h1>
+        {visible ? (
+          <h1>This artifact is password-protected.</h1>
+        ) : (
+          <h2>This artifact is password-protected.</h2>
+        )}
         <p>Enter the password to view this artifact.</p>
         <form class="aa-viewer-password-form" data-aa-password-form="true">
           <label class="aa-label" for="aa-share-password">
@@ -190,7 +194,9 @@ function ViewerChrome({
     <header class="aa-viewer-chrome" data-aa-chrome="true">
       <div class="aa-viewer-heading">
         <div class="aa-viewer-title-row">
-          <h1 data-aa-title="true">{content?.title ?? 'Loading…'}</h1>
+          <p class="aa-viewer-title" data-aa-title="true">
+            {content?.title ?? 'Loading…'}
+          </p>
           <span
             class="aa-badge aa-badge--accent aa-viewer-updated-pill"
             data-aa-updated-pill="true"

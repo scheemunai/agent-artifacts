@@ -23,7 +23,7 @@ const POLL_INTERVAL_MS = 30_000;
 const FRAME_MIN_HEIGHT = 288;
 const FRAME_MAX_HEIGHT = 2400;
 let contentHash = boot.initialContent?.content_hash || null;
-let inFlight = false;
+let contentRequestInFlight = false;
 let stopped = false;
 let viewerToken = null;
 let updatePillTimer = null;
@@ -95,6 +95,10 @@ function installRefreshButton() {
   }
 
   refreshButton.addEventListener('click', () => {
+    if (contentRequestInFlight) {
+      setRefreshBusy(true);
+      return;
+    }
     fetchContent({ poll: true, manual: true });
   });
 }
@@ -138,7 +142,14 @@ function installLiveRevalidation() {
 }
 
 async function fetchContent({ poll, manual = false }) {
-  if (stopped || inFlight) {
+  if (stopped) {
+    return;
+  }
+
+  if (contentRequestInFlight) {
+    if (manual) {
+      setRefreshBusy(true);
+    }
     return;
   }
 
@@ -146,8 +157,8 @@ async function fetchContent({ poll, manual = false }) {
     return;
   }
 
-  inFlight = true;
-  setRefreshBusy(manual);
+  contentRequestInFlight = true;
+  setRefreshBusy(true);
   try {
     const url = new URL(boot.contentUrl, window.location.origin);
     if (poll) {
@@ -196,7 +207,7 @@ async function fetchContent({ poll, manual = false }) {
     );
     applyContent(payload, { showUpdated: changed, preserveScroll: changed });
   } finally {
-    inFlight = false;
+    contentRequestInFlight = false;
     setRefreshBusy(false);
   }
 }
@@ -394,7 +405,8 @@ function showTerminal(message) {
     updatedNode.textContent = '';
   }
   if (contentNode) {
-    contentNode.innerHTML = `<section class="aa-viewer-terminal"><section class="aa-viewer-terminal-card"><span class="aa-mark" aria-hidden="true">◆</span><h1>${escapeHtml(message)}</h1></section></section>`;
+    const currentUrl = escapeHtml(window.location.href);
+    contentNode.innerHTML = `<section class="aa-viewer-terminal"><section class="aa-viewer-terminal-card"><span class="aa-mark" aria-hidden="true">◆</span><h1>${escapeHtml(message)}</h1><div class="aa-specimen-row aa-viewer-terminal-actions"><a class="aa-btn aa-btn--secondary" href="${currentUrl}"><span>Try again</span></a><a class="aa-btn aa-btn--ghost" href="/"><span>Go home</span></a></div></section></section>`;
   }
 }
 

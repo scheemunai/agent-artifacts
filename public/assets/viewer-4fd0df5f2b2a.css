@@ -37,7 +37,7 @@
   align-items: center;
 }
 
-.aa-viewer-title-row h1 {
+.aa-viewer-title {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
@@ -129,6 +129,7 @@
 }
 
 .aa-viewer-gate-card h1,
+.aa-viewer-gate-card h2,
 .aa-viewer-terminal-card h1 {
   margin: 0;
   color: var(--color-aa-ink);
@@ -142,6 +143,11 @@
 .aa-viewer-terminal-card p {
   margin: 0;
   color: var(--color-aa-muted);
+}
+
+.aa-viewer-terminal-actions {
+  justify-content: center;
+  margin-top: var(--spacing-aa-2);
 }
 
 .aa-viewer-password-form {
