@@ -98,50 +98,54 @@ describe('the released image layout', () => {
   it.each([
     ['the app directory, as the container does', () => room],
     ['an unrelated working directory', () => foreignCwd],
-  ])('serves the whole product when started from %s', async (_label, cwdFor) => {
-    const cwd = cwdFor();
-    const dataDir = mkdtempSync(join(tmpdir(), 'aa-image-data-'));
-    const server = await startServer({
-      command: process.execPath,
-      args: [join(room, 'dist/index.js')],
-      cwd,
-      sqlitePath: join(dataDir, 'app.db'),
-    });
+  ])(
+    'serves the whole product when started from %s',
+    async (_label, cwdFor) => {
+      const cwd = cwdFor();
+      const dataDir = mkdtempSync(join(tmpdir(), 'aa-image-data-'));
+      const server = await startServer({
+        command: process.execPath,
+        args: [join(room, 'dist/index.js')],
+        cwd,
+        sqlitePath: join(dataDir, 'app.db'),
+      });
 
-    try {
-      // Migrations and starter-template seeding both ran, or /healthz would never have answered.
-      const health = await request(server.port, '/healthz');
-      expect(health.status).toBe(200);
+      try {
+        // Migrations and starter-template seeding both ran, or /healthz would never have answered.
+        const health = await request(server.port, '/healthz');
+        expect(health.status).toBe(200);
 
-      const html = await fetchOk(server.port, PAGE);
-      const stylesheet = stylesheetHrefFrom(html);
-      expect(stylesheet).toMatch(/^\/assets\/app-[a-f0-9]{12}\.css$/);
+        const html = await fetchOk(server.port, PAGE);
+        const stylesheet = stylesheetHrefFrom(html);
+        expect(stylesheet).toMatch(/^\/assets\/app-[a-f0-9]{12}\.css$/);
 
-      const css = await request(server.port, stylesheet);
-      expect(css.status, 'the static root must not depend on the working directory').toBe(200);
-      expect(css.headers.get('content-type')).toContain('text/css');
+        const css = await request(server.port, stylesheet);
+        expect(css.status, 'the static root must not depend on the working directory').toBe(200);
+        expect(css.headers.get('content-type')).toContain('text/css');
 
-      const font = await request(server.port, '/assets/fonts/source-sans-3-latin-var.woff2');
-      expect(font.status).toBe(200);
+        const font = await request(server.port, '/assets/fonts/source-sans-3-latin-var.woff2');
+        expect(font.status).toBe(200);
 
-      // The probe that was missing: a real unfurl image, fetched over HTTP, from the released
-      // layout. It needs a live share, so this walks the actual onboarding flow first.
-      const { shareId } = await publishSharedArtifact(server.port, dataDir);
-      const og = await request(server.port, `/a/${shareId}/og.png`);
-      expect(og.status, 'og.png must render in the released layout').toBe(200);
-      expect(og.headers.get('content-type')).toBe('image/png');
+        // The probe that was missing: a real unfurl image, fetched over HTTP, from the released
+        // layout. It needs a live share, so this walks the actual onboarding flow first.
+        const { shareId } = await publishSharedArtifact(server.port, dataDir);
+        const og = await request(server.port, `/a/${shareId}/og.png`);
+        expect(og.status, 'og.png must render in the released layout').toBe(200);
+        expect(og.headers.get('content-type')).toBe('image/png');
 
-      const png = Buffer.from(await og.arrayBuffer());
-      expect(png.subarray(0, 8)).toEqual(
-        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-      );
-      expect(png.byteLength).toBeGreaterThan(1000);
+        const png = Buffer.from(await og.arrayBuffer());
+        expect(png.subarray(0, 8)).toEqual(
+          Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+        );
+        expect(png.byteLength).toBeGreaterThan(1000);
 
-      expect(server.stderr()).not.toContain('MISSING RUNTIME ASSET');
-      expect(server.stderr()).not.toContain('STYLESHEET');
-    } finally {
-      await server.stop();
-      rmSync(dataDir, { recursive: true, force: true });
-    }
-  }, BOOT_TIMEOUT_MS);
+        expect(server.stderr()).not.toContain('MISSING RUNTIME ASSET');
+        expect(server.stderr()).not.toContain('STYLESHEET');
+      } finally {
+        await server.stop();
+        rmSync(dataDir, { recursive: true, force: true });
+      }
+    },
+    BOOT_TIMEOUT_MS
+  );
 });

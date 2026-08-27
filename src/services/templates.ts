@@ -6,9 +6,9 @@ import { z } from 'zod';
 import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } from '../db/client.js';
 import { decodeSortCursor, encodeSortCursor } from '../lib/cursor.js';
 import { AppError } from '../lib/errors.js';
+import { resolveShippedPath } from '../lib/runtime-paths.js';
 import { ARTIFACT_ID_PATTERN, type ArtifactType, slugSchema } from '../lib/schemas/artifacts.js';
 import { promoteTemplateSchema, templateSlotSchema } from '../lib/schemas/templates.js';
-import { resolveShippedPath } from '../lib/runtime-paths.js';
 import type { Logger } from '../logger.js';
 
 export interface TemplateSlot {
@@ -103,7 +103,9 @@ type ManifestEntry = z.infer<typeof manifestEntrySchema>;
  */
 export function loadStarterTemplates(rootDir?: string): StarterTemplate[] {
   const manifestPath =
-    rootDir === undefined ? resolveStarterManifestPath() : resolve(rootDir, 'templates', 'manifest.ts');
+    rootDir === undefined
+      ? resolveStarterManifestPath()
+      : resolve(rootDir, 'templates', 'manifest.ts');
   const templatesDir = dirname(manifestPath);
   const manifest = readManifest(manifestPath);
 

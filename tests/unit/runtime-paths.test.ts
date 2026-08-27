@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { resolveMigrationsFolder } from '../../src/db/migrations.js';
 import {
   APP_ROOT,
-  MissingShippedPathError,
   appPath,
   findShippedPath,
+  MissingShippedPathError,
   resolveShippedPath,
   shippedPathCandidates,
 } from '../../src/lib/runtime-paths.js';

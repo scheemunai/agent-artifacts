@@ -61,7 +61,9 @@ export async function publishSharedArtifact(
     }),
   });
   const payload = await published.text();
-  expect(published.status, `POST /v1/artifacts responded ${published.status}: ${payload}`).toBe(201);
+  expect(published.status, `POST /v1/artifacts responded ${published.status}: ${payload}`).toBe(
+    201
+  );
 
   const body = JSON.parse(payload) as { share?: { url?: string } };
   const shareUrl = body.share?.url;
