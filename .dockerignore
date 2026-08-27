@@ -3,6 +3,8 @@
 .github
 node_modules
 .pnpm-store
+.cache/ms-playwright
+ms-playwright
 
 # Local configuration, secrets, and runtime state
 .env
@@ -37,12 +39,27 @@ coverage
 .vitest
 *.lcov
 junit*.xml
+reports
+test-report
 test-results
+e2e-results
+blob-report
 playwright-report
 playwright.config.ts
+playwright/.cache
+playwright/.local-browsers
 screenshots
+**/screenshots
+*.har
 *.webm
+trace.zip
 trace*.zip
+*.trace.zip
+
+# Editor and OS noise
+.DS_Store
+.idea
+.vscode
 
 # Repository-only documentation and project metadata
 docs
