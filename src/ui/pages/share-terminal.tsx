@@ -1,12 +1,11 @@
-import { ShareTerminalMain } from '../components/share-terminal-main.js';
+import { ShareTerminalMain, type ShareTerminalStatus } from '../components/share-terminal-main.js';
 import { abuseHref, ViewerDocument, ViewerFooter } from './viewer.js';
-
-export type ShareTerminalStatus = 404 | 410 | 429;
 
 export {
   CLIENT_TERMINAL_COPY,
   type ClientTerminalStatus,
   ShareTerminalMain,
+  type ShareTerminalStatus,
 } from '../components/share-terminal-main.js';
 
 interface ShareTerminalPageProps {
@@ -37,6 +36,7 @@ export function ShareTerminalPage({
         title={pageTitle}
         message={message}
         shareUrl={shareUrl}
+        status={status}
         headingId={`terminal-title-${status}`}
       />
       <ViewerFooter

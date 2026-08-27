@@ -179,3 +179,48 @@ describe('client-side terminal parity', () => {
     }
   });
 });
+
+describe('terminal actions offer only what can actually work', () => {
+  const render = (status: 404 | 410 | 429) =>
+    renderToString(
+      ShareTerminalPage({
+        title: 'This link has been revoked.',
+        message: 'The owner turned off sharing for this artifact.',
+        status,
+        shareUrl: canonicalUrl,
+        abuseEmail: 'abuse@example.test',
+      })
+    );
+
+  it('drops "Try again" on states that can never come back', () => {
+    // Verified on six surfaces: unknown-404, share-expired-410, revoked-410, suspended-410,
+    // retention-expired-410 and the client-rendered terminal. Every one of them offered a retry
+    // pointed at the URL that had just failed permanently.
+    for (const status of [404, 410] as const) {
+      expect(render(status), `status ${status}`).not.toContain('Try again');
+    }
+  });
+
+  it('keeps it where retrying is the correct advice', () => {
+    // 429 is the one terminal that is genuinely temporary.
+    expect(render(429)).toContain('Try again');
+  });
+
+  it('promotes the one remaining action instead of leaving two ghosts', () => {
+    // "Go home" was a `ghost` button with no border sitting beside a dead "Try again", so neither
+    // read as the thing to do next.
+    const actions =
+      /<div class="aa-button-row[^"]*aa-viewer-terminal-actions"[^>]*>([\s\S]*?)<\/div>/.exec(
+        render(410)
+      )?.[1];
+    expect(actions, 'no terminal action row').toBeDefined();
+    expect(actions).toContain('aa-btn--primary');
+    expect(actions?.match(/<a\b/g) ?? []).toHaveLength(1);
+  });
+
+  it('carries the same action set into the client-swapped terminal', () => {
+    for (const status of STATUSES) {
+      expect(terminalTemplate(status), `status ${status}`).not.toContain('Try again');
+    }
+  });
+});

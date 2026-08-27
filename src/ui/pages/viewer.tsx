@@ -2,7 +2,7 @@ import type { Child } from 'hono/jsx';
 import type { ViewerContentResult, ViewerPageModel } from '../../services/viewer.js';
 import { stylesheetHref } from '../assets.js';
 import { DOCTYPE, UI_FOUNDATION_SCRIPT_SRC } from '../components/layout.js';
-import { Button, ProductMark } from '../components/primitives.js';
+import { Button, Notice, ProductMark } from '../components/primitives.js';
 import {
   CLIENT_TERMINAL_COPY,
   type ClientTerminalStatus,
@@ -72,6 +72,7 @@ export function ViewerPage({ model, abuseEmail, pinnedVersion }: ViewerPageProps
           hidden={model.passwordProtected ? true : undefined}
         >
           <ViewerChrome content={model.initialContent} pinnedVersion={pinnedVersion} />
+          <RefreshStatus />
           <VersionBanner
             shownVersion={pinnedVersion ?? null}
             latestVersion={
@@ -90,6 +91,37 @@ export function ViewerPage({ model, abuseEmail, pinnedVersion }: ViewerPageProps
       />
       <ClientTerminalTemplates shareUrl={model.canonicalUrl} />
     </ViewerDocument>
+  );
+}
+
+/**
+ * What the viewer says when a refresh fails.
+ *
+ * Before this, nothing was said at all: the script only handled `!response.ok`, and a real network
+ * failure makes `fetch` *throw*, which never reached that branch. A pixel diff of the offline
+ * render against the idle one differed only in a button's hover fill — the page silently went on
+ * presenting stale content as live.
+ *
+ * Both states are rendered here rather than built in the script, for the same reason the terminal
+ * templates are: one implementation, no copy in the client. They sit directly under the chrome
+ * that holds the refresh control, which is the attached rung — a status belongs beside the thing
+ * it describes, not floating at the top of the page or in a toast region the viewer never had.
+ */
+function RefreshStatus() {
+  return (
+    <div class="aa-viewer-status" data-aa-viewer-status-region="true">
+      <div data-aa-viewer-status="offline" hidden>
+        <Notice tone="warn" title="You appear to be offline.">
+          This page is showing the last version it loaded, and will catch up on its own once the
+          connection is back.
+        </Notice>
+      </div>
+      <div data-aa-viewer-status="stale" hidden>
+        <Notice tone="danger" title="Could not refresh this artifact.">
+          This page is showing the last version it loaded. Try again in a moment.
+        </Notice>
+      </div>
+    </div>
   );
 }
 
@@ -113,6 +145,7 @@ function ClientTerminalTemplates({ shareUrl }: { shareUrl: string }) {
             title={CLIENT_TERMINAL_COPY[status].title}
             message={CLIENT_TERMINAL_COPY[status].message}
             shareUrl={shareUrl}
+            status={status}
             headingId={`terminal-title-${status}`}
           />
         </template>

@@ -114,7 +114,9 @@ describe('viewer page UI polish', () => {
     );
 
     expect(html).toContain('data-aa-terminal="true"');
-    expect(html).toContain('Try again');
+    // No "Try again": a 410 is permanent, and retrying the URL that just returned it cannot work.
+    // See `tests/unit/ui-terminal-parity.test.ts` for the per-status action contract.
+    expect(html).not.toContain('Try again');
     expect(html).toContain('Go home');
     expect(html).toContain('aa-viewer-terminal-actions');
     // The client no longer builds this card: it clones the server-rendered `<template>`, which is

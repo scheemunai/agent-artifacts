@@ -44,6 +44,7 @@ const TWICE_USED: Array<{ name: string; render: (index: number) => string }> = [
           title: `Gone ${index}`,
           message: `It went away ${index}.`,
           shareUrl: '/a/abc',
+          status: 410,
         })
       ),
   },
