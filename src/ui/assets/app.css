@@ -84,7 +84,6 @@
   --width-aa-panel: 48.75rem;
   --width-aa-shell-narrow: 46rem;
   --width-aa-measure: 42.5rem;
-  --width-aa-text: 40rem;
   --width-aa-dialog: 36rem;
   --width-aa-card: 30rem;
   --width-aa-drawer: 24rem;
@@ -1253,6 +1252,14 @@
     white-space: pre-wrap;
   }
 
+  /* A copy-once credential must never break across lines: a human transcribing an API key from a
+     wrapped token drops or duplicates characters. Scroll it sideways instead of wrapping it. */
+  .aa-copy--credential pre {
+    overflow-wrap: normal;
+    white-space: pre;
+    word-break: normal;
+  }
+
   .aa-copy pre::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -1309,6 +1316,11 @@
   .aa-home-actions {
     flex-wrap: nowrap;
     gap: var(--spacing-aa-2);
+  }
+
+  /* The brand is a name, not a paragraph: it must never break mid-word. */
+  .aa-brand {
+    white-space: nowrap;
   }
 
   .aa-marketing-shell {
@@ -1670,7 +1682,7 @@
 
   .aa-marketing-features {
     display: grid;
-    width: min(100%, var(--width-aa-text));
+    width: min(100%, var(--width-aa-measure));
     gap: 1.05rem;
   }
 
@@ -1828,8 +1840,14 @@
     }
 
     .aa-home-actions {
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       justify-content: flex-end;
+    }
+
+    /* Secondary header actions stand down rather than wrap onto a second row that collides with
+       the header rule. Everything hidden here is reachable from the marketing footer. */
+    .aa-btn--compact-hide {
+      display: none;
     }
 
     .aa-marketing-artifact__meta {

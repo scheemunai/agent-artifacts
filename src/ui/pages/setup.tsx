@@ -1,10 +1,38 @@
 import { Layout } from '../components/layout.js';
-import { Badge, Button, Card, CopyBlock, Input, ProductMark } from '../components/primitives.js';
+import {
+  Badge,
+  Button,
+  ButtonRow,
+  Card,
+  CopyBlock,
+  Input,
+  Notice,
+  ProductMark,
+} from '../components/primitives.js';
 import { buildArtifactCurl, buildInstallPrompt, buildRedactedInstallPrompt } from './dashboard.js';
+
+/** Fields a setup failure can be attributed to, so the message can ride the field that caused it. */
+export type SetupErrorField =
+  | 'setup_token'
+  | 'email'
+  | 'password'
+  | 'password_confirm'
+  | 'bot_name';
 
 export interface SetupPageProps {
   baseUrl: string;
   error?: string | undefined;
+  /**
+   * Which field the error belongs to. Rung 2 of the attachment ladder: a message about one field
+   * belongs on that field, not ~300px above it where the field is off-screen at 375.
+   */
+  errorField?: SetupErrorField | undefined;
+  /**
+   * The submitted setup token, round-tripped on error. This is a one-time value the operator reads
+   * out of the server boot log, so dropping it on a validation slip costs them a trip back to the
+   * terminal. It is the worst field on the form to clear.
+   */
+  setupToken?: string | undefined;
   email?: string | undefined;
   botName?: string | undefined;
   botByline?: string | undefined;
@@ -13,10 +41,16 @@ export interface SetupPageProps {
 export function SetupPage({
   baseUrl,
   error,
+  errorField,
+  setupToken = '',
   email = '',
   botName = '',
   botByline = '',
 }: SetupPageProps) {
+  const fieldError = (field: SetupErrorField) =>
+    error && errorField === field ? error : undefined;
+  const formError = error && !errorField ? error : undefined;
+
   return (
     <Layout
       title="Setup · Agent Artifacts"
@@ -24,30 +58,35 @@ export function SetupPage({
     >
       <main class="aa-placeholder">
         <div class="aa-shell aa-shell--narrow">
-          <Card raised>
+          <Card
+            raised
+            notice={
+              formError ? (
+                <Notice tone="danger" title="Setup could not complete">
+                  {formError}
+                </Notice>
+              ) : undefined
+            }
+          >
             <div class="aa-stack aa-placeholder-card">
               <div>
                 <ProductMark />
                 <p class="aa-page-kicker">Self-hosted first run</p>
                 <h1 class="aa-section-title">Set up Agent Artifacts</h1>
                 <p class="aa-section-note">
-                  Create the admin account, name your first bot, and copy the key shown once.
+                  One form, all at once: the admin account, your first bot, and the key shown once
+                  on the next screen.
                 </p>
               </div>
-              <div class="aa-specimen-row">
-                <Badge tone="accent">1 Token</Badge>
-                <Badge tone="neutral">2 Admin</Badge>
-                <Badge tone="neutral">3 Bot</Badge>
-                <Badge tone="neutral">4 Key</Badge>
-              </div>
-              {error ? <p class="aa-error">{error}</p> : null}
               <form class="aa-stack" method="post" action="/setup">
                 <Input
                   id="setup_token"
                   name="setup_token"
                   label="Setup token"
                   type="password"
+                  value={setupToken}
                   hint="Find this one-time token in the server boot log."
+                  error={fieldError('setup_token')}
                 />
                 <Input
                   id="email"
@@ -56,13 +95,21 @@ export function SetupPage({
                   type="email"
                   value={email}
                   placeholder="you@example.com"
+                  error={fieldError('email')}
                 />
-                <Input id="password" name="password" label="Password" type="password" />
+                <Input
+                  id="password"
+                  name="password"
+                  label="Password"
+                  type="password"
+                  error={fieldError('password')}
+                />
                 <Input
                   id="password_confirm"
                   name="password_confirm"
                   label="Confirm password"
                   type="password"
+                  error={fieldError('password_confirm')}
                 />
                 <Input
                   id="bot_name"
@@ -70,6 +117,7 @@ export function SetupPage({
                   label="First bot name"
                   value={botName}
                   placeholder="R2"
+                  error={fieldError('bot_name')}
                 />
                 <Input
                   id="bot_byline"
@@ -79,12 +127,12 @@ export function SetupPage({
                   placeholder="Andrej's Chief of Staff"
                   optional
                 />
-                <div class="aa-specimen-row">
+                <ButtonRow>
                   <Button variant="primary" type="submit">
                     Create admin and bot
                   </Button>
                   <Badge tone="info">{baseUrl}</Badge>
-                </div>
+                </ButtonRow>
               </form>
             </div>
           </Card>
@@ -124,10 +172,10 @@ export function SetupKeyPage({ baseUrl, email, botName, apiKey }: SetupKeyPagePr
           <Card title="Your bot's key" description="Shown once. Store it in your agent secrets.">
             <div class="aa-stack">
               <Badge tone="warn">Shown only once</Badge>
-              <CopyBlock id="setup-key" label="API key" value={apiKey} />
+              <CopyBlock id="setup-key" label="API key" value={apiKey} variant="credential" />
               <CopyBlock id="setup-install-prompt" label="Install prompt" value={installPrompt} />
               <CopyBlock id="setup-curl" label="Create your first artifact" value={curl} />
-              <div class="aa-specimen-row">
+              <ButtonRow>
                 <Button
                   variant="primary"
                   href="/dashboard"
@@ -135,7 +183,7 @@ export function SetupKeyPage({ baseUrl, email, botName, apiKey }: SetupKeyPagePr
                 >
                   Open dashboard →
                 </Button>
-              </div>
+              </ButtonRow>
             </div>
           </Card>
         </div>
@@ -184,14 +232,14 @@ export function SetupKeyHiddenPage({
                   value={buildRedactedInstallPrompt({ baseUrl, botName, last4: apiKeyLast4 })}
                 />
               ) : null}
-              <div class="aa-specimen-row">
+              <ButtonRow>
                 <Button variant="primary" href="/dashboard">
                   Open dashboard →
                 </Button>
                 <Button variant="secondary" href="/dashboard/bots">
                   Regenerate key
                 </Button>
-              </div>
+              </ButtonRow>
             </div>
           </Card>
         </div>

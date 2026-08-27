@@ -77,8 +77,14 @@ describe('ui component primitives', () => {
   });
 
   it('hydrates copy blocks and the mobile drawer with data attributes, not inline handlers', () => {
+    // A real install prompt is many lines, and only a multi-line block can actually scroll —
+    // the hint is now conditional on that, so the fixture has to be honest about its shape.
     const copy = renderToString(
-      CopyBlock({ id: 'copy-me', label: 'Install prompt', value: 'POST /v1/artifacts' })
+      CopyBlock({
+        id: 'copy-me',
+        label: 'Install prompt',
+        value: 'POST /v1/artifacts\nAuthorization: Bearer [KEY]\n\n{ "title": "…" }',
+      })
     );
     const nav = renderToString(
       NavShell({ items: [{ label: 'Style guide', href: '/style-guide' }] })
@@ -89,6 +95,16 @@ describe('ui component primitives', () => {
     expect(copy).toContain('Scroll inside the block to view everything');
     expect(nav).toContain('data-aa-drawer="true"');
     expect(`${copy}${nav}`).not.toMatch(/on(click|submit|keydown)=/i);
+  });
+
+  it('does not claim a single-line copy block scrolls', () => {
+    const copy = renderToString(
+      CopyBlock({ id: 'copy-one', label: 'API key', value: 'aa_bot_0123456789' })
+    );
+
+    expect(copy).toContain('data-aa-copy="copy-one"');
+    expect(copy).not.toContain('Scroll inside the block');
+    expect(copy).not.toContain('aria-describedby');
   });
 
   it('renders dismissible server toasts and specimen pagination feedback hooks', () => {

@@ -1,6 +1,14 @@
 import type { Child } from 'hono/jsx';
 import { Layout } from '../components/layout.js';
-import { Badge, Button, Card, CopyBlock, NavShell, ProductMark } from '../components/primitives.js';
+import {
+  Badge,
+  Button,
+  ButtonRow,
+  Card,
+  CopyBlock,
+  NavShell,
+  ProductMark,
+} from '../components/primitives.js';
 
 interface PlaceholderPageProps {
   title: string;
@@ -53,7 +61,7 @@ export function PlaceholderPage({
                 shareable pages. The UI foundation is available now; auth, setup, dashboard, and
                 cloud homepage behavior will attach to this shell.
               </p>
-              <div class="aa-specimen-row">
+              <ButtonRow>
                 <Button variant="primary" href={primaryHref}>
                   {primaryLabel}
                 </Button>
@@ -61,7 +69,7 @@ export function PlaceholderPage({
                   Health check
                 </Button>
                 <Badge tone="info">Placeholder</Badge>
-              </div>
+              </ButtonRow>
               {secondary}
             </div>
           </Card>

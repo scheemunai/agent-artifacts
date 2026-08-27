@@ -122,9 +122,8 @@ const widthTokens: TokenSpec[] = [
   { name: '--width-aa-shell-narrow', intent: 'Auth, setup, and other single-column pages.' },
   {
     name: '--width-aa-measure',
-    intent: 'Code and callout measures: the API block, the origin note.',
+    intent: 'The marketing reading column: the API block, the feature lines, the origin note.',
   },
-  { name: '--width-aa-text', intent: 'Plain reading measure for stacked body copy.' },
   { name: '--width-aa-dialog', intent: 'Modal dialogs, capped against the viewport.' },
   { name: '--width-aa-card', intent: 'Placeholder and auth cards inside a narrow shell.' },
   { name: '--width-aa-drawer', intent: 'Mobile drawer panel; the scrim owns every other pixel.' },

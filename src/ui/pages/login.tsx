@@ -1,5 +1,13 @@
 import { Layout } from '../components/layout.js';
-import { Badge, Button, Card, Input, ProductMark } from '../components/primitives.js';
+import {
+  Badge,
+  Button,
+  ButtonRow,
+  Card,
+  Input,
+  ProductMark,
+  StatusHeading,
+} from '../components/primitives.js';
 
 export interface LoginPageProps {
   mode: 'password' | 'magic';
@@ -28,57 +36,63 @@ export function LoginPage({
         <div class="aa-shell aa-shell--narrow">
           <Card raised>
             <div class="aa-stack aa-placeholder-card">
-              <div>
-                <ProductMark />
-                <p class="aa-page-kicker">Human dashboard</p>
-                <h1 class="aa-section-title">{title}</h1>
-                <p class="aa-section-note">
-                  {isMagic
-                    ? 'Enter your email and we will send a 15-minute sign-in link.'
-                    : 'Use the admin email and password from your self-hosted setup.'}
-                </p>
-              </div>
-
+              {/*
+                A screen's header is part of its state. Rendering the "enter your email" header
+                unconditionally left the sent screen instructing and confirming the same action at
+                once. Success states own their own heading.
+              */}
               {sent ? (
                 <MagicLinkSentCard email={email} />
               ) : (
-                <form class="aa-stack" method="post" action="/login">
-                  <input type="hidden" name="mode" value={mode} />
-                  <Input
-                    id="email"
-                    name="email"
-                    label="Email"
-                    type="email"
-                    value={email}
-                    placeholder="you@example.com"
-                    error={error && isMagic ? error : undefined}
-                  />
-                  {isMagic ? null : (
-                    <Input
-                      id="password"
-                      name="password"
-                      label="Password"
-                      type="password"
-                      error={error && !isMagic ? error : undefined}
-                    />
-                  )}
-                  <div class="aa-specimen-row">
-                    <Button variant="primary" type="submit">
-                      {isMagic ? 'Email me a link' : 'Log in'}
-                    </Button>
-                    {mailAvailable && !isMagic ? (
-                      <Button variant="secondary" href="/login?mode=magic">
-                        Email me a link instead
-                      </Button>
-                    ) : null}
-                    {isMagic ? <Badge tone="info">15-minute link</Badge> : null}
-                  </div>
-                  {isMagic ? (
-                    <p class="aa-hint">
-                      You will see the same confirmation whether or not an account exists.
+                <>
+                  <div>
+                    <ProductMark />
+                    <p class="aa-page-kicker">Human dashboard</p>
+                    <h1 class="aa-section-title">{title}</h1>
+                    <p class="aa-section-note">
+                      {isMagic
+                        ? 'Enter your email and we will send a 15-minute sign-in link.'
+                        : 'Use the admin email and password from your self-hosted setup.'}
                     </p>
-                  ) : null}
-                </form>
+                  </div>
+                  <form class="aa-stack" method="post" action="/login">
+                    <input type="hidden" name="mode" value={mode} />
+                    <Input
+                      id="email"
+                      name="email"
+                      label="Email"
+                      type="email"
+                      value={email}
+                      placeholder="you@example.com"
+                      error={error && isMagic ? error : undefined}
+                    />
+                    {isMagic ? null : (
+                      <Input
+                        id="password"
+                        name="password"
+                        label="Password"
+                        type="password"
+                        error={error && !isMagic ? error : undefined}
+                      />
+                    )}
+                    <ButtonRow>
+                      <Button variant="primary" type="submit">
+                        {isMagic ? 'Email me a link' : 'Log in'}
+                      </Button>
+                      {mailAvailable && !isMagic ? (
+                        <Button variant="secondary" href="/login?mode=magic">
+                          Email me a link instead
+                        </Button>
+                      ) : null}
+                      {isMagic ? <Badge tone="info">15-minute link</Badge> : null}
+                    </ButtonRow>
+                    {isMagic ? (
+                      <p class="aa-hint">
+                        You will see the same confirmation whether or not an account exists.
+                      </p>
+                    ) : null}
+                  </form>
+                </>
               )}
             </div>
           </Card>
@@ -107,14 +121,16 @@ export function MagicLinkInterstitialPage({ token }: { token: string }) {
                   it does not consume the link until you submit the form.
                 </p>
               </div>
-              <form method="post" action="/auth/verify" class="aa-specimen-row">
+              <form method="post" action="/auth/verify">
                 <input type="hidden" name="token" value={token} />
-                <Button variant="primary" type="submit">
-                  Continue
-                </Button>
-                <Button variant="secondary" href="/login?mode=magic">
-                  Send a new link
-                </Button>
+                <ButtonRow>
+                  <Button variant="primary" type="submit">
+                    Continue
+                  </Button>
+                  <Button variant="secondary" href="/login?mode=magic">
+                    Send a new link
+                  </Button>
+                </ButtonRow>
               </form>
             </div>
           </Card>
@@ -180,14 +196,16 @@ export function EmailChangeInterstitialPage({ token }: { token: string }) {
                   because it does not consume the link until you submit the form.
                 </p>
               </div>
-              <form method="post" action="/auth/change-email" class="aa-specimen-row">
+              <form method="post" action="/auth/change-email">
                 <input type="hidden" name="token" value={token} />
-                <Button variant="primary" type="submit">
-                  Update email
-                </Button>
-                <Button variant="secondary" href="/dashboard/settings">
-                  Back to settings
-                </Button>
+                <ButtonRow>
+                  <Button variant="primary" type="submit">
+                    Update email
+                  </Button>
+                  <Button variant="secondary" href="/dashboard/settings">
+                    Back to settings
+                  </Button>
+                </ButtonRow>
               </form>
             </div>
           </Card>
@@ -224,12 +242,19 @@ export function EmailChangeExpiredPage({ email = '' }: { email?: string }) {
   );
 }
 
+/**
+ * The sent state owns its whole header. It carries the page's only h1, and its status rides the
+ * heading row rather than floating in a stack gap above it.
+ */
 function MagicLinkSentCard({ email }: { email: string }) {
   return (
     <section class="aa-stack" aria-live="polite">
-      <Badge tone="success">Link sent</Badge>
       <div>
-        <h2 class="aa-section-title">Check your email</h2>
+        <ProductMark />
+        <p class="aa-page-kicker">Human dashboard</p>
+        <StatusHeading level={1} status="Link sent" tone="success">
+          Check your email
+        </StatusHeading>
         <p class="aa-section-note">
           We sent a sign-in link to {email || 'that address'}. It expires in 15 minutes.
         </p>

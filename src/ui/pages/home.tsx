@@ -113,9 +113,16 @@ export function HomePage({
             <ProductMark />
             <span>Agent Artifacts</span>
           </a>
-          <nav class="aa-specimen-row aa-home-actions" aria-label="Primary">
+          {/*
+            The header carries one action per state below 560px. The authenticated state already
+            did (Dashboard) and renders cleanly on one row; the anonymous state carried three, which
+            is what forced the brand to break mid-name and the CTA to collide with the header rule.
+            The secondary actions stand down on a phone rather than wrapping, and the footer keeps
+            them reachable.
+          */}
+          <nav class="aa-button-row aa-home-actions" aria-label="Primary">
             {githubUrl ? (
-              <Button variant="ghost" size="sm" href={githubUrl}>
+              <Button variant="ghost" size="sm" href={githubUrl} class="aa-btn--compact-hide">
                 GitHub
               </Button>
             ) : null}
@@ -125,7 +132,7 @@ export function HomePage({
               </Button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" href={HOME_CTA_HREF}>
+                <Button variant="ghost" size="sm" href={HOME_CTA_HREF} class="aa-btn--compact-hide">
                   Log in
                 </Button>
                 <Button variant="primary" size="sm" href={HOME_CTA_HREF}>
@@ -254,6 +261,14 @@ export function HomePage({
           ·
         </span>
         <a href="/llms.txt">API contract</a>
+        {authenticated ? null : (
+          <>
+            <span class="aa-marketing-separator" aria-hidden="true">
+              ·
+            </span>
+            <a href={HOME_CTA_HREF}>Log in</a>
+          </>
+        )}
         <span class="aa-marketing-separator" aria-hidden="true">
           ·
         </span>

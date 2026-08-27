@@ -866,18 +866,33 @@ export function EmptyState({ title, description, action, id }: EmptyStateProps) 
   );
 }
 
+export type CopyBlockVariant = 'text' | 'credential';
+
 interface CopyBlockProps {
   id: string;
   label: string;
   value: string;
+  /**
+   * `credential` for a copy-once secret a human may transcribe: an API key, a setup token. The
+   * block stops wrapping, so the token never breaks across lines. Prose and commands stay `text`,
+   * where wrapping is what you want.
+   */
+  variant?: CopyBlockVariant | undefined;
 }
 
-export function CopyBlock({ id, label, value }: CopyBlockProps) {
+export function CopyBlock({ id, label, value, variant = 'text' }: CopyBlockProps) {
   const hintId = `${id}-hint`;
   const labelId = `${id}-label`;
+  // A scroll hint on a block that cannot scroll is a false statement, and the shipped one said
+  // "scroll inside the block" beneath a two-line key. Only a multi-line value can scroll
+  // vertically, which is the one thing the server can know without measuring the viewport.
+  const scrollable = value.includes('\n');
 
   return (
-    <section class="aa-copy" aria-labelledby={labelId}>
+    <section
+      class={cx('aa-copy', variant === 'credential' && 'aa-copy--credential')}
+      aria-labelledby={labelId}
+    >
       <header class="aa-copy__header">
         <span class="aa-copy__label" id={labelId}>
           {label}
@@ -896,12 +911,14 @@ export function CopyBlock({ id, label, value }: CopyBlockProps) {
           </Button>
         </ButtonRow>
       </header>
-      <pre id={id} tabindex={0} aria-describedby={hintId}>
+      <pre id={id} tabindex={0} aria-describedby={scrollable ? hintId : undefined}>
         <code>{value}</code>
       </pre>
-      <p class="aa-copy__hint" id={hintId}>
-        Scroll inside the block to view everything. Copy includes the full text.
-      </p>
+      {scrollable ? (
+        <p class="aa-copy__hint" id={hintId}>
+          Scroll inside the block to view everything. Copy includes the full text.
+        </p>
+      ) : null}
     </section>
   );
 }

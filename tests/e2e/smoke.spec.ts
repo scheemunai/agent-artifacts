@@ -101,7 +101,61 @@ test('cloud homepage renders Fresh Air structure without mobile overflow', async
   // The repository is unpublished, so no surface may link to it.
   await expect(page.locator('a[href*="github.com"]')).toHaveCount(0);
 
+  // A-13: the header holds one row and the brand never breaks mid-name. Below 560px the secondary
+  // action stands down rather than wrapping into the header rule; the footer keeps it reachable.
+  const header = page.locator('header.aa-app-header');
+  const brand = page.locator('.aa-brand');
+  const headerBox = await header.boundingBox();
+  const brandBox = await brand.boundingBox();
+  expect(headerBox).not.toBeNull();
+  expect(brandBox).not.toBeNull();
+  // One line of brand: its height stays within a single 56px row rather than inflating to ~96px.
+  expect(brandBox?.height ?? 0).toBeLessThan(48);
+  expect(headerBox?.height ?? 0).toBeLessThan(80);
+
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width <= 560) {
+    await expect(
+      page.locator('header.aa-app-header').getByRole('link', { name: 'Log in' })
+    ).toBeHidden();
+    await expect(
+      page.locator('.aa-marketing-footer').getByRole('link', { name: 'Log in' })
+    ).toBeVisible();
+  } else {
+    await expect(
+      page.locator('header.aa-app-header').getByRole('link', { name: 'Log in' })
+    ).toBeVisible();
+  }
+
   await expect(page.locator('h1')).toHaveCount(1);
+  await expectNoHorizontalOverflow(page);
+});
+
+test('the magic-link sent state replaces the header instead of contradicting it', async ({
+  page,
+}) => {
+  await page.goto(`${CLOUD_BASE_URL}/login?mode=magic`);
+
+  await expect(page.getByRole('heading', { name: 'Sign in to Agent Artifacts' })).toBeVisible();
+  await expect(
+    page.getByText('Enter your email and we will send a 15-minute sign-in link.')
+  ).toBeVisible();
+
+  await page.getByLabel('Email').fill('e2e-magic@example.test');
+  await page.getByRole('button', { name: 'Email me a link' }).click();
+
+  // A-49: the instruction leaves with the state it described.
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+  await expect(
+    page.getByText('Enter your email and we will send a 15-minute sign-in link.')
+  ).toHaveCount(0);
+  await expect(page.locator('h1')).toHaveCount(1);
+
+  // A-51: the status rides the heading row rather than floating above it.
+  const statusHeading = page.locator('.aa-status-heading');
+  await expect(statusHeading).toContainText('Check your email');
+  await expect(statusHeading).toContainText('Link sent');
+
   await expectNoHorizontalOverflow(page);
 });
 
