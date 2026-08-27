@@ -1,3 +1,4 @@
+import { UNKNOWN_CAUSE_RECOURSE } from '../copy/terminal-copy.js';
 import { Button, ButtonRow, ProductMark, slugId } from './primitives.js';
 
 /** The statuses a mid-view poll can discover. It sees an HTTP status and nothing finer. */
@@ -20,7 +21,9 @@ export const CLIENT_TERMINAL_COPY: Record<
   },
   410: {
     title: 'This link is no longer available.',
-    message: 'The owner stopped sharing it, or it has expired.',
+    // No cause: a poll learns a status code and nothing else, and one of the causes behind a 410
+    // is an owner suspended by moderation, whose account state this reader is not entitled to.
+    message: UNKNOWN_CAUSE_RECOURSE,
   },
 };
 

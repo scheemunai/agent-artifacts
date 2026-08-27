@@ -22,6 +22,8 @@
  * including its doctype, with agent HTML embedded raw.
  */
 
+import { UNKNOWN_CAUSE_RECOURSE } from '../copy/terminal-copy.js';
+
 /** Fresh Air token values, inlined because the sandbox origin cannot fetch the stylesheet. */
 const INK = '#2f3a40';
 const MUTED = '#5b6870';
@@ -183,7 +185,9 @@ function terminalCopy(status: 401 | 404 | 410): { title: string; message: string
   if (status === 410) {
     return {
       title: 'This artifact is no longer available.',
-      message: 'The owner stopped sharing it, or it has expired.',
+      // Same rule as the viewer's client swap: this document is built from a status code alone, so
+      // it cannot name a cause without guessing, and one of the causes is not ours to disclose.
+      message: UNKNOWN_CAUSE_RECOURSE,
     };
   }
 

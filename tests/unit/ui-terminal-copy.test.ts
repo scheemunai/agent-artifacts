@@ -5,6 +5,7 @@ import {
   type ClientTerminalStatus,
   ShareTerminalMain,
 } from '../../src/ui/components/share-terminal-main.js';
+import { FrameTerminalDocument } from '../../src/ui/pages/frame-document.js';
 
 /**
  * The copy anchor, and the reason it has to exist separately from the parity test.
@@ -27,8 +28,12 @@ const EXPECTED: Record<ClientTerminalStatus, { title: string; message: string; a
     action: 'Go home',
   },
   410: {
+    // Was "The owner stopped sharing it, or it has expired." — a cause this surface cannot know,
+    // and for a moderated account, one it must not disclose. Written out here rather than imported
+    // from the source constant: importing it would make this table agree with the code by
+    // construction, which is the exact self-reference this file exists to avoid.
     title: 'This link is no longer available.',
-    message: 'The owner stopped sharing it, or it has expired.',
+    message: 'If you think that is a mistake, ask whoever shared it.',
     action: 'Go home',
   },
 };
@@ -66,6 +71,30 @@ describe('terminal copy is anchored, not merely consistent', () => {
       expect(html, `status ${status} title`).toContain(EXPECTED[status].title);
       expect(html, `status ${status} message`).toContain(EXPECTED[status].message);
       expect(html, `status ${status} action`).toContain(EXPECTED[status].action);
+    }
+  });
+
+  it('attributes no cause, on either surface, because neither can know one', () => {
+    // 6ef8917 stopped the *server* telling recipients that a suspended owner had revoked their
+    // link. This is the same defect one path over: a mid-view poll learns an HTTP status and
+    // nothing else, so any sentence naming a cause is a guess printed as fact — and when the cause
+    // is a suspended account it is both wrong and a disclosure of that owner's moderation state to
+    // whoever happens to hold the link.
+    //
+    // Both status-only surfaces are checked together because the sentence was duplicated across
+    // them: fixing one and leaving the other is precisely what happened the first time.
+    const attribution = /\bowner\b|\brevoked\b|\bsuspend|\bstopped sharing\b|\bturned off\b/i;
+
+    for (const status of STATUSES) {
+      const { title, message } = CLIENT_TERMINAL_COPY[status];
+      expect(`${title} ${message}`, `client ${status} attributes a cause`).not.toMatch(attribution);
+    }
+
+    for (const status of [401, 404, 410] as const) {
+      const document = FrameTerminalDocument({ status, homeUrl: 'https://example.test' });
+      const body = /<main>([\s\S]*?)<\/main>/.exec(document)?.[1] ?? '';
+      expect(body.length, `frame ${status} rendered no body`).toBeGreaterThan(0);
+      expect(body, `frame ${status} attributes a cause`).not.toMatch(attribution);
     }
   });
 

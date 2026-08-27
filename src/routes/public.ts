@@ -26,6 +26,7 @@ import {
   type ViewerContentResult,
   ViewerService,
 } from '../services/viewer.js';
+import { UNKNOWN_CAUSE_RECOURSE } from '../ui/copy/terminal-copy.js';
 import { FrameDocument, FrameTerminalDocument } from '../ui/pages/frame-document.js';
 import { ShareTerminalPage, type ShareTerminalStatus } from '../ui/pages/share-terminal.js';
 import { ViewerPage } from '../ui/pages/viewer.js';
@@ -515,7 +516,9 @@ function terminalCopy(error: ServiceError): {
     // link is not entitled to the owner's moderation state. So: what happened, not why.
     return {
       title: 'This link is no longer available.',
-      message: 'It has been disabled. If you think that is a mistake, ask whoever shared it.',
+      // Composed from the shared line rather than repeating it: this is the sentence the two
+      // status-only surfaces now carry alone, and three copies of it is how the fix missed them.
+      message: `It has been disabled. ${UNKNOWN_CAUSE_RECOURSE}`,
       status: 410,
     };
   }
