@@ -18,6 +18,7 @@ const versionBanner = document.querySelector('[data-aa-version-banner]');
 const versionBannerText = document.querySelector('[data-aa-version-banner-text]');
 const viewLatestLink = document.querySelector('[data-aa-view-latest]');
 const updatedPill = document.querySelector('[data-aa-updated-pill]');
+const statusRegion = document.querySelector('[data-aa-viewer-status-region]');
 
 const POLL_INTERVAL_MS = 30_000;
 const FRAME_MIN_HEIGHT = 288;
@@ -176,12 +177,22 @@ async function fetchContent({ poll, manual = false }) {
       headers['X-AA-Share-Token'] = viewerToken;
     }
 
-    const response = await fetch(url.toString(), {
-      credentials: 'same-origin',
-      headers,
-    });
+    let response;
+    try {
+      response = await fetch(url.toString(), {
+        credentials: 'same-origin',
+        headers,
+      });
+    } catch {
+      // A hard network failure makes fetch *reject*; it never reaches the `!response.ok` branch
+      // below. That is why an offline refresh used to produce no feedback at all — the page went
+      // on presenting stale content as live.
+      showViewerStatus('offline');
+      return;
+    }
 
     if (response.status === 304) {
+      clearViewerStatus();
       return;
     }
 
@@ -197,10 +208,11 @@ async function fetchContent({ poll, manual = false }) {
     }
 
     if (!response.ok) {
-      showInlineError('Could not refresh this artifact.');
+      showViewerStatus('stale');
       return;
     }
 
+    clearViewerStatus();
     const payload = await response.json();
     const changed = Boolean(
       contentHash && payload.content_hash && payload.content_hash !== contentHash
@@ -452,14 +464,30 @@ function showTerminal(status) {
   currentRoot.replaceWith(template.content.cloneNode(true));
 }
 
-function showInlineError(message) {
-  if (!contentNode) {
+/**
+ * Reveals one of the refresh-failure notices the server rendered under the chrome.
+ *
+ * The copy lives in `viewer.tsx`, not here: this only chooses which of the two parked states is
+ * true right now. The old version built a bare `<p class="aa-error">` and prepended it *outside*
+ * the prose column, so on the rare occasion it did fire it landed full-bleed at x=0 with no
+ * measure and no padding.
+ */
+function showViewerStatus(kind) {
+  if (!statusRegion) {
     return;
   }
-  const error = document.createElement('p');
-  error.className = 'aa-error';
-  error.textContent = message;
-  contentNode.prepend(error);
+  for (const slot of statusRegion.querySelectorAll('[data-aa-viewer-status]')) {
+    slot.hidden = slot.getAttribute('data-aa-viewer-status') !== kind;
+  }
+}
+
+function clearViewerStatus() {
+  if (!statusRegion) {
+    return;
+  }
+  for (const slot of statusRegion.querySelectorAll('[data-aa-viewer-status]')) {
+    slot.hidden = true;
+  }
 }
 
 function formatByline(bot) {

@@ -97,6 +97,17 @@
   font-weight: 550;
 }
 
+/* Sits directly under the chrome that holds the refresh control, because a status belongs beside
+   the thing it describes. Collapses to nothing while both states are hidden. */
+.aa-viewer-status {
+  min-width: 0;
+  padding-inline: var(--spacing-aa-6);
+}
+
+.aa-viewer-status:has([data-aa-viewer-status]:not([hidden])) {
+  padding-block-start: var(--spacing-aa-4);
+}
+
 .aa-viewer-content {
   min-width: 0;
 }
@@ -182,9 +193,14 @@
   font-size: var(--text-aa-sm);
 }
 
+/* These read as captions otherwise — same colour, same weight, no underline as the surrounding
+   "Made with … ·" text. On a paid plan the footer collapses to a single link, and that link is
+   "Report abuse": the only abuse affordance a public page has. It has to look like a link. */
 .aa-viewer-footer a {
   color: var(--color-aa-muted);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
 }
 
 /* The mark sits inline in the byline, so it takes the line's optical size rather than the brand
