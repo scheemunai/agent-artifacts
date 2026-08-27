@@ -708,6 +708,11 @@ function DashboardChrome({
       title={`${title} · Agent Artifacts`}
       description="Manage Agent Artifacts published by your bots."
     >
+      {/* One mount, not one component rendered twice. The drawer footer used to carry a second
+          copy, and at 375 with the drawer open both were live — which is the defect surviving the
+          de-duplication of its *treatment*. Main's copy is the one that works at every width, so
+          it is the one that stays. Moving it into the header (V2-N7) needs a rule in app.css to
+          stand it down below the nav breakpoint, and that file is not this worker's to edit. */}
       <NavShell
         items={[
           { label: 'Artifacts', href: '/dashboard', current: active === 'artifacts' },
@@ -716,9 +721,7 @@ function DashboardChrome({
           { label: 'Settings', href: '/dashboard/settings', current: active === 'settings' },
           ...extensionNavItems.map((item) => ({ ...item, current: false })),
         ]}
-      >
-        <AccountMenu email={account.email} />
-      </NavShell>
+      ></NavShell>
       <main class="aa-main">
         <div class="aa-shell aa-stack">
           <AccountMenu email={account.email} />
@@ -878,7 +881,7 @@ function ArtifactRow({ artifact }: { artifact: DashboardArtifactListItem }) {
         </ButtonRow>
         <p class="aa-section-note">
           by {artifact.botName ?? 'unknown bot'} · <code>{artifact.slug}</code> · updated{' '}
-          {formatRelativeTime(artifact.updatedAt)} · {formatCount(artifact.lifetimeViews)} views
+          {formatRelativeTime(artifact.updatedAt)} · {countOf(artifact.lifetimeViews, 'view')}
         </p>
       </div>
     </Card>
@@ -926,16 +929,17 @@ function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
           <>
             <CopyBlock id="share-url" label="Public URL" value={share.url} />
             <p class="aa-section-note">
-              {share.viewCount} views on this share · {share.uniqueViewerCount} unique viewers ·{' '}
-              {artifact.lifetimeViews} lifetime views ·{' '}
+              {countOf(share.viewCount, 'view')} on this share ·{' '}
+              {countOf(share.uniqueViewerCount, 'unique viewer')} ·{' '}
+              {countOf(artifact.lifetimeViews, 'lifetime view')} ·{' '}
               {share.lastViewedAt
                 ? `last viewed ${formatRelativeTime(share.lastViewedAt)}`
                 : 'never viewed'}
             </p>
             {artifact.previousShareCount > 0 ? (
               <p class="aa-hint">
-                Previously shared — {artifact.lifetimeViews} lifetime views across{' '}
-                {artifact.previousShareCount} earlier links.
+                Previously shared — {countOf(artifact.lifetimeViews, 'lifetime view')} across{' '}
+                {countOf(artifact.previousShareCount, 'earlier link')}.
               </p>
             ) : null}
             <form
@@ -1404,6 +1408,17 @@ function formatByline(artifact: Pick<DashboardArtifactListItem, 'botName' | 'bot
 /** Counts are read, not parsed: a grouped 50,000 is a number, 50000 is a digit string. */
 function formatCount(value: number): string {
   return value.toLocaleString('en-US');
+}
+
+/**
+ * A count and its noun, agreeing.
+ *
+ * The share stats interpolated into fixed plurals, so a freshly-viewed artifact reported
+ * "1 views on this share · 1 unique viewers · 1 lifetime views" — three disagreements in one
+ * line, on the screen an owner sees right after their first visitor.
+ */
+function countOf(value: number, noun: string): string {
+  return `${formatCount(value)} ${noun}${value === 1 ? '' : 's'}`;
 }
 
 function formatRelativeTime(timestamp: number): string {

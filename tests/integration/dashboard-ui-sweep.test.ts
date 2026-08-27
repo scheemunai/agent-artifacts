@@ -166,7 +166,7 @@ describe('B-C2 · the Promote panel does not offer a form that can never submit'
 });
 
 describe('B-G3 / B-G4 · one account block, and identity is not a status', () => {
-  it('renders the email as text and both mounts identically', async () => {
+  it('renders the email as text, once', async () => {
     const ctx = await makeContext();
     const { cookie, email } = await seed(ctx);
 
@@ -177,14 +177,15 @@ describe('B-G3 / B-G4 · one account block, and identity is not a status', () =>
     // C5 reserves badge tones for state. As an info Badge the identity sat directly above
     // notice pills of identical shape and size, so chrome and feedback read as one object.
     expect(html).not.toMatch(new RegExp(`<span class="aa-badge[^"]*">${email}</span>`));
-    // One treatment, rendered twice — not two hand-rolled blocks that disagree on whether the
-    // address is a status pill or text, and on how wide the way out is.
+    // This asserted TWO identical renderings, which was right while the goal was "one treatment
+    // instead of two hand-rolled ones that disagree". It was still two things on the page: the
+    // validator's drawer pixels caught both live at 375. One component, mounted once.
     const block =
       `<div class="aa-button-row"><span class="aa-hint">${email}</span>` +
       '<form method="post" action="/dashboard/api/logout">' +
       '<button class="aa-btn aa-btn--secondary aa-btn--sm" type="submit">' +
       '<span>Log out</span></button></form></div>';
-    expect(html.split(block).length - 1).toBe(2);
+    expect(html.split(block).length - 1).toBe(1);
   });
 });
 

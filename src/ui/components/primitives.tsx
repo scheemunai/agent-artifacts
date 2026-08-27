@@ -1200,7 +1200,9 @@ export function NavShell({ items, children }: NavShellProps) {
               </a>
             ))}
           </nav>
-          <footer class="aa-drawer__footer">{children}</footer>
+          {/* Only rendered when something was given: an empty footer is a 1px rule and a gap
+              under the last nav link, which reads as a section that failed to load. */}
+          {children ? <footer class="aa-drawer__footer">{children}</footer> : null}
         </aside>
         <button
           class="aa-drawer__scrim"
