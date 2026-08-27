@@ -5,7 +5,9 @@ import { initializeDatabase } from './db/client.js';
 import { runMigrations } from './db/migrations.js';
 import { loadCloudModule } from './extension/loader.js';
 import { createLogger } from './logger.js';
+import { startLiveArtifactMetaRefresh } from './services/live-artifact-meta.js';
 import { startBackgroundScheduler } from './services/scheduler.js';
+import { heroArtifactUrl } from './ui/pages/home.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -14,6 +16,12 @@ async function main(): Promise<void> {
   await runMigrations(database, logger);
   const cloudModule = await loadCloudModule(config, { db: database, logger });
   startBackgroundScheduler({ db: database, config, logger, cloudModule });
+
+  // The marketing hero is framed as a live artifact, so its meta strip is filled from
+  // the public poll surface at boot and refreshed on an interval. Only cloud serves it.
+  if (config.deployment === 'cloud') {
+    startLiveArtifactMetaRefresh(heroArtifactUrl(config.baseUrl), { logger });
+  }
 
   const app = createApp({ config, logger, db: database, cloudModule });
   serve(

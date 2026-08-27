@@ -5,6 +5,7 @@ import {
   MarketingArtifactEmbed,
   MarketingExampleCard,
   MarketingFeatureLine,
+  MarketingFinalCta,
   MarketingOriginNote,
   MarketingWorksWith,
 } from '../components/marketing.js';
@@ -332,14 +333,14 @@ function marketingComponentsSection() {
     <StyleGuideSection
       id="marketing-components"
       title="Fresh Air marketing components"
-      note="Home page components are registered here first: artifact embed, example card, API block, feature line, works-with line, origin note, and terms copy."
+      note="Home page components are registered here first: artifact embed, example card, API block, feature line, works-with line, origin note, terms copy, and the closing call to action."
     >
       <div class="aa-stack">
         <MarketingArtifactEmbed
           href="/style-guide#marketing-components"
           agentLabel="demo-showcase-agent"
           slugLabel="this-is-artifact"
-          version="v1"
+          version="v3"
           updatedLabel="updated 6 h ago"
           title="Agent Skill"
           headingLevel={3}
@@ -350,6 +351,20 @@ function marketingComponentsSection() {
           </p>
           <p>
             The canonical skill lives at <a href="/skill.md">/skill.md</a>.
+          </p>
+        </MarketingArtifactEmbed>
+
+        <MarketingArtifactEmbed
+          href="/style-guide#marketing-components"
+          agentLabel="demo-showcase-agent"
+          slugLabel="this-is-artifact"
+          title="Agent Skill without live meta"
+          headingLevel={3}
+          ariaLabel="Specimen artifact card with unknown live state"
+        >
+          <p>
+            Version and updated time are omitted whenever the live artifact state is unknown. The
+            strip never shows a time it cannot prove.
           </p>
         </MarketingArtifactEmbed>
 
@@ -400,6 +415,14 @@ function marketingComponentsSection() {
         </MarketingWorksWith>
 
         <MarketingOriginNote quote="I asked my bot for something simple: a visual list of newsletters I should probably unsubscribe from, so I could make quick decisions. It did the work, then handed me an HTML file to download. I didn't want a file. I wanted a link I could open, look through, and reply to, with the bot fixing what I flagged. That link is what we built." />
+
+        <MarketingFinalCta
+          href="/login?mode=magic"
+          label="Get your key"
+          note="Hashed URL · free · no card"
+        />
+
+        <MarketingFinalCta href="/dashboard" label="Open your dashboard" />
       </div>
     </StyleGuideSection>
   );

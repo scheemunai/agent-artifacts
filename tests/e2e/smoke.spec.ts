@@ -62,7 +62,10 @@ test('cloud homepage renders Fresh Air structure without mobile overflow', async
     page.getByText('Shareable Artifacts your agent can use to show its work.')
   ).toBeVisible();
   await expect(page.getByText('this-is-artifact')).toBeVisible();
-  await expect(page.getByText('updated 6 h ago')).toBeVisible();
+  // The meta strip is fetched from the live artifact. This instance has no such artifact,
+  // so the strip must stay silent rather than fall back to a hard-coded age.
+  await expect(page.locator('.aa-marketing-artifact__updated')).toHaveCount(0);
+  await expect(page.getByText(/updated \d+ (min|h|d|mo) ago/)).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Agent Skill' })).toBeVisible();
   await expect(
     page.getByRole('link', { name: 'Open the live Agent Skill artifact' })
@@ -84,10 +87,20 @@ test('cloud homepage renders Fresh Air structure without mobile overflow', async
   ).toBeVisible();
   await expect(page.getByText('Why this exists').first()).toBeVisible();
   await expect(page.getByText('Free artifacts live for seven days, then fade.')).toBeVisible();
+  await expect(page.getByText('MIT licensed and self-hostable, end to end.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Agent Skill', exact: true })).toHaveAttribute(
     'href',
     '/skill.md'
   );
+
+  // Deck zone 8 closes with a call to action carrying the reassurance line.
+  const finalCta = page.locator('.aa-marketing-cta');
+  await expect(finalCta.getByRole('link', { name: 'Get your key' })).toBeVisible();
+  await expect(finalCta.getByText('Hashed URL · free · no card')).toBeVisible();
+
+  // The repository is unpublished, so no surface may link to it.
+  await expect(page.locator('a[href*="github.com"]')).toHaveCount(0);
+
   await expect(page.locator('h1')).toHaveCount(1);
   await expectNoHorizontalOverflow(page);
 });
@@ -98,10 +111,15 @@ test('/style-guide exercises primitives without mobile overflow', async ({ page 
   await expect(page.getByRole('heading', { name: 'Agent Artifacts Style Guide' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Design tokens' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Fresh Air marketing components' })).toBeVisible();
-  await expect(page.getByText('this-is-artifact')).toBeVisible();
+  await expect(page.getByText('this-is-artifact').first()).toBeVisible();
   await expect(page.locator('#style-guide-marketing-api')).toContainText(
     'POST agentartifact.ai/v1/artifacts'
   );
+  // Both artifact-embed meta states are registered: live meta known, and live meta unknown.
+  await expect(page.locator('.aa-marketing-artifact__updated')).toHaveCount(1);
+  await expect(page.locator('.aa-marketing-chip')).toHaveCount(1);
+  await expect(page.locator('.aa-marketing-cta')).toHaveCount(2);
+  await expect(page.locator('.aa-marketing-cta__note')).toHaveCount(1);
   await expect(page.getByRole('heading', { name: 'Component primitives' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Markdown artifact theme' })).toBeVisible();
 

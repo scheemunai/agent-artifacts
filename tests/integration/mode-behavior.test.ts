@@ -61,7 +61,24 @@ describe('deployment mode behavior', () => {
     expect(html).toContain('this-is-artifact');
     expect(html).toContain('href="/skill.md"');
     expect(html).toContain('What people use it for');
-    expect(html).toContain('https://github.com/ZeroPointRepo/agent-artifacts');
+    expect(html).toContain('Hashed URL · free · no card');
+    // The repository is unpublished (docs/decisions.md), so the homepage links nowhere
+    // until AA_GITHUB_URL is set.
+    expect(html).not.toContain('github.com');
+  });
+
+  it('shows the GitHub affordances once AA_GITHUB_URL is configured', async () => {
+    const githubUrl = 'https://github.com/example-owner/agent-artifacts';
+    const ctx = await createModeContext({
+      env: { DEPLOYMENT: 'cloud', AA_GITHUB_URL: githubUrl },
+    });
+
+    const response = await ctx.app.request('https://agentartifact-cloud.example.test/');
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(html).toContain(`href="${githubUrl}"`);
+    expect(html).toContain('Star it on GitHub.');
   });
 
   it('serves /skill.md in both deployment modes', async () => {

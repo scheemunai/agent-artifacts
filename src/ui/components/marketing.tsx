@@ -5,8 +5,10 @@ export interface MarketingArtifactEmbedProps {
   href: string;
   agentLabel: string;
   slugLabel: string;
-  version: string;
-  updatedLabel: string;
+  /** Omitted when the live artifact state is unknown: the strip never guesses. */
+  version?: string | undefined;
+  /** Omitted when the live artifact state is unknown: the strip never guesses. */
+  updatedLabel?: string | undefined;
   title: string;
   children: Child;
   ariaLabel?: string | undefined;
@@ -43,8 +45,8 @@ export function MarketingArtifactEmbed({
           ·
         </span>
         <span class="aa-marketing-artifact__slug">{slugLabel}</span>
-        <span class="aa-marketing-chip">{version}</span>
-        <span class="aa-marketing-artifact__updated">{updatedLabel}</span>
+        {version ? <span class="aa-marketing-chip">{version}</span> : null}
+        {updatedLabel ? <span class="aa-marketing-artifact__updated">{updatedLabel}</span> : null}
       </header>
       <div class="aa-marketing-artifact__body">
         {heading}
@@ -150,6 +152,24 @@ export function MarketingTermsCard({ price, oss }: MarketingTermsCardProps) {
       <p class="aa-marketing-terms__price">{price}</p>
       <p class="aa-marketing-terms__oss">{oss}</p>
     </section>
+  );
+}
+
+export interface MarketingFinalCtaProps {
+  href: string;
+  label: string;
+  /** Reassurance microcopy, rendered directly under the button. */
+  note?: Child | undefined;
+}
+
+export function MarketingFinalCta({ href, label, note }: MarketingFinalCtaProps) {
+  return (
+    <div class="aa-marketing-cta">
+      <Button variant="primary" href={href}>
+        {label}
+      </Button>
+      {note ? <p class="aa-marketing-cta__note">{note}</p> : null}
+    </div>
   );
 }
 

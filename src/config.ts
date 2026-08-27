@@ -107,6 +107,7 @@ const rawEnvSchema = z.object({
   AA_TRUST_PROXY: integerFromEnv(0, 0),
   AA_MAX_CONTENT_BYTES: integerFromEnv(2_097_152, 1),
   AA_ARTIFACT_PURGE_DAYS: integerFromEnv(30, 1),
+  AA_GITHUB_URL: z.preprocess(emptyStringToUndefined, z.url().optional()),
   AA_ABUSE_EMAIL: z.email().default('abuse@agentartifact.ai'),
   AA_SECURITY_EMAIL: z.email().default('security@agentartifact.ai'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
@@ -147,6 +148,7 @@ export interface AppConfig {
   maxContentBytes: number;
   jsonBodyLimitBytes: number;
   artifactPurgeDays: number;
+  githubUrl?: string;
   abuseEmail: string;
   securityEmail: string;
   logLevel: RawEnv['LOG_LEVEL'];
@@ -208,6 +210,7 @@ export function loadConfig(
     maxContentBytes: raw.AA_MAX_CONTENT_BYTES,
     jsonBodyLimitBytes: raw.AA_MAX_CONTENT_BYTES + 512 * 1024,
     artifactPurgeDays: raw.AA_ARTIFACT_PURGE_DAYS,
+    ...(raw.AA_GITHUB_URL ? { githubUrl: raw.AA_GITHUB_URL } : {}),
     abuseEmail: raw.AA_ABUSE_EMAIL,
     securityEmail: raw.AA_SECURITY_EMAIL,
     logLevel: raw.LOG_LEVEL,

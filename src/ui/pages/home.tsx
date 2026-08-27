@@ -1,9 +1,11 @@
+import { formatUpdatedLabel, type LiveArtifactMeta } from '../../services/live-artifact-meta.js';
 import { Layout } from '../components/layout.js';
 import {
   MarketingApiBlock,
   MarketingArtifactEmbed,
   MarketingExampleCard,
   MarketingFeatureLine,
+  MarketingFinalCta,
   MarketingFooter,
   MarketingOriginNote,
   MarketingSection,
@@ -12,8 +14,6 @@ import {
 } from '../components/marketing.js';
 import { Button, ProductMark } from '../components/primitives.js';
 
-export const GITHUB_REPOSITORY = 'ZeroPointRepo/agent-artifacts';
-export const GITHUB_URL = `https://github.com/${GITHUB_REPOSITORY}`;
 export const HOME_HERO = 'Artifacts for Agents';
 export const HOME_SUBLINE = 'Shareable Artifacts your agent can use to show its work.';
 export const HOME_AGENT_SKILL_COPY =
@@ -21,13 +21,16 @@ export const HOME_AGENT_SKILL_COPY =
 export const HOME_ORIGIN_QUOTE =
   "I asked my bot for something simple: a visual list of newsletters I should probably unsubscribe from, so I could make quick decisions. It did the work, then handed me an HTML file to download. I didn't want a file. I wanted a link I could open, look through, and reply to, with the bot fixing what I flagged. That link is what we built.";
 
+export const HOME_CTA_LABEL = 'Get your key';
+export const HOME_CTA_HREF = '/login?mode=magic';
+export const HOME_CTA_REASSURANCE = 'Hashed URL · free · no card';
+export const HOME_AUTHENTICATED_CTA_LABEL = 'Open your dashboard';
+
 export const HOME_DEMO_ARTIFACTS = [
   {
     title: 'Agent Skill',
     description: 'A real artifact that explains how agents publish here.',
     slugLabel: 'this-is-artifact',
-    version: 'v1',
-    updatedLabel: 'updated 6 h ago',
     path: '/a/KbLJ0zvyiGadXLHUs2E5Rb',
   },
 ] as const;
@@ -67,6 +70,15 @@ const features = [
 export interface HomePageProps {
   baseUrl: string;
   authenticated?: boolean | undefined;
+  /**
+   * Public repository URL. The repo is unpublished (docs/decisions.md, "Repository
+   * publication status"), so this is unset by default and every GitHub affordance
+   * disappears rather than linking somewhere that 404s.
+   */
+  githubUrl?: string | undefined;
+  /** Live state of the hero artifact. Absent means the meta strip stays silent. */
+  liveArtifact?: LiveArtifactMeta | null | undefined;
+  now?: number | undefined;
 }
 
 export function buildHomeDemoArtifactUrl(baseUrl: string, artifactPath: string) {
@@ -75,8 +87,23 @@ export function buildHomeDemoArtifactUrl(baseUrl: string, artifactPath: string) 
   return `${url.origin}${artifactPath}`;
 }
 
-export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
-  const agentSkillUrl = buildHomeDemoArtifactUrl(baseUrl, HOME_AGENT_SKILL_ARTIFACT.path);
+/** Public URL of the artifact the hero card is built from. */
+export function heroArtifactUrl(baseUrl: string): string {
+  return buildHomeDemoArtifactUrl(baseUrl, HOME_AGENT_SKILL_ARTIFACT.path);
+}
+
+export function HomePage({
+  baseUrl,
+  authenticated = false,
+  githubUrl,
+  liveArtifact = null,
+  now,
+}: HomePageProps) {
+  const agentSkillUrl = heroArtifactUrl(baseUrl);
+  const updatedLabel = liveArtifact
+    ? (formatUpdatedLabel(liveArtifact.updatedAt, now ?? Date.now()) ?? undefined)
+    : undefined;
+  const versionLabel = liveArtifact?.versionLabel;
 
   return (
     <Layout title="Agent Artifacts" description={HOME_SUBLINE}>
@@ -87,20 +114,22 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
             <span>Agent Artifacts</span>
           </a>
           <nav class="aa-specimen-row aa-home-actions" aria-label="Primary">
-            <Button variant="ghost" size="sm" href={GITHUB_URL}>
-              GitHub
-            </Button>
+            {githubUrl ? (
+              <Button variant="ghost" size="sm" href={githubUrl}>
+                GitHub
+              </Button>
+            ) : null}
             {authenticated ? (
               <Button variant="primary" size="sm" href="/dashboard">
                 Dashboard
               </Button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" href="/login?mode=magic">
+                <Button variant="ghost" size="sm" href={HOME_CTA_HREF}>
                   Log in
                 </Button>
-                <Button variant="primary" size="sm" href="/login?mode=magic">
-                  Get your key
+                <Button variant="primary" size="sm" href={HOME_CTA_HREF}>
+                  {HOME_CTA_LABEL}
                 </Button>
               </>
             )}
@@ -125,8 +154,8 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
               href={agentSkillUrl}
               agentLabel="demo-showcase-agent"
               slugLabel={HOME_AGENT_SKILL_ARTIFACT.slugLabel}
-              version={HOME_AGENT_SKILL_ARTIFACT.version}
-              updatedLabel={HOME_AGENT_SKILL_ARTIFACT.updatedLabel}
+              version={versionLabel}
+              updatedLabel={updatedLabel}
               title={HOME_AGENT_SKILL_ARTIFACT.title}
               headingLevel={2}
               ariaLabel="Open the live Agent Skill artifact"
@@ -192,21 +221,34 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
             <MarketingTermsCard
               price="Free artifacts live for seven days, then fade. For $9 a month they live forever, on your own subdomain, with no footer but yours."
               oss={
-                <>
-                  MIT licensed and self-hostable, end to end.{' '}
-                  <a href={GITHUB_URL}>Star it on GitHub.</a>
-                </>
+                githubUrl ? (
+                  <>
+                    MIT licensed and self-hostable, end to end.{' '}
+                    <a href={githubUrl}>Star it on GitHub.</a>
+                  </>
+                ) : (
+                  'MIT licensed and self-hostable, end to end.'
+                )
               }
+            />
+            <MarketingFinalCta
+              href={authenticated ? '/dashboard' : HOME_CTA_HREF}
+              label={authenticated ? HOME_AUTHENTICATED_CTA_LABEL : HOME_CTA_LABEL}
+              note={authenticated ? undefined : HOME_CTA_REASSURANCE}
             />
           </MarketingSection>
         </div>
       </main>
 
       <MarketingFooter>
-        <a href={GITHUB_URL}>GitHub</a>
-        <span class="aa-marketing-separator" aria-hidden="true">
-          ·
-        </span>
+        {githubUrl ? (
+          <>
+            <a href={githubUrl}>GitHub</a>
+            <span class="aa-marketing-separator" aria-hidden="true">
+              ·
+            </span>
+          </>
+        ) : null}
         <a href="/skill.md">Agent Skill</a>
         <span class="aa-marketing-separator" aria-hidden="true">
           ·
