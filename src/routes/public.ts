@@ -27,7 +27,7 @@ import {
   ViewerService,
 } from '../services/viewer.js';
 import { FrameDocument, FrameTerminalDocument } from '../ui/pages/frame-document.js';
-import { ShareTerminalPage } from '../ui/pages/share-terminal.js';
+import { ShareTerminalPage, type ShareTerminalStatus } from '../ui/pages/share-terminal.js';
 import { ViewerPage } from '../ui/pages/viewer.js';
 
 export interface PublicRoutesContext {
@@ -176,21 +176,31 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       return context.json(toErrorEnvelope(new ServiceError(404, 'not_found', 'Not found')), 404);
     }
 
-    return handleBinary(context as unknown as PublicContext, async () => {
-      const versionNum = parseVersionParam(new URL(context.req.url));
-      const content = await viewer.getDownload(context.req.param('share_id'), {
-        ...(versionNum ? { versionNum } : {}),
-        viewerToken: shareToken(context as unknown as PublicContext),
-      });
-      const extension = content.type === 'markdown' ? 'md' : 'html';
-      const filename = `${content.slug}${versionNum ? `-v${versionNum}` : ''}.${extension}`;
-      return context.body(content.content, 200, {
-        'Content-Type':
-          content.type === 'markdown' ? 'text/markdown; charset=utf-8' : FRAME_CONTENT_TYPE,
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Cache-Control': versionNum ? 'private, max-age=86400, immutable' : 'private, max-age=10',
-      });
-    });
+    return handleBinary(
+      context as unknown as PublicContext,
+      async () => {
+        const versionNum = parseVersionParam(new URL(context.req.url));
+        const content = await viewer.getDownload(context.req.param('share_id'), {
+          ...(versionNum ? { versionNum } : {}),
+          viewerToken: shareToken(context as unknown as PublicContext),
+        });
+        const extension = content.type === 'markdown' ? 'md' : 'html';
+        const filename = `${content.slug}${versionNum ? `-v${versionNum}` : ''}.${extension}`;
+        return context.body(content.content, 200, {
+          'Content-Type':
+            content.type === 'markdown' ? 'text/markdown; charset=utf-8' : FRAME_CONTENT_TYPE,
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': versionNum ? 'private, max-age=86400, immutable' : 'private, max-age=10',
+        });
+      },
+      (serviceError) =>
+        sharePageError(
+          context as unknown as PublicContext,
+          ctx.config,
+          ctx.config.abuseEmail,
+          serviceError
+        )
+    );
   });
 
   app.on(['GET', 'HEAD'], '/a/:share_id/og.png', async (context) => {
@@ -354,17 +364,31 @@ async function handleJson(
 
 async function handleBinary(
   context: PublicContext,
-  handler: () => Promise<Response>
+  handler: () => Promise<Response>,
+  htmlFallback?: (error: ServiceError) => Response | Promise<Response>
 ): Promise<Response> {
   try {
     return await handler();
   } catch (error) {
     const serviceError = serviceErrorFromUnknown(error);
+    // The viewer's ⭳ Download is a link a human clicks. Once a share token has expired it answered
+    // with the API's own envelope, so a reader following it landed on
+    // `{"error":{"code":"password_required"…}}` in the browser's JSON viewer. Negotiated: a browser
+    // gets the page, every other caller keeps the envelope byte for byte.
+    if (htmlFallback && wantsHtml(context)) {
+      return htmlFallback(serviceError);
+    }
     if (serviceError.status === 401) {
       return context.json(toErrorEnvelope(serviceError), 401);
     }
     return context.text(serviceError.message, serviceError.status);
   }
+}
+
+function wantsHtml(context: PublicContext): boolean {
+  return (context.req.header('accept') ?? '')
+    .split(',')
+    .some((part) => part.trim().toLowerCase().startsWith('text/html'));
 }
 
 /**
@@ -475,12 +499,23 @@ function sharePageError(
 function terminalCopy(error: ServiceError): {
   title: string;
   message: string;
-  status: 404 | 410 | 429;
+  status: ShareTerminalStatus;
 } {
   if (error.status === 410 && error.code === 'share_expired') {
     return {
       title: 'This link has expired.',
       message: 'The owner set this share link to expire.',
+      status: 410,
+    };
+  }
+
+  if (error.status === 410 && error.code === 'share_disabled') {
+    // A suspended owner. The page must not claim the owner turned sharing off — that is simply
+    // untrue — and must not disclose that the account was actioned either: the person holding the
+    // link is not entitled to the owner's moderation state. So: what happened, not why.
+    return {
+      title: 'This link is no longer available.',
+      message: 'It has been disabled. If you think that is a mistake, ask whoever shared it.',
       status: 410,
     };
   }
@@ -506,6 +541,14 @@ function terminalCopy(error: ServiceError): {
       title: 'Too many requests.',
       message: 'Please wait a moment and try again.',
       status: 429,
+    };
+  }
+
+  if (error.status === 401) {
+    return {
+      title: 'This artifact is password-protected.',
+      message: 'Open the artifact and enter its password to download it.',
+      status: 401,
     };
   }
 
