@@ -21,3 +21,8 @@ ecosystem.config.cjs
 .DS_Store
 .idea/
 .vscode/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
