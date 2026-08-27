@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import type { Pool, PoolClient } from 'pg';
 import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } from '../db/client.js';
 import type { Account, ArtifactEvent, CloudModule } from '../extension/cloud-module.js';
+import { ARTIFACT_ID_PATTERN } from '../lib/schemas/artifacts.js';
 import type { Logger } from '../logger.js';
 import { ServiceError } from './errors.js';
 
@@ -27,6 +28,20 @@ export interface UpsertArtifactInput {
   share?: boolean;
   passwordHash?: string | null;
   templateSlug?: string | null;
+}
+
+export interface PatchArtifactInput {
+  account: Account;
+  bot?: BotRef | null;
+  idOrSlug: string;
+  patch: {
+    slug?: string;
+    type?: ArtifactType;
+    title?: string;
+    content?: string;
+    metadata?: Record<string, unknown>;
+    changeSummary?: string | null;
+  };
 }
 
 export interface RestoreArtifactInput {
@@ -151,6 +166,24 @@ interface PendingShareEvent {
   shareId: string;
 }
 
+interface PatchArtifactTarget {
+  slug: string;
+  type: ArtifactType;
+  title: string;
+  content: string;
+  contentHash: string;
+  metadata: string;
+}
+
+interface PatchArtifactMeta {
+  changedContent: boolean;
+  changedSlug: boolean;
+  changedMetadata: boolean;
+  changeSummary: string | null;
+  botId: string | null;
+  now: number;
+}
+
 interface TransactionOutcome extends ArtifactWriteResult {
   events: ArtifactEvent[];
 }
@@ -243,6 +276,61 @@ export class ArtifactService {
         await this.updateArtifact(input, contentHash, true, serializeMetadata(input.metadata))
       );
     }
+  }
+
+  async patchArtifact(input: PatchArtifactInput): Promise<ArtifactWriteResult> {
+    const current = await this.resolveLiveArtifact(input.account.id, input.idOrSlug);
+    if (!current) {
+      throw new ServiceError(404, 'not_found', 'Artifact not found');
+    }
+
+    const target: PatchArtifactTarget = {
+      slug: input.patch.slug ?? current.slug,
+      type: input.patch.type ?? current.type,
+      title: input.patch.title ?? current.title,
+      content: input.patch.content ?? current.content,
+      metadata:
+        input.patch.metadata === undefined
+          ? current.metadata
+          : serializeMetadata(input.patch.metadata),
+      contentHash: '',
+    };
+    target.contentHash = computeContentHash(target.type, target.title, target.content);
+
+    const changedContent = target.contentHash !== current.content_hash;
+    const changedSlug = target.slug !== current.slug;
+    const changedMetadata = target.metadata !== current.metadata;
+
+    if (changedSlug) {
+      const conflict = await this.findLiveArtifactBySlug(input.account.id, target.slug);
+      if (conflict && conflict.id !== current.id) {
+        throw new ServiceError(409, 'slug_conflict', 'Slug is already in use', { field: 'slug' });
+      }
+    }
+
+    if (changedContent) {
+      await this.enforceQuota(input.account, {
+        type: 'create_version',
+        artifact_id: current.id,
+        content_bytes: Buffer.byteLength(target.content, 'utf8'),
+      });
+    }
+
+    const meta: PatchArtifactMeta = {
+      changedContent,
+      changedSlug,
+      changedMetadata,
+      changeSummary: input.patch.changeSummary ?? null,
+      botId: input.bot?.id ?? null,
+      now: this.now(),
+    };
+
+    const outcome =
+      this.db.dialect === 'sqlite'
+        ? this.patchSqliteArtifact(input.account.id, current.id, target, meta)
+        : await this.patchPostgresArtifact(input.account.id, current.id, target, meta);
+
+    return this.emitOutcome(outcome);
   }
 
   async restoreVersion(input: RestoreArtifactInput): Promise<ArtifactWriteResult> {
@@ -679,6 +767,175 @@ export class ArtifactService {
     }
   }
 
+  private patchSqliteArtifact(
+    accountId: string,
+    artifactId: string,
+    target: PatchArtifactTarget,
+    meta: PatchArtifactMeta
+  ): TransactionOutcome {
+    const handle = this.db as SqliteDatabaseHandle;
+    const transaction = handle.sqlite.transaction(() => {
+      const locked = this.getSqliteLiveArtifactById(handle, accountId, artifactId);
+      if (!locked) {
+        throw new ServiceError(404, 'not_found', 'Artifact not found');
+      }
+
+      if (!meta.changedContent) {
+        if (meta.changedSlug || meta.changedMetadata) {
+          handle.sqlite
+            .prepare(
+              `
+                UPDATE artifacts
+                SET slug = ?, metadata = ?, updated_at = ?
+                WHERE id = ? AND account_id = ? AND deleted_at IS NULL
+              `
+            )
+            .run(target.slug, target.metadata, meta.now, artifactId, accountId);
+        }
+
+        const artifact = this.mustGetSqliteArtifactById(handle, artifactId);
+        const share = this.getSqliteActiveShare(handle, artifactId);
+        return {
+          mode: 'unchanged' as const,
+          artifact: artifactFromRow(artifact),
+          share: share ? shareFromRow(share, this.baseUrl) : null,
+          events: [],
+        };
+      }
+
+      const nextVersion = locked.version_num + 1;
+      handle.sqlite
+        .prepare(
+          `
+            UPDATE artifacts
+            SET slug = ?, type = ?, title = ?, content = ?, content_hash = ?, metadata = ?,
+                version_num = ?, updated_at = ?
+            WHERE id = ? AND account_id = ? AND deleted_at IS NULL
+          `
+        )
+        .run(
+          target.slug,
+          target.type,
+          target.title,
+          target.content,
+          target.contentHash,
+          target.metadata,
+          nextVersion,
+          meta.now,
+          artifactId,
+          accountId
+        );
+
+      this.insertSqliteVersion({
+        artifactId,
+        versionNum: nextVersion,
+        type: target.type,
+        title: target.title,
+        content: target.content,
+        contentHash: target.contentHash,
+        changeSummary: meta.changeSummary,
+        restoredFromVersion: null,
+        botId: meta.botId,
+        now: meta.now,
+      });
+
+      const artifact = this.mustGetSqliteArtifactById(handle, artifactId);
+      const share = this.getSqliteActiveShare(handle, artifactId);
+      return {
+        mode: 'updated' as const,
+        artifact: artifactFromRow(artifact),
+        share: share ? shareFromRow(share, this.baseUrl) : null,
+        events: [artifactEvent('artifact.updated', accountId, artifactId, meta.botId, meta.now)],
+      };
+    });
+
+    return transaction.immediate();
+  }
+
+  private async patchPostgresArtifact(
+    accountId: string,
+    artifactId: string,
+    target: PatchArtifactTarget,
+    meta: PatchArtifactMeta
+  ): Promise<TransactionOutcome> {
+    const handle = this.db as PostgresDatabaseHandle;
+    const client = await handle.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+      const locked = await getPostgresLiveArtifactById(client, accountId, artifactId, true);
+      if (!locked) {
+        throw new ServiceError(404, 'not_found', 'Artifact not found');
+      }
+
+      if (!meta.changedContent) {
+        if (meta.changedSlug || meta.changedMetadata) {
+          await client.query(
+            `
+              UPDATE artifacts
+              SET slug = $1, metadata = $2, updated_at = $3
+              WHERE id = $4 AND account_id = $5 AND deleted_at IS NULL
+            `,
+            [target.slug, target.metadata, meta.now, artifactId, accountId]
+          );
+        }
+      } else {
+        const nextVersion = locked.version_num + 1;
+        await client.query(
+          `
+            UPDATE artifacts
+            SET slug = $1, type = $2, title = $3, content = $4, content_hash = $5, metadata = $6,
+                version_num = $7, updated_at = $8
+            WHERE id = $9 AND account_id = $10 AND deleted_at IS NULL
+          `,
+          [
+            target.slug,
+            target.type,
+            target.title,
+            target.content,
+            target.contentHash,
+            target.metadata,
+            nextVersion,
+            meta.now,
+            artifactId,
+            accountId,
+          ]
+        );
+
+        await insertPostgresVersion(client, {
+          artifactId,
+          versionNum: nextVersion,
+          type: target.type,
+          title: target.title,
+          content: target.content,
+          contentHash: target.contentHash,
+          changeSummary: meta.changeSummary,
+          restoredFromVersion: null,
+          botId: meta.botId,
+          now: meta.now,
+        });
+      }
+
+      const artifact = await this.mustGetPostgresArtifactById(client, artifactId);
+      const share = await this.getPostgresActiveShare(client, artifactId);
+      await client.query('COMMIT');
+
+      return {
+        mode: meta.changedContent ? 'updated' : 'unchanged',
+        artifact: artifactFromRow(artifact),
+        share: share ? shareFromRow(share, this.baseUrl) : null,
+        events: meta.changedContent
+          ? [artifactEvent('artifact.updated', accountId, artifactId, meta.botId, meta.now)]
+          : [],
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   private restoreSqlite(
     input: RestoreArtifactInput,
     source: ArtifactVersionSnapshot
@@ -947,6 +1204,15 @@ export class ArtifactService {
     }
 
     return getPostgresLiveArtifactBySlug(this.db.pool, accountId, slug, false);
+  }
+
+  private async resolveLiveArtifact(
+    accountId: string,
+    idOrSlug: string
+  ): Promise<ArtifactDbRow | null> {
+    return ARTIFACT_ID_PATTERN.test(idOrSlug)
+      ? this.findLiveArtifactById(accountId, idOrSlug)
+      : this.findLiveArtifactBySlug(accountId, idOrSlug);
   }
 
   private async findLiveArtifactById(

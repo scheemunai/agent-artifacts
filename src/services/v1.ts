@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { nanoid } from 'nanoid';
 import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 import type { AppConfig } from '../config.js';
-import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } from '../db/client.js';
+import type { DatabaseHandle, PostgresDatabaseHandle } from '../db/client.js';
 import type { Account, CloudModule } from '../extension/cloud-module.js';
 import {
   decodeSortCursor,
@@ -16,7 +16,7 @@ import {
   type ArtifactType,
   BOT_KEY_PATTERN,
 } from '../lib/schemas/artifacts.js';
-import { ArtifactService, type ArtifactSnapshot, computeContentHash } from './artifacts.js';
+import { ArtifactService, type ArtifactSnapshot } from './artifacts.js';
 import { hashPassword } from './auth.js';
 import { hashSecret } from './bots.js';
 import {
@@ -250,69 +250,35 @@ export async function updateArtifact(input: {
   idOrSlug: string;
   patch: UpdateArtifactRequest;
 }): Promise<Record<string, unknown>> {
-  const current = await resolveLiveArtifact(input.db, input.auth.account.id, input.idOrSlug);
-  if (!current) {
-    throw new AppError(404, 'not_found', 'Artifact not found');
-  }
-
-  const next = {
-    title: input.patch.title ?? current.title,
-    content: input.patch.content ?? current.content,
-    type: input.patch.type ?? current.type,
-    slug: input.patch.slug ?? current.slug,
-    metadata: input.patch.metadata ? JSON.stringify(input.patch.metadata) : current.metadata,
-  };
-  const nextHash = computeContentHash(next.type, next.title, next.content);
-  const changedContent = nextHash !== current.content_hash;
-  const changedSlug = next.slug !== current.slug;
-  const changedMetadata = next.metadata !== current.metadata;
-  const now = Date.now();
-
-  if (changedSlug) {
-    const conflict = await findLiveArtifactBySlug(input.db, input.auth.account.id, next.slug);
-    if (conflict && conflict.id !== current.id) {
-      throw new AppError(409, 'slug_conflict', 'Slug is already in use', { field: 'slug' });
-    }
-  }
-
-  if (changedContent) {
-    const quota = await input.cloudModule.checkQuota(input.auth.account, {
-      type: 'create_version',
-      artifact_id: current.id,
-      content_bytes: Buffer.byteLength(next.content, 'utf8'),
-    });
-    if (!quota.allow) {
-      throw new AppError(403, 'quota_exceeded', quota.message, { code: quota.code });
-    }
-  }
-
-  const updated =
-    input.db.dialect === 'sqlite'
-      ? updateSqliteArtifact(input.db, current, next, {
-          changedContent,
-          changedSlug,
-          changedMetadata,
-          changeSummary: input.patch.changeSummary ?? null,
-          botId: input.auth.bot.id,
-          now,
-        })
-      : await updatePostgresArtifact(input.db, current, next, {
-          changedContent,
-          changedSlug,
-          changedMetadata,
-          changeSummary: input.patch.changeSummary ?? null,
-          botId: input.auth.bot.id,
-          now,
-        });
+  const service = new ArtifactService({
+    db: input.db,
+    extension: input.cloudModule,
+    baseUrl: input.config.baseUrl,
+  });
+  const result = await service.patchArtifact({
+    account: input.auth.account,
+    bot: input.auth.bot,
+    idOrSlug: input.idOrSlug,
+    patch: {
+      ...(input.patch.slug !== undefined ? { slug: input.patch.slug } : {}),
+      ...(input.patch.type !== undefined ? { type: input.patch.type } : {}),
+      ...(input.patch.title !== undefined ? { title: input.patch.title } : {}),
+      ...(input.patch.content !== undefined ? { content: input.patch.content } : {}),
+      ...(input.patch.metadata !== undefined ? { metadata: input.patch.metadata } : {}),
+      ...(input.patch.changeSummary !== undefined
+        ? { changeSummary: input.patch.changeSummary }
+        : {}),
+    },
+  });
 
   return formatArtifact(
     input.db,
     input.cloudModule,
     input.auth.account,
     input.config,
-    artifactSnapshotFromRow(updated),
+    result.artifact,
     {
-      unchanged: !changedContent,
+      unchanged: result.mode === 'unchanged',
       includeContent: true,
     }
   );
@@ -1075,175 +1041,6 @@ async function findVersion(
     'SELECT * FROM artifact_versions WHERE artifact_id = ? AND version_num = ?',
     [artifactId, versionNum]
   );
-}
-
-function updateSqliteArtifact(
-  db: SqliteDatabaseHandle,
-  current: ArtifactRow,
-  next: { title: string; content: string; type: ArtifactType; slug: string; metadata: string },
-  meta: {
-    changedContent: boolean;
-    changedSlug: boolean;
-    changedMetadata: boolean;
-    changeSummary: string | null;
-    botId: string;
-    now: number;
-  }
-): ArtifactRow {
-  const transaction = db.sqlite.transaction(() => {
-    const locked = db.sqlite
-      .prepare('SELECT * FROM artifacts WHERE id = ? AND deleted_at IS NULL')
-      .get(current.id) as ArtifactRow | undefined;
-    if (!locked) {
-      throw new AppError(404, 'not_found', 'Artifact not found');
-    }
-
-    const nextHash = computeContentHash(next.type, next.title, next.content);
-    if (!meta.changedContent) {
-      if (meta.changedSlug || meta.changedMetadata) {
-        db.sqlite
-          .prepare('UPDATE artifacts SET slug = ?, metadata = ?, updated_at = ? WHERE id = ?')
-          .run(next.slug, next.metadata, meta.now, current.id);
-      }
-      return db.sqlite
-        .prepare('SELECT * FROM artifacts WHERE id = ?')
-        .get(current.id) as ArtifactRow;
-    }
-
-    const versionNum = locked.version_num + 1;
-    db.sqlite
-      .prepare(
-        `
-          UPDATE artifacts
-          SET slug = ?, type = ?, title = ?, content = ?, content_hash = ?, metadata = ?,
-              version_num = ?, updated_at = ?
-          WHERE id = ?
-        `
-      )
-      .run(
-        next.slug,
-        next.type,
-        next.title,
-        next.content,
-        nextHash,
-        next.metadata,
-        versionNum,
-        meta.now,
-        current.id
-      );
-    db.sqlite
-      .prepare(
-        `
-          INSERT INTO artifact_versions (
-            artifact_id, version_num, type, title, content, content_hash,
-            change_summary, restored_from_version, created_by_bot, created_at
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
-        `
-      )
-      .run(
-        current.id,
-        versionNum,
-        next.type,
-        next.title,
-        next.content,
-        nextHash,
-        meta.changeSummary,
-        meta.botId,
-        meta.now
-      );
-    return db.sqlite.prepare('SELECT * FROM artifacts WHERE id = ?').get(current.id) as ArtifactRow;
-  });
-
-  return transaction.immediate();
-}
-
-async function updatePostgresArtifact(
-  db: PostgresDatabaseHandle,
-  current: ArtifactRow,
-  next: { title: string; content: string; type: ArtifactType; slug: string; metadata: string },
-  meta: {
-    changedContent: boolean;
-    changedSlug: boolean;
-    changedMetadata: boolean;
-    changeSummary: string | null;
-    botId: string;
-    now: number;
-  }
-): Promise<ArtifactRow> {
-  const client = await db.pool.connect();
-  try {
-    await client.query('BEGIN');
-    const locked = await client.query<ArtifactRow>(
-      'SELECT * FROM artifacts WHERE id = $1 AND deleted_at IS NULL FOR UPDATE',
-      [current.id]
-    );
-    const lockedRow = locked.rows[0];
-    if (!lockedRow) {
-      throw new AppError(404, 'not_found', 'Artifact not found');
-    }
-
-    const nextHash = computeContentHash(next.type, next.title, next.content);
-    if (!meta.changedContent) {
-      if (meta.changedSlug || meta.changedMetadata) {
-        await client.query(
-          'UPDATE artifacts SET slug = $1, metadata = $2, updated_at = $3 WHERE id = $4',
-          [next.slug, next.metadata, meta.now, current.id]
-        );
-      }
-    } else {
-      const versionNum = lockedRow.version_num + 1;
-      await client.query(
-        `
-          UPDATE artifacts
-          SET slug = $1, type = $2, title = $3, content = $4, content_hash = $5, metadata = $6,
-              version_num = $7, updated_at = $8
-          WHERE id = $9
-        `,
-        [
-          next.slug,
-          next.type,
-          next.title,
-          next.content,
-          nextHash,
-          next.metadata,
-          versionNum,
-          meta.now,
-          current.id,
-        ]
-      );
-      await client.query(
-        `
-          INSERT INTO artifact_versions (
-            artifact_id, version_num, type, title, content, content_hash,
-            change_summary, restored_from_version, created_by_bot, created_at
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8, $9)
-        `,
-        [
-          current.id,
-          versionNum,
-          next.type,
-          next.title,
-          next.content,
-          nextHash,
-          meta.changeSummary,
-          meta.botId,
-          meta.now,
-        ]
-      );
-    }
-    const updated = await client.query<ArtifactRow>('SELECT * FROM artifacts WHERE id = $1', [
-      current.id,
-    ]);
-    await client.query('COMMIT');
-    return updated.rows[0] as ArtifactRow;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
 }
 
 async function findActiveShare(db: DatabaseHandle, artifactId: string): Promise<ShareRow | null> {

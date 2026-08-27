@@ -329,6 +329,22 @@ export class AuthService {
     return { ...account, passwordHash, updatedAt: now };
   }
 
+  async updateAccountEmail(accountId: string, email: string): Promise<void> {
+    const now = this.now();
+    if (this.db.dialect === 'sqlite') {
+      this.db.sqlite
+        .prepare('UPDATE accounts SET email = ?, updated_at = ? WHERE id = ?')
+        .run(email, now, accountId);
+      return;
+    }
+
+    await this.db.pool.query('UPDATE accounts SET email = $1, updated_at = $2 WHERE id = $3', [
+      email,
+      now,
+      accountId,
+    ]);
+  }
+
   async requestMagicLink(emailInput: string): Promise<MagicLinkIssueResult> {
     const email = normalizeEmail(emailInput);
     const existing = await this.findAccountByEmail(email);

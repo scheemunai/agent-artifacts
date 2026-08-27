@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SqliteDatabaseHandle } from '../../src/db/client.js';
+import type { ArtifactEvent, CloudModule } from '../../src/extension/cloud-module.js';
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
 import { ArtifactService } from '../../src/services/artifacts.js';
 import { createMigratedSqliteContext } from './db-test-utils.js';
@@ -142,6 +143,113 @@ describe('ArtifactService versioning', () => {
     }
   });
 
+  it('patchArtifact content changes create exactly one new version and emit an update event', async () => {
+    const ctx = await createMigratedSqliteContext();
+    const events: ArtifactEvent[] = [];
+    const service = createService(ctx.db, recordingCloudModule(events));
+
+    try {
+      const first = await service.upsertArtifact({
+        account: ctx.account,
+        slug: 'patch-content',
+        type: 'markdown',
+        title: 'Patch Content',
+        content: '# v1',
+      });
+      events.length = 0;
+
+      const patched = await service.patchArtifact({
+        account: ctx.account,
+        idOrSlug: 'patch-content',
+        patch: {
+          content: '# v2',
+          changeSummary: 'service patch',
+        },
+      });
+      const versions = await service.listVersions(first.artifact.id);
+
+      expect(patched.mode).toBe('updated');
+      expect(patched.artifact.id).toBe(first.artifact.id);
+      expect(patched.artifact.versionNum).toBe(2);
+      expect(versions.map((version) => version.versionNum)).toEqual([1, 2]);
+      expect(versions[1]?.changeSummary).toBe('service patch');
+      expect(events).toEqual([
+        expect.objectContaining({
+          type: 'artifact.updated',
+          accountId: ctx.account.id,
+          artifactId: first.artifact.id,
+        }),
+      ]);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('patchArtifact slug and metadata changes do not create a version row', async () => {
+    const ctx = await createMigratedSqliteContext();
+    const service = createService(ctx.db);
+
+    try {
+      const first = await service.upsertArtifact({
+        account: ctx.account,
+        slug: 'patch-metadata',
+        type: 'markdown',
+        title: 'Patch Metadata',
+        content: '# Stable',
+        metadata: { status: 'draft' },
+      });
+
+      const patched = await service.patchArtifact({
+        account: ctx.account,
+        idOrSlug: first.artifact.id,
+        patch: {
+          slug: 'patch-metadata-renamed',
+          metadata: { status: 'reviewed' },
+        },
+      });
+
+      expect(patched.mode).toBe('unchanged');
+      expect(patched.artifact.slug).toBe('patch-metadata-renamed');
+      expect(patched.artifact.metadata).toEqual({ status: 'reviewed' });
+      expect(patched.artifact.versionNum).toBe(1);
+      expect(await versionNums(service, first.artifact.id)).toEqual([1]);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('patchArtifact preserves v1 slug conflict status and error code', async () => {
+    const ctx = await createMigratedSqliteContext();
+    const service = createService(ctx.db);
+
+    try {
+      await service.upsertArtifact({
+        account: ctx.account,
+        slug: 'patch-conflict-a',
+        type: 'markdown',
+        title: 'Patch Conflict A',
+        content: '# A',
+      });
+      await service.upsertArtifact({
+        account: ctx.account,
+        slug: 'patch-conflict-b',
+        type: 'markdown',
+        title: 'Patch Conflict B',
+        content: '# B',
+      });
+
+      await expect(
+        service.patchArtifact({
+          account: ctx.account,
+          idOrSlug: 'patch-conflict-a',
+          patch: { slug: 'patch-conflict-b' },
+        })
+      ).rejects.toMatchObject({ status: 409, code: 'slug_conflict' });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('soft delete revokes the active share', async () => {
     const ctx = await createMigratedSqliteContext();
     const service = createService(ctx.db);
@@ -176,13 +284,25 @@ describe('ArtifactService versioning', () => {
   });
 });
 
-function createService(db: SqliteDatabaseHandle) {
+function createService(
+  db: SqliteDatabaseHandle,
+  extension = createDefaultCloudModule({ aaHideFooter: false })
+) {
   return new ArtifactService({
     db,
-    extension: createDefaultCloudModule({ aaHideFooter: false }),
+    extension,
     baseUrl: 'https://example.test',
     now: tickingClock(),
   });
+}
+
+function recordingCloudModule(events: ArtifactEvent[]): CloudModule {
+  return {
+    ...createDefaultCloudModule({ aaHideFooter: false }),
+    onArtifactEvent(event) {
+      events.push(event);
+    },
+  };
 }
 
 function tickingClock(): () => number {

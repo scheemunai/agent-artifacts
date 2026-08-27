@@ -6,7 +6,6 @@ import type { Account, CloudModule, QuotaAction } from '../extension/cloud-modul
 import { createDefaultCloudModule } from '../extension/default-module.js';
 import { AppError } from '../lib/errors.js';
 import { dashboardPreviewFrameHeaders } from '../lib/frame-policy.js';
-import { renderMarkdown } from '../lib/markdown.js';
 import type { Logger } from '../logger.js';
 import { ArtifactService } from '../services/artifacts.js';
 import {
@@ -17,6 +16,11 @@ import {
   normalizeEmail,
   verifyPasswordIfHashExists,
 } from '../services/auth.js';
+import {
+  type DashboardArtifactVersionViewModel,
+  DashboardReadModelService,
+  readDashboardListFilters,
+} from '../services/dashboard-read-models.js';
 import { createMailService } from '../services/mail.js';
 import {
   type AuthenticatedSession,
@@ -34,17 +38,13 @@ import {
   patchShareResponse,
 } from '../services/v1.js';
 import {
-  type DashboardArtifactDetail,
-  type DashboardArtifactListItem,
   DashboardArtifactPage,
-  type DashboardArtifactVersion,
   DashboardBotsPage,
   DashboardHomePage,
   type DashboardNavItem,
   type DashboardNotice,
   DashboardSettingsPage,
   DashboardTemplatesPage,
-  type DashboardTemplateView,
 } from '../ui/pages/dashboard.js';
 import { SetupKeyPage, SetupPage, SetupUnavailablePage } from '../ui/pages/setup.js';
 import {
@@ -71,73 +71,8 @@ interface HumanServices {
   auth: AuthService;
   sessions: SessionService;
   artifacts: ArtifactService;
+  dashboardReads: DashboardReadModelService;
 }
-
-interface ArtifactQueryRow {
-  id: string;
-  account_id: string;
-  slug: string;
-  type: 'markdown' | 'html';
-  title: string;
-  content: string;
-  content_hash: string;
-  version_num: number;
-  updated_at: number;
-  created_at: number;
-  created_by_bot: string | null;
-  bot_name: string | null;
-  bot_byline: string | null;
-  share_id: string | null;
-  share_password_hash: string | null;
-  share_expires_at: number | null;
-  share_revoked_at: number | null;
-  share_view_count: number | null;
-  share_unique_viewer_count: number | null;
-  share_last_viewed_at: number | null;
-  share_created_at: number | null;
-}
-
-interface ShareAggregateRow {
-  lifetime_views: number | string | null;
-  previous_share_count: number | string | null;
-}
-
-interface VersionQueryRow {
-  artifact_id: string;
-  version_num: number;
-  type: 'markdown' | 'html';
-  title: string;
-  content: string;
-  content_hash: string;
-  change_summary: string | null;
-  restored_from_version: number | null;
-  created_by_bot: string | null;
-  created_at: number;
-  bot_name: string | null;
-}
-
-interface TemplateQueryRow {
-  id: string;
-  account_id: string | null;
-  slug: string;
-  name: string;
-  description: string | null;
-  type: 'markdown' | 'html';
-  content: string;
-  slots: string;
-  created_from_artifact: string | null;
-  created_at: number;
-  updated_at: number;
-}
-
-interface ListFilters {
-  q: string;
-  botId: string;
-  type: string;
-  cursor: string;
-}
-
-const pageSize = 20;
 
 export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext): void {
   if (!context.db) {
@@ -158,6 +93,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       baseUrl: context.config.baseUrl,
       logger: context.logger,
     }),
+    dashboardReads: new DashboardReadModelService(context.db, { baseUrl: context.config.baseUrl }),
   };
 
   if (context.config.deployment === 'self-hosted') {
@@ -247,15 +183,14 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return session;
     }
 
-    const filters = readListFilters(routeContext.req.query());
+    const filters = readDashboardListFilters(routeContext.req.query());
     const plan = await services.cloudModule.resolvePlan(accountToCloudAccount(session.account));
     const bots = await services.auth.listBots(session.account.id);
-    const { artifacts, nextCursor } = await listArtifacts(
-      services,
-      session.account.id,
+    const { artifacts, nextCursor } = await services.dashboardReads.listDashboardArtifacts({
+      accountId: session.account.id,
       filters,
-      plan.artifact_retention_days
-    );
+      retentionDays: plan.artifact_retention_days,
+    });
     return routeContext.html(
       DashboardHomePage({
         account: accountView(session.account),
@@ -277,16 +212,15 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     }
     const artifactId = routeContext.req.param('id');
     const plan = await services.cloudModule.resolvePlan(accountToCloudAccount(session.account));
-    const artifact = await getArtifactDetail(
-      services,
-      session.account.id,
+    const artifact = await services.dashboardReads.getDashboardArtifactDetail({
+      accountId: session.account.id,
       artifactId,
-      plan.artifact_retention_days
-    );
+      retentionDays: plan.artifact_retention_days,
+    });
     if (!artifact) {
       return routeContext.notFound();
     }
-    const versions = await listVersions(services, artifactId);
+    const versions = await services.dashboardReads.listDashboardArtifactVersions(artifactId);
     const diff = resolveDiff(routeContext.req.query(), versions);
     return routeContext.html(
       DashboardArtifactPage({
@@ -307,12 +241,11 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (session instanceof Response) {
       return session;
     }
-    const artifact = await getArtifactDetail(
-      services,
-      session.account.id,
-      routeContext.req.param('id'),
-      null
-    );
+    const artifact = await services.dashboardReads.getDashboardArtifactDetail({
+      accountId: session.account.id,
+      artifactId: routeContext.req.param('id'),
+      retentionDays: null,
+    });
     if (artifact?.type !== 'html') {
       return routeContext.notFound();
     }
@@ -324,12 +257,11 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (session instanceof Response) {
       return session;
     }
-    const artifact = await getArtifactDetail(
-      services,
-      session.account.id,
-      routeContext.req.param('id'),
-      null
-    );
+    const artifact = await services.dashboardReads.getDashboardArtifactDetail({
+      accountId: session.account.id,
+      artifactId: routeContext.req.param('id'),
+      retentionDays: null,
+    });
     if (!artifact) {
       return routeContext.notFound();
     }
@@ -368,7 +300,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     return routeContext.html(
       DashboardTemplatesPage({
         account: accountView(session.account),
-        templates: await listTemplates(services, session.account.id),
+        templates: await services.dashboardReads.listDashboardTemplates(session.account.id),
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
       })
@@ -536,12 +468,11 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (session instanceof Response) {
       return session;
     }
-    const artifact = await getArtifactDetail(
-      services,
-      session.account.id,
-      routeContext.req.param('id'),
-      null
-    );
+    const artifact = await services.dashboardReads.getDashboardArtifactDetail({
+      accountId: session.account.id,
+      artifactId: routeContext.req.param('id'),
+      retentionDays: null,
+    });
     const form = await parseForm(routeContext);
     if (!artifact || stringField(form, 'confirm') !== artifact.title) {
       return routeContext.redirect(
@@ -612,12 +543,11 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return session;
     }
     const form = await parseForm(routeContext);
-    const artifact = await getArtifactDetail(
-      services,
-      session.account.id,
-      routeContext.req.param('id'),
-      null
-    );
+    const artifact = await services.dashboardReads.getDashboardArtifactDetail({
+      accountId: session.account.id,
+      artifactId: routeContext.req.param('id'),
+      retentionDays: null,
+    });
     if (!artifact || stringField(form, 'confirm') !== artifact.slug) {
       return routeContext.redirect(
         `/dashboard/artifacts/${routeContext.req.param('id')}?notice=confirmation_mismatch`,
@@ -671,8 +601,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         303
       );
     }
-    await updateAccountEmail(
-      services,
+    await services.auth.updateAccountEmail(
       session.account.id,
       normalizeEmail(stringField(form, 'new_email'))
     );
@@ -756,219 +685,8 @@ async function requireApiSession(
   return session;
 }
 
-function readListFilters(query: Record<string, string | string[]>): ListFilters {
-  return {
-    q: scalarQuery(query.q),
-    botId: scalarQuery(query.bot),
-    type: scalarQuery(query.type),
-    cursor: scalarQuery(query.cursor),
-  };
-}
-
 function scalarQuery(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
-}
-
-async function listArtifacts(
-  services: HumanServices,
-  accountId: string,
-  filters: ListFilters,
-  retentionDays: number | null
-): Promise<{ artifacts: DashboardArtifactListItem[]; nextCursor: string | null }> {
-  const cursor = decodeCursor(filters.cursor);
-  const params: unknown[] = [accountId];
-  const clauses = ['a.account_id = ?', 'a.deleted_at IS NULL'];
-  if (filters.q) {
-    clauses.push('(a.title LIKE ? OR a.slug LIKE ?)');
-    const like = `%${escapeLike(filters.q)}%`;
-    params.push(like, like);
-  }
-  if (filters.botId) {
-    clauses.push('a.created_by_bot = ?');
-    params.push(filters.botId);
-  }
-  if (filters.type === 'markdown' || filters.type === 'html') {
-    clauses.push('a.type = ?');
-    params.push(filters.type);
-  }
-  if (cursor) {
-    clauses.push('(a.updated_at < ? OR (a.updated_at = ? AND a.id < ?))');
-    params.push(cursor.updatedAt, cursor.updatedAt, cursor.id);
-  }
-  params.push(pageSize + 1);
-
-  const sql = artifactSelectSql(
-    clauses.join(' AND '),
-    'ORDER BY a.updated_at DESC, a.id DESC LIMIT ?'
-  );
-  const rows = await queryArtifacts(services.db, sql, params);
-  const pageRows = rows.slice(0, pageSize);
-  const artifacts = await Promise.all(
-    pageRows.map((row) => artifactListItemFromRow(services, row, retentionDays))
-  );
-  const nextCursor = rows.length > pageSize ? encodeCursor(pageRows[pageRows.length - 1]) : null;
-  return { artifacts, nextCursor };
-}
-
-async function getArtifactDetail(
-  services: HumanServices,
-  accountId: string,
-  artifactId: string,
-  retentionDays: number | null
-): Promise<DashboardArtifactDetail | null> {
-  const sql = artifactSelectSql(
-    'a.account_id = ? AND a.id = ? AND a.deleted_at IS NULL',
-    'LIMIT 1'
-  );
-  const rows = await queryArtifacts(services.db, sql, [accountId, artifactId]);
-  const row = rows[0];
-  if (!row) {
-    return null;
-  }
-  return {
-    ...(await artifactListItemFromRow(services, row, retentionDays)),
-    content: row.content,
-    contentHash: row.content_hash,
-    versionNum: row.version_num,
-    htmlPreview:
-      row.type === 'markdown'
-        ? renderMarkdown(row.content, { contentHash: row.content_hash })
-        : null,
-  };
-}
-
-async function listVersions(
-  services: HumanServices,
-  artifactId: string
-): Promise<DashboardArtifactVersion[]> {
-  const sql = `
-    SELECT av.*, b.name AS bot_name
-    FROM artifact_versions av
-    LEFT JOIN bots b ON b.id = av.created_by_bot
-    WHERE av.artifact_id = ?
-    ORDER BY av.version_num DESC
-  `;
-  const rows =
-    services.db.dialect === 'sqlite'
-      ? (services.db.sqlite.prepare(sql).all(artifactId) as VersionQueryRow[])
-      : (await services.db.pool.query<VersionQueryRow>(sql.replace('?', '$1'), [artifactId])).rows;
-  return rows.map((row) => ({
-    versionNum: row.version_num,
-    type: row.type,
-    title: row.title,
-    content: row.content,
-    contentHash: row.content_hash,
-    changeSummary: row.change_summary,
-    restoredFromVersion: row.restored_from_version,
-    createdByBotName: row.bot_name,
-    createdAt: row.created_at,
-  }));
-}
-
-async function listTemplates(
-  services: HumanServices,
-  accountId: string
-): Promise<DashboardTemplateView[]> {
-  const sql = `
-    SELECT *
-    FROM templates
-    WHERE account_id IS NULL OR account_id = ?
-    ORDER BY account_id IS NOT NULL, name ASC
-  `;
-  const rows =
-    services.db.dialect === 'sqlite'
-      ? (services.db.sqlite.prepare(sql).all(accountId) as TemplateQueryRow[])
-      : (await services.db.pool.query<TemplateQueryRow>(sql.replace('?', '$1'), [accountId])).rows;
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
-    description: row.description,
-    type: row.type,
-    slots: parseTemplateSlots(row.slots),
-    builtIn: row.account_id === null,
-  }));
-}
-
-function artifactSelectSql(where: string, suffix: string): string {
-  return `
-    SELECT
-      a.id, a.account_id, a.slug, a.type, a.title, a.content, a.content_hash,
-      a.version_num, a.updated_at, a.created_at, a.created_by_bot,
-      b.name AS bot_name, b.byline AS bot_byline,
-      s.id AS share_id, s.password_hash AS share_password_hash,
-      s.expires_at AS share_expires_at, s.revoked_at AS share_revoked_at,
-      s.view_count AS share_view_count, s.unique_viewer_count AS share_unique_viewer_count,
-      s.last_viewed_at AS share_last_viewed_at, s.created_at AS share_created_at
-    FROM artifacts a
-    LEFT JOIN bots b ON b.id = a.created_by_bot
-    LEFT JOIN shares s ON s.artifact_id = a.id AND s.revoked_at IS NULL
-    WHERE ${where}
-    ${suffix}
-  `;
-}
-
-async function queryArtifacts(
-  db: DatabaseHandle,
-  sql: string,
-  params: unknown[]
-): Promise<ArtifactQueryRow[]> {
-  if (db.dialect === 'sqlite') {
-    return db.sqlite.prepare(sql).all(...params) as ArtifactQueryRow[];
-  }
-  let index = 0;
-  const pgSql = sql.replace(/\?/g, () => `$${++index}`);
-  return (await db.pool.query<ArtifactQueryRow>(pgSql, params)).rows;
-}
-
-async function artifactListItemFromRow(
-  services: HumanServices,
-  row: ArtifactQueryRow,
-  retentionDays: number | null
-): Promise<DashboardArtifactListItem> {
-  const aggregate = await shareAggregate(services.db, row.id);
-  const retentionExpiresAt =
-    retentionDays === null ? null : row.updated_at + retentionDays * 86_400_000;
-  const activeShare = row.share_id
-    ? {
-        id: row.share_id,
-        url: `${services.config.baseUrl}/a/${row.share_id}`,
-        passwordProtected: row.share_password_hash !== null,
-        viewCount: row.share_view_count ?? 0,
-        uniqueViewerCount: row.share_unique_viewer_count ?? 0,
-        lastViewedAt: row.share_last_viewed_at,
-        createdAt: row.share_created_at ?? row.created_at,
-        revokedAt: row.share_revoked_at,
-      }
-    : null;
-  return {
-    id: row.id,
-    title: row.title,
-    slug: row.slug,
-    type: row.type,
-    updatedAt: row.updated_at,
-    botName: row.bot_name,
-    botByline: row.bot_byline,
-    activeShare,
-    lifetimeViews: Number(aggregate.lifetime_views ?? activeShare?.viewCount ?? 0),
-    previousShareCount: Number(aggregate.previous_share_count ?? 0),
-    expiresAt: row.share_expires_at ?? retentionExpiresAt,
-  };
-}
-
-async function shareAggregate(db: DatabaseHandle, artifactId: string): Promise<ShareAggregateRow> {
-  const sql = `
-    SELECT
-      COALESCE(SUM(view_count), 0) AS lifetime_views,
-      COALESCE(SUM(CASE WHEN revoked_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS previous_share_count
-    FROM shares
-    WHERE artifact_id = ?
-  `;
-  if (db.dialect === 'sqlite') {
-    return db.sqlite.prepare(sql).get(artifactId) as ShareAggregateRow;
-  }
-  const result = await db.pool.query<ShareAggregateRow>(sql.replace('?', '$1'), [artifactId]);
-  return result.rows[0] ?? { lifetime_views: 0, previous_share_count: 0 };
 }
 
 function dashboardPrincipal(account: AuthenticatedSession['account']): AuthPrincipal {
@@ -1065,25 +783,6 @@ function dashboardErrorMessage(error: unknown): string {
   return authErrorMessage(error);
 }
 
-async function updateAccountEmail(
-  services: HumanServices,
-  accountId: string,
-  email: string
-): Promise<void> {
-  const now = Date.now();
-  if (services.db.dialect === 'sqlite') {
-    services.db.sqlite
-      .prepare('UPDATE accounts SET email = ?, updated_at = ? WHERE id = ?')
-      .run(email, now, accountId);
-    return;
-  }
-  await services.db.pool.query('UPDATE accounts SET email = $1, updated_at = $2 WHERE id = $3', [
-    email,
-    now,
-    accountId,
-  ]);
-}
-
 async function enforceQuota(
   services: HumanServices,
   account: Account,
@@ -1148,8 +847,8 @@ function noticeFromQuery(value: string | undefined): DashboardNotice | undefined
 
 function resolveDiff(
   query: Record<string, string | string[]>,
-  versions: DashboardArtifactVersion[]
-): { left: DashboardArtifactVersion; right: DashboardArtifactVersion } | null {
+  versions: DashboardArtifactVersionViewModel[]
+): { left: DashboardArtifactVersionViewModel; right: DashboardArtifactVersionViewModel } | null {
   const leftNum = Number(scalarQuery(query.left));
   const rightNum = Number(scalarQuery(query.right));
   if (!Number.isInteger(leftNum) || !Number.isInteger(rightNum)) {
@@ -1158,48 +857,6 @@ function resolveDiff(
   const left = versions.find((version) => version.versionNum === leftNum);
   const right = versions.find((version) => version.versionNum === rightNum);
   return left && right ? { left, right } : null;
-}
-
-function parseTemplateSlots(slotsJson: string): string[] {
-  try {
-    const value = JSON.parse(slotsJson) as Array<string | { name?: string }>;
-    return value
-      .map((slot) => (typeof slot === 'string' ? slot : (slot.name ?? '')))
-      .filter((slot) => slot.length > 0);
-  } catch {
-    return [];
-  }
-}
-
-function encodeCursor(row: ArtifactQueryRow | undefined): string | null {
-  if (!row) {
-    return null;
-  }
-  return Buffer.from(JSON.stringify({ updatedAt: row.updated_at, id: row.id })).toString(
-    'base64url'
-  );
-}
-
-function decodeCursor(value: string): { updatedAt: number; id: string } | null {
-  if (!value) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as {
-      updatedAt?: unknown;
-      id?: unknown;
-    };
-    if (typeof parsed.updatedAt === 'number' && typeof parsed.id === 'string') {
-      return { updatedAt: parsed.updatedAt, id: parsed.id };
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, '');
 }
 
 function downloadFilename(slug: string, type: string): string {
