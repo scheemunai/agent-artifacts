@@ -98,7 +98,10 @@ describe('B-N5 / B-N6 · numbers and bylines read like a product', () => {
     ).text();
     // "by Craft Bot · Craft byline · updated" read as two bots separated by a field delimiter.
     expect(html).not.toContain('by Craft Bot · Craft byline');
-    expect(html).toContain('Craft Bot (Craft byline)');
+    // The parenthetical's last word is now bound to the one before it with a non-breaking space
+    // (V3-N2), so "byline)" cannot be orphaned onto its own line. The claim here is unchanged —
+    // name and byline joined by parentheses rather than the delimiter between unrelated fields.
+    expect(html).toContain('Craft Bot (Craft\u00a0byline)');
   });
 });
 

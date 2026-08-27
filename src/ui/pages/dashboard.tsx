@@ -345,7 +345,8 @@ export function DashboardBotsPage({
             <p class="aa-page-kicker">Bot registry</p>
             <h1 class="aa-section-title">Bots are your agents' identities.</h1>
             <p class="aa-section-note">
-              Each bot has a scoped API key, a byline, and immediate regenerate/revoke controls.
+              Each bot has a scoped API key and a byline; regenerate or revoke it behind a typed
+              confirmation.
             </p>
           </header>
         </section>
@@ -1507,9 +1508,19 @@ function formatByline(artifact: Pick<DashboardArtifactListItem, 'botName' | 'bot
   }
   // The interpunct separates unrelated meta fields elsewhere in this line, so using it here too
   // made one bot read as two. Parentheses subordinate the byline to the name it describes.
-  return artifact.botByline
-    ? `by ${artifact.botName} (${artifact.botByline})`
-    : `by ${artifact.botName}`;
+  if (!artifact.botByline) {
+    return `by ${artifact.botName}`;
+  }
+  // A long byline wrapped mid-parenthetical and left "bot)" alone on its own line under a
+  // two-line title. Binding the last word to the one before it with a non-breaking space means
+  // the smallest thing that can wrap is two words plus the bracket — the typographic widow fix,
+  // and it needs no stylesheet.
+  return `by ${artifact.botName} (${bindFinalWord(artifact.botByline)})`;
+}
+
+/** Joins the last two words with a non-breaking space, so a lone word cannot end up orphaned. */
+function bindFinalWord(text: string): string {
+  return text.replace(/\s+(\S+)$/, '\u00a0$1');
 }
 
 /** Counts are read, not parsed: a grouped 50,000 is a number, 50000 is a digit string. */
