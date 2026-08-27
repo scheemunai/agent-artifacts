@@ -152,7 +152,10 @@ export class DashboardReadModelService {
     const clauses = ['a.account_id = ?', 'a.deleted_at IS NULL'];
 
     if (input.filters.q) {
-      clauses.push('(a.title LIKE ? OR a.slug LIKE ?)');
+      // PRD §4.6: case-insensitive search is always lower(column) LIKE lower(?), never the
+      // Postgres-only ILIKE. Bare LIKE is case-insensitive on SQLite but case-sensitive on
+      // Postgres, which would silently split this from the §8.4.3 `q` parameter it mirrors.
+      clauses.push('(lower(a.title) LIKE lower(?) OR lower(a.slug) LIKE lower(?))');
       const like = `%${escapeLike(input.filters.q)}%`;
       params.push(like, like);
     }

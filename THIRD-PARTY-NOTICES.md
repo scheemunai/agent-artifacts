@@ -36,7 +36,13 @@ Agent Artifacts bundles a latin subset of Source Sans 3 in:
 
 - `src/ui/assets/fonts/source-sans-3-latin-var.woff2`
 - `public/assets/fonts/source-sans-3-latin-var.woff2`
+- `src/ui/assets/fonts/source-sans-3-latin-regular.ttf`
+- `src/ui/assets/fonts/source-sans-3-latin-semibold.ttf`
 - `src/ui/assets/fonts/source-sans-3-OFL.md`
+
+The two `.ttf` files are static weight instances (400 and 600) derived from the bundled
+variable `.woff2` subset, because the Open Graph renderer (satori) cannot consume woff2.
+Derivation is documented in `src/ui/assets/fonts/README.md`.
 
 Copyright notice from `source-sans-3-OFL.md`:
 
@@ -55,6 +61,7 @@ The Source Sans 3 font file is licensed under the SIL Open Font License, Version
 The following checked-in `public/assets` files are first-party Agent Artifacts runtime assets and are covered by this repository's MIT License unless a file header states otherwise:
 
 - `public/assets/dashboard-m4.js`
+- `public/assets/og-fallback.png` — rendered by the first-party Open Graph pipeline (`src/lib/og.ts`)
 - `public/assets/ui-foundation-9ff54f825be4.js`
 - `public/assets/viewer-0f4f9f6c8a7e.js`
 - `public/assets/viewer-4fd0df5f2b2a.css`

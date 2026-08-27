@@ -11,12 +11,28 @@ export const OG_DEFAULT_DESCRIPTION = 'Published with Agent Artifacts';
 export const OG_CACHE_MAX_ENTRIES = 128;
 export const OG_CACHE_MAX_BYTES = 64 * 1024 * 1024;
 
-const PRODUCT_MARK = '◆ Agent Artifacts';
+/**
+ * Fresh Air card palette. Every value mirrors a token in `src/ui/assets/app.css`
+ * so a shared link unfurls in the same colours the product itself ships.
+ */
+export const OG_PALETTE = {
+  air: '#f1f5f2',
+  ink: '#2f3a40',
+  muted: '#5b6870',
+  line: '#dde4e0',
+  accent: '#c2482a',
+  accentInk: '#ffffff',
+} as const;
+
+export const OG_FONT_FAMILY = 'Source Sans 3';
+export const OG_WORDMARK = 'Agent Artifacts';
+
+const ACCENT_BAR_HEIGHT = 10;
 const TITLE_FONT_WEIGHT = 650 as unknown as FontWeight;
 const FONT_DIR_FROM_MODULE = new URL('../ui/assets/fonts/', import.meta.url);
 const requireFromHere = createRequire(import.meta.url);
-const REGULAR_FONT_FILENAME = 'inter-latin-regular.ttf';
-const SEMIBOLD_FONT_FILENAME = 'inter-latin-semibold.ttf';
+const REGULAR_FONT_FILENAME = 'source-sans-3-latin-regular.ttf';
+const SEMIBOLD_FONT_FILENAME = 'source-sans-3-latin-semibold.ttf';
 
 export interface OgImageInput {
   title: string;
@@ -51,41 +67,29 @@ let fontBuffers: { regular: Buffer; semibold: Buffer } | undefined;
 let satoriInitPromise: Promise<void> | undefined;
 
 export async function generateOgImage(input: OgImageInput): Promise<Buffer> {
-  const title = normalizeOgText(input.title, 'Untitled artifact', 92);
-  const byline = normalizeOgText(formatByline(input), OG_DEFAULT_DESCRIPTION, 120);
-  const fonts = loadInterFonts();
-  await ensureSatoriInitialized();
+  return rasterize(await buildOgSvg(input));
+}
 
-  const svg = await satori(createOgTree({ title, byline }), {
-    width: OG_IMAGE_WIDTH,
-    height: OG_IMAGE_HEIGHT,
-    fonts: [
-      { name: 'Inter', data: fonts.regular, weight: 400, style: 'normal' },
-      { name: 'Inter', data: fonts.semibold, weight: TITLE_FONT_WEIGHT, style: 'normal' },
-    ],
-    embedFont: true,
-    loadAdditionalAsset: async () => [],
-  });
-
-  const png = new Resvg(svg, {
-    fitTo: { mode: 'original' },
-    font: {
-      loadSystemFonts: false,
-      fontFiles: [resolveFontPath(REGULAR_FONT_FILENAME), resolveFontPath(SEMIBOLD_FONT_FILENAME)],
-      defaultFontFamily: 'Inter',
-    },
-    logLevel: 'off',
-  })
-    .render()
-    .asPng();
-
-  return Buffer.from(png);
+export async function generateOgFallbackImage(): Promise<Buffer> {
+  return rasterize(await buildOgFallbackSvg());
 }
 
 export async function generateCachedOgImage(input: CachedOgImageInput): Promise<Buffer> {
   return ogImageCache.getOrSetAsync(ogCacheKey(input.shareId, input.contentHash), () =>
     generateOgImage(input)
   );
+}
+
+/** Article card: the unfurl for a live share link. */
+export async function buildOgSvg(input: OgImageInput): Promise<string> {
+  const title = normalizeOgText(input.title, 'Untitled artifact', 92);
+  const byline = normalizeOgText(formatByline(input), OG_DEFAULT_DESCRIPTION, 120);
+  return renderCard(createOgTree({ title, byline }));
+}
+
+/** Brand card: served as `/assets/og-fallback.png` when a share has no card of its own. */
+export async function buildOgFallbackSvg(): Promise<string> {
+  return renderCard(createOgFallbackTree());
 }
 
 export function buildOgDescription(input: OgDescriptionInput): string {
@@ -115,36 +119,47 @@ export function ogCacheKey(shareId: string, contentHash: string): string {
   return `${shareId}\0${contentHash}`;
 }
 
-function createOgTree({ title, byline }: { title: string; byline: string }): OgNode {
-  return element(
-    'div',
-    {
-      style: {
-        width: OG_IMAGE_WIDTH,
-        height: OG_IMAGE_HEIGHT,
-        backgroundColor: '#ffffff',
-        color: '#111827',
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: 'Inter',
-      },
+async function renderCard(tree: OgNode): Promise<string> {
+  const fonts = loadOgFonts();
+  await ensureSatoriInitialized();
+
+  return satori(tree, {
+    width: OG_IMAGE_WIDTH,
+    height: OG_IMAGE_HEIGHT,
+    fonts: [
+      { name: OG_FONT_FAMILY, data: fonts.regular, weight: 400, style: 'normal' },
+      { name: OG_FONT_FAMILY, data: fonts.semibold, weight: TITLE_FONT_WEIGHT, style: 'normal' },
+    ],
+    embedFont: true,
+    loadAdditionalAsset: async () => [],
+  });
+}
+
+function rasterize(svg: string): Buffer {
+  const png = new Resvg(svg, {
+    fitTo: { mode: 'original' },
+    font: {
+      loadSystemFonts: false,
+      fontFiles: [resolveFontPath(REGULAR_FONT_FILENAME), resolveFontPath(SEMIBOLD_FONT_FILENAME)],
+      defaultFontFamily: OG_FONT_FAMILY,
     },
-    element('div', {
-      style: {
-        display: 'flex',
-        height: 10,
-        width: '100%',
-        backgroundColor: '#4f46e5',
-        flexShrink: 0,
-      },
-    }),
+    logLevel: 'off',
+  })
+    .render()
+    .asPng();
+
+  return Buffer.from(png);
+}
+
+function createOgTree({ title, byline }: { title: string; byline: string }): OgNode {
+  return cardShell(
     element(
       'div',
       {
         style: {
           display: 'flex',
           flexDirection: 'column',
-          height: OG_IMAGE_HEIGHT - 10,
+          height: OG_IMAGE_HEIGHT - ACCENT_BAR_HEIGHT,
           padding: '74px 86px 58px 86px',
         },
       },
@@ -155,7 +170,7 @@ function createOgTree({ title, byline }: { title: string; byline: string }): OgN
             display: 'flex',
             flexDirection: 'column',
             maxWidth: 990,
-            height: 230,
+            maxHeight: 230,
             overflow: 'hidden',
           },
         },
@@ -164,7 +179,7 @@ function createOgTree({ title, byline }: { title: string; byline: string }): OgN
           {
             style: {
               display: 'flex',
-              color: '#111827',
+              color: OG_PALETTE.ink,
               fontSize: 68,
               fontWeight: 650,
               letterSpacing: '-0.045em',
@@ -179,7 +194,7 @@ function createOgTree({ title, byline }: { title: string; byline: string }): OgN
         {
           style: {
             display: 'flex',
-            color: '#6b7280',
+            color: OG_PALETTE.muted,
             fontSize: 30,
             fontWeight: 400,
             lineHeight: 1.35,
@@ -195,16 +210,128 @@ function createOgTree({ title, byline }: { title: string; byline: string }): OgN
         {
           style: {
             display: 'flex',
-            alignItems: 'center',
-            color: '#4f46e5',
-            fontSize: 25,
-            fontWeight: 650,
-            letterSpacing: '-0.02em',
+            flexDirection: 'column',
             marginTop: 'auto',
           },
         },
-        PRODUCT_MARK
+        element('div', {
+          style: {
+            display: 'flex',
+            width: '100%',
+            height: 1,
+            backgroundColor: OG_PALETTE.line,
+            flexShrink: 0,
+          },
+        }),
+        element(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              marginTop: 26,
+            },
+          },
+          productMark(38),
+          element(
+            'div',
+            {
+              style: {
+                display: 'flex',
+                marginLeft: 14,
+                color: OG_PALETTE.ink,
+                fontSize: 25,
+                fontWeight: 650,
+                letterSpacing: '-0.02em',
+              },
+            },
+            OG_WORDMARK
+          )
+        )
       )
+    )
+  );
+}
+
+function createOgFallbackTree(): OgNode {
+  return cardShell(
+    element(
+      'div',
+      {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          height: OG_IMAGE_HEIGHT - ACCENT_BAR_HEIGHT,
+          padding: '0 86px',
+        },
+      },
+      productMark(112),
+      element(
+        'div',
+        {
+          style: {
+            display: 'flex',
+            marginTop: 30,
+            color: OG_PALETTE.ink,
+            fontSize: 58,
+            fontWeight: 650,
+            letterSpacing: '-0.035em',
+            lineHeight: 1.1,
+          },
+        },
+        OG_WORDMARK
+      )
+    )
+  );
+}
+
+/** Air canvas with the §9.7 accent bar across the top. */
+function cardShell(body: OgNode): OgNode {
+  return element(
+    'div',
+    {
+      style: {
+        width: OG_IMAGE_WIDTH,
+        height: OG_IMAGE_HEIGHT,
+        backgroundColor: OG_PALETTE.air,
+        color: OG_PALETTE.ink,
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: OG_FONT_FAMILY,
+      },
+    },
+    element('div', {
+      style: {
+        display: 'flex',
+        height: ACCENT_BAR_HEIGHT,
+        width: '100%',
+        backgroundColor: OG_PALETTE.accent,
+        flexShrink: 0,
+      },
+    }),
+    body
+  );
+}
+
+/** Vector twin of the `ProductMark` component in `src/ui/components/primitives.tsx`. */
+function productMark(size: number): OgNode {
+  return element(
+    'svg',
+    {
+      width: size,
+      height: size,
+      viewBox: '0 0 32 32',
+      xmlns: 'http://www.w3.org/2000/svg',
+      style: { display: 'flex', flexShrink: 0 },
+    },
+    element(
+      'g',
+      { transform: 'rotate(45 16 16)' },
+      element('path', { fill: OG_PALETTE.accent, d: 'M6 6 H16 L26 16 V26 H6 Z' }),
+      element('path', { fill: OG_PALETTE.accentInk, d: 'M16 6 L26 16 H16 Z' })
     )
   );
 }
@@ -224,7 +351,7 @@ function ensureSatoriInitialized(): Promise<void> {
   return satoriInitPromise;
 }
 
-function loadInterFonts(): { regular: Buffer; semibold: Buffer } {
+function loadOgFonts(): { regular: Buffer; semibold: Buffer } {
   if (!fontBuffers) {
     fontBuffers = {
       regular: readFileSync(resolveFontPath(REGULAR_FONT_FILENAME)),
@@ -244,7 +371,7 @@ function resolveFontPath(filename: string): string {
 
   const match = candidates.find((candidate) => existsSync(candidate));
   if (!match) {
-    throw new Error(`Missing bundled Inter font: ${filename}`);
+    throw new Error(`Missing bundled OG font: ${filename}`);
   }
 
   return match;
@@ -312,6 +439,10 @@ function ellipsize(value: string, maxCharacters: number): string {
   return `${value.slice(0, maxCharacters - 1).trimEnd()}…`;
 }
 
+/**
+ * The bundled Source Sans 3 latin subset covers ASCII, Latin-1 and the punctuation
+ * below. Anything else is dropped rather than rendered as a missing-glyph box.
+ */
 function isSupportedOgCodePoint(codePoint: number | undefined): boolean {
   if (codePoint === undefined) {
     return false;
@@ -327,7 +458,6 @@ function isSupportedOgCodePoint(codePoint: number | undefined): boolean {
     codePoint === 0x201c ||
     codePoint === 0x201d ||
     codePoint === 0x2022 ||
-    codePoint === 0x2026 ||
-    codePoint === 0x25c6
+    codePoint === 0x2026
   );
 }

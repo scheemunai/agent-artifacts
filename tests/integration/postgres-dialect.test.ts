@@ -6,13 +6,16 @@ import { describe, expect, it } from 'vitest';
 import { initializeDatabase, type PostgresDatabaseHandle } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrations.js';
 import { AuthService } from '../../src/services/auth.js';
+import { DashboardReadModelService } from '../../src/services/dashboard-read-models.js';
 import { runBackgroundSweeps } from '../../src/services/scheduler.js';
 import { createShareResponse } from '../../src/services/v1.js';
+import { VIEW_THROTTLE_MS, ViewerService } from '../../src/services/viewer.js';
 import {
   createPostgresTestContext,
   insertPostgresShareViewer,
   POSTGRES_DAY_MS,
   POSTGRES_TEST_NOW,
+  type PostgresTestContext,
   postgresArtifactService,
   postgresCountRows,
   postgresJson,
@@ -300,6 +303,126 @@ describePostgres('PostgreSQL dialect support', () => {
     }
   });
 
+  it('records racing first views on PostgreSQL without a duplicate-key failure', async () => {
+    const ctx = await createPostgresTestContext();
+
+    try {
+      const created = await publishPostgresArtifact(ctx, {
+        slug: 'pg-concurrent-first-view',
+        now: POSTGRES_TEST_NOW,
+        share: true,
+      });
+      const shareId = created.share?.shareId as string;
+      const viewerId = '00000000-0000-4000-8000-000000000512';
+      const recordView = (): Promise<boolean> =>
+        // A fresh service per racer, so the in-process throttle cannot mask the database
+        // race that PRD §7.2.8's upsert exists to survive.
+        new ViewerService({
+          db: ctx.db,
+          config: ctx.config,
+          cloudModule: ctx.cloudModule,
+          logger,
+          now: () => POSTGRES_TEST_NOW,
+        }).recordView({
+          shareId,
+          artifactId: created.artifact.id,
+          accountId: ctx.account.id,
+          viewerId,
+        });
+
+      const counted = await Promise.all(Array.from({ length: 8 }, recordView));
+
+      expect(counted.filter(Boolean)).toHaveLength(1);
+      expect(await postgresCountRows(ctx, 'share_viewers', 'share_id = $1', [shareId])).toBe(1);
+      expect(await postgresShareCounters(ctx, shareId)).toEqual({
+        view_count: 1,
+        unique_viewer_count: 1,
+      });
+
+      const ledger = await ctx.db.pool.query<{ view_count: number; last_viewed_at: number }>(
+        'SELECT view_count, last_viewed_at FROM share_viewers WHERE share_id = $1 AND viewer_id = $2',
+        [shareId, viewerId]
+      );
+      expect(ledger.rows[0]).toEqual({ view_count: 1, last_viewed_at: POSTGRES_TEST_NOW });
+
+      // The same viewer past the throttle window counts again without a second ledger row.
+      const laterViewer = new ViewerService({
+        db: ctx.db,
+        config: ctx.config,
+        cloudModule: ctx.cloudModule,
+        logger,
+        now: () => POSTGRES_TEST_NOW + VIEW_THROTTLE_MS,
+      });
+      expect(
+        await laterViewer.recordView({
+          shareId,
+          artifactId: created.artifact.id,
+          accountId: ctx.account.id,
+          viewerId,
+        })
+      ).toBe(true);
+      expect(await postgresCountRows(ctx, 'share_viewers', 'share_id = $1', [shareId])).toBe(1);
+      expect(await postgresShareCounters(ctx, shareId)).toEqual({
+        view_count: 2,
+        unique_viewer_count: 1,
+      });
+
+      // The public reader stays a 200 under the same concurrency.
+      const responses = await Promise.all(
+        Array.from({ length: 6 }, () =>
+          ctx.app.request(`/a/${shareId}/content`, {
+            headers: { Cookie: 'aa_viewer=00000000-0000-4000-8000-000000000513' },
+          })
+        )
+      );
+      expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200, 200, 200]);
+      expect(await postgresCountRows(ctx, 'share_viewers', 'share_id = $1', [shareId])).toBe(2);
+      expect(await postgresShareCounters(ctx, shareId)).toEqual({
+        view_count: 3,
+        unique_viewer_count: 2,
+      });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('searches dashboard artifacts case-insensitively on PostgreSQL', async () => {
+    const ctx = await createPostgresTestContext();
+
+    try {
+      await publishPostgresArtifact(ctx, {
+        slug: 'weekly-ops-report',
+        title: 'Weekly Ops Report',
+        now: POSTGRES_TEST_NOW,
+      });
+      await publishPostgresArtifact(ctx, {
+        slug: 'launch-checklist',
+        title: 'launch checklist',
+        now: POSTGRES_TEST_NOW - 1,
+      });
+
+      const readModels = new DashboardReadModelService(ctx.db, { baseUrl: ctx.config.baseUrl });
+      const search = async (q: string): Promise<string[]> => {
+        const result = await readModels.listDashboardArtifacts({
+          accountId: ctx.account.id,
+          filters: { q, botId: '', type: '', cursor: '' },
+          retentionDays: null,
+        });
+        return result.artifacts.map((artifact) => artifact.slug);
+      };
+
+      // PRD §4.6: lower(column) LIKE lower(?) — bare LIKE is case-sensitive on PostgreSQL, so
+      // each of these misses unless both sides are lowered, exactly as §8.4.3 `q` already does.
+      expect(await search('report')).toEqual(['weekly-ops-report']);
+      expect(await search('WEEKLY OPS')).toEqual(['weekly-ops-report']);
+      expect(await search('LAUNCH-CHECKLIST')).toEqual(['launch-checklist']);
+      expect(await search('Checklist')).toEqual(['launch-checklist']);
+      expect(await search('nothing-matches-this')).toEqual([]);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('keeps purge/read/share races coherent on PostgreSQL', async () => {
     const ctx = await createPostgresTestContext({ artifactPurgeDays: 30 });
 
@@ -471,3 +594,18 @@ describePostgres('PostgreSQL dialect support', () => {
     }
   });
 });
+
+async function postgresShareCounters(
+  ctx: Pick<PostgresTestContext, 'db'>,
+  shareId: string
+): Promise<{ view_count: number; unique_viewer_count: number }> {
+  const result = await ctx.db.pool.query<{ view_count: number; unique_viewer_count: number }>(
+    'SELECT view_count, unique_viewer_count FROM shares WHERE id = $1',
+    [shareId]
+  );
+  const row = result.rows[0];
+  if (!row) {
+    throw new Error(`Missing share ${shareId}`);
+  }
+  return { view_count: row.view_count, unique_viewer_count: row.unique_viewer_count };
+}

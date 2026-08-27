@@ -470,50 +470,66 @@ export class ViewerService {
     return getPostgresVersionSource(this.db.pool, artifactId, versionNum);
   }
 
+  /**
+   * PRD §7.2.8 write path. Both dialects run the same three conflict-free steps so a
+   * concurrent first view can never raise a duplicate-key error on the public reader:
+   *
+   *   1. Throttled UPDATE — counts a repeat view only when the ledger row is older than
+   *      the throttle window. Matching zero rows means "absent or throttled".
+   *   2. Capped INSERT with `ON CONFLICT DO NOTHING` — adds the ledger row when the share
+   *      is under the unique-viewer cap. A racing writer that already inserted the row
+   *      makes this a no-op instead of a `23505`.
+   *   3. Existence probe — the only way to tell the two zero-row outcomes apart. A row
+   *      means step 1 was throttled (not counted); no row means the share is at the
+   *      unique-viewer cap, which still counts a view but never a new unique viewer.
+   */
   private recordSqliteView(input: ViewerRecordViewInput, now: number): boolean {
     const handle = this.db as SqliteDatabaseHandle;
+    const countableBefore = now - VIEW_THROTTLE_MS;
+
     const transaction = handle.sqlite.transaction(() => {
-      const existing = handle.sqlite
-        .prepare('SELECT last_viewed_at FROM share_viewers WHERE share_id = ? AND viewer_id = ?')
-        .get(input.shareId, input.viewerId) as ShareViewerRow | undefined;
+      const touched = handle.sqlite
+        .prepare(
+          `
+            UPDATE share_viewers
+            SET view_count = view_count + 1, last_viewed_at = ?
+            WHERE share_id = ? AND viewer_id = ? AND last_viewed_at <= ?
+          `
+        )
+        .run(now, input.shareId, input.viewerId, countableBefore);
 
-      if (existing && now - existing.last_viewed_at < VIEW_THROTTLE_MS) {
-        return false;
-      }
-
-      if (existing) {
-        handle.sqlite
-          .prepare(
-            `
-              UPDATE share_viewers
-              SET view_count = view_count + 1, last_viewed_at = ?
-              WHERE share_id = ? AND viewer_id = ?
-            `
-          )
-          .run(now, input.shareId, input.viewerId);
+      if (touched.changes > 0) {
         incrementSqliteShareView(handle, input.shareId, now, false);
         return true;
       }
 
-      const uniqueCount = handle.sqlite
-        .prepare('SELECT COUNT(*) AS count FROM share_viewers WHERE share_id = ?')
-        .get(input.shareId) as { count: number };
-      const insertUnique = uniqueCount.count < SHARE_VIEWER_UNIQUE_CAP;
+      const inserted = handle.sqlite
+        .prepare(
+          `
+            INSERT INTO share_viewers (
+              share_id, viewer_id, first_viewed_at, last_viewed_at, view_count
+            )
+            SELECT ?, ?, ?, ?, 1
+            WHERE (SELECT COUNT(*) FROM share_viewers WHERE share_id = ?) < ?
+            ON CONFLICT (share_id, viewer_id) DO NOTHING
+          `
+        )
+        .run(input.shareId, input.viewerId, now, now, input.shareId, SHARE_VIEWER_UNIQUE_CAP);
 
-      if (insertUnique) {
-        handle.sqlite
-          .prepare(
-            `
-              INSERT INTO share_viewers (
-                share_id, viewer_id, first_viewed_at, last_viewed_at, view_count
-              )
-              VALUES (?, ?, ?, ?, 1)
-            `
-          )
-          .run(input.shareId, input.viewerId, now, now);
+      if (inserted.changes > 0) {
+        incrementSqliteShareView(handle, input.shareId, now, true);
+        return true;
       }
 
-      incrementSqliteShareView(handle, input.shareId, now, insertUnique);
+      const existing = handle.sqlite
+        .prepare('SELECT last_viewed_at FROM share_viewers WHERE share_id = ? AND viewer_id = ?')
+        .get(input.shareId, input.viewerId) as ShareViewerRow | undefined;
+
+      if (existing) {
+        return false;
+      }
+
+      incrementSqliteShareView(handle, input.shareId, now, false);
       return true;
     });
 
@@ -522,54 +538,56 @@ export class ViewerService {
 
   private async recordPostgresView(input: ViewerRecordViewInput, now: number): Promise<boolean> {
     const handle = this.db as PostgresDatabaseHandle;
+    const countableBefore = now - VIEW_THROTTLE_MS;
     const client = await handle.pool.connect();
 
     try {
       await client.query('BEGIN');
-      const existing = await client.query<ShareViewerRow>(
-        'SELECT last_viewed_at FROM share_viewers WHERE share_id = $1 AND viewer_id = $2',
-        [input.shareId, input.viewerId]
+
+      const touched = await client.query(
+        `
+          UPDATE share_viewers
+          SET view_count = view_count + 1, last_viewed_at = $1
+          WHERE share_id = $2 AND viewer_id = $3 AND last_viewed_at <= $4
+        `,
+        [now, input.shareId, input.viewerId, countableBefore]
       );
-      const existingRow = existing.rows[0];
 
-      if (existingRow && now - existingRow.last_viewed_at < VIEW_THROTTLE_MS) {
-        await client.query('COMMIT');
-        return false;
-      }
-
-      if (existingRow) {
-        await client.query(
-          `
-            UPDATE share_viewers
-            SET view_count = view_count + 1, last_viewed_at = $1
-            WHERE share_id = $2 AND viewer_id = $3
-          `,
-          [now, input.shareId, input.viewerId]
-        );
+      if ((touched.rowCount ?? 0) > 0) {
         await incrementPostgresShareView(client, input.shareId, now, false);
         await client.query('COMMIT');
         return true;
       }
 
-      const count = await client.query<{ count: string }>(
-        'SELECT COUNT(*) AS count FROM share_viewers WHERE share_id = $1',
-        [input.shareId]
+      const inserted = await client.query(
+        `
+          INSERT INTO share_viewers (
+            share_id, viewer_id, first_viewed_at, last_viewed_at, view_count
+          )
+          SELECT $1::text, $2::text, $3::bigint, $3::bigint, 1
+          WHERE (SELECT COUNT(*) FROM share_viewers WHERE share_id = $1) < $4
+          ON CONFLICT (share_id, viewer_id) DO NOTHING
+        `,
+        [input.shareId, input.viewerId, now, SHARE_VIEWER_UNIQUE_CAP]
       );
-      const insertUnique = Number(count.rows[0]?.count ?? 0) < SHARE_VIEWER_UNIQUE_CAP;
 
-      if (insertUnique) {
-        await client.query(
-          `
-            INSERT INTO share_viewers (
-              share_id, viewer_id, first_viewed_at, last_viewed_at, view_count
-            )
-            VALUES ($1, $2, $3, $3, 1)
-          `,
-          [input.shareId, input.viewerId, now]
-        );
+      if ((inserted.rowCount ?? 0) > 0) {
+        await incrementPostgresShareView(client, input.shareId, now, true);
+        await client.query('COMMIT');
+        return true;
       }
 
-      await incrementPostgresShareView(client, input.shareId, now, insertUnique);
+      const existing = await client.query<ShareViewerRow>(
+        'SELECT last_viewed_at FROM share_viewers WHERE share_id = $1 AND viewer_id = $2',
+        [input.shareId, input.viewerId]
+      );
+
+      if ((existing.rowCount ?? 0) > 0) {
+        await client.query('COMMIT');
+        return false;
+      }
+
+      await incrementPostgresShareView(client, input.shareId, now, false);
       await client.query('COMMIT');
       return true;
     } catch (error) {
