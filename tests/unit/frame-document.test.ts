@@ -62,15 +62,56 @@ describe('FrameDocument', () => {
     const hostile = `<p>a & b < c</p><button>Inline button</button><script>window.x=1</script>`;
     const html = FrameDocument({ content: hostile, title: 'Hostile' });
 
+    // The agent's bytes survive exactly, including its own script — that is what this test is for,
+    // and it is unaffected by A-25.
     expect(html).toContain(hostile);
-    // The wrapper introduces no script of its own; the only one present is the agent's.
-    expect(html.match(/<script/g) ?? []).toHaveLength(1);
+    expect(html).toContain('<script>window.x=1</script>');
+    // Two scripts now: the agent's, and the height sender this shell appends after the content.
+    // The count is asserted so a third can never arrive unnoticed.
+    expect(html.match(/<script/g) ?? []).toHaveLength(2);
+    expect(
+      html.indexOf('window.x=1'),
+      'the sender was injected before the agent content'
+    ).toBeLessThan(html.indexOf('aa:frame-height'));
   });
 
-  it('introduces no script and no cross-origin request of its own', () => {
+  it('sends its measured height to the embedder, and only that', () => {
+    const html = FrameDocument({ content: '<h1>Fragment</h1>', title: 'Fragment' });
+
+    // A-25: the viewer has always listened for `aa:frame-height`; nothing ever sent it, so every
+    // HTML artifact clamped at the CSS default of 432px regardless of its content.
+    expect(html).toContain("type:'aa:frame-height'");
+    expect(html).toContain('scrollHeight');
+    // Inert by construction: it posts one fixed-shape message and does nothing else. It never reads
+    // from the parent, touches no cookie or storage, makes no request, and mutates no DOM.
+    expect(html).toContain('window.parent===window');
+    for (const forbidden of [
+      'document.cookie',
+      'localStorage',
+      'fetch(',
+      'XMLHttpRequest',
+      'innerHTML',
+    ]) {
+      expect(html, `height sender reaches for ${forbidden}`).not.toContain(forbidden);
+    }
+  });
+
+  it('injects nothing at all into a document the agent wrote whole', () => {
+    // The ruling draws the line here: a full document has made every decision this shell would
+    // make, so it stays byte-identical and keeps the 432px clamp as an accepted limit.
+    const full =
+      '<!doctype html><html><head><title>Whole</title></head><body><p>Mine</p></body></html>';
+
+    expect(FrameDocument({ content: full, title: 'ignored' })).toBe(full);
+  });
+
+  it('introduces no cross-origin request of its own', () => {
     const html = FrameDocument({ content: fragment, title: 'Weekly Ops' });
 
-    expect(html).not.toContain('<script');
+    // The height sender is the one script this shell adds — see the test above. The invariant is
+    // now "adds only the audited height sender", not "adds no script": the sandbox already runs the
+    // agent's own scripts under `allow-scripts`, so this adds no capability that was not present.
+    expect(html.match(/<script/g) ?? []).toHaveLength(1);
     // The sandbox origin cannot load the app stylesheet, so the shell must be self-contained.
     expect(html).not.toContain('<link');
     expect(html).not.toMatch(/https?:\/\//);

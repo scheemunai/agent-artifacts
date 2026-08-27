@@ -38,7 +38,15 @@ describe('sandboxed artifact frame shell', () => {
       expect(html).toContain('width=device-width');
       expect(html).toContain('<title>Weekly Ops</title>');
       expect(html).toContain(FRAGMENT);
-      expect(html).not.toContain('<script');
+      // APPROVED POLICY CHANGE (A-25). This asserted that the shell adds no script at all. It now
+      // adds exactly one — the audited height sender — to wrapped fragments, so the frame can tell
+      // the viewer how tall it is instead of clamping at 432px forever. Reasoning recorded here
+      // because the invariant being replaced was deliberate: the frame is served with
+      // `sandbox allow-scripts`, so the agent's own scripts already execute in this document. A
+      // sender that posts one integer to its embedder grants no capability the sandbox did not.
+      // The frame response headers are unchanged; see frame-policy.test.ts.
+      expect(html.match(/<script/g) ?? []).toHaveLength(1);
+      expect(html).toContain('aa:frame-height');
 
       // Security posture is unchanged: the same header set the policy module produces.
       for (const [name, value] of Object.entries(

@@ -306,10 +306,21 @@ export function StyleGuidePage() {
                 <p class="aa-hint">
                   Agent HTML is served from the sandbox origin, which cannot load this stylesheet,
                   so the shell is self-contained: one inline <code>&lt;style&gt;</code>, no{' '}
-                  <code>&lt;link&gt;</code>, no font file, no request, and never a script. Every
-                  baseline rule is a bare element selector so anything the agent writes outranks it,
-                  and content that already declares its own <code>&lt;!doctype&gt;</code> passes
-                  through byte for byte. It wraps; it never rewrites.
+                  <code>&lt;link&gt;</code>, no font file and no request. Every baseline rule is a
+                  bare element selector so anything the agent writes outranks it, and content that
+                  already declares its own <code>&lt;!doctype&gt;</code> passes through byte for
+                  byte. It wraps; it never rewrites.
+                </p>
+                <p class="aa-hint">
+                  The one script it adds is the height sender, appended to wrapped fragments so the
+                  viewer can size the frame to its content instead of the 432px fallback. It posts a
+                  single <code>aa:frame-height</code> message and does nothing else.
+                </p>
+                <p class="aa-hint">
+                  <strong>Accepted limit:</strong> an artifact that ships a whole document is passed
+                  through untouched, so it receives no sender and keeps the fixed 432px frame. Byte
+                  fidelity for author-written documents is worth more than automatic height, and the
+                  two cannot both be had.
                 </p>
               </Card>
               <Card

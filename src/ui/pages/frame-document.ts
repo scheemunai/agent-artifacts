@@ -14,7 +14,8 @@
  *    upstream; this module must not become a second, weaker opinion about the same bytes.
  * 2. **It is self-contained.** The frame is served from the sandbox origin, which cannot load the
  *    app stylesheet, and its CSP is `default-src 'none'`. So: one inline `<style>`, no `<link>`,
- *    no font file, no request of any kind — and no script, ever.
+ *    no font file, no request of any kind — and no script beyond the audited height sender
+ *    below, which is added only to fragments this shell wraps.
  * 3. **The agent's content dominates.** Every baseline rule is a bare element selector, so any
  *    class, id or inline style the agent writes outranks it. There is no app chrome in the frame.
  *
@@ -83,6 +84,40 @@ const PRODUCT_MARK_SVG =
   '<path fill="currentColor" fill-rule="evenodd" d="M6 6 H16 L26 16 V26 H6 Z M16 6 L26 16 H16 Z" />' +
   '</g></svg>';
 
+/**
+ * The frame-height sender.
+ *
+ * The viewer has always installed a listener for `aa:frame-height`, keyed on the posting frame's
+ * own `contentWindow`. Nothing ever sent the message, so every HTML artifact rendered at the CSS
+ * fallback height — a fixed 432px — no matter how long it was.
+ *
+ * Approved policy change (A-25): this shell previously added no script at all. It now adds exactly
+ * this one, to wrapped fragments only. The reasoning, recorded because the invariant it replaces
+ * was a deliberate one: the frame is served with `sandbox allow-scripts`, so the agent's own
+ * scripts already run here. A sender that posts a number to the embedder adds no capability the
+ * sandbox did not already grant. The invariant becomes "adds only the audited height sender".
+ *
+ * Inert by construction: it does nothing unless framed, posts one fixed-shape message, and never
+ * reads the parent, touches storage, issues a request or mutates the document. `'*'` is the correct
+ * target origin because the frame is on an opaque sandbox origin and the payload is a single
+ * integer; the listener authenticates the sender by `contentWindow` identity, not by origin.
+ */
+const FRAME_HEIGHT_SENDER = [
+  '(function(){',
+  'if(window.parent===window)return;',
+  'var last=0;',
+  'function send(){',
+  'var h=Math.ceil(document.documentElement.scrollHeight);',
+  'if(!isFinite(h)||h<=0||h===last)return;',
+  'last=h;',
+  "window.parent.postMessage({type:'aa:frame-height',height:h},'*');",
+  '}',
+  'send();',
+  "window.addEventListener('load',send);",
+  "if(typeof ResizeObserver==='function'){new ResizeObserver(send).observe(document.documentElement);}",
+  '})();',
+].join('');
+
 export interface FrameDocumentInput {
   /** Agent HTML, exactly as stored. Never parsed, never transformed. */
   content: string;
@@ -147,6 +182,7 @@ export function FrameDocument({ content, title }: FrameDocumentInput): string {
     '</head>',
     '<body>',
     content,
+    `<script>${FRAME_HEIGHT_SENDER}</script>`,
     '</body>',
     '</html>',
   ].join('');
