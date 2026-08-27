@@ -310,6 +310,31 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     return routeContext.html(artifact.content);
   });
 
+  app.get('/dashboard/artifacts/:id/download', async (routeContext) => {
+    const session = await requirePageSession(routeContext, services);
+    if (session instanceof Response) {
+      return session;
+    }
+    const artifact = await getArtifactDetail(
+      services,
+      session.account.id,
+      routeContext.req.param('id'),
+      null
+    );
+    if (!artifact) {
+      return routeContext.notFound();
+    }
+    routeContext.header(
+      'Content-Type',
+      artifact.type === 'markdown' ? 'text/markdown; charset=utf-8' : 'text/html; charset=utf-8'
+    );
+    routeContext.header(
+      'Content-Disposition',
+      `attachment; filename="${downloadFilename(artifact.slug, artifact.type)}"`
+    );
+    return routeContext.body(artifact.content);
+  });
+
   app.get('/dashboard/bots', async (routeContext) => {
     const session = await requirePageSession(routeContext, services);
     if (session instanceof Response) {
@@ -493,6 +518,19 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     const session = await requireApiSession(routeContext, services);
     if (session instanceof Response) {
       return session;
+    }
+    const artifact = await getArtifactDetail(
+      services,
+      session.account.id,
+      routeContext.req.param('id'),
+      null
+    );
+    const form = await parseForm(routeContext);
+    if (!artifact || stringField(form, 'confirm') !== artifact.title) {
+      return routeContext.redirect(
+        `/dashboard/artifacts/${routeContext.req.param('id')}?notice=confirmation_mismatch`,
+        303
+      );
     }
     await services.artifacts.softDeleteArtifact({
       account: accountToCloudAccount(session.account),
@@ -1266,6 +1304,10 @@ function decodeCursor(value: string): { updatedAt: number; id: string } | null {
 
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, '');
+}
+
+function downloadFilename(slug: string, type: string): string {
+  return `${slug}.${type === 'markdown' ? 'md' : 'html'}`.replace(/[^a-zA-Z0-9._-]/g, '-');
 }
 
 function htmlFrameCsp(): string {

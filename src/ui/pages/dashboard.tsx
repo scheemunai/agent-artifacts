@@ -193,14 +193,22 @@ export function DashboardArtifactPage({
             </p>
           </header>
           <div class="aa-specimen-row">
-            <Button variant="secondary" href={`/v1/artifacts/${artifact.id}/download`}>
+            <Button variant="secondary" href={`/dashboard/artifacts/${artifact.id}/download`}>
               Download
             </Button>
             <Button variant="primary" href="#share-panel">
               Share
             </Button>
-            <form method="post" action={`/dashboard/api/artifacts/${artifact.id}/delete`}>
-              <input type="hidden" name="confirm" value={artifact.title} />
+            <form
+              class="aa-stack"
+              method="post"
+              action={`/dashboard/api/artifacts/${artifact.id}/delete`}
+            >
+              <Input
+                id="delete_artifact_confirm"
+                name="confirm"
+                label={`Type ${artifact.title} to delete`}
+              />
               <Button variant="danger" type="submit">
                 Delete
               </Button>
