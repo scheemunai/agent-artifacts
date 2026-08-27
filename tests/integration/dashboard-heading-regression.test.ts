@@ -41,9 +41,10 @@ describe('dashboard heading hierarchy', () => {
     const detail = await (
       await ctx.app.request(`/dashboard/artifacts/${artifactId}`, { headers: { Cookie: cookie } })
     ).text();
+    expect(detail).toContain('data-aa-dashboard-preview="markdown"');
     expect(
       hasAttributes(detail, 'data-aa-dashboard-preview="markdown"', 'aria-hidden="true"')
-    ).toBe(true);
+    ).toBe(false);
     expect(detail).toContain('<h2>E2E Dashboard Artifact</h2>');
     expect(detail).toContain('<h3>Nested section</h3>');
     expect(detail).not.toContain('<article class="aa-md"><h1>E2E Dashboard Artifact</h1>');
@@ -54,9 +55,10 @@ describe('dashboard heading hierarchy', () => {
       })
     ).text();
     expect(template).toContain('Template preview: Report');
+    expect(template).toContain('data-aa-dashboard-template-preview="markdown"');
     expect(
       hasAttributes(template, 'data-aa-dashboard-template-preview="markdown"', 'aria-hidden="true"')
-    ).toBe(true);
+    ).toBe(false);
     expect(template).toContain('<h2>{{title}}</h2>');
     expect(account.email).toContain('headings@example.test');
   });

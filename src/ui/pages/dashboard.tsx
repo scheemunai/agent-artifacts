@@ -249,7 +249,6 @@ export function DashboardArtifactPage({
           >
             {artifact.type === 'markdown' && artifact.htmlPreview ? (
               <div
-                aria-hidden="true"
                 data-aa-dashboard-preview="markdown"
                 dangerouslySetInnerHTML={{ __html: artifact.htmlPreview }}
               />
@@ -1056,7 +1055,6 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
         </p>
         {template.htmlPreview ? (
           <div
-            aria-hidden="true"
             data-aa-dashboard-template-preview="markdown"
             dangerouslySetInnerHTML={{ __html: template.htmlPreview }}
           />
