@@ -292,6 +292,7 @@ export function StyleGuidePage() {
             {buttonSection()}
             {widthSection()}
             {fieldSection()}
+            {passwordFieldSection()}
             {badgeSection()}
             {noticeSection()}
             {destructiveSection()}
@@ -738,6 +739,51 @@ function fieldSection() {
         />
         <Input id="field-focus" label="Focused demo" value="Visible focus ring" state="focus" />
       </div>
+    </Card>
+  );
+}
+
+function passwordFieldSection() {
+  return (
+    <Card
+      title="Password fields"
+      description="Boxes that look identical and mean different things. autocomplete is what tells them apart."
+    >
+      <div class="aa-grid">
+        <Input
+          id="field-current-password"
+          label="Current password"
+          type="password"
+          autocomplete="current-password"
+        />
+        <Input
+          id="field-new-password"
+          label="New password"
+          type="password"
+          autocomplete="new-password"
+          hint="At least 12 characters."
+        />
+        <Input
+          id="field-confirm-password"
+          label="Confirm new password"
+          type="password"
+          autocomplete="new-password"
+        />
+      </div>
+      <p class="aa-hint">
+        Three password boxes on one form are indistinguishable to a password manager unless the
+        markup says which is which. Without <code>autocomplete</code> it offers to fill all three
+        with the current password, and to save the wrong one afterwards — so the field that decides
+        whether someone can still log in is set by a guess. <code>current-password</code> and{' '}
+        <code>new-password</code> are the browser's vocabulary, not ours; the value is not styling
+        and not a hint, so it belongs on every password field the product ships rather than only on
+        the forms where a manager has been seen getting it wrong.
+      </p>
+      <p class="aa-hint">
+        A password-typed box that is not a password wants saying so too: a one-time setup token
+        rendered with <code>type="password"</code> will be offered for saving as the site password
+        unless it opts out.
+      </p>
     </Card>
   );
 }
@@ -1222,6 +1268,29 @@ function navigationSection() {
         previousDisabled
         nextDisabled
       />
+      <Pagination
+        label="Artifact list pages"
+        pageDescription="20 shown so far"
+        previousDisabled
+        previousHref="/dashboard"
+        nextHref="/dashboard?cursor=aa_cur_8Fq2"
+      />
+      <p class="aa-hint">
+        Two ways to drive one component. The first two specimens are script-driven: their steps are
+        buttons, for a client that replaces the results in place. The third is the artifact list
+        footer, which is where the href props came from — a server-rendered list paging through
+        cursor URLs, so its steps have to be links. A link survives a middle-click, a copy, and a
+        page load before any JavaScript has run; a button does none of those, which is most of why
+        this component sat unused while lists hand-rolled a Button for "there is more" and a Badge
+        for "that was all" — two kinds of object for two states of one thing.
+      </p>
+      <p class="aa-hint">
+        The third specimen is also the first page, so its Previous step is disabled while still
+        being given an href. A disabled step keeps its element and loses its destination: it renders
+        as an anchor carrying <code>aria-disabled="true"</code> and <code>tabindex="-1"</code>, with
+        no <code>href</code> at all — rather than a live link that looks unavailable, or a control
+        that changes tag between pages and moves the focus order under the reader.
+      </p>
     </Card>
   );
 }
@@ -1274,7 +1343,13 @@ function dialogExamples() {
         }
       >
         <div class="aa-grid">
-          <Input id="modal-password" label="Optional password" type="password" optional />
+          <Input
+            id="modal-password"
+            label="Optional password"
+            type="password"
+            optional
+            autocomplete="new-password"
+          />
           <p class="aa-hint">
             Background scroll is locked while open. Escape and outside click close the dialog.
           </p>

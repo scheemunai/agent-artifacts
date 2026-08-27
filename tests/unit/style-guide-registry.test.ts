@@ -126,6 +126,11 @@ describe('style guide registry', () => {
       'aria-busy="true"',
       // Input: default, hint, error, disabled, focus.
       'aria-invalid="true"',
+      // Input.autocomplete — the browser vocabulary that tells three identical-looking password
+      // boxes apart. It shipped with a consumer and no specimen, which is how a prop becomes
+      // invisible: the next author writes the form without it because the contract never showed it.
+      'autocomplete="current-password"',
+      'autocomplete="new-password"',
       // Notice: four tones.
       'aa-notice--info',
       'aa-notice--success',
@@ -143,6 +148,37 @@ describe('style guide registry', () => {
     ]) {
       expect(html, `${marker} has no specimen`).toContain(marker);
     }
+  });
+
+  it('registers both of the ways Pagination can be driven', () => {
+    // `previousHref` / `nextHref` shipped with a first consumer and no specimen, so the contract
+    // showed a component that could only be driven by a client nobody had written — while the
+    // artifact list footer, the reason the props exist, was invisible here.
+    //
+    // Scoped to the pagination specimens rather than the whole page: buttons and links both appear
+    // all over this document, so a page-wide match would pass on any two unrelated elements.
+    const navs = html.match(/<nav class="aa-pagination"[\s\S]*?<\/nav>/g) ?? [];
+    expect(navs.length, 'pagination has no specimens').toBeGreaterThan(1);
+
+    expect(
+      navs.some((nav) => /<button[^>]*>\s*<span>Next<\/span>/.test(nav)),
+      'no script-driven pagination specimen'
+    ).toBe(true);
+    expect(
+      navs.some((nav) => /<a[^>]*\shref="[^"]+"[^>]*>\s*<span>Next<\/span>/.test(nav)),
+      'the href-driven mode has no specimen'
+    ).toBe(true);
+  });
+
+  it('shows what a paging step disabled on the first page renders as', () => {
+    // A step that is given an href and disabled at once — the first page of any cursor list — is
+    // the shape most likely to be got wrong. It keeps its element and loses its destination, so
+    // the tag does not change between pages and the focus order does not shift under the reader.
+    // The lookahead is the assertion that matters: a disabled step with an href would be a live
+    // link dressed as an unavailable one.
+    expect(html, 'no specimen for a disabled link-driven step').toMatch(
+      /<a(?![^>]*\shref=)[^>]*aria-disabled="true"[^>]*tabindex="-1"[^>]*>\s*<span>Previous<\/span>/
+    );
   });
 
   it('declares no min-width a 375px viewport cannot hold, outside a scroll container', () => {
