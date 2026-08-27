@@ -45,7 +45,7 @@ selects Resend, otherwise a complete SMTP pair (`SMTP_HOST` + `SMTP_FROM`) selec
 otherwise no mail is sent. The value `log` writes login links to the application log and
 delivers no mail. It is development only, and it is a deliberate weakening of the §4.4 cloud
 boot gate, which otherwise makes a cloud instance with no mail transport a fatal boot error:
-`log` satisfies that gate. `src/config.ts` warns loudly at boot and the launch checklist
+`log` satisfies that gate. `src/services/mail.ts:23` warns loudly at boot and the launch checklist
 requires removing it before a cloud instance takes real signups. PRD §6's table still owes
 both rows; that amendment belongs to a PRD v1.2 pass.
 
@@ -120,11 +120,18 @@ Postgres while the API's was not. One predicate now serves both.
 ### Share lifecycle belongs to ArtifactService
 
 Share lifecycle is owned by `ArtifactService` (persist and emit); `deleteShareResponse`'s signature
-gained `cloudModule`/`config`/`account`; R2-001 closed. The explicit share endpoints and the four
+gained `cloudModule`/`config`/`account`. The explicit share endpoints and the four
 dashboard share mutations previously wrote through a parallel persistence layer in `src/services/v1.ts`
 that emitted no domain events, so a CloudModule analytics consumer missed every share created or
 revoked outside the artifact write path. `deleteShareResponse` could not emit even in principle: it
 never received the module. That is why the signature changed rather than the body alone.
+
+**R2-001 is closed for the share lifecycle, not in full.** One piece of the same seam is still open
+and says so in the code: `ArtifactService.getTemplatePreview` carries a `TODO(R2-001 follow-up)`
+because it is a template read model living on the artifact service. It was moved there so the
+dashboard route would stop owning SQL, which was the urgent half; consolidating it alongside
+`src/services/dashboard-read-models.ts` is the remaining half. Read the claim as "no share mutation
+bypasses the service or its events any more", which is true, rather than "the seam is gone".
 
 ### Asset pipeline
 
@@ -159,3 +166,65 @@ returning visitor can receive stale drawer and modal JavaScript after this deplo
 this release therefore uses cold browser contexts. The S4-remainder work re-mints asset names from
 content on every build, which makes the filename a promise again; `immutable` must not be added to
 `/assets` until it does.
+
+## 2026-08-27 — Section 12 registrations that were owed
+
+PRD §12 forbids silently inventing endpoints, env vars, DB columns or response fields, and requires
+each one to be recorded here. The round-1 consolidation claimed the repository could now explain
+itself; a validator checked that claim against the code and found three registrations still missing.
+They are recorded below, grounded in the code as it stands rather than in anybody's memory of it.
+
+### New endpoint: `POST /v1/templates`
+
+`src/routes/v1/index.ts` mounts a sixth `/v1` family member that PRD §8 does not list: promote an
+existing markdown artifact into an account template. It takes `artifact_id`, `name`, `slug` and an
+optional `description`, and returns `201`. §9.5 describes promotion as a "Dashboard-only flow", so
+this endpoint is a genuine addition to the agent-facing surface, not a re-description of one.
+
+It was authorised during the build rather than invented, and it is not hidden: it appears in the
+served `/v1/contract` text as section 3, in the generated OpenAPI document, and in `/skill.md`, and
+two guard tests assert the contract text and the document agree with the routes. What it never had
+was this paragraph. The consequence of the omission is narrow but real: PRD §8 remains the written
+spec, and a reader comparing §8 to the code finds an endpoint with no recorded decision behind it.
+
+### New response field: `latest_version_num`
+
+`src/routes/public.ts` adds `latest_version_num` to the `/a/:share_id/content` payload. §8.5.2's
+documented body does not contain it. It exists because §9.4 requires the viewer to say "Viewing v4
+of v7" when a reader has pinned a version with `?v=`, and the reader cannot know the second number
+without being told it. The field is therefore necessary, and adding it was right; not writing it
+down was not.
+
+### Named CSP variant: `dashboard-preview`
+
+`src/lib/frame-policy.ts` defines two frame policies rather than one. Appendix A Lesson 11 says the
+owner dashboard gets no looser sandbox than the public page, and this variant honours that by being
+strictly tighter: `default-src 'none'`, `connect-src 'none'`, `font-src 'none'`, `base-uri 'none'`,
+no `https:` script or style sources, and `script-src`/`style-src` limited to `'unsafe-inline'`. The
+public artifact policy allows `https:` sources for all three.
+
+Two differences are deliberate and worth stating rather than leaving to be rediscovered. The preview
+sets `Referrer-Policy: strict-origin-when-cross-origin` where the public frame sets `no-referrer`,
+and it sets no `Cache-Control`, because a preview of the owner's own draft should not be cached by
+anything. One difference is a gap rather than a decision: the preview headers carry no
+`frame-ancestors` directive, so that response is the only frame response in the codebase without a
+framing restriction. The exposure is small because the route is session-gated and `aa_session` is
+`SameSite=Lax`, but it is an omission, not a choice, and it should be closed rather than explained.
+
+## 2026-08-27 — Commit archaeology: where the OG repaint actually lives
+
+`7723be1` is titled "fix(postgres): make view recording conflict-free and search case-insensitive"
+and its message describes only those two things. The commit also contains the entire Fresh Air
+repaint of the OG card: `src/lib/og.ts` rewritten, both Source Sans 3 static TTFs added,
+`public/assets/og-fallback.png` added, `src/ui/assets/fonts/README.md`, the `THIRD-PARTY-NOTICES.md`
+entry, and 122 lines of `tests/unit/og-image.test.ts`.
+
+That happened because two workers shared one checkout and one staged the other's files. The branch
+is shared and already deployed, so the history is not being rewritten to fix it. This note is the
+correction instead.
+
+The practical consequence, and the reason this is worth a section: anyone asking "when did the OG
+card stop being indigo Inter and start being coral Source Sans 3, and why" will search the log for
+a commit about OG and find none. The answer is `7723be1`, and the reasoning is in the OG entry of
+the round-1 consolidation above. Blame on `src/lib/og.ts` points at a Postgres commit; that is an
+accident of tooling, not a sign that the palette change was slipped in.
