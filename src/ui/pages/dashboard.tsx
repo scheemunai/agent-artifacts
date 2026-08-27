@@ -973,6 +973,7 @@ function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
                 name="password"
                 label={share.passwordProtected ? 'Change password' : 'Set password'}
                 type="password"
+                autocomplete="new-password"
               />
               <Button variant="secondary" type="submit">
                 {share.passwordProtected ? 'Change password' : 'Set password'}
@@ -1010,6 +1011,7 @@ function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
               name="password"
               label="Password"
               type="password"
+              autocomplete="new-password"
               optional
             />
             <Button variant="primary" type="submit">

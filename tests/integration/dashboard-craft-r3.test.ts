@@ -180,4 +180,50 @@ describe('B-F3 · password managers can tell the fields apart', () => {
     expect(html).toMatch(/<input[^>]*id="new_password"[^>]*autocomplete="new-password"/);
     expect(html).toMatch(/<input[^>]*id="confirm_password"[^>]*autocomplete="new-password"/);
   });
+
+  it("tells the browser a share password is a new one, not the account holder's", async () => {
+    const ctx = await makeContext();
+    const { cookie } = await seed(ctx);
+    const artifact = ctx.db.sqlite.prepare('SELECT id FROM artifacts LIMIT 1').get() as {
+      id: string;
+    };
+
+    const html = await (
+      await ctx.app.request(`/dashboard/artifacts/${artifact.id}`, { headers: { Cookie: cookie } })
+    ).text();
+
+    // A share password protects one link; it is not the credential the reader signs in with.
+    // Unmarked, a manager offers the account password here and then offers to overwrite the
+    // saved one with whatever was typed for the share.
+    expect(html).toMatch(/<input[^>]*id="share_password"[^>]*autocomplete="new-password"/);
+  });
+
+  it('marks the optional password on the create-a-share form the same way', async () => {
+    const ctx = await makeContext();
+    const auth = new AuthService(ctx.db, ctx.config, ctx.logger);
+    const account = await auth.createPasswordAccount('unshared@example.test', 'password123');
+    const { bot } = await auth.createBot(accountToCloudAccount(account), 'Unshared Bot');
+    const created = await new ArtifactService({
+      db: ctx.db,
+      extension: createDefaultCloudModule(ctx.config),
+      baseUrl: ctx.config.baseUrl,
+    }).upsertArtifact({
+      account: accountToCloudAccount(account),
+      bot: { id: bot.id, name: bot.name, byline: bot.byline },
+      slug: 'unshared',
+      type: 'markdown',
+      title: 'Unshared',
+      content: '# Unshared',
+      share: false,
+    });
+    const cookie = await login(ctx, account.email, 'password123');
+
+    const html = await (
+      await ctx.app.request(`/dashboard/artifacts/${created.artifact.id}`, {
+        headers: { Cookie: cookie },
+      })
+    ).text();
+
+    expect(html).toMatch(/<input[^>]*id="new_share_password"[^>]*autocomplete="new-password"/);
+  });
 });
