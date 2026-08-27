@@ -173,7 +173,7 @@ export function DashboardHomePage({
             {artifacts.map((artifact) => (
               <ArtifactRow artifact={artifact} />
             ))}
-            <div class="aa-specimen-row">
+            <ButtonRow>
               {filters.nextCursor ? (
                 <Button
                   variant="secondary"
@@ -184,7 +184,7 @@ export function DashboardHomePage({
               ) : (
                 <Badge tone="neutral">End of list</Badge>
               )}
-            </div>
+            </ButtonRow>
           </div>
         )}
       </section>
@@ -225,15 +225,11 @@ export function DashboardArtifactPage({
         <section class="aa-section">
           <header class="aa-section-header">
             <p class="aa-page-kicker">Artifact detail</p>
-            <div class="aa-specimen-row">
+            <ButtonRow>
               <h1 class="aa-section-title">{artifact.title}</h1>
               <ArtifactTypeBadge type={artifact.type} />
-              {artifact.activeShare ? (
-                <Badge tone="accent">◆ shared</Badge>
-              ) : (
-                <Badge>private</Badge>
-              )}
-            </div>
+              {artifact.activeShare ? <Badge tone="accent">Shared</Badge> : <Badge>private</Badge>}
+            </ButtonRow>
             <p class="aa-section-note">
               <code>{artifact.slug}</code> · {formatByline(artifact)} · updated{' '}
               {formatRelativeTime(artifact.updatedAt)}
@@ -242,9 +238,6 @@ export function DashboardArtifactPage({
           <ButtonRow>
             <Button variant="secondary" href={`/dashboard/artifacts/${artifact.id}/download`}>
               Download
-            </Button>
-            <Button variant="primary" href="#share-panel">
-              Share
             </Button>
             <ConfirmDestructive
               id={`delete-artifact-${artifact.id}`}
@@ -711,23 +704,11 @@ function DashboardChrome({
           ...extensionNavItems.map((item) => ({ ...item, current: false })),
         ]}
       >
-        <form class="aa-stack" method="post" action="/dashboard/api/logout">
-          <span class="aa-hint">{account.email}</span>
-          <Button variant="secondary" type="submit">
-            Log out
-          </Button>
-        </form>
+        <AccountMenu email={account.email} />
       </NavShell>
       <main class="aa-main">
         <div class="aa-shell aa-stack">
-          <div class="aa-specimen-row">
-            <Badge tone="info">{account.email}</Badge>
-            <form method="post" action="/dashboard/api/logout">
-              <Button variant="secondary" size="sm" type="submit">
-                Log out
-              </Button>
-            </form>
-          </div>
+          <AccountMenu email={account.email} />
           {notice ? (
             <Notice tone={notice.tone} placement="page" dismissible>
               {notice.message}
@@ -737,6 +718,31 @@ function DashboardChrome({
         </div>
       </main>
     </Layout>
+  );
+}
+
+/**
+ * Who you are signed in as, and the way out. One component, mounted twice.
+ *
+ * These were two hand-rolled blocks that disagreed: in `<main>` the address was an info `Badge`
+ * with a small secondary button; in the drawer footer it was hint text with a full-width one. C5
+ * reserves badge tones for state, and as an info pill the identity sat directly above notice pills
+ * of identical shape and size, so the product's chrome and the product's feedback read as the same
+ * kind of object. Identity is text.
+ *
+ * The remaining half of B-G3 — mounting this once, in the header, so it is not on the page twice
+ * at 375 — needs `NavShell` to host it, which is shared chrome outside this file.
+ */
+function AccountMenu({ email }: { email: string }) {
+  return (
+    <ButtonRow>
+      <span class="aa-hint">{email}</span>
+      <form method="post" action="/dashboard/api/logout">
+        <Button variant="secondary" size="sm" type="submit">
+          Log out
+        </Button>
+      </form>
+    </ButtonRow>
   );
 }
 
@@ -846,20 +852,20 @@ function ArtifactRow({ artifact }: { artifact: DashboardArtifactListItem }) {
   return (
     <Card>
       <div class="aa-stack">
-        <div class="aa-specimen-row">
+        <ButtonRow>
           <a href={`/dashboard/artifacts/${artifact.id}`}>
             <strong>{artifact.title}</strong>
           </a>
           <ArtifactTypeBadge type={artifact.type} />
           {artifact.activeShare ? (
             <Badge tone="accent">
-              ◆ shared{artifact.activeShare.passwordProtected ? ' · key' : ''}
+              Shared{artifact.activeShare.passwordProtected ? ' · password' : ''}
             </Badge>
           ) : (
             <Badge tone="neutral">private</Badge>
           )}
           {artifact.expiresAt ? <ExpiresBadge expiresAt={artifact.expiresAt} /> : null}
-        </div>
+        </ButtonRow>
         <p class="aa-section-note">
           by {artifact.botName ?? 'unknown bot'} · <code>{artifact.slug}</code> · updated{' '}
           {formatRelativeTime(artifact.updatedAt)} · {artifact.lifetimeViews} views
@@ -877,9 +883,18 @@ function ArtifactTypeBadge({ type }: { type: ArtifactType }) {
   );
 }
 
+/**
+ * The badge clamped its countdown at zero but kept the future tense, so an artifact that had
+ * already gone read "expires in 0d" — a statement about the future that was false about the past.
+ * Past, present and future each get their own sentence.
+ */
 function ExpiresBadge({ expiresAt }: { expiresAt: number }) {
-  const days = Math.max(0, Math.ceil((expiresAt - Date.now()) / 86_400_000));
-  return <Badge tone="warn">expires in {days}d</Badge>;
+  const remainingMs = expiresAt - Date.now();
+  if (remainingMs <= 0) {
+    return <Badge tone="danger">expired</Badge>;
+  }
+  const days = Math.ceil(remainingMs / 86_400_000);
+  return <Badge tone="warn">{days <= 1 ? 'expires today' : `expires in ${days}d`}</Badge>;
 }
 
 function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
@@ -1001,25 +1016,29 @@ function VersionHistory({
                 <span class="aa-hint"> · restored from v{version.restoredFromVersion}</span>
               ) : null}
             </span>,
-            <div class="aa-specimen-row">
-              <Button
-                size="sm"
-                variant="secondary"
-                href={`/dashboard/artifacts/${artifact.id}?left=${version.versionNum}&right=${artifact.versionNum}`}
-              >
-                Diff
-              </Button>
+            <ButtonRow>
+              {/* The current version's Diff pointed at `?left=N&right=N` — a version compared
+                  with itself. There is nothing to show, so there is nothing to offer. */}
               {version.versionNum === artifact.versionNum ? (
                 <Badge tone="success">current</Badge>
               ) : (
-                <form method="post" action={`/dashboard/api/artifacts/${artifact.id}/restore`}>
-                  <input type="hidden" name="version" value={String(version.versionNum)} />
-                  <Button size="sm" variant="secondary" type="submit">
-                    Restore
+                <>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    href={`/dashboard/artifacts/${artifact.id}?left=${version.versionNum}&right=${artifact.versionNum}`}
+                  >
+                    Diff
                   </Button>
-                </form>
+                  <form method="post" action={`/dashboard/api/artifacts/${artifact.id}/restore`}>
+                    <input type="hidden" name="version" value={String(version.versionNum)} />
+                    <Button size="sm" variant="secondary" type="submit">
+                      Restore
+                    </Button>
+                  </form>
+                </>
               )}
-            </div>,
+            </ButtonRow>,
           ])}
       />
     </Card>
@@ -1053,21 +1072,38 @@ function PromotePanel({
   baseUrl: string;
   error: string | null;
 }) {
+  // An HTML artifact used to get the whole panel: a prefilled name, a prefilled slug, an editable
+  // description, an error line and a submit at 55% opacity — a form the reader can type into that
+  // can never be sent. State the rule once and offer nothing to fill in.
+  if (artifact.type !== 'markdown') {
+    return (
+      <Card title="Promote to template" description="Templates fill {{slots}} in markdown.">
+        <p class="aa-section-note">
+          Only markdown artifacts can be promoted. Publish this content as markdown if you want a
+          reusable start from it.
+        </p>
+      </Card>
+    );
+  }
+
   const slots = Array.from(new Set(artifact.content.match(/{{[a-z0-9_]+}}/g) ?? []));
   return (
     <Card
       title="Promote to template"
-      description="Only markdown artifacts can become v1 templates."
+      description="Reuse this artifact's content as a start for new ones."
+      notice={
+        error ? (
+          <Notice tone="danger" title="That template was not created">
+            {error}
+          </Notice>
+        ) : undefined
+      }
     >
       <form
         class="aa-stack"
         method="post"
         action={`/dashboard/api/artifacts/${artifact.id}/promote-template`}
       >
-        {artifact.type === 'html' ? (
-          <p class="aa-error">Only markdown artifacts can be promoted to templates.</p>
-        ) : null}
-        {error ? <p class="aa-error">{error}</p> : null}
         <p class="aa-hint">
           Detected slots: {slots.length > 0 ? slots.join(' ') : 'none yet'} · {baseUrl}
         </p>
@@ -1085,7 +1121,7 @@ function PromotePanel({
           optional
           rows={3}
         />
-        <Button variant="secondary" type="submit" disabled={artifact.type === 'html'}>
+        <Button variant="secondary" type="submit">
           Promote markdown artifact
         </Button>
       </form>
@@ -1198,7 +1234,7 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
       description="Review the raw markdown template before using it from the API."
     >
       <div class="aa-stack">
-        <div class="aa-specimen-row">
+        <ButtonRow>
           <Badge tone={template.builtIn ? 'info' : 'accent'}>
             {template.builtIn ? 'starter' : 'yours'}
           </Badge>
@@ -1206,7 +1242,7 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
           <Badge tone={template.type === 'markdown' ? 'success' : 'info'}>
             {template.type === 'markdown' ? 'markdown' : 'html'}
           </Badge>
-        </div>
+        </ButtonRow>
         {template.description ? <p class="aa-section-note">{template.description}</p> : null}
         <p class="aa-hint">
           Slots:{' '}
