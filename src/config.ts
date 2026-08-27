@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 const DEPLOYMENTS = ['cloud', 'self-hosted'] as const;
 const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const;
+const MAIL_TRANSPORTS = ['smtp', 'resend', 'log'] as const;
 
 export class ConfigError extends Error {
   constructor(readonly issues: string[]) {
@@ -99,6 +100,7 @@ const rawEnvSchema = z.object({
   SMTP_PASS: optionalString(),
   SMTP_FROM: optionalString(),
   RESEND_API_KEY: optionalString(),
+  AA_MAIL_TRANSPORT: z.preprocess(emptyStringToUndefined, z.enum(MAIL_TRANSPORTS).optional()),
   AA_RATE_LIMIT_RPM: integerFromEnv(60, 1),
   AA_RATE_LIMIT_WRITES_PER_MIN: integerFromEnv(10, 1),
   AA_RATE_LIMITS_DISABLED: booleanFromEnv(false),
@@ -112,7 +114,10 @@ const rawEnvSchema = z.object({
 
 type RawEnv = z.infer<typeof rawEnvSchema>;
 
+export type MailTransport = 'auto' | (typeof MAIL_TRANSPORTS)[number];
+
 export interface MailConfig {
+  transport: MailTransport;
   smtpHost?: string;
   smtpPort: number;
   smtpUser?: string;
@@ -188,6 +193,7 @@ export function loadConfig(
     ...(raw.SANDBOX_ORIGIN ? { sandboxOrigin: raw.SANDBOX_ORIGIN } : {}),
     frameOrigin,
     mail: {
+      transport: raw.AA_MAIL_TRANSPORT ?? 'auto',
       ...(raw.SMTP_HOST ? { smtpHost: raw.SMTP_HOST } : {}),
       smtpPort: raw.SMTP_PORT,
       ...(raw.SMTP_USER ? { smtpUser: raw.SMTP_USER } : {}),
@@ -243,13 +249,23 @@ function validateModeRequirements(raw: RawEnv): string[] {
     issues.push('SMTP_FROM is required when any SMTP setting is provided');
   }
 
+  if (raw.AA_MAIL_TRANSPORT === 'smtp' && !hasSmtpTransport) {
+    issues.push('SMTP_HOST and SMTP_FROM are required when AA_MAIL_TRANSPORT=smtp');
+  }
+
+  if (raw.AA_MAIL_TRANSPORT === 'resend' && !raw.RESEND_API_KEY) {
+    issues.push('RESEND_API_KEY is required when AA_MAIL_TRANSPORT=resend');
+  }
+
   if (raw.DEPLOYMENT === 'cloud') {
     if (!raw.SANDBOX_ORIGIN) {
       issues.push('SANDBOX_ORIGIN is required when DEPLOYMENT=cloud');
     }
 
-    if (!raw.RESEND_API_KEY && !hasSmtpTransport) {
-      issues.push('RESEND_API_KEY or SMTP_HOST + SMTP_FROM is required when DEPLOYMENT=cloud');
+    if (!raw.RESEND_API_KEY && !hasSmtpTransport && raw.AA_MAIL_TRANSPORT !== 'log') {
+      issues.push(
+        'cloud mail transport is required: set RESEND_API_KEY, SMTP_HOST + SMTP_FROM, or AA_MAIL_TRANSPORT=log for development only'
+      );
     }
   }
 

@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import type { AppConfig, MailConfig } from '../config.js';
+import type { AppConfig, MailConfig, MailTransport } from '../config.js';
 import type { Logger } from '../logger.js';
 
 export interface SendMagicLinkInput {
@@ -16,19 +16,46 @@ export function createMailService(
   config: Pick<AppConfig, 'mail' | 'baseUrl' | 'deployment'>,
   logger: Logger
 ): MailService {
-  if (config.mail.resendApiKey) {
+  const transport = resolveMailTransport(config.mail);
+
+  if (transport === 'log') {
+    if (config.mail.transport === 'log') {
+      logger.warn("MAIL TRANSPORT IS 'log' — NOT FOR PRODUCTION");
+    }
+    return new LogMailService(logger);
+  }
+
+  if (transport === 'resend') {
     return new ResendMailService(config.mail, logger);
   }
 
-  if (config.mail.smtpHost && config.mail.smtpFrom) {
-    return new SmtpMailService(config.mail);
-  }
-
-  return new LogMailService(logger);
+  return new SmtpMailService(config.mail);
 }
 
 export function hasConfiguredMail(config: Pick<AppConfig, 'mail'>): boolean {
+  if (config.mail.transport === 'log') {
+    return true;
+  }
+  if (config.mail.transport === 'resend') {
+    return Boolean(config.mail.resendApiKey);
+  }
+  if (config.mail.transport === 'smtp') {
+    return Boolean(config.mail.smtpHost && config.mail.smtpFrom);
+  }
   return Boolean(config.mail.resendApiKey || (config.mail.smtpHost && config.mail.smtpFrom));
+}
+
+function resolveMailTransport(mail: MailConfig): Exclude<MailTransport, 'auto'> {
+  if (mail.transport !== 'auto') {
+    return mail.transport;
+  }
+  if (mail.resendApiKey) {
+    return 'resend';
+  }
+  if (mail.smtpHost && mail.smtpFrom) {
+    return 'smtp';
+  }
+  return 'log';
 }
 
 export function magicLinkEmailText(url: string): string {
@@ -105,6 +132,6 @@ class LogMailService implements MailService {
   constructor(private readonly logger: Logger) {}
 
   async sendMagicLink(input: SendMagicLinkInput): Promise<void> {
-    this.logger.info({ email: input.to, magic_link: input.url }, 'auth.magic_link.dev');
+    this.logger.warn({ email: input.to, magic_link: input.url }, 'auth.magic_link.dev');
   }
 }
