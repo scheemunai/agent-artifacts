@@ -187,11 +187,7 @@ export function DashboardHomePage({
                 of object rather than two states of the same one. */}
             <Pagination
               label="Artifact list pages"
-              pageDescription={
-                filters.nextCursor
-                  ? `${formatCount(artifacts.length)} shown so far`
-                  : `${formatCount(artifacts.length)} artifacts · end of list`
-              }
+              pageDescription={pageDescription(artifacts.length, filters)}
               previousDisabled={!filters.cursor}
               nextDisabled={!filters.nextCursor}
               previousHref="/dashboard"
@@ -240,7 +236,7 @@ export function DashboardArtifactPage({
             <ButtonRow>
               <h1 class="aa-section-title">{artifact.title}</h1>
               <ArtifactTypeBadge type={artifact.type} />
-              {artifact.activeShare ? <Badge tone="accent">Shared</Badge> : <Badge>private</Badge>}
+              <ShareStateBadge artifact={artifact} />
             </ButtonRow>
             <p class="aa-section-note">
               <code>{artifact.slug}</code> · {formatByline(artifact)} · updated{' '}
@@ -892,13 +888,7 @@ function ArtifactRow({ artifact }: { artifact: DashboardArtifactListItem }) {
       </span>
       <ButtonRow>
         <ArtifactTypeBadge type={artifact.type} />
-        {artifact.activeShare ? (
-          <Badge tone="accent">
-            Shared{artifact.activeShare.passwordProtected ? ' · password' : ''}
-          </Badge>
-        ) : (
-          <Badge tone="neutral">private</Badge>
-        )}
+        <ShareStateBadge artifact={artifact} />
         {artifact.expiresAt ? <ExpiresBadge expiresAt={artifact.expiresAt} /> : null}
       </ButtonRow>
       <span class="aa-list-row__meta">
@@ -915,6 +905,33 @@ function ArtifactRow({ artifact }: { artifact: DashboardArtifactListItem }) {
  * artifact and, worse, spent both tones so neither was available for anything that is actually a
  * state. Type is a neutral tag; success, warn, danger and info belong to what happened.
  */
+/**
+ * One share state, one rendering, wherever it appears.
+ *
+ * The list said "Shared · password" while the detail header of the same artifact said only
+ * "Shared" — the discriminator lived 500px further down in the panel, so the header quietly
+ * disagreed with the row that led to it. And a revoked link rendered the same neutral "private"
+ * as an artifact that had never been shared, which are opposite facts: one was never public, the
+ * other was and was pulled back. `previousShareCount` already knew.
+ */
+function ShareStateBadge({
+  artifact,
+}: {
+  artifact: Pick<DashboardArtifactListItem, 'activeShare' | 'previousShareCount'>;
+}) {
+  if (artifact.activeShare) {
+    return (
+      <Badge tone="accent">
+        Shared{artifact.activeShare.passwordProtected ? ' · password' : ''}
+      </Badge>
+    );
+  }
+  if (artifact.previousShareCount > 0) {
+    return <Badge tone="warn">Link revoked</Badge>;
+  }
+  return <Badge tone="neutral">private</Badge>;
+}
+
 function ArtifactTypeBadge({ type }: { type: ArtifactType }) {
   return <Badge tone="neutral">{type === 'markdown' ? 'md' : 'html'}</Badge>;
 }
@@ -1431,6 +1448,23 @@ function TemplateTable({
       />
     </Card>
   );
+}
+
+/**
+ * What the number in the pagination meta is counting.
+ *
+ * "8 artifacts · end of list" on a 28-artifact account read as "this account has 8" — one string
+ * doing two jobs depending on how the reader got there. Only the first page can honestly claim
+ * to be counting the whole set; past a cursor the count is of this page and says so. A true
+ * running total would need a count the list query does not currently make.
+ */
+function pageDescription(shown: number, filters: DashboardHomePageProps['filters']): string {
+  if (filters.nextCursor) {
+    return `${formatCount(shown)} shown so far`;
+  }
+  return filters.cursor
+    ? `${formatCount(shown)} on this page · end of list`
+    : `${formatCount(shown)} artifacts · end of list`;
 }
 
 /** Whether the reader narrowed the list themselves. `cursor` is paging, not filtering. */
