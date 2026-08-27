@@ -182,7 +182,13 @@ describe('A-52 · credential blocks do not break tokens or lie about scrolling',
     expect(html).toContain('aa-copy--credential');
   });
 
-  it('omits the scroll hint on a single-line block that cannot scroll vertically', () => {
+  it('shows no scroll hint on a single-line block until something proves it scrolls', () => {
+    // Amended, not weakened — the intent (nothing may claim a block scrolls when it does not) is
+    // unchanged and still asserted. What changed is *when* the claim is settled: a `credential`
+    // block does not wrap, so a long key overflows horizontally, which the value cannot reveal and
+    // only a measurement can. The hint is therefore rendered `hidden` rather than omitted, so the
+    // shared `data-aa-scroll-region` mechanism has something to unhide, and so `aria-describedby`
+    // points at a real element instead of dangling. Nothing is visible until it is true.
     const html = renderToString(
       CopyBlock({
         id: 'k',
@@ -192,8 +198,8 @@ describe('A-52 · credential blocks do not break tokens or lie about scrolling',
       })
     );
 
-    expect(html).not.toContain('Scroll inside the block');
-    expect(html).not.toContain('aria-describedby');
+    expect(html).toMatch(/<p class="aa-copy__hint" id="k-hint"[^>]*hidden/);
+    expect(html).toContain('data-aa-scroll-hint-for="k-hint"');
   });
 
   it('keeps the hint on a genuinely multi-line block', () => {

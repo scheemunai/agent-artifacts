@@ -103,8 +103,11 @@ describe('ui component primitives', () => {
     );
 
     expect(copy).toContain('data-aa-copy="copy-one"');
-    expect(copy).not.toContain('Scroll inside the block');
-    expect(copy).not.toContain('aria-describedby');
+    // The hint is present but `hidden`, not absent. Same visible outcome — nothing claims this
+    // block scrolls — but the element exists so the client's measurement has something to reveal
+    // when a long credential overflows sideways, and so `aria-describedby` never dangles. A hidden
+    // target is correctly ignored by assistive tech. See ui-copy-block-affordance.test.ts.
+    expect(copy).toMatch(/<p class="aa-copy__hint"[^>]*hidden/);
   });
 
   it('renders dismissible server toasts and specimen pagination feedback hooks', () => {

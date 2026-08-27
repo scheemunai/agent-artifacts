@@ -1845,8 +1845,13 @@
     }
 
     /* Secondary header actions stand down rather than wrap onto a second row that collides with
-       the header rule. Everything hidden here is reachable from the marketing footer. */
-    .aa-btn--compact-hide {
+       the header rule. Everything hidden here is reachable from the marketing footer.
+
+       Qualified with `.aa-btn` for specificity, not source order: `.aa-btn { display: inline-flex }`
+       is the same (0,1,0), so an unqualified hide wins only because it is emitted later in the
+       file. That is the mechanism that kept the mobile Menu button on every desktop page for
+       months. */
+    .aa-btn.aa-btn--compact-hide {
       display: none;
     }
 

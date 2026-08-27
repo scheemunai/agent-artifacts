@@ -883,10 +883,19 @@ interface CopyBlockProps {
 export function CopyBlock({ id, label, value, variant = 'text' }: CopyBlockProps) {
   const hintId = `${id}-hint`;
   const labelId = `${id}-label`;
-  // A scroll hint on a block that cannot scroll is a false statement, and the shipped one said
-  // "scroll inside the block" beneath a two-line key. Only a multi-line value can scroll
-  // vertically, which is the one thing the server can know without measuring the viewport.
-  const scrollable = value.includes('\n');
+  // Two axes, two ways of knowing.
+  //
+  // A multi-line value overflows the block's `max-height`, and the server can prove that from the
+  // value alone. A single-line value cannot overflow vertically — but a `credential` block does
+  // not wrap, so a long API key overflows *sideways*, and no amount of looking at the string tells
+  // you whether it does at this viewport. That case is measured: `data-aa-scroll-region` and
+  // `data-aa-scroll-hint-for` are the generic contract `ui-foundation` already implements for the
+  // Table, and it needs no knowledge of this component to serve it.
+  //
+  // The hint element is always rendered so the measurement has something to reveal, and so
+  // `aria-describedby` never points at an element that is not there. A hidden target is correctly
+  // ignored by assistive tech, which is the right answer when there is nothing to say.
+  const knownScrollable = value.includes('\n');
 
   return (
     <section
@@ -911,14 +920,21 @@ export function CopyBlock({ id, label, value, variant = 'text' }: CopyBlockProps
           </Button>
         </ButtonRow>
       </header>
-      <pre id={id} tabindex={0} aria-describedby={scrollable ? hintId : undefined}>
+      <pre
+        id={id}
+        tabindex={0}
+        aria-describedby={hintId}
+        data-aa-scroll-region="true"
+        // Only the unproven case is handed to the measurement: `updateScrollRegion` assigns
+        // `hint.hidden` unconditionally, so wiring a hint the server has already shown would let a
+        // no-horizontal-overflow reading hide a block that genuinely scrolls vertically.
+        {...(knownScrollable ? {} : { 'data-aa-scroll-hint-for': hintId })}
+      >
         <code>{value}</code>
       </pre>
-      {scrollable ? (
-        <p class="aa-copy__hint" id={hintId}>
-          Scroll inside the block to view everything. Copy includes the full text.
-        </p>
-      ) : null}
+      <p class="aa-copy__hint" id={hintId} hidden={knownScrollable ? undefined : true}>
+        Scroll inside the block to view everything. Copy includes the full text.
+      </p>
     </section>
   );
 }

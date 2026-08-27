@@ -9,6 +9,7 @@ import {
   maxLength,
   parseStylesheet,
   resolveVars,
+  specificity,
   splitTopLevel,
   stripComments,
   themeVariables,
@@ -103,6 +104,54 @@ describe('cascade repairs', () => {
     // the Menu button renders next to the full desktop nav on every page at 1440.
     expect(winningDeclaration(appRules, menuTrigger, 'display', 1440)?.value).toBe('none');
     expect(winningDeclaration(appRules, menuTrigger, 'display', 375)?.value).toBe('inline-flex');
+  });
+
+  it('never lets a button rule depend on source order to beat the base rule', () => {
+    // Named trap, two instances: `.aa-mobile-trigger` shipped broken for months, and
+    // `.aa-btn--compact-hide` was laid again while this batch was in flight. Both are (0,1,0)
+    // against `.aa-btn { display: inline-flex }`, so whichever is emitted later wins — which means
+    // the product is one file reorder away from the same defect. Equal specificity is the bug;
+    // resolving correctly today is not a defence.
+    const base = appRules.find((rule) => rule.selector === '.aa-btn');
+    const baseDisplay = declarationValue(base?.block ?? '', 'display');
+    const baseSpecificity = specificity('.aa-btn');
+
+    const buttonRules = appRules.filter((rule) => {
+      if (rule.selector === '.aa-btn') {
+        return false;
+      }
+      // Single compound only: a rule that already has an ancestor is not in this tie.
+      if (/[\s>+~]/.test(rule.selector.trim())) {
+        return false;
+      }
+      if (!/\.aa-btn|\.aa-mobile-trigger/.test(rule.selector)) {
+        return false;
+      }
+      const display = declarationValue(rule.block, 'display');
+      // A rule that sets the same display as the base cannot lose anything to it.
+      return display !== undefined && display !== baseDisplay;
+    });
+
+    expect(buttonRules.length, 'no button display rules found — check the filter').toBeGreaterThan(
+      0
+    );
+
+    for (const rule of buttonRules) {
+      const ruleSpecificity = specificity(rule.selector);
+      const beatsBase =
+        ruleSpecificity[0] > baseSpecificity[0] ||
+        (ruleSpecificity[0] === baseSpecificity[0] && ruleSpecificity[1] > baseSpecificity[1]) ||
+        (ruleSpecificity[0] === baseSpecificity[0] &&
+          ruleSpecificity[1] === baseSpecificity[1] &&
+          ruleSpecificity[2] > baseSpecificity[2]);
+
+      expect(
+        beatsBase,
+        `"${rule.selector}" sets display:${declarationValue(rule.block, 'display')} at the same ` +
+          `specificity as ".aa-btn" — it wins only because of where it sits in the file. ` +
+          `Qualify it as ".aa-btn${rule.selector}".`
+      ).toBe(true);
+    }
   });
 
   const passwordGateError: ElementSpec[] = [
