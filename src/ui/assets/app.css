@@ -1119,9 +1119,15 @@
   }
 
   .aa-empty__icon {
+    display: inline-grid;
+    place-items: center;
     color: var(--color-aa-accent);
-    font-size: var(--text-aa-2xl);
     line-height: 1;
+  }
+
+  .aa-empty__icon .aa-mark {
+    width: 2.25rem;
+    height: 2.25rem;
   }
 
   .aa-empty__title {

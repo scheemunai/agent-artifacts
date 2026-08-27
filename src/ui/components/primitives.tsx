@@ -659,8 +659,8 @@ interface EmptyStateProps {
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <section class="aa-empty" aria-labelledby="empty-title">
-      <div class="aa-empty__icon" aria-hidden="true">
-        ◆
+      <div class="aa-empty__icon">
+        <ProductMark />
       </div>
       <h3 class="aa-empty__title" id="empty-title">
         {title}
@@ -810,13 +810,29 @@ export function Avatar({ name, size = 'md' }: AvatarProps) {
   );
 }
 
+/**
+ * The product's only brand mark.
+ *
+ * The notch is a real cut-out — one path, two subpaths, `fill-rule="evenodd"` — not a second shape
+ * painted over the first. It used to be painted `#FFFFFF`, the sole hard-coded hex in the component
+ * layer, so on the Fresh Air canvas and in the drawer the notch rendered *lighter* than its
+ * surroundings and read as a stray white shard rather than negative space, turning the diamond
+ * into a "◀". As a cut-out it shows whatever surface it sits on, at any tint.
+ *
+ * The two subpaths are the vector `src/lib/og.ts` draws for the OG card, held identical by
+ * `tests/unit/og-image.test.ts`; the OG keeps two painted paths because it renders onto a card
+ * whose background is known to be white.
+ */
 export function ProductMark() {
   return (
     <span class="aa-mark" aria-hidden="true">
       <svg viewBox="0 0 32 32" focusable="false" aria-hidden="true" role="presentation">
         <g transform="rotate(45 16 16)">
-          <path fill="currentColor" d="M6 6 H16 L26 16 V26 H6 Z" />
-          <path fill="#FFFFFF" d="M16 6 L26 16 H16 Z" />
+          <path
+            fill="currentColor"
+            fill-rule="evenodd"
+            d="M6 6 H16 L26 16 V26 H6 Z M16 6 L26 16 H16 Z"
+          />
         </g>
       </svg>
     </span>

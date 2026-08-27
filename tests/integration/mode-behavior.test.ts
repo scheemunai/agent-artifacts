@@ -151,7 +151,9 @@ describe('deployment mode behavior', () => {
     const html = await response.text();
 
     expect(response.status).toBe(200);
-    expect(html).toContain('Made with ◆ Agent Artifacts');
+    // The mark is the ProductMark component now, not a text glyph, so the footer is
+    // identified by its brand link rather than by the character it used to print.
+    expect(html).toContain('aa-viewer-footer__brand');
   });
 
   it('suppresses the public footer with AA_HIDE_FOOTER in self-hosted mode', async () => {
@@ -164,7 +166,7 @@ describe('deployment mode behavior', () => {
     const html = await response.text();
 
     expect(response.status).toBe(200);
-    expect(html).not.toContain('Made with ◆ Agent Artifacts');
+    expect(html).not.toContain('aa-viewer-footer__brand');
     expect(html).toContain('Report abuse');
   });
 
@@ -175,7 +177,7 @@ describe('deployment mode behavior', () => {
     });
     const freeArtifact = await publishSharedArtifact(free);
     const freeHtml = await (await free.app.request(`/a/${freeArtifact.share?.shareId}`)).text();
-    expect(freeHtml).toContain('Made with ◆ Agent Artifacts');
+    expect(freeHtml).toContain('aa-viewer-footer__brand');
 
     const pro = await createModeContext({
       env: { DEPLOYMENT: 'cloud' },
@@ -183,7 +185,7 @@ describe('deployment mode behavior', () => {
     });
     const proArtifact = await publishSharedArtifact(pro);
     const proHtml = await (await pro.app.request(`/a/${proArtifact.share?.shareId}`)).text();
-    expect(proHtml).not.toContain('Made with ◆ Agent Artifacts');
+    expect(proHtml).not.toContain('aa-viewer-footer__brand');
     expect(proHtml).toContain('Report abuse');
   });
 });

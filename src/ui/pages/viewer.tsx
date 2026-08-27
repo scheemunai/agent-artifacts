@@ -284,8 +284,12 @@ export function ViewerFooter({
   return (
     <footer class="aa-viewer-footer">
       {showProductFooter ? (
-        <a href="https://agentartifact.ai" rel="noopener noreferrer">
-          Made with ◆ Agent Artifacts
+        <a
+          class="aa-viewer-footer__brand"
+          href="https://agentartifact.ai"
+          rel="noopener noreferrer"
+        >
+          Made with <ProductMark /> Agent Artifacts
         </a>
       ) : null}
       {showProductFooter ? <span aria-hidden="true">·</span> : null}

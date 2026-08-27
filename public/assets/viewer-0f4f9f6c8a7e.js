@@ -19,6 +19,17 @@ const versionBannerText = document.querySelector('[data-aa-version-banner-text]'
 const viewLatestLink = document.querySelector('[data-aa-view-latest]');
 const updatedPill = document.querySelector('[data-aa-updated-pill]');
 
+/**
+ * The `ProductMark` vector, as markup. This card is built as an HTML string rather than JSX, and
+ * it used to substitute a diamond text glyph for the mark — so the same terminal state carried two
+ * different brands depending on whether the server or the poller rendered it.
+ */
+const PRODUCT_MARK_SVG =
+  '<span class="aa-mark" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false" aria-hidden="true" role="presentation">' +
+  '<g transform="rotate(45 16 16)">' +
+  '<path fill="currentColor" fill-rule="evenodd" d="M6 6 H16 L26 16 V26 H6 Z M16 6 L26 16 H16 Z"></path>' +
+  '</g></svg></span>';
+
 const POLL_INTERVAL_MS = 30_000;
 const FRAME_MIN_HEIGHT = 288;
 const FRAME_MAX_HEIGHT = 2400;
@@ -439,7 +450,7 @@ function showTerminal(message) {
   }
   if (contentNode) {
     const currentUrl = escapeHtml(window.location.href);
-    contentNode.innerHTML = `<section class="aa-viewer-terminal"><section class="aa-viewer-terminal-card"><span class="aa-mark" aria-hidden="true">◆</span><h1>${escapeHtml(message)}</h1><div class="aa-button-row aa-button-row--center aa-viewer-terminal-actions"><a class="aa-btn aa-btn--secondary" href="${currentUrl}"><span>Try again</span></a><a class="aa-btn aa-btn--ghost" href="/"><span>Go home</span></a></div></section></section>`;
+    contentNode.innerHTML = `<section class="aa-viewer-terminal"><section class="aa-viewer-terminal-card">${PRODUCT_MARK_SVG}<h1>${escapeHtml(message)}</h1><div class="aa-button-row aa-button-row--center aa-viewer-terminal-actions"><a class="aa-btn aa-btn--secondary" href="${currentUrl}"><span>Try again</span></a><a class="aa-btn aa-btn--ghost" href="/"><span>Go home</span></a></div></section></section>`;
   }
 }
 
