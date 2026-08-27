@@ -6,6 +6,7 @@ import type { DatabaseHandle } from './db/client.js';
 import type { CloudModule } from './extension/cloud-module.js';
 import { AppError, errorEnvelope, internalErrorEnvelope } from './lib/errors.js';
 import type { Logger } from './logger.js';
+import { registerHumanRoutes } from './routes/dashboard.js';
 import { healthRoute } from './routes/health.js';
 import { registerPublicRoutes } from './routes/public.js';
 import { registerV1Routes } from './routes/v1/index.js';
@@ -80,6 +81,7 @@ export function createApp({
   };
   registerV1Routes(app, routesContext);
   registerPublicRoutes(app, routesContext);
+  registerHumanRoutes(app, routesContext);
   app.route('/', createWebRoute(config));
 
   app.notFound((context) =>
