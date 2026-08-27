@@ -7,6 +7,8 @@ import pg from 'pg';
 import type { AppConfig } from '../config.js';
 import type { Logger } from '../logger.js';
 
+pg.types.setTypeParser(20, (value: string) => Number(value));
+
 export type DatabaseDialect = 'sqlite' | 'postgres';
 
 export interface DatabaseHandleBase {

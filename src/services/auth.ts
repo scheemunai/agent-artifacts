@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }
 import { dirname, resolve } from 'node:path';
 import { argon2id, hash as argonHash, verify as argonVerify } from 'argon2';
 import { nanoid } from 'nanoid';
+import type { PoolClient } from 'pg';
 import type { AppConfig } from '../config.js';
 import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } from '../db/client.js';
 import type { Account } from '../extension/cloud-module.js';
@@ -630,7 +631,7 @@ export class AuthService {
         `,
         [input.accountId, input.email, input.passwordHash, input.now]
       );
-      await insertPostgresBot(handle, input.bot, input.apiKey);
+      await insertPostgresBot(client, input.bot, input.apiKey);
       await client.query(
         `
           INSERT INTO sessions (id, account_id, created_at, expires_at, last_seen_at)
@@ -888,7 +889,7 @@ async function insertBot(db: DatabaseHandle, bot: BotRecord, apiKey: string): Pr
     return;
   }
 
-  await insertPostgresBot(db, bot, apiKey);
+  await insertPostgresBot(db.pool, bot, apiKey);
 }
 
 function insertSqliteBot(handle: SqliteDatabaseHandle, bot: BotRecord, apiKey: string): void {
@@ -915,11 +916,11 @@ function insertSqliteBot(handle: SqliteDatabaseHandle, bot: BotRecord, apiKey: s
 }
 
 async function insertPostgresBot(
-  handle: PostgresDatabaseHandle,
+  executor: PostgresDatabaseHandle['pool'] | PoolClient,
   bot: BotRecord,
   apiKey: string
 ): Promise<void> {
-  await handle.pool.query(
+  await executor.query(
     `
       INSERT INTO bots (
         id, account_id, name, byline, api_key_hash, api_key_last4,
