@@ -274,8 +274,12 @@ function ViewerChrome({
         <Button variant="secondary" href={downloadHref} dataAttrs={{ 'data-aa-download': 'true' }}>
           ⭳ Download
         </Button>
+        {/* Bordered and square, matching Download beside it. The control was never unlabelled —
+            it has had both an accessible name and a tooltip — but a bare 14px muted glyph with no
+            box next to a bordered button does not read as a control at all. */}
         <Button
-          variant="ghost"
+          variant="secondary"
+          iconOnly
           ariaLabel="Refresh artifact"
           title="Refresh artifact"
           dataAttrs={{ 'data-aa-refresh': 'true' }}

@@ -122,3 +122,40 @@ describe('ButtonRow', () => {
     expect(html).toContain('aa-button-row');
   });
 });
+
+describe('icon-only controls read as controls', () => {
+  it('gives a mark-only button a square box at the touch floor', () => {
+    // `min-height` was honoured everywhere and `min-width` was set nowhere, so an icon-only button
+    // computed to 33x44 — under the 44px floor on one axis.
+    const rule = appRules.find((candidate) => candidate.selector === '.aa-btn--icon');
+    expect(rule, 'no .aa-btn--icon rule').toBeDefined();
+
+    expect(declarationValue(rule?.block ?? '', 'min-width')).toBe('var(--spacing-aa-touch)');
+    expect(declarationValue(rule?.block ?? '', 'width')).toBe('var(--spacing-aa-touch)');
+    expect(
+      renderToString(Button({ children: '↻', iconOnly: true, ariaLabel: 'Refresh' }))
+    ).toContain('aa-btn--icon');
+  });
+
+  it('gives the viewer refresh control a box beside the bordered Download button', () => {
+    // The control was never unlabelled — it has carried an accessible name and a tooltip
+    // throughout. A bare 14px muted glyph with no border beside a bordered button simply does not
+    // read as a control, which is an affordance defect, not an a11y one.
+    const viewerSource = readFileSync('src/ui/pages/viewer.tsx', 'utf8');
+    const refresh = /<Button[\s\S]*?data-aa-refresh[\s\S]*?>/.exec(viewerSource)?.[0] ?? '';
+
+    expect(refresh).toContain('iconOnly');
+    expect(refresh).toContain('variant="secondary"');
+    // Still named, still tooltipped. Do not "fix" this by adding a third label.
+    expect(refresh).toContain('ariaLabel="Refresh artifact"');
+    expect(refresh).toContain('title="Refresh artifact"');
+  });
+
+  it('keeps the mark in place while the control is busy', () => {
+    // Swapping the glyph for the word "Refreshing…" reflowed a control that is now a fixed square.
+    const viewerScript = readFileSync('public/assets/viewer-0f4f9f6c8a7e.js', 'utf8');
+
+    expect(viewerScript).not.toMatch(/refreshButton\.textContent\s*=/);
+    expect(viewerScript).toContain("setAttribute('aria-busy'");
+  });
+});

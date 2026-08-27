@@ -404,8 +404,10 @@ function setRefreshBusy(isBusy) {
   if (!refreshButton) {
     return;
   }
+  // The mark stays put: swapping it for the word "Refreshing…" used to reflow a control that is
+  // now a fixed 44px square. Busy is carried by state and by the accessible name instead.
   refreshButton.disabled = isBusy;
-  refreshButton.textContent = isBusy ? 'Refreshing…' : '↻';
+  refreshButton.setAttribute('aria-busy', isBusy ? 'true' : 'false');
   refreshButton.setAttribute('aria-label', isBusy ? 'Refreshing artifact' : 'Refresh artifact');
   refreshButton.setAttribute('title', isBusy ? 'Refreshing artifact' : 'Refresh artifact');
 }
