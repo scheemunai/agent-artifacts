@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   GITHUB_REPOSITORY,
   GITHUB_URL,
+  HOME_DEMO_COPY,
   HOME_HERO,
+  HOME_HTML_ARTIFACT_URL,
+  HOME_REPORT_ARTIFACT_URL,
   HOME_SUBLINE,
   HomePage,
 } from '../../src/ui/pages/home.js';
@@ -14,8 +17,14 @@ describe('cloud marketing homepage', () => {
 
     expect(html).toContain(HOME_HERO);
     expect(html).toContain(HOME_SUBLINE.replace("agent's", 'agent&#39;s'));
-    expect(html).toContain('Demo GIF/video placeholder');
-    expect(html).toContain('aa-home-demo-slot');
+    expect(html).toContain(HOME_DEMO_COPY);
+    expect(html).toContain('See the work');
+    expect(html).toContain('Templated report');
+    expect(html).toContain('Sandboxed HTML dashboard');
+    expect(html).toContain(`href="${HOME_REPORT_ARTIFACT_URL}"`);
+    expect(html).toContain(`href="${HOME_HTML_ARTIFACT_URL}"`);
+    expect(html).toContain('Open report →');
+    expect(html).toContain('Open dashboard →');
     expect(html).toContain('Sign up to get your key.');
     expect(html).toContain('Your API key: [KEY]');
     expect(html).toContain('Hello from [BOT NAME]');
@@ -24,6 +33,8 @@ describe('cloud marketing homepage', () => {
     expect(html).toContain(`github.com/${GITHUB_REPOSITORY}`);
     expect(html).toContain('Pro ($9/mo)');
     expect(html).not.toContain('/pricing');
+    expect(html).not.toContain('Demo GIF/video placeholder');
+    expect(html).not.toContain('aa-home-demo-slot');
     expect(html).not.toMatch(/Testimonials|logo wall|feature grid/i);
   });
 

@@ -1,5 +1,5 @@
 import { Layout } from '../components/layout.js';
-import { Button, Card, CopyBlock, ProductMark } from '../components/primitives.js';
+import { Badge, Button, Card, CopyBlock, ProductMark } from '../components/primitives.js';
 import { buildInstallPrompt } from './dashboard.js';
 
 export const GITHUB_REPOSITORY = 'ZeroPointRepo/agent-artifacts';
@@ -7,6 +7,28 @@ export const GITHUB_URL = `https://github.com/${GITHUB_REPOSITORY}`;
 export const HOME_HERO = 'Your agent does the work. Artifacts is where it shows the work.';
 export const HOME_SUBLINE =
   "One POST turns your agent's markdown or HTML into a beautiful, versioned, shareable page — stable URL, live updates, optional password.";
+export const HOME_DEMO_COPY =
+  'Two real artifacts, published through the live API: a templated report and a sandboxed HTML dashboard. Update the same slug later; the public link stays put.';
+export const HOME_REPORT_ARTIFACT_URL =
+  'https://agentartifact.anacreon.ai/a/EUMZD1RSHBZgHya2ZoNWxQ';
+export const HOME_HTML_ARTIFACT_URL = 'https://agentartifact.anacreon.ai/a/-jNreL9Menxh1DmknwfOT-';
+
+const HOME_DEMO_ARTIFACTS = [
+  {
+    title: 'Templated report',
+    description: 'Markdown through the built-in report template.',
+    badge: 'report',
+    href: HOME_REPORT_ARTIFACT_URL,
+    action: 'Open report →',
+  },
+  {
+    title: 'Sandboxed HTML dashboard',
+    description: 'Self-contained HTML rendered inside the sandboxed frame.',
+    badge: 'html',
+    href: HOME_HTML_ARTIFACT_URL,
+    action: 'Open dashboard →',
+  },
+] as const;
 
 export interface HomePageProps {
   baseUrl: string;
@@ -58,14 +80,27 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
           </section>
 
           <div class="aa-home-body aa-stack">
-            <section class="aa-empty aa-home-demo-slot" aria-label="Demo video placeholder">
-              <div class="aa-empty__icon" aria-hidden="true">
-                ◆
+            <section class="aa-section" aria-labelledby="home-demo">
+              <div class="aa-section-header">
+                <h2 class="aa-section-title" id="home-demo">
+                  See the work
+                </h2>
+                <p class="aa-section-note">{HOME_DEMO_COPY}</p>
               </div>
-              <h2 class="aa-empty__title">Demo GIF/video placeholder</h2>
-              <p class="aa-empty__description">
-                A 16:10 product demo will sit here. No autoplay sound.
-              </p>
+              <div class="aa-grid aa-grid--2">
+                {HOME_DEMO_ARTIFACTS.map((artifact) => (
+                  <Card title={artifact.title} description={artifact.description}>
+                    <div class="aa-stack">
+                      <Badge tone={artifact.badge === 'html' ? 'info' : 'success'}>
+                        {artifact.badge}
+                      </Badge>
+                      <Button variant="secondary" href={artifact.href}>
+                        {artifact.action}
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
             </section>
 
             <section class="aa-section" aria-labelledby="home-install">
