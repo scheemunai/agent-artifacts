@@ -26,6 +26,7 @@ RUN addgroup -S -g 1001 aa \
   && chown -R aa:aa /data /app
 
 COPY --from=build --chown=aa:aa /app/package.json ./package.json
+COPY --from=build --chown=aa:aa /app/LICENSE ./LICENSE
 COPY --from=build --chown=aa:aa /app/node_modules ./node_modules
 COPY --from=build --chown=aa:aa /app/dist ./dist
 COPY --from=build --chown=aa:aa /app/public ./public
