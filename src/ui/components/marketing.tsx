@@ -81,6 +81,17 @@ export interface MarketingApiBlockProps {
 }
 
 export function MarketingApiBlock({ id, label, children }: MarketingApiBlockProps) {
+  // A-14. This block is `white-space: pre; overflow-x: auto`, so at 375 it truncated line 2
+  // mid-token — `{ "title": "Weekly Ops Report", "content"` — with no fade, no visible scrollbar
+  // and nothing to say more existed. It *was* scrollable; the page just never admitted it.
+  //
+  // The affordance is CopyBlock's, not a second implementation of it: same `aa-copy__hint` class,
+  // same `data-aa-scroll-region` / `data-aa-scroll-hint-for` contract, so the measurement already
+  // shipped in ui-foundation drives this block from markup alone. Horizontal overflow depends on
+  // the viewport and cannot be known while rendering, so the hint starts hidden and is revealed
+  // only if the block actually overflows.
+  const hintId = `${id}-scroll-hint`;
+
   return (
     <section class="aa-marketing-api" aria-labelledby={`${id}-label`}>
       <div class="aa-marketing-api__bar">
@@ -102,9 +113,19 @@ export function MarketingApiBlock({ id, label, children }: MarketingApiBlockProp
           </Button>
         </span>
       </div>
-      <pre class="aa-marketing-api__code" id={id} tabindex={0}>
+      <pre
+        class="aa-marketing-api__code"
+        id={id}
+        tabindex={0}
+        aria-describedby={hintId}
+        data-aa-scroll-region="true"
+        data-aa-scroll-hint-for={hintId}
+      >
         <code>{children}</code>
       </pre>
+      <p class="aa-copy__hint" id={hintId} hidden>
+        Scroll inside the block to view everything. Copy includes the full text.
+      </p>
     </section>
   );
 }
