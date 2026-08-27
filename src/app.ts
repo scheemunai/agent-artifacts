@@ -1,6 +1,7 @@
 import { serveStatic } from '@hono/node-server/serve-static';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { type Context, Hono } from 'hono';
+import { getCookie } from 'hono/cookie';
 import { nanoid } from 'nanoid';
 import type { AppConfig } from './config.js';
 import type { DatabaseHandle } from './db/client.js';
@@ -13,6 +14,8 @@ import { registerPublicRoutes } from './routes/public.js';
 import { registerRobotsAndSandboxGuard } from './routes/robots.js';
 import { registerV1Routes } from './routes/v1/index.js';
 import { createWebRoute } from './routes/web.js';
+import { SESSION_COOKIE_NAME } from './services/sessions.js';
+import { ErrorPage } from './ui/pages/error-page.js';
 
 interface AppVariables {
   requestId: string;
@@ -106,8 +109,15 @@ export function createApp({
   app.route('/', createWebRoute(config));
   cloudModule?.registerRoutes?.(app as unknown as OpenAPIHono);
 
-  app.notFound((context) =>
-    context.json(
+  app.notFound((context) => {
+    if (prefersHtmlError(context)) {
+      return context.html(
+        ErrorPage({ status: 404, code: 'not_found', chrome: errorPageChrome(context) }),
+        404
+      );
+    }
+
+    return context.json(
       {
         error: {
           code: 'not_found',
@@ -115,8 +125,8 @@ export function createApp({
         },
       },
       404
-    )
-  );
+    );
+  });
 
   app.onError((error, context) => {
     const requestId = context.get('requestId');
@@ -127,14 +137,60 @@ export function createApp({
         context.header(name, value);
       }
       requestLogger.warn({ err: error, status: error.status, code: error.code }, 'request.error');
+      if (prefersHtmlError(context)) {
+        return context.html(
+          ErrorPage({
+            status: error.status,
+            code: error.code,
+            chrome: errorPageChrome(context),
+          }),
+          error.status
+        );
+      }
       return context.json(errorEnvelope(error, requestId), error.status);
     }
 
     requestLogger.error({ err: error }, 'request.error');
+    if (prefersHtmlError(context)) {
+      return context.html(
+        ErrorPage({
+          status: 500,
+          code: 'internal_error',
+          chrome: errorPageChrome(context),
+          requestId,
+        }),
+        500
+      );
+    }
     return context.json(internalErrorEnvelope(requestId), 500);
   });
 
   return app;
+}
+
+/**
+ * Content negotiation is the whole fix: a browser navigation gets a page, an API client keeps its
+ * envelope. `/v1` is excluded outright — that envelope is a published contract, whatever `Accept`
+ * the caller happens to send.
+ */
+function prefersHtmlError(context: Context<{ Variables: AppVariables }>): boolean {
+  const path = new URL(context.req.url).pathname;
+  if (path === '/v1' || path.startsWith('/v1/')) {
+    return false;
+  }
+
+  return (context.req.header('accept') ?? '')
+    .split(',')
+    .some((part) => part.trim().toLowerCase().startsWith('text/html'));
+}
+
+/**
+ * Chrome follows the visitor, not the route: someone with a session keeps the navigation they were
+ * using, so a dead link is a detour rather than an ejection. The cookie is a presentation hint
+ * only — it grants nothing, and the links it produces enforce their own access.
+ */
+function errorPageChrome(context: Context<{ Variables: AppVariables }>): 'dashboard' | 'public' {
+  return getCookie(context, SESSION_COOKIE_NAME) ? 'dashboard' : 'public';
 }
 
 function requestPrincipalFromContext(
