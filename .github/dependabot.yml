@@ -1,0 +1,58 @@
+# Dependency update policy.
+#
+# Every dependency in this repository is pinned to an exact version and every action to a commit
+# SHA, which is the right posture for a project whose release check audits the production tree —
+# but a pinned tree cannot drift *and* cannot be told when it should. These entries are the other
+# half of that contract: nothing moves silently, and nothing goes stale unnoticed.
+
+version: 2
+
+updates:
+  - package-ecosystem: npm # covers the pnpm lockfile
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    groups:
+      # One PR per category keeps review cheap; security updates still arrive on their own.
+      production-dependencies:
+        dependency-type: production
+        update-types: [minor, patch]
+      development-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker # docker/Dockerfile base images
+    directory: /docker
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(docker)
+
+  - package-ecosystem: docker # docker-compose.yml service images
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(docker)
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(ci)

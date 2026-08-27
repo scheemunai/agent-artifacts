@@ -1,0 +1,23 @@
+# Gitleaks configuration for Agent Artifacts.
+#
+# The CI job runs gitleaks over the full git history, so a secret that was committed and later
+# deleted still fails the build. That is the point: history is what an attacker clones.
+#
+# Everything allowlisted below is a documentation placeholder, matched by its literal placeholder
+# text rather than by file or rule. A real credential in the same file, on the same line, still
+# trips the scan — which is the property that makes an allowlist safe to have.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documentation placeholders, not credentials"
+regexTarget = "match"
+regexes = [
+  # The published API contract, the agent skill and the style guide all teach the same call shape.
+  # `aa_bot_YOUR_KEY` is the placeholder; a real key is `aa_bot_` followed by 32+ random characters.
+  '''Authorization: Bearer aa_bot_YOUR_KEY''',
+  # docs/self-hosting.md shows what the boot log looks like; the value is visibly elided.
+  # The generic-api-key rule's match begins at `token:`, so the anchor starts there too.
+  '''token: abcdef123456\.\.\.''',
+]
