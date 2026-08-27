@@ -11,10 +11,11 @@ import { readClientSource } from '../support/client-assets.js';
  * and no `aria-describedby` at all. The variant's headline case was the one that lost its
  * affordance: A-17's "the scroll was never the bug, the silence was", one component over.
  *
- * The two answers are now one contract. The server states what it can prove (a multi-line value
- * overflows the block's max-height); everything else is measured through the same
- * `data-aa-scroll-region` attributes `ui-foundation` already implements — which needed no change to
- * serve a second component, because it never knew about the first.
+ * The two answers are now one contract, and since a4a5508 there is only one mechanism behind it:
+ * every block is measured through the same `data-aa-scroll-region` attributes `ui-foundation`
+ * already implements — which needed no change to serve a second component, because it never knew
+ * about the first. The server's newline reading survives only as the opening state for a reader
+ * whose JavaScript has not run, and the measurement overrules it either way.
  */
 const foundation = readClientSource('ui-foundation.js');
 
@@ -40,15 +41,33 @@ describe('CopyBlock scroll affordance', () => {
     expect(html).toMatch(/<p class="aa-copy__hint" id="key-hint"[^>]*hidden/);
   });
 
-  it('does not hand over the case the server has already settled', () => {
-    // `updateScrollRegion` assigns `hint.hidden` unconditionally from a *horizontal* reading, so
-    // wiring a hint the server has already shown would let a no-horizontal-overflow measurement
-    // hide a block that genuinely scrolls vertically.
+  it('hands over the multi-line case too, now that the reading has two axes', () => {
+    // This assertion is the inverse of the one it replaces, and the inversion is the point.
+    //
+    // `updateScrollRegion` used to assign `hint.hidden` from a *horizontal* reading alone, so a
+    // block that scrolls only vertically measured as "no overflow". Wiring its hint would have let
+    // the measurement hide a hint the server had correctly shown, so this component withheld the
+    // provable case and settled it alone — two mechanisms answering one question, kept apart by a
+    // limitation rather than by a reason. a4a5508 gave the reading its second axis and spent that
+    // reason, so every block goes to the measurement and the divergence cannot come back.
     const html = renderToString(CopyBlock({ id: 'prompt', label: 'Install', value: PROMPT }));
 
-    expect(html).not.toContain('data-aa-scroll-hint-for');
-    expect(html).toMatch(/<p class="aa-copy__hint" id="prompt-hint"(?![^>]*hidden)/);
+    expect(html).toContain('data-aa-scroll-hint-for="prompt-hint"');
     expect(html).toContain('Scroll inside the block');
+  });
+
+  it('still speaks for the provable case before any script runs', () => {
+    // What the server knows is now an opening state rather than a settlement: it renders the hint
+    // for a value it can see overflowing, and the measurement corrects it in either direction once
+    // it can. Starting hidden would have been simpler and would have cost every reader without
+    // JavaScript the one sentence explaining why the block is cut off.
+    const multiline = renderToString(CopyBlock({ id: 'prompt', label: 'Install', value: PROMPT }));
+    const single = renderToString(CopyBlock({ id: 'key', label: 'API key', value: CREDENTIAL }));
+
+    expect(multiline).toMatch(/<p class="aa-copy__hint" id="prompt-hint"(?![^>]*hidden)/);
+    // And it does not guess where it cannot see: a single line may or may not overflow sideways,
+    // which is the measurement's question, so the hint waits to be told.
+    expect(single).toMatch(/<p class="aa-copy__hint" id="key-hint"[^>]*hidden/);
   });
 
   it('never points aria-describedby at an element it did not render', () => {

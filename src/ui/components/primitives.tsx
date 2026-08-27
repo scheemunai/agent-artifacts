@@ -919,7 +919,20 @@ export function CopyBlock({ id, label, value, variant = 'text' }: CopyBlockProps
   // The hint element is always rendered so the measurement has something to reveal, and so
   // `aria-describedby` never points at an element that is not there. A hidden target is correctly
   // ignored by assistive tech, which is the right answer when there is nothing to say.
-  const knownScrollable = value.includes('\n');
+  //
+  // Every block is now handed to the measurement. This used to be withheld from multi-line values:
+  // `updateScrollRegion` read only `scrollWidth`, so a block that scrolls vertically measured as
+  // "no overflow" and would have had its hint hidden — the server had to settle that case itself
+  // and keep the measurement away from it. a4a5508 gave the reading its second axis, so the reason
+  // is spent, and one mechanism answers "is there more here" instead of two that had to agree.
+  //
+  // What survives is the server's opening guess, and it is only a guess: a value with a newline
+  // usually overflows the block's `max-height`, but a two-line value inside a three-line box does
+  // not. Rendering the hint for it is the right default anyway — before any script runs it is the
+  // only thing that can speak, and the measurement now corrects it in BOTH directions the moment
+  // it can. Starting hidden instead would trade a wrong hint nobody sees for a missing hint every
+  // no-JavaScript reader gets.
+  const mayOverflowUnaided = value.includes('\n');
 
   return (
     <section
@@ -949,14 +962,11 @@ export function CopyBlock({ id, label, value, variant = 'text' }: CopyBlockProps
         tabindex={0}
         aria-describedby={hintId}
         data-aa-scroll-region="true"
-        // Only the unproven case is handed to the measurement: `updateScrollRegion` assigns
-        // `hint.hidden` unconditionally, so wiring a hint the server has already shown would let a
-        // no-horizontal-overflow reading hide a block that genuinely scrolls vertically.
-        {...(knownScrollable ? {} : { 'data-aa-scroll-hint-for': hintId })}
+        data-aa-scroll-hint-for={hintId}
       >
         <code>{value}</code>
       </pre>
-      <p class="aa-copy__hint" id={hintId} hidden={knownScrollable ? undefined : true}>
+      <p class="aa-copy__hint" id={hintId} hidden={mayOverflowUnaided ? undefined : true}>
         Scroll inside the block to view everything. Copy includes the full text.
       </p>
     </section>

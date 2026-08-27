@@ -562,7 +562,15 @@
     background: var(--color-aa-surface);
   }
 
+  /* The one case where the surface the ring lands on IS the control. A destructive button focused
+     in the accent is V2-N10's shape again: the accent is a warm red-orange, so "delete" wore a ring
+     in nearly-but-not-quite its own colour, which reads as a rendering fault rather than as focus.
+     Set on the variant rather than per instance, so it holds wherever the button appears — in a
+     card, in a destructive dialog where the fill goes solid red, in a toolbar. The ring is drawn
+     outside the button, so it lands on the surrounding surface and stays visible even when the
+     button itself is filled danger. */
   .aa-btn--danger {
+    --color-aa-focus: var(--color-aa-danger);
     color: var(--color-aa-danger);
     border-color: var(--color-aa-danger-line);
     background: var(--color-aa-danger-soft);
@@ -1085,22 +1093,30 @@
     box-shadow: var(--shadow-aa-md);
   }
 
+  /* Toasts retone their focus ring for the same reason the notices do, and it was the same defect:
+     a toast carries a dismiss button, so a success toast wore an accent-red ring on a green
+     surface — V2-N10 exactly, one component over. c011b1d fixed the notices; the toast tones are
+     the same shape and were missed because nothing held the pair together. */
   .aa-toast--success {
+    --color-aa-focus: var(--color-aa-success);
     border-color: var(--color-aa-success-line);
     background: var(--color-aa-success-soft);
   }
 
   .aa-toast--warn {
+    --color-aa-focus: var(--color-aa-warn);
     border-color: var(--color-aa-warn-line);
     background: var(--color-aa-warn-soft);
   }
 
   .aa-toast--danger {
+    --color-aa-focus: var(--color-aa-danger);
     border-color: var(--color-aa-danger-line);
     background: var(--color-aa-danger-soft);
   }
 
   .aa-toast--info {
+    --color-aa-focus: var(--color-aa-info);
     border-color: var(--color-aa-info-line);
     background: var(--color-aa-info-soft);
   }
