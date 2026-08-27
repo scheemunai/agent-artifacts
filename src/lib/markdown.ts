@@ -8,6 +8,7 @@ export const MARKDOWN_ARTICLE_CLASS = 'aa-md';
 
 export interface RenderMarkdownOptions {
   contentHash?: string;
+  headingOffset?: number;
 }
 
 export const markdownRenderCache = createRenderCache<string>();
@@ -19,13 +20,26 @@ const MARKED_OPTIONS = {
 } as const;
 
 export function renderMarkdown(markdown: string, options: RenderMarkdownOptions = {}): string {
-  const cacheKey = options.contentHash ?? hashMarkdownSource(markdown);
-  return markdownRenderCache.getOrSet(cacheKey, () => renderMarkdownUncached(markdown));
+  const headingOffset = normalizeHeadingOffset(options.headingOffset);
+  const cacheKey = markdownCacheKey(
+    options.contentHash ?? hashMarkdownSource(markdown),
+    headingOffset
+  );
+  return markdownRenderCache.getOrSet(cacheKey, () =>
+    renderMarkdownUncached(markdown, { headingOffset })
+  );
 }
 
-export function renderMarkdownUncached(markdown: string): string {
+export function renderMarkdownUncached(
+  markdown: string,
+  options: Pick<RenderMarkdownOptions, 'headingOffset'> = {}
+): string {
+  const headingOffset = normalizeHeadingOffset(options.headingOffset);
   const tokens = marked.lexer(markdown, MARKED_OPTIONS);
   capBlockNesting(tokens);
+  if (headingOffset > 0) {
+    offsetHeadings(tokens, headingOffset);
+  }
   const dirtyHtml = marked.parser(tokens, MARKED_OPTIONS);
   const sanitizedHtml = sanitizeMarkdownHtml(dirtyHtml);
   return `<article class="${MARKDOWN_ARTICLE_CLASS}">${sanitizedHtml}</article>`;
@@ -43,8 +57,33 @@ export function hashMarkdownSource(markdown: string): string {
   return createHash('sha256').update(markdown).digest('hex');
 }
 
+function markdownCacheKey(contentKey: string, headingOffset: number): string {
+  return `markdown:${contentKey}:heading-offset:${headingOffset}`;
+}
+
+function normalizeHeadingOffset(value: number | undefined): number {
+  if (value === undefined) {
+    return 0;
+  }
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(5, Math.trunc(value)));
+}
+
 function capBlockNesting(tokens: TokensList | Token[]): void {
   capTokenArray(tokens, 0);
+}
+
+function offsetHeadings(tokens: TokensList | Token[], headingOffset: number): void {
+  for (const token of tokens) {
+    if (token.type === 'heading') {
+      token.depth = Math.min(6, token.depth + headingOffset) as typeof token.depth;
+    }
+    for (const childTokens of getTokenChildren(token)) {
+      offsetHeadings(childTokens, headingOffset);
+    }
+  }
 }
 
 function capTokenArray(tokens: Token[], depth: number): void {

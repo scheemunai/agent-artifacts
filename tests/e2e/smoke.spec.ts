@@ -178,8 +178,9 @@ test('authenticated dashboard list to detail preserves history and share control
 
   await page.getByRole('link', { name: seed.dashboardArtifactTitle }).click();
 
-  // known-queued-defect: duplicate visible h1s currently make this strict locator resolve twice.
-  await expect(page.getByRole('heading', { name: seed.dashboardArtifactTitle })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: seed.dashboardArtifactTitle, level: 1 })
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Rendered preview' })).toBeVisible();
   await expect(page.getByText('Dashboard smoke body v2')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Share panel' })).toBeVisible();
@@ -189,8 +190,8 @@ test('authenticated dashboard list to detail preserves history and share control
   await expect(page.getByRole('button', { name: 'Set password' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Revoke link' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Version history' })).toBeVisible();
-  await expect(page.getByText('v2')).toBeVisible();
-  await expect(page.getByText('v1')).toBeVisible();
+  await expect(page.getByText('v2', { exact: true })).toBeVisible();
+  await expect(page.getByText('v1', { exact: true })).toBeVisible();
   await expect(page.getByText('second dashboard smoke version')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Diff' }).first()).toBeVisible();
   await expectNoHorizontalOverflow(page);

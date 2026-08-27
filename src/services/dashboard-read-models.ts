@@ -205,7 +205,7 @@ export class DashboardReadModelService {
       versionNum: row.version_num,
       htmlPreview:
         row.type === 'markdown'
-          ? renderMarkdown(row.content, { contentHash: row.content_hash })
+          ? renderMarkdown(row.content, { contentHash: row.content_hash, headingOffset: 1 })
           : null,
     };
   }

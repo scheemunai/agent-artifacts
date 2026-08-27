@@ -7,6 +7,7 @@ import type { Account, CloudModule, QuotaAction } from '../extension/cloud-modul
 import { createDefaultCloudModule } from '../extension/default-module.js';
 import { AppError } from '../lib/errors.js';
 import { dashboardPreviewFrameHeaders } from '../lib/frame-policy.js';
+import { renderMarkdown } from '../lib/markdown.js';
 import type { Logger } from '../logger.js';
 import { ArtifactService } from '../services/artifacts.js';
 import {
@@ -846,6 +847,7 @@ async function getTemplatePreview(
   slots: string[];
   builtIn: boolean;
   content: string;
+  htmlPreview: string | null;
 } | null> {
   if (!templateId) {
     return null;
@@ -879,6 +881,8 @@ async function getTemplatePreview(
         slots: parseTemplateSlotNames(row.slots),
         builtIn: row.account_id === null,
         content: row.content,
+        htmlPreview:
+          row.type === 'markdown' ? renderMarkdown(row.content, { headingOffset: 1 }) : null,
       }
     : null;
 }

@@ -87,6 +87,7 @@ export interface DashboardTemplateView {
 
 export interface DashboardTemplatePreview extends DashboardTemplateView {
   content: string;
+  htmlPreview: string | null;
 }
 
 export interface DashboardNotice {
@@ -247,7 +248,11 @@ export function DashboardArtifactPage({
             description="Owner previews use the same sanitizing/sandboxing posture as public pages."
           >
             {artifact.type === 'markdown' && artifact.htmlPreview ? (
-              <div dangerouslySetInnerHTML={{ __html: artifact.htmlPreview }} />
+              <div
+                aria-hidden="true"
+                data-aa-dashboard-preview="markdown"
+                dangerouslySetInnerHTML={{ __html: artifact.htmlPreview }}
+              />
             ) : (
               <iframe
                 title={artifact.title}
@@ -1049,6 +1054,13 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
             ? template.slots.map((slot) => <Badge tone="neutral">{`{{${slot}}}`}</Badge>)
             : 'none'}
         </p>
+        {template.htmlPreview ? (
+          <div
+            aria-hidden="true"
+            data-aa-dashboard-template-preview="markdown"
+            dangerouslySetInnerHTML={{ __html: template.htmlPreview }}
+          />
+        ) : null}
         <CopyBlock
           id={`template-preview-${template.id}`}
           label="Template source"

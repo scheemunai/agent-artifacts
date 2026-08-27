@@ -29,6 +29,20 @@ describe('markdown rendering and render cache', () => {
     expect(getMarkdownRenderCacheStats()).toMatchObject({ entries: 1 });
   });
 
+  it('keys rendered HTML by heading offset to avoid dashboard/viewer cache poisoning', () => {
+    clearMarkdownRenderCache();
+
+    const publicHtml = renderMarkdown('# Cache Heading', { contentHash: 'heading-offset-cache' });
+    const dashboardHtml = renderMarkdown('# Cache Heading', {
+      contentHash: 'heading-offset-cache',
+      headingOffset: 1,
+    });
+
+    expect(publicHtml).toContain('<h1>Cache Heading</h1>');
+    expect(dashboardHtml).toContain('<h2>Cache Heading</h2>');
+    expect(getMarkdownRenderCacheStats()).toMatchObject({ entries: 2 });
+  });
+
   it('evicts least-recently-used entries by byte cap without external dependencies', () => {
     const cache = new LruCache<string>({ maxBytes: 4, sizeOf: (value) => value.length });
 
