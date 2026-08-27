@@ -78,12 +78,15 @@ export function SetupPage({
                   id="setup_token"
                   name="setup_token"
                   label="Setup token"
-                  type="password"
-                  // Masked because it is a secret, not because it is a password. This is a code the
-                  // operator reads out of the boot log once and never uses again, so a manager must
-                  // not offer to save it as the site password. `off` would be the wrong instrument:
-                  // browsers deliberately ignore it on password-typed fields so that managers keep
-                  // working. Naming the field truthfully is what actually changes the behaviour.
+                  // Not a password in either respect, so it is styled and declared like what it is.
+                  // Visible: this is a one-time code the operator is transcribing from a boot log on
+                  // the same screen, consumed within seconds and worthless after. Masking hides
+                  // nothing that is not already on display, and makes a mistyped character
+                  // impossible to spot at the one moment accuracy matters.
+                  // one-time-code, not `off`: browsers deliberately ignore `off` on password-typed
+                  // fields so managers keep working, so naming the field truthfully is the only
+                  // thing that actually stops a spent token being saved as the site password.
+                  type="text"
                   autocomplete="one-time-code"
                   value={setupToken}
                   hint="Find this one-time token in the server boot log."
@@ -129,11 +132,13 @@ export function SetupPage({
                   placeholder="Andrej's Chief of Staff"
                   optional
                 />
+                <p class="aa-hint">
+                  Setting up <code>{baseUrl}</code>. Your agent will publish to this address.
+                </p>
                 <ButtonRow>
                   <Button variant="primary" type="submit">
                     Create admin and bot
                   </Button>
-                  <Badge tone="info">{baseUrl}</Badge>
                 </ButtonRow>
               </form>
             </div>

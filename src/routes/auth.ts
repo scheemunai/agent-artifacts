@@ -82,6 +82,18 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
       return requestMagicLink(context, options, email);
     }
 
+    // A request for a sign-in mode this instance does not offer used to fall through to the password
+    // branch with an empty password, so it answered 401 with a credential error: three false claims
+    // at once — that credentials were checked, that they were wrong, and nothing about the real
+    // cause. Nothing in the product links here (the form only offers magic when mail is configured),
+    // so this is a direct or bookmarked POST, and it deserves the true answer rather than a silence.
+    if (mode === 'magic' && !mailAvailable) {
+      return context.html(
+        LoginPage({ mode: 'password', email, mailAvailable, magicUnavailable: true }),
+        400
+      );
+    }
+
     if (!options.config.rateLimitsDisabled) {
       const allowed = options.passwordLimiter.check(
         rateLimitKey(['password', clientIp(context, options.config.trustProxy)]),

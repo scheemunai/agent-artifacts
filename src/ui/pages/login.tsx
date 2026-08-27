@@ -5,6 +5,7 @@ import {
   ButtonRow,
   Card,
   Input,
+  Notice,
   ProductMark,
   StatusHeading,
 } from '../components/primitives.js';
@@ -15,6 +16,11 @@ export interface LoginPageProps {
   error?: string | undefined;
   sent?: boolean | undefined;
   mailAvailable?: boolean | undefined;
+  /**
+   * The visitor asked for magic-link sign-in on an instance that cannot send mail. Says so, rather
+   * than letting the request fail as a credential error it never was.
+   */
+  magicUnavailable?: boolean | undefined;
 }
 
 export function LoginPage({
@@ -23,6 +29,7 @@ export function LoginPage({
   error,
   sent = false,
   mailAvailable = false,
+  magicUnavailable = false,
 }: LoginPageProps) {
   const isMagic = mode === 'magic';
   const title = isMagic ? 'Sign in to Agent Artifacts' : 'Log in to Agent Artifacts';
@@ -34,7 +41,17 @@ export function LoginPage({
     >
       <main class="aa-placeholder">
         <div class="aa-shell aa-shell--narrow">
-          <Card raised>
+          <Card
+            raised
+            notice={
+              magicUnavailable ? (
+                <Notice tone="info" title="Magic-link sign-in is not enabled here">
+                  This instance has no mail transport configured, so there is no address to send a
+                  link from. Sign in with your password below.
+                </Notice>
+              ) : undefined
+            }
+          >
             <div class="aa-stack aa-placeholder-card">
               {/*
                 A screen's header is part of its state. Rendering the "enter your email" header
