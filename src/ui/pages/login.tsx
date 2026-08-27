@@ -114,7 +114,13 @@ export function MagicLinkInterstitialPage({ token }: { token: string }) {
             <div class="aa-stack aa-placeholder-card">
               <div>
                 <ProductMark />
-                <p class="aa-page-kicker">Email verified</p>
+                {/*
+                  Not "Email verified". This page is reached by a GET, and a GET deliberately does
+                  not consume the link, so nothing has been verified yet: the token may be expired,
+                  already used, or fabricated. The kicker names the object in hand, not a state the
+                  page has not reached.
+                */}
+                <p class="aa-page-kicker">Sign-in link</p>
                 <h1 class="aa-section-title">Sign in to Agent Artifacts</h1>
                 <p class="aa-section-note">
                   Continue below to finish signing in. This page is safe for email scanners because

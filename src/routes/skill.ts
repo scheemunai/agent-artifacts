@@ -1,10 +1,44 @@
 import type { Context } from 'hono';
+import { renderToString } from 'hono/jsx/dom/server';
 import type { AppConfig } from '../config.js';
+import { renderMarkdown } from '../lib/markdown.js';
+import { SkillPage } from '../ui/pages/skill.js';
 
+/**
+ * `/skill.md` has two audiences on one URL. An agent reads it as a contract, and a human reaches it
+ * by clicking "Agent Skill" in the footer. Serving markdown unconditionally meant the human got a
+ * wall of raw source in the browser.
+ *
+ * The split is by `Accept`, the same negotiation the global error handler uses. The markdown branch
+ * is unchanged and must stay byte-identical: it is the contract surface, and a test pins it.
+ */
 export function skillResponse(context: Context, config: AppConfig): Response {
+  if (prefersHtml(context)) {
+    context.header('Content-Type', 'text/html; charset=utf-8');
+    context.header('Cache-Control', 'public, max-age=3600');
+    return context.body(skillHtml(config));
+  }
+
   context.header('Content-Type', 'text/markdown; charset=utf-8');
   context.header('Cache-Control', 'public, max-age=3600');
   return context.body(skillText(config));
+}
+
+function prefersHtml(context: Context): boolean {
+  return (context.req.header('accept') ?? '')
+    .split(',')
+    .some((part) => part.trim().toLowerCase().startsWith('text/html'));
+}
+
+/**
+ * The same skill text, rendered through the artifact markdown pipeline and put in product chrome.
+ * Deriving it from `skillText` rather than duplicating the copy is the point: there is one source,
+ * and the human page cannot drift from what agents are told.
+ */
+export function skillHtml(config: AppConfig): string {
+  return renderToString(
+    SkillPage({ baseUrl: config.baseUrl, html: renderMarkdown(skillText(config)) })
+  );
 }
 
 export function skillText(config: AppConfig): string {

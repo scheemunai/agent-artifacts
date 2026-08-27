@@ -10,6 +10,7 @@ import { initializeDatabase, type SqliteDatabaseHandle } from '../../src/db/clie
 import { runMigrations } from '../../src/db/migrations.js';
 import type { Account, CloudModule } from '../../src/extension/cloud-module.js';
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
+import { skillText } from '../../src/routes/skill.js';
 import { insertAccount } from '../unit/db-test-utils.js';
 import {
   createTestCloudModule,
@@ -97,6 +98,47 @@ describe('deployment mode behavior', () => {
       expect(text).toContain('Authorization: Bearer aa_bot_YOUR_KEY');
       expect(text).not.toMatch(/search/i);
     }
+  });
+
+  it('BYTE-PIN: an agent that sends no Accept gets exactly skillText, unaltered', async () => {
+    const ctx = await createModeContext({ env: { DEPLOYMENT: 'cloud' } });
+
+    const response = await ctx.app.request(`${ctx.config.baseUrl}/skill.md`);
+
+    // Byte-for-byte against the source of truth. The human HTML branch may change freely; if it
+    // ever moves this, the contract moved, and that must be a deliberate edit to skillText.
+    expect(await response.text()).toBe(skillText(ctx.config));
+    expect(response.headers.get('Content-Type')).toBe('text/markdown; charset=utf-8');
+  });
+
+  it('keeps the markdown byte-identical for a curl-style Accept', async () => {
+    const ctx = await createModeContext({ env: { DEPLOYMENT: 'cloud' } });
+
+    for (const accept of ['*/*', 'text/markdown', 'application/json', 'text/plain']) {
+      const response = await ctx.app.request(`${ctx.config.baseUrl}/skill.md`, {
+        headers: { Accept: accept },
+      });
+
+      expect(response.headers.get('Content-Type')).toBe('text/markdown; charset=utf-8');
+      expect(await response.text()).toBe(skillText(ctx.config));
+    }
+  });
+
+  it('answers a browser navigation with a rendered page instead of raw markdown', async () => {
+    const ctx = await createModeContext({ env: { DEPLOYMENT: 'cloud' } });
+
+    const response = await ctx.app.request(`${ctx.config.baseUrl}/skill.md`, {
+      headers: { Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+    });
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
+    expect(html.toLowerCase().startsWith('<!doctype')).toBe(true);
+    expect(html).toContain('aa-prose-page');
+    expect(html).toContain('Authorization: Bearer aa_bot_YOUR_KEY');
+    // Rendered, not dumped.
+    expect(html).not.toContain('# Agent Artifacts Skill');
   });
 
   it('fails cloud boot without a real or dev mail transport and accepts AA_MAIL_TRANSPORT=log', () => {
