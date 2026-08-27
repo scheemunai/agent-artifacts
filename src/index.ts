@@ -5,6 +5,7 @@ import { initializeDatabase } from './db/client.js';
 import { runMigrations } from './db/migrations.js';
 import { loadCloudModule } from './extension/loader.js';
 import { createLogger } from './logger.js';
+import { startBackgroundScheduler } from './services/scheduler.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -12,6 +13,7 @@ async function main(): Promise<void> {
   const database = await initializeDatabase(config, logger);
   await runMigrations(database, logger);
   const cloudModule = await loadCloudModule(config, { db: database, logger });
+  startBackgroundScheduler({ db: database, config, logger, cloudModule });
 
   const app = createApp({ config, logger, db: database, cloudModule });
   serve(

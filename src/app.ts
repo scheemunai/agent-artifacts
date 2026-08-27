@@ -1,4 +1,5 @@
 import { serveStatic } from '@hono/node-server/serve-static';
+import type { OpenAPIHono } from '@hono/zod-openapi';
 import { Hono } from 'hono';
 import { nanoid } from 'nanoid';
 import type { AppConfig } from './config.js';
@@ -62,11 +63,20 @@ export function createApp({
       context.header('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
     }
 
-    const contentType = context.res.headers.get('content-type');
+    const contentType = context.res.headers.get('content-type')?.toLowerCase();
     if (contentType?.includes('text/html')) {
-      context.header('Content-Security-Policy', appOriginCsp(config.frameOrigin));
-      context.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-      context.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+      if (!context.res.headers.has('Content-Security-Policy')) {
+        context.header('Content-Security-Policy', appOriginCsp(config.frameOrigin));
+      }
+      if (!context.res.headers.has('Referrer-Policy')) {
+        context.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+      }
+      if (!context.res.headers.has('Permissions-Policy')) {
+        context.header(
+          'Permissions-Policy',
+          'camera=(), microphone=(), geolocation=(), payment=()'
+        );
+      }
     }
   });
 
@@ -83,6 +93,7 @@ export function createApp({
   registerPublicRoutes(app, routesContext);
   registerHumanRoutes(app, routesContext);
   app.route('/', createWebRoute(config));
+  cloudModule?.registerRoutes?.(app as unknown as OpenAPIHono);
 
   app.notFound((context) =>
     context.json(

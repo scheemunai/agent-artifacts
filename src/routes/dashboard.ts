@@ -1,10 +1,10 @@
 import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
-import { nanoid } from 'nanoid';
 import type { AppConfig } from '../config.js';
-import type { DatabaseHandle, PostgresDatabaseHandle } from '../db/client.js';
+import type { DatabaseHandle } from '../db/client.js';
 import type { Account, CloudModule, QuotaAction } from '../extension/cloud-module.js';
 import { createDefaultCloudModule } from '../extension/default-module.js';
+import { AppError } from '../lib/errors.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import type { Logger } from '../logger.js';
 import { ArtifactService } from '../services/artifacts.js';
@@ -25,6 +25,13 @@ import {
   SESSION_COOKIE_NAME,
   SessionService,
 } from '../services/sessions.js';
+import { promoteArtifactToTemplate } from '../services/templates.js';
+import {
+  type AuthPrincipal,
+  createShareResponse,
+  deleteShareResponse,
+  patchShareResponse,
+} from '../services/v1.js';
 import {
   type DashboardArtifactDetail,
   type DashboardArtifactListItem,
@@ -32,6 +39,7 @@ import {
   type DashboardArtifactVersion,
   DashboardBotsPage,
   DashboardHomePage,
+  type DashboardNavItem,
   type DashboardNotice,
   DashboardSettingsPage,
   DashboardTemplatesPage,
@@ -254,6 +262,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         bots,
         latestBot: bots[0] ?? null,
         baseUrl: services.config.baseUrl,
+        extensionNavItems: dashboardNavItems(services, session.account),
         filters: { ...filters, nextCursor },
         notice: noticeFromQuery(routeContext.req.query('notice')),
       })
@@ -285,6 +294,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         versions,
         diff,
         baseUrl: services.config.baseUrl,
+        extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
         promoteError: routeContext.req.query('promote_error') ?? null,
       })
@@ -345,6 +355,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         account: accountView(session.account),
         bots: await services.auth.listBots(session.account.id),
         baseUrl: services.config.baseUrl,
+        extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
       })
     );
@@ -359,6 +370,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       DashboardTemplatesPage({
         account: accountView(session.account),
         templates: await listTemplates(services, session.account.id),
+        extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
       })
     );
@@ -372,6 +384,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     return routeContext.html(
       DashboardSettingsPage({
         account: accountView(session.account),
+        extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
         error: routeContext.req.query('error') ?? undefined,
       })
@@ -419,6 +432,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
           account: accountView(session.account),
           bots: await services.auth.listBots(session.account.id),
           baseUrl: services.config.baseUrl,
+          extensionNavItems: dashboardNavItems(services, session.account),
           shownKey: { apiKey, botName: bot.name },
           notice: { tone: 'success', message: 'Bot created. Copy the key now.' },
         })
@@ -429,6 +443,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
           account: accountView(session.account),
           bots: await services.auth.listBots(session.account.id),
           baseUrl: services.config.baseUrl,
+          extensionNavItems: dashboardNavItems(services, session.account),
           error: authErrorMessage(error),
         }),
         { status: htmlStatus(error) }
@@ -453,6 +468,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
           account: accountView(session.account),
           bots: await services.auth.listBots(session.account.id),
           baseUrl: services.config.baseUrl,
+          extensionNavItems: dashboardNavItems(services, session.account),
           shownKey: { apiKey: result.apiKey, botName: result.bot.name },
           notice: { tone: 'success', message: 'Key regenerated. Old key is invalid now.' },
         })
@@ -463,6 +479,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
           account: accountView(session.account),
           bots: await services.auth.listBots(session.account.id),
           baseUrl: services.config.baseUrl,
+          extensionNavItems: dashboardNavItems(services, session.account),
           error: authErrorMessage(error),
         }),
         { status: htmlStatus(error) }
@@ -489,6 +506,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
           account: accountView(session.account),
           bots: await services.auth.listBots(session.account.id),
           baseUrl: services.config.baseUrl,
+          extensionNavItems: dashboardNavItems(services, session.account),
           error: authErrorMessage(error),
         }),
         { status: htmlStatus(error) }
@@ -545,12 +563,11 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return session;
     }
     const form = await parseForm(routeContext);
-    await createShare(
+    await createDashboardShare(
       services,
-      session.account.id,
+      session,
       routeContext.req.param('id'),
-      stringField(form, 'password'),
-      accountToCloudAccount(session.account)
+      stringField(form, 'password')
     );
     return routeContext.redirect(
       `/dashboard/artifacts/${routeContext.req.param('id')}?notice=share_created`,
@@ -571,13 +588,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         303
       );
     }
-    await setSharePassword(
-      services,
-      session.account.id,
-      routeContext.req.param('id'),
-      password,
-      accountToCloudAccount(session.account)
-    );
+    await setDashboardSharePassword(services, session, routeContext.req.param('id'), password);
     return routeContext.redirect(
       `/dashboard/artifacts/${routeContext.req.param('id')}?notice=share_password_changed`,
       303
@@ -589,7 +600,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (session instanceof Response) {
       return session;
     }
-    await removeSharePassword(services, session.account.id, routeContext.req.param('id'));
+    await removeDashboardSharePassword(services, session, routeContext.req.param('id'));
     return routeContext.redirect(
       `/dashboard/artifacts/${routeContext.req.param('id')}?notice=share_password_removed`,
       303
@@ -614,7 +625,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         303
       );
     }
-    await revokeShare(services, session.account.id, routeContext.req.param('id'));
+    await revokeDashboardShare(services, session, routeContext.req.param('id'));
     return routeContext.redirect(
       `/dashboard/artifacts/${routeContext.req.param('id')}?notice=share_revoked`,
       303
@@ -636,7 +647,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return routeContext.redirect('/dashboard/templates?notice=template_promoted', 303);
     } catch (error) {
       return routeContext.redirect(
-        `/dashboard/artifacts/${routeContext.req.param('id')}?promote_error=${encodeURIComponent(authErrorMessage(error))}`,
+        `/dashboard/artifacts/${routeContext.req.param('id')}?promote_error=${encodeURIComponent(dashboardErrorMessage(error))}`,
         303
       );
     }
@@ -961,126 +972,75 @@ async function shareAggregate(db: DatabaseHandle, artifactId: string): Promise<S
   return result.rows[0] ?? { lifetime_views: 0, previous_share_count: 0 };
 }
 
-async function createShare(
-  services: HumanServices,
-  accountId: string,
-  artifactId: string,
-  password: string,
-  account: Account
-): Promise<void> {
-  await assertOwnsArtifact(services, accountId, artifactId);
-  if (password) {
-    await enforceQuota(services, account, { type: 'set_share_password' });
-  }
-  const passwordHash = password ? await hashPassword(password) : null;
-  const now = Date.now();
-  if (services.db.dialect === 'sqlite') {
-    const existing = services.db.sqlite
-      .prepare('SELECT id FROM shares WHERE artifact_id = ? AND revoked_at IS NULL')
-      .get(artifactId) as { id: string } | undefined;
-    if (existing) {
-      services.db.sqlite
-        .prepare('UPDATE shares SET password_hash = ?, password_updated_at = ? WHERE id = ?')
-        .run(passwordHash, passwordHash ? now : null, existing.id);
-      return;
-    }
-    services.db.sqlite
-      .prepare(
-        `
-          INSERT INTO shares (
-            id, artifact_id, password_hash, password_updated_at, expires_at, revoked_at,
-            view_count, unique_viewer_count, last_viewed_at, created_at
-          ) VALUES (?, ?, ?, ?, NULL, NULL, 0, 0, NULL, ?)
-        `
-      )
-      .run(`sha_${nanoid(21)}`, artifactId, passwordHash, passwordHash ? now : null, now);
-    return;
-  }
-  await createSharePostgres(services.db, artifactId, passwordHash, now);
+function dashboardPrincipal(account: AuthenticatedSession['account']): AuthPrincipal {
+  return {
+    account: accountToCloudAccount(account),
+    bot: {
+      id: 'dashboard',
+      name: 'Dashboard',
+      byline: null,
+    },
+    apiKeyHash: 'dashboard',
+  };
 }
 
-async function createSharePostgres(
-  handle: PostgresDatabaseHandle,
+async function createDashboardShare(
+  services: HumanServices,
+  session: AuthenticatedSession,
   artifactId: string,
-  passwordHash: string | null,
-  now: number
+  password: string
 ): Promise<void> {
-  const existing = await handle.pool.query<{ id: string }>(
-    'SELECT id FROM shares WHERE artifact_id = $1 AND revoked_at IS NULL',
-    [artifactId]
-  );
-  if (existing.rows[0]) {
-    await handle.pool.query(
-      'UPDATE shares SET password_hash = $1, password_updated_at = $2 WHERE id = $3',
-      [passwordHash, passwordHash ? now : null, existing.rows[0].id]
-    );
-    return;
-  }
-  await handle.pool.query(
-    `
-      INSERT INTO shares (
-        id, artifact_id, password_hash, password_updated_at, expires_at, revoked_at,
-        view_count, unique_viewer_count, last_viewed_at, created_at
-      ) VALUES ($1, $2, $3, $4, NULL, NULL, 0, 0, NULL, $5)
-    `,
-    [`sha_${nanoid(21)}`, artifactId, passwordHash, passwordHash ? now : null, now]
-  );
+  await createShareResponse({
+    db: services.db,
+    cloudModule: services.cloudModule,
+    config: services.config,
+    auth: dashboardPrincipal(session.account),
+    idOrSlug: artifactId,
+    ...(password ? { passwordHash: await hashPassword(password) } : {}),
+  });
 }
 
-async function setSharePassword(
+async function setDashboardSharePassword(
   services: HumanServices,
-  accountId: string,
+  session: AuthenticatedSession,
   artifactId: string,
-  password: string,
-  account: Account
+  password: string
 ): Promise<void> {
-  await assertOwnsArtifact(services, accountId, artifactId);
-  await enforceQuota(services, account, { type: 'set_share_password' });
-  const passwordHash = await hashPassword(password);
-  const now = Date.now();
-  const sql =
-    'UPDATE shares SET password_hash = ?, password_updated_at = ? WHERE artifact_id = ? AND revoked_at IS NULL';
-  if (services.db.dialect === 'sqlite') {
-    services.db.sqlite.prepare(sql).run(passwordHash, now, artifactId);
-    return;
-  }
-  await services.db.pool.query(
-    'UPDATE shares SET password_hash = $1, password_updated_at = $2 WHERE artifact_id = $3 AND revoked_at IS NULL',
-    [passwordHash, now, artifactId]
-  );
+  await patchShareResponse({
+    db: services.db,
+    cloudModule: services.cloudModule,
+    config: services.config,
+    auth: dashboardPrincipal(session.account),
+    idOrSlug: artifactId,
+    passwordHash: await hashPassword(password),
+  });
 }
 
-async function removeSharePassword(
+async function removeDashboardSharePassword(
   services: HumanServices,
-  accountId: string,
+  session: AuthenticatedSession,
   artifactId: string
 ): Promise<void> {
-  await assertOwnsArtifact(services, accountId, artifactId);
-  const sql =
-    'UPDATE shares SET password_hash = NULL, password_updated_at = NULL WHERE artifact_id = ? AND revoked_at IS NULL';
-  if (services.db.dialect === 'sqlite') {
-    services.db.sqlite.prepare(sql).run(artifactId);
-    return;
-  }
-  await services.db.pool.query(sql.replace('?', '$1'), [artifactId]);
+  await patchShareResponse({
+    db: services.db,
+    cloudModule: services.cloudModule,
+    config: services.config,
+    auth: dashboardPrincipal(session.account),
+    idOrSlug: artifactId,
+    passwordHash: null,
+  });
 }
 
-async function revokeShare(
+async function revokeDashboardShare(
   services: HumanServices,
-  accountId: string,
+  session: AuthenticatedSession,
   artifactId: string
 ): Promise<void> {
-  await assertOwnsArtifact(services, accountId, artifactId);
-  const now = Date.now();
-  const sql = 'UPDATE shares SET revoked_at = ? WHERE artifact_id = ? AND revoked_at IS NULL';
-  if (services.db.dialect === 'sqlite') {
-    services.db.sqlite.prepare(sql).run(now, artifactId);
-    return;
-  }
-  await services.db.pool.query(
-    'UPDATE shares SET revoked_at = $1 WHERE artifact_id = $2 AND revoked_at IS NULL',
-    [now, artifactId]
-  );
+  await deleteShareResponse({
+    db: services.db,
+    accountId: session.account.id,
+    idOrSlug: artifactId,
+  });
 }
 
 async function promoteTemplate(
@@ -1089,91 +1049,21 @@ async function promoteTemplate(
   artifactId: string,
   input: { name: string; slug: string; description: string }
 ): Promise<void> {
-  const artifact = await getArtifactDetail(services, accountId, artifactId, null);
-  if (!artifact) {
-    throw new AuthError(404, 'not_found', 'Artifact not found');
-  }
-  if (artifact.type !== 'markdown') {
-    throw new AuthError(400, 'validation_failed', 'Only markdown artifacts can be promoted');
-  }
-  const slots = Array.from(
-    new Set((artifact.content.match(/{{[a-z0-9_]+}}/g) ?? []).map((slot) => slot.slice(2, -2)))
-  );
-  if (slots.length === 0) {
-    throw new AuthError(400, 'validation_failed', 'Add at least one {{slot}} placeholder first');
-  }
-  if (!input.name || !input.slug) {
-    throw new AuthError(400, 'validation_failed', 'Template name and slug are required');
-  }
-  const now = Date.now();
-  const slotsJson = JSON.stringify(slots.map((name) => ({ name, required: true })));
-  if (services.db.dialect === 'sqlite') {
-    services.db.sqlite
-      .prepare(
-        `
-          INSERT INTO templates (
-            id, account_id, slug, name, description, type, content, slots,
-            created_from_artifact, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, 'markdown', ?, ?, ?, ?, ?)
-        `
-      )
-      .run(
-        `tpl_${nanoid(21)}`,
-        accountId,
-        input.slug,
-        input.name,
-        input.description || null,
-        artifact.content,
-        slotsJson,
-        artifact.id,
-        now,
-        now
-      );
-    return;
-  }
-  await services.db.pool.query(
-    `
-      INSERT INTO templates (
-        id, account_id, slug, name, description, type, content, slots,
-        created_from_artifact, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, 'markdown', $6, $7, $8, $9, $10)
-    `,
-    [
-      `tpl_${nanoid(21)}`,
-      accountId,
-      input.slug,
-      input.name,
-      input.description || null,
-      artifact.content,
-      slotsJson,
-      artifact.id,
-      now,
-      now,
-    ]
-  );
+  await promoteArtifactToTemplate({
+    db: services.db,
+    accountId,
+    artifactId,
+    name: input.name,
+    slug: input.slug,
+    description: input.description || null,
+  });
 }
 
-async function assertOwnsArtifact(
-  services: HumanServices,
-  accountId: string,
-  artifactId: string
-): Promise<void> {
-  const countSql =
-    'SELECT count(*) AS count FROM artifacts WHERE id = ? AND account_id = ? AND deleted_at IS NULL';
-  const count =
-    services.db.dialect === 'sqlite'
-      ? (services.db.sqlite.prepare(countSql).get(artifactId, accountId) as { count: number }).count
-      : Number(
-          (
-            await services.db.pool.query<{ count: string }>(
-              'SELECT count(*) AS count FROM artifacts WHERE id = $1 AND account_id = $2 AND deleted_at IS NULL',
-              [artifactId, accountId]
-            )
-          ).rows[0]?.count ?? 0
-        );
-  if (count === 0) {
-    throw new AuthError(404, 'not_found', 'Artifact not found');
+function dashboardErrorMessage(error: unknown): string {
+  if (error instanceof AppError) {
+    return error.message;
   }
+  return authErrorMessage(error);
 }
 
 async function updateAccountEmail(
@@ -1213,6 +1103,13 @@ function htmlStatus(error: unknown): 400 | 403 | 409 | 429 | 500 {
     }
   }
   return 500;
+}
+
+function dashboardNavItems(
+  services: HumanServices,
+  account: AuthenticatedSession['account']
+): DashboardNavItem[] {
+  return services.cloudModule.navItems?.(accountToCloudAccount(account)) ?? [];
 }
 
 function accountView(account: AuthenticatedSession['account']) {

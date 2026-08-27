@@ -51,7 +51,7 @@ describe('viewer HTML sandbox isolation', () => {
       });
       const frameText = await frame.text();
       expect(frame.status).toBe(200);
-      expect(frame.headers.get('content-type')).toMatch(/^text\/html/i);
+      expect(frame.headers.get('content-type')).toBe('text/html; charset=utf-8');
       expect(frame.headers.get('content-security-policy')).toBe(
         "sandbox allow-scripts; default-src 'none'; script-src https: 'unsafe-inline' 'unsafe-eval'; style-src https: 'unsafe-inline'; img-src https: data: blob:; font-src https: data:; connect-src https:; media-src https: data:; form-action 'none'; frame-ancestors https://agentartifact.example.test"
       );

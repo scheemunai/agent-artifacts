@@ -5,6 +5,7 @@ import type { DatabaseHandle } from '../db/client.js';
 import type { CloudModule } from '../extension/cloud-module.js';
 import { createDefaultCloudModule } from '../extension/default-module.js';
 import { generateCachedOgImage } from '../lib/og.js';
+import { clientIp } from '../lib/rate-limit.js';
 import type { Logger } from '../logger.js';
 import { ServiceError, toErrorEnvelope } from '../services/errors.js';
 import {
@@ -34,7 +35,7 @@ const PUBLIC_RATE_LIMIT = 120;
 const PUBLIC_RATE_WINDOW_MS = 60 * 1000;
 const VERIFY_RATE_LIMIT = 10;
 const VERIFY_RATE_WINDOW_MS = 15 * 60 * 1000;
-const FRAME_CONTENT_TYPE = 'text/HTML; charset=utf-8';
+const FRAME_CONTENT_TYPE = 'text/html; charset=utf-8';
 const APP_PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=()';
 
 export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRoutesContext): void {
@@ -71,7 +72,7 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
     }
 
     const decision = rateLimiter.take({
-      key: `public:${clientIp(context as unknown as PublicContext, ctx.config)}`,
+      key: `public:${clientIp(context, ctx.config.trustProxy)}`,
       limit: PUBLIC_RATE_LIMIT,
       windowMs: PUBLIC_RATE_WINDOW_MS,
     });
@@ -133,7 +134,7 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
 
     if (!ctx.config.rateLimitsDisabled) {
       const decision = rateLimiter.take({
-        key: `verify:${clientIp(context as unknown as PublicContext, ctx.config)}:${shareId}`,
+        key: `verify:${clientIp(context, ctx.config.trustProxy)}:${shareId}`,
         limit: VERIFY_RATE_LIMIT,
         windowMs: VERIFY_RATE_WINDOW_MS,
       });
@@ -518,20 +519,6 @@ function isSandboxHost(context: PublicContext, config: AppConfig): boolean {
   const host =
     context.req.header('host')?.toLowerCase() ?? new URL(context.req.url).host.toLowerCase();
   return host === sandboxHost;
-}
-
-function clientIp(context: PublicContext, config: AppConfig): string {
-  const forwardedFor = context.req.header('x-forwarded-for');
-  if (config.trustProxy > 0 && forwardedFor) {
-    const parts = forwardedFor
-      .split(',')
-      .map((part) => part.trim())
-      .filter(Boolean);
-    const index = Math.max(0, parts.length - config.trustProxy - 1);
-    return parts[index] ?? 'unknown';
-  }
-
-  return context.req.header('x-real-ip') ?? context.req.header('cf-connecting-ip') ?? 'unknown';
 }
 
 function rateLimited(context: PublicContext, retryAfterSeconds: number): Response {

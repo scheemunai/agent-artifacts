@@ -17,6 +17,12 @@ import {
 
 export const MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
 export const SETUP_TOKEN_LENGTH = 24;
+export const ARGON2ID_PASSWORD_PARAMS = {
+  type: argon2id,
+  memoryCost: 19_456,
+  timeCost: 2,
+  parallelism: 1,
+} as const;
 
 export interface PasswordLoginResult {
   account: SessionAccount;
@@ -777,7 +783,7 @@ export class AuthService {
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  return argonHash(password, { type: argon2id });
+  return argonHash(password, ARGON2ID_PASSWORD_PARAMS);
 }
 
 export async function verifyPasswordIfHashExists(

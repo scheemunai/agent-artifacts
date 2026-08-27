@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import argon2 from 'argon2';
 import { nanoid } from 'nanoid';
 import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 import type { AppConfig } from '../config.js';
@@ -18,6 +17,7 @@ import {
   BOT_KEY_PATTERN,
 } from '../lib/schemas/artifacts.js';
 import { ArtifactService, type ArtifactSnapshot, computeContentHash } from './artifacts.js';
+import { hashPassword } from './auth.js';
 import { hashSecret } from './bots.js';
 import {
   getTemplateResponse as getTemplateResponseFromService,
@@ -189,12 +189,7 @@ export async function authenticateBotToken(
 }
 
 export async function createPasswordHash(password: string): Promise<string> {
-  return argon2.hash(password, {
-    type: argon2.argon2id,
-    memoryCost: 19_456,
-    timeCost: 2,
-    parallelism: 1,
-  });
+  return hashPassword(password);
 }
 
 export async function publishArtifact(input: {

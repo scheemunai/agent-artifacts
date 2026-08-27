@@ -6,6 +6,7 @@ import { createApp } from '../../src/app.js';
 import { type AppConfig, loadConfig } from '../../src/config.js';
 import { initializeDatabase, type SqliteDatabaseHandle } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrations.js';
+import type { CloudModule } from '../../src/extension/cloud-module.js';
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
 
 export interface AuthTestContext {
@@ -18,7 +19,8 @@ export interface AuthTestContext {
 }
 
 export async function createAuthTestContext(
-  env: Record<string, string> = {}
+  env: Record<string, string> = {},
+  options: { cloudModule?: CloudModule } = {}
 ): Promise<AuthTestContext> {
   const cwd = mkdtempSync(join(tmpdir(), 'aa-auth-'));
   const deployment = env.DEPLOYMENT ?? 'self-hosted';
@@ -45,7 +47,7 @@ export async function createAuthTestContext(
   const logger = pino({ enabled: false });
   const db = (await initializeDatabase(config, logger)) as SqliteDatabaseHandle;
   await runMigrations(db, logger);
-  const cloudModule = createDefaultCloudModule(config);
+  const cloudModule = options.cloudModule ?? createDefaultCloudModule(config);
   const app = createApp({ config, logger, db, cloudModule });
 
   return {

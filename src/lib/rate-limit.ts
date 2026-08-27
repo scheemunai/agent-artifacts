@@ -78,17 +78,28 @@ export function setRateLimitHeaders(context: Context, result: RateLimitResult): 
 }
 
 export function clientIp(context: Context, trustProxy: number): string {
-  if (trustProxy > 0) {
-    const forwardedFor = context.req.header('x-forwarded-for');
-    if (forwardedFor) {
-      const hops = forwardedFor
-        .split(',')
-        .map((hop) => hop.trim())
-        .filter(Boolean);
-      const index = Math.max(0, hops.length - trustProxy - 1);
-      return hops[index] ?? hops[0] ?? 'unknown';
-    }
+  const socketAddress = socketRemoteAddress(context) ?? 'unknown';
+
+  if (trustProxy <= 0) {
+    return socketAddress;
   }
 
-  return context.req.header('x-real-ip') ?? 'unknown';
+  const forwardedFor = context.req.header('x-forwarded-for');
+  if (forwardedFor) {
+    const hops = forwardedFor
+      .split(',')
+      .map((hop) => hop.trim())
+      .filter(Boolean);
+    const index = Math.max(0, hops.length - trustProxy - 1);
+    return hops[index] ?? hops[0] ?? socketAddress;
+  }
+
+  return context.req.header('x-real-ip') ?? context.req.header('cf-connecting-ip') ?? socketAddress;
+}
+
+function socketRemoteAddress(context: Context): string | null {
+  const env = context.env as
+    | { incoming?: { socket?: { remoteAddress?: string | null } } }
+    | undefined;
+  return env?.incoming?.socket?.remoteAddress ?? null;
 }

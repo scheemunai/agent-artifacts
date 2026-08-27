@@ -36,6 +36,7 @@ export interface ApiTestContext {
 export interface CreateApiTestContextOptions {
   cloudModule?: CloudModule;
   rateLimitsDisabled?: boolean;
+  rateLimitRpm?: number;
   maxContentBytes?: number;
   baseUrl?: string;
   suspended?: boolean;
@@ -53,6 +54,9 @@ export async function createApiTestContext(
       BASE_URL: options.baseUrl ?? 'https://example.test',
       AA_SQLITE_PATH: './data/app.db',
       AA_RATE_LIMITS_DISABLED: String(options.rateLimitsDisabled ?? true),
+      ...(options.rateLimitRpm !== undefined
+        ? { AA_RATE_LIMIT_RPM: String(options.rateLimitRpm) }
+        : {}),
       ...(options.maxContentBytes !== undefined
         ? { AA_MAX_CONTENT_BYTES: String(options.maxContentBytes) }
         : {}),

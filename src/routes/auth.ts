@@ -1,6 +1,7 @@
 import type { Context, Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { AppConfig } from '../config.js';
+import { clientIp } from '../lib/rate-limit.js';
 import type { Logger } from '../logger.js';
 import { AuthError, type AuthService, normalizeEmail } from '../services/auth.js';
 import { hasConfiguredMail, type MailService } from '../services/mail.js';
@@ -95,7 +96,7 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
 
     if (!options.config.rateLimitsDisabled) {
       const allowed = options.passwordLimiter.check(
-        `password:${clientIp(context)}`,
+        `password:${clientIp(context, options.config.trustProxy)}`,
         10,
         15 * 60 * 1000
       );
@@ -161,7 +162,7 @@ async function requestMagicLink(
   if (!options.config.rateLimitsDisabled) {
     const emailAllowed = options.magicEmailLimiter.check(`magic-email:${email}`, 5, 60 * 60 * 1000);
     const ipAllowed = options.magicIpLimiter.check(
-      `magic-ip:${clientIp(context)}`,
+      `magic-ip:${clientIp(context, options.config.trustProxy)}`,
       10,
       60 * 60 * 1000
     );
@@ -226,11 +227,6 @@ export async function parseForm(context: Context): Promise<Record<string, string
 
 export function stringField(form: Record<string, string>, name: string): string {
   return form[name]?.trim() ?? '';
-}
-
-export function clientIp(context: Context): string {
-  const forwarded = context.req.header('x-forwarded-for')?.split(',')[0]?.trim();
-  return forwarded || context.req.header('x-real-ip') || 'unknown';
 }
 
 export function authErrorMessage(error: unknown): string {

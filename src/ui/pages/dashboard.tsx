@@ -90,12 +90,18 @@ export interface DashboardNotice {
   message: string;
 }
 
+export interface DashboardNavItem {
+  label: string;
+  href: string;
+}
+
 export interface DashboardHomePageProps {
   account: DashboardAccountView;
   artifacts: DashboardArtifactListItem[];
   bots: DashboardBotView[];
   latestBot: DashboardBotView | null;
   baseUrl: string;
+  extensionNavItems?: DashboardNavItem[] | undefined;
   filters: {
     q: string;
     botId: string;
@@ -112,11 +118,18 @@ export function DashboardHomePage({
   bots,
   latestBot,
   baseUrl,
+  extensionNavItems,
   filters,
   notice,
 }: DashboardHomePageProps) {
   return (
-    <DashboardChrome title="Artifacts" account={account} active="artifacts" notice={notice}>
+    <DashboardChrome
+      title="Artifacts"
+      account={account}
+      active="artifacts"
+      notice={notice}
+      extensionNavItems={extensionNavItems}
+    >
       <section class="aa-section">
         <header class="aa-section-header">
           <p class="aa-page-kicker">Artifacts</p>
@@ -159,6 +172,7 @@ export interface DashboardArtifactPageProps {
   versions: DashboardArtifactVersion[];
   diff: { left: DashboardArtifactVersion; right: DashboardArtifactVersion } | null;
   baseUrl: string;
+  extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
   promoteError?: string | null | undefined;
 }
@@ -169,11 +183,18 @@ export function DashboardArtifactPage({
   versions,
   diff,
   baseUrl,
+  extensionNavItems,
   notice,
   promoteError,
 }: DashboardArtifactPageProps) {
   return (
-    <DashboardChrome title={artifact.title} account={account} active="artifacts" notice={notice}>
+    <DashboardChrome
+      title={artifact.title}
+      account={account}
+      active="artifacts"
+      notice={notice}
+      extensionNavItems={extensionNavItems}
+    >
       <div class="aa-stack">
         <section class="aa-section">
           <header class="aa-section-header">
@@ -246,6 +267,7 @@ export interface DashboardBotsPageProps {
   account: DashboardAccountView;
   bots: DashboardBotView[];
   baseUrl: string;
+  extensionNavItems?: DashboardNavItem[] | undefined;
   shownKey?: { apiKey: string; botName: string } | undefined;
   notice?: DashboardNotice | undefined;
   error?: string | undefined;
@@ -255,12 +277,19 @@ export function DashboardBotsPage({
   account,
   bots,
   baseUrl,
+  extensionNavItems,
   shownKey,
   notice,
   error,
 }: DashboardBotsPageProps) {
   return (
-    <DashboardChrome title="Bots" account={account} active="bots" notice={notice}>
+    <DashboardChrome
+      title="Bots"
+      account={account}
+      active="bots"
+      notice={notice}
+      extensionNavItems={extensionNavItems}
+    >
       <div class="aa-stack">
         <section class="aa-section">
           <header class="aa-section-header">
@@ -322,19 +351,27 @@ export function DashboardBotsPage({
 export interface DashboardTemplatesPageProps {
   account: DashboardAccountView;
   templates: DashboardTemplateView[];
+  extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
 }
 
 export function DashboardTemplatesPage({
   account,
   templates,
+  extensionNavItems,
   notice,
 }: DashboardTemplatesPageProps) {
   const starters = templates.filter((template) => template.builtIn);
   const personal = templates.filter((template) => !template.builtIn);
 
   return (
-    <DashboardChrome title="Templates" account={account} active="templates" notice={notice}>
+    <DashboardChrome
+      title="Templates"
+      account={account}
+      active="templates"
+      notice={notice}
+      extensionNavItems={extensionNavItems}
+    >
       <div class="aa-stack">
         <section class="aa-section">
           <header class="aa-section-header">
@@ -363,13 +400,25 @@ export function DashboardTemplatesPage({
 
 export interface DashboardSettingsPageProps {
   account: DashboardAccountView;
+  extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
   error?: string | undefined;
 }
 
-export function DashboardSettingsPage({ account, notice, error }: DashboardSettingsPageProps) {
+export function DashboardSettingsPage({
+  account,
+  extensionNavItems,
+  notice,
+  error,
+}: DashboardSettingsPageProps) {
   return (
-    <DashboardChrome title="Settings" account={account} active="settings" notice={notice}>
+    <DashboardChrome
+      title="Settings"
+      account={account}
+      active="settings"
+      notice={notice}
+      extensionNavItems={extensionNavItems}
+    >
       <div class="aa-stack">
         <section class="aa-section">
           <header class="aa-section-header">
@@ -516,12 +565,14 @@ function DashboardChrome({
   account,
   active,
   notice,
+  extensionNavItems = [],
   children,
 }: {
   title: string;
   account: DashboardAccountView;
   active: DashboardSection;
   notice?: DashboardNotice | undefined;
+  extensionNavItems?: DashboardNavItem[] | undefined;
   children: Child;
 }) {
   return (
@@ -535,6 +586,7 @@ function DashboardChrome({
           { label: 'Bots', href: '/dashboard/bots', current: active === 'bots' },
           { label: 'Templates', href: '/dashboard/templates', current: active === 'templates' },
           { label: 'Settings', href: '/dashboard/settings', current: active === 'settings' },
+          ...extensionNavItems.map((item) => ({ ...item, current: false })),
         ]}
       >
         <form class="aa-stack" method="post" action="/dashboard/api/logout">
