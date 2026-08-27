@@ -98,8 +98,12 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         return context.body(null, 304);
       }
 
+      // PRD §8.6: a view is counted only on a successful GET of the live content. HEAD serves
+      // the same headers but must never count and must never mint an aa_viewer cookie, or every
+      // link checker and uptime probe would inflate both view_count and unique_viewer_count.
       const poll = url.searchParams.get('poll') === '1';
-      if (!poll && !versionNum) {
+      const countsView = context.req.method === 'GET' && !poll && !versionNum;
+      if (countsView) {
         const viewerId = viewerCookie(context as unknown as PublicContext, viewer, ctx.config);
         await viewer.recordView({
           shareId: content.shareId,

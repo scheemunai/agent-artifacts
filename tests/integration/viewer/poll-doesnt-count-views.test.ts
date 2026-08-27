@@ -104,6 +104,43 @@ describe('viewer poll requests do not count views', () => {
     }
   });
 
+  it('serves HEAD probes without counting a view or minting a viewer cookie', async () => {
+    const ctx = await createViewerTestContext();
+
+    try {
+      const created = await publishSharedArtifact(ctx, {
+        slug: 'head-probe-report',
+        title: 'Head Probe Report',
+      });
+      const shareId = created.share?.shareId as string;
+
+      for (let index = 0; index < 3; index += 1) {
+        const probe = await ctx.app.request(`/a/${shareId}/content`, { method: 'HEAD' });
+        expect(probe.status).toBe(200);
+        expect(probe.headers.get('etag')).toBe(`"${created.artifact.contentHash}"`);
+        expect(probe.headers.get('cache-control')).toBe('private, max-age=10, must-revalidate');
+        expect(probe.headers.get('set-cookie')).toBeNull();
+      }
+
+      expect(shareCounters(ctx, shareId)).toEqual({
+        view_count: 0,
+        unique_viewer_count: 0,
+        viewers: 0,
+      });
+
+      const read = await ctx.app.request(`/a/${shareId}/content`);
+      expect(read.status).toBe(200);
+      expect(read.headers.get('set-cookie')).toContain('aa_viewer=');
+      expect(shareCounters(ctx, shareId)).toEqual({
+        view_count: 1,
+        unique_viewer_count: 1,
+        viewers: 1,
+      });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('caps unique viewer rows at 50000 while continuing to count non-poll views', async () => {
     const ctx = await createViewerTestContext();
 
