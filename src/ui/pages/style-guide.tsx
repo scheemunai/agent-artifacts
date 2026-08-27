@@ -282,6 +282,61 @@ export function StyleGuidePage() {
           </StyleGuideSection>
 
           <StyleGuideSection
+            id="documents"
+            title="Document surfaces"
+            note="Four surfaces replace the whole page rather than composing into one, so they are described here instead of specimened. Every one of them exists because a real screen was shipping raw bytes to a human."
+          >
+            <div class="aa-grid aa-grid--2">
+              <Card
+                title="FrameDocument"
+                description="src/ui/pages/frame-document.ts — the shell around a sandboxed HTML artifact."
+              >
+                <p class="aa-hint">
+                  Agent HTML is served from the sandbox origin, which cannot load this stylesheet,
+                  so the shell is self-contained: one inline <code>&lt;style&gt;</code>, no{' '}
+                  <code>&lt;link&gt;</code>, no font file, no request, and never a script. Every
+                  baseline rule is a bare element selector so anything the agent writes outranks it,
+                  and content that already declares its own <code>&lt;!doctype&gt;</code> passes
+                  through byte for byte. It wraps; it never rewrites.
+                </p>
+              </Card>
+              <Card
+                title="FrameTerminalDocument"
+                description="The sandbox origin's own missing / gone / locked page."
+              >
+                <p class="aa-hint">
+                  Same self-contained rules, the product mark, one sentence of explanation and one
+                  action. Distinct copy per cause — missing, no longer available, password-protected
+                  — because one string for three states tells at least two lies.
+                </p>
+              </Card>
+              <Card
+                title="ErrorPage"
+                description="src/ui/pages/error-page.tsx — what a browser gets when a request misses."
+              >
+                <p class="aa-hint">
+                  Chosen by content negotiation in the global handler: an <code>Accept</code> that
+                  asks for HTML gets this page, everything else keeps the JSON envelope, and{' '}
+                  <code>/v1</code> keeps it unconditionally. Chrome follows the visitor — a
+                  signed-in owner keeps their dashboard navigation, everyone else gets the public
+                  card.
+                </p>
+              </Card>
+              <Card
+                title="VersionBanner"
+                description="src/ui/components/version-banner.tsx — shown only when a version is pinned."
+              >
+                <p class="aa-hint">
+                  <code>isPinnedVersion(shown, latest)</code> is the whole decision, and{' '}
+                  <code>viewer-*.js</code> calls a predicate of the same name with the same body. On
+                  the latest version both the banner and its "View latest" link are hidden, because
+                  a link to the page you are already on is not a link.
+                </p>
+              </Card>
+            </div>
+          </StyleGuideSection>
+
+          <StyleGuideSection
             id="examples"
             title="Copy-paste examples"
             note="Examples are intentionally small so future screens compose primitives instead of inventing variants."
@@ -475,7 +530,7 @@ function buttonSection() {
             >
               {variant}
             </Badge>
-            <div class="aa-specimen-row">
+            <ButtonRow>
               {states.map((state) => (
                 <StateButton variant={variant} state={state}>
                   {state === 'loading' ? 'Saving…' : state}
@@ -493,7 +548,7 @@ function buttonSection() {
                   ↻
                 </Button>
               ) : null}
-            </div>
+            </ButtonRow>
           </div>
         ))}
       </div>
@@ -666,7 +721,7 @@ function badgeSection() {
       title="Badge"
       description="Inline-flex only: badges size to content and never stretch full-width."
     >
-      <div class="aa-specimen-row">
+      <ButtonRow>
         {tones.map(([tone, label]) => (
           <Badge tone={tone}>{label}</Badge>
         ))}
@@ -675,7 +730,7 @@ function badgeSection() {
             {label}
           </Badge>
         ))}
-      </div>
+      </ButtonRow>
     </Card>
   );
 }
@@ -687,7 +742,7 @@ function cardTableSection() {
         title="Card"
         description="Default, raised, empty, and error states are content patterns on the same primitive."
         footer={
-          <div class="aa-specimen-row">
+          <ButtonRow>
             <Button
               variant="primary"
               size="sm"
@@ -706,7 +761,7 @@ function cardTableSection() {
             >
               Cancel
             </Button>
-          </div>
+          </ButtonRow>
         }
       >
         <p class="aa-hint">Use cards for grouped forms, setup steps, and dashboard side panels.</p>
@@ -901,17 +956,17 @@ function feedbackSection() {
         title="Dialogs"
         description="Native dialog, Escape closes, focus is trapped, small screens scroll internally."
       >
-        <div class="aa-specimen-row">
+        <ButtonRow>
           <Button variant="primary" dataAttrs={{ 'data-aa-open-dialog': 'style-guide-modal' }}>
             Open modal
           </Button>
           <Button variant="danger" dataAttrs={{ 'data-aa-open-dialog': 'style-guide-confirm' }}>
             Revoke link
           </Button>
-        </div>
+        </ButtonRow>
       </Card>
       <Card title="Toast" description="Status messaging that does not move layout.">
-        <div class="aa-specimen-row">
+        <ButtonRow>
           <Button
             variant="secondary"
             dataAttrs={{
@@ -932,7 +987,7 @@ function feedbackSection() {
           >
             Error toast
           </Button>
-        </div>
+        </ButtonRow>
         <div class="aa-stack">
           <Toast tone="info">Public viewer refreshed.</Toast>
           <Toast tone="warn">This artifact expires soon.</Toast>
@@ -1026,7 +1081,7 @@ function loadingSection() {
       title="Avatar, mark, spinner, skeleton"
       description="Identity primitives plus sanctioned inline loading patterns."
     >
-      <div class="aa-specimen-row">
+      <ButtonRow>
         <ProductMark />
         <Avatar name="Agent Artifacts" size="sm" />
         <Avatar name="R2 Operations" />
@@ -1035,7 +1090,7 @@ function loadingSection() {
         <Button variant="primary" loading>
           Publishing…
         </Button>
-      </div>
+      </ButtonRow>
       <div class="aa-usage">
         <strong>Skeleton is specimen-only, not for production use.</strong> PRD §9 loading states
         use inline text, disabled button labels, and the spinner where status needs a visual marker.
