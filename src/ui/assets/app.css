@@ -394,11 +394,12 @@
     }
   }
 
-  /* One action row for the whole product. `.aa-specimen-row` is the deprecated alias: it is a
-     style-guide name that leaked into 25 production call sites, so the two share one declaration
-     block and can never drift while the remaining pages migrate. */
-  .aa-button-row,
-  .aa-specimen-row {
+  /* One action row for the whole product, rendered by `ButtonRow`. This carried a deprecated
+     `.aa-specimen-row` alias — a style-guide name that had leaked into 25 production call sites —
+     sharing this declaration block so the two could not drift while the pages migrated. The
+     migration is done and the alias is gone; see style-guide-registry.test.ts, which now pins its
+     absence where it used to pin its existence. */
+  .aa-button-row {
     display: flex;
     min-width: 0;
     flex-wrap: wrap;

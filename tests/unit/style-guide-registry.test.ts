@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
@@ -24,19 +25,26 @@ const styleGuideSource = readFileSync('src/ui/pages/style-guide.tsx', 'utf8');
 const html = renderToString(StyleGuidePage());
 
 /**
- * Files this batch owns. `.aa-specimen-row` — a class named after the style guide — leaked into 25
- * production call sites; these are the ones retired here, with the rest tracked for the
- * page-adoption phase.
+ * `.aa-specimen-row` — a class named after the style guide — leaked into 25 production call sites.
+ * The migration is now complete, so this walks every source file rather than an enumerated list of
+ * the ones a batch happened to own.
+ *
+ * The enumeration was the right shape while the migration was in flight and the wrong shape the
+ * moment it finished: a list guards the files someone remembered to list, and the whole point of
+ * this class of defect is that it spreads to files nobody is thinking about. Seven names became
+ * sixty-eight files the day the alias came out.
  */
-const OWNED_SOURCES = [
-  'src/ui/components/primitives.tsx',
-  'src/ui/components/version-banner.tsx',
-  'src/ui/pages/style-guide.tsx',
-  'src/ui/pages/viewer.tsx',
-  'src/ui/pages/share-terminal.tsx',
-  'src/ui/pages/error-page.tsx',
-  'public/assets/viewer-0f4f9f6c8a7e.js',
-];
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return sourceFiles(path);
+    }
+    return /\.(tsx?|js)$/.test(entry.name) ? [path] : [];
+  });
+}
+
+const ALL_SOURCES = [...sourceFiles('src'), ...sourceFiles('public/assets')];
 
 function exportedComponents(source: string): string[] {
   return Array.from(source.matchAll(/^export function ([A-Z][A-Za-z0-9]*)\s*\(/gm), (match) =>
@@ -63,9 +71,11 @@ describe('style guide registry', () => {
     }
   });
 
-  it('stops shipping the style guide class into the product', () => {
-    for (const path of OWNED_SOURCES) {
-      // Applied as a class, not merely named in the prose that explains why it is deprecated.
+  it('ships the style guide class from nowhere in the product', () => {
+    expect(ALL_SOURCES.length).toBeGreaterThan(50);
+
+    for (const path of ALL_SOURCES) {
+      // Applied as a class, not merely named in the prose that explains why it was deprecated.
       expect(
         readFileSync(path, 'utf8'),
         `${path} still hand-rolls a row with the style-guide class`
@@ -73,11 +83,20 @@ describe('style guide registry', () => {
     }
   });
 
-  it('keeps the deprecated alias defined until the remaining pages migrate', () => {
-    // The class is still on home, login, setup, placeholder and dashboard. Deleting the rule now
-    // would break those pages; sharing one declaration block means it cannot drift meanwhile.
+  it('retires the deprecated alias now that nothing calls it', () => {
+    // The alias existed for one reason — 25 production call sites could not be migrated in one
+    // commit — and that reason is now spent. It is deleted rather than left defined-but-unused,
+    // because an available class is an invitation: the next person to need a row finds it by
+    // autocomplete and the leak restarts, which is exactly how it reached 25 sites the first time.
+    //
+    // This assertion is the inverse of the one it replaces. That is deliberate: a scaffold removed
+    // with no test is a scaffold that can come back silently, so the retirement is pinned in the
+    // same place the exception used to be, and the CSS is read rather than the compiled output so
+    // the guard holds without a build.
     const css = readFileSync('src/ui/assets/app.css', 'utf8');
-    expect(css).toMatch(/\.aa-button-row,\s*\n\s*\.aa-specimen-row\s*\{/);
+    expect(css).not.toMatch(/\.aa-specimen-row\s*[,{]/);
+    // ButtonRow's own class is what survives, and it must survive — the alias shared its block.
+    expect(css).toMatch(/\.aa-button-row\s*\{/);
   });
 
   it('documents every state of the primitives it registers', () => {
