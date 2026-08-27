@@ -59,7 +59,10 @@ describe('viewer share lifecycle responses', () => {
       const response = await suspendedCtx.app.request(`/a/${shareId}`);
       const html = await response.text();
       expect(response.status).toBe(410);
-      expect(html).toContain('This link has been revoked.');
+      // The owner did not revoke this link, so the page must not say they did. It also must not
+      // disclose *why* — the recipient is not entitled to the account's moderation state.
+      expect(html).not.toContain('The owner turned off sharing for this artifact.');
+      expect(html).toContain('This link is no longer available.');
       expect(html).toContain('Report abuse');
     } finally {
       await suspendedCtx.cleanup();

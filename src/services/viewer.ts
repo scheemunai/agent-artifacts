@@ -369,7 +369,10 @@ export class ViewerService {
       suspendedAt: row.suspended_at,
     };
     if (account.suspendedAt !== null) {
-      throw new ServiceError(410, 'share_revoked', 'This share link has been revoked');
+      // Not `share_revoked`: the owner did not revoke anything, and reusing that code made the
+      // public page tell recipients a false cause. Still 410 — from the reader's side the resource
+      // is genuinely gone — but with a code the terminal copy can tell apart.
+      throw new ServiceError(410, 'share_disabled', 'This share link is no longer available');
     }
 
     const plan = await this.cloudModule.resolvePlan(account);
