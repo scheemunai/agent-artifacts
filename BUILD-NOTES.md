@@ -126,21 +126,15 @@ that emitted no domain events, so a CloudModule analytics consumer missed every 
 revoked outside the artifact write path. `deleteShareResponse` could not emit even in principle: it
 never received the module. That is why the signature changed rather than the body alone.
 
-### Generated CSS stays generated, and a missing build says so
+### Asset pipeline
 
-`pnpm dev` now runs `build:css` before the watcher, so the documented first run works by command
-rather than by luck. Generated CSS stays gitignored: Tailwind hashes its output over the whole
-scanned source tree, so committing it would churn on unrelated UI edits, and a stale committed copy
-would reintroduce the 404 class this change closes. `pnpm build` remains the authoritative producer
-for the image and the release archive. `src/ui/assets.ts` resolves the manifest from
-`import.meta.url` rather than the working directory, caches the resolved href instead of re-reading
-JSON on every render, and invalidates on rebuild. A missing build is now impossible to miss: one
-stderr block naming `pnpm run build:css`, and pages link the tracked
-`public/assets/build-missing.css`, which paints its own diagnosis as a red banner rather than
-resolving to a file that has never existed. `public/assets/og-fallback.png` is guarded by a
-byte-equality test against `generateOgFallbackImage()` rather than being regenerated during the
-build, because the render is deterministic and a build step would let the committed card drift
-silently the way the palette already had.
+ASSET PIPELINE (R1-W3, ff81395): `pnpm dev` now runs `build:css` first; generated CSS + manifest
+stay gitignored with `pnpm build` authoritative. `src/ui/assets.ts` resolves the manifest from
+`import.meta.url`, caches it with fs.watch invalidation, and on a missing build logs one
+`[agent-artifacts] STYLESHEET BUILD MISSING` block and serves the checked-in
+`public/assets/build-missing.css` instead of the non-existent `/assets/app.css`. New script
+`pnpm run build:og-fallback` regenerates `public/assets/og-fallback.png`, guarded by a
+byte-equality test. Retired Inter font files and their notices section deleted.
 
 ### Phase F: twelve foundation steps, and the discovery underneath them
 
