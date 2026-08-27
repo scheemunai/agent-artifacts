@@ -132,6 +132,7 @@ See [docs/deploy.md](./docs/deploy.md) and [docs/self-hosting.md](./docs/self-ho
 - API docs: [docs/api.md](./docs/api.md), `/v1/contract`, `/v1/openapi.json`
 - Self-hosting: [docs/self-hosting.md](./docs/self-hosting.md)
 - Deploy guide: [docs/deploy.md](./docs/deploy.md)
+- Production runbook: [docs/production.md](./docs/production.md)
 - UI system: run the app and open `/style-guide`
 - Contributing: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - Security: [SECURITY.md](./SECURITY.md)

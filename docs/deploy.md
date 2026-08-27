@@ -2,6 +2,8 @@
 
 Agent Artifacts deploys as one container that listens on `PORT` and persists `/data`. The default database is SQLite at `/data/agent-artifacts.db`; set `DATABASE_URL` for Postgres when the platform does not provide durable local disk.
 
+For the hosted product launch runbook — DNS, mail, secrets, backups, monitoring, and go-live gates — see [production.md](./production.md).
+
 Official platform references used for the checked-in configs:
 
 - Railway Dockerfile path and health checks: <https://docs.railway.com/config-as-code/reference>
