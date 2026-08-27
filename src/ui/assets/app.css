@@ -82,10 +82,12 @@
   --width-aa-shell: 72rem;
   --width-aa-shell-marketing: 66.5rem;
   --width-aa-panel: 48.75rem;
-  --width-aa-shell-narrow: 46rem;
+  /* Auth, setup, verify and placeholder: a single card that is the whole page. One measure
+     draws the card and its contents — they were 46rem and 30rem, which is how 186px of dead
+     column ended up beside every input. */
+  --width-aa-shell-narrow: 30rem;
   --width-aa-measure: 42.5rem;
   --width-aa-dialog: 36rem;
-  --width-aa-card: 30rem;
   --width-aa-drawer: 24rem;
   --width-aa-toast: 24rem;
   --width-aa-prose: 72ch;
@@ -2093,15 +2095,19 @@
     overscroll-behavior: none;
   }
 
+  /* These pages render no app header, so reserving one pushed the centred card up by half of it —
+     a consistent 32px above optical centre at both viewports. */
   .aa-placeholder {
     display: grid;
-    min-height: calc(100vh - 4rem);
+    min-height: 100vh;
     place-items: center;
     padding-block: var(--spacing-aa-16);
   }
 
+  /* Fills the card rather than capping itself: the shell above already carries the measure, and a
+     second cap here is what made the contents disagree with the box drawn around them. */
   .aa-placeholder-card {
-    width: min(100%, var(--width-aa-card));
+    width: 100%;
     text-align: left;
   }
 

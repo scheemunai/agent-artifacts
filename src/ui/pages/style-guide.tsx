@@ -119,13 +119,15 @@ const widthTokens: TokenSpec[] = [
     name: '--width-aa-panel',
     intent: 'Feature panels: the hero artifact card and the terms card.',
   },
-  { name: '--width-aa-shell-narrow', intent: 'Auth, setup, and other single-column pages.' },
+  {
+    name: '--width-aa-shell-narrow',
+    intent: 'Auth, setup, verify and placeholder: the single card that is the whole page.',
+  },
   {
     name: '--width-aa-measure',
     intent: 'The marketing reading column: the API block, the feature lines, the origin note.',
   },
   { name: '--width-aa-dialog', intent: 'Modal dialogs, capped against the viewport.' },
-  { name: '--width-aa-card', intent: 'Placeholder and auth cards inside a narrow shell.' },
   { name: '--width-aa-drawer', intent: 'Mobile drawer panel; the scrim owns every other pixel.' },
   { name: '--width-aa-toast', intent: 'Toast region, capped against the viewport.' },
   { name: '--width-aa-prose', intent: 'The artifact reading column: 72ch, type-relative.' },
