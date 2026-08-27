@@ -102,6 +102,9 @@
   --spacing-aa-12: 3rem;
   --spacing-aa-16: 4rem;
   --spacing-aa-touch: 2.75rem;
+  /* The sticky app header. Named because two rules must agree on it: the header's own
+     height and the scroll offset that keeps anchor targets out from under it. */
+  --height-aa-app-header: 4rem;
 
   /* Radius tokens: restrained rounding that stays utilitarian. */
   --radius-aa-xs: 0.25rem;
@@ -142,6 +145,10 @@
 
   html {
     min-width: 0;
+    /* `.aa-app-header` is sticky at top:0, so an anchor jump would put the target's first
+       line behind it. Padding the scroll container covers every anchor at once — a
+       per-target `scroll-margin-top` is a list someone has to remember to extend. */
+    scroll-padding-top: var(--height-aa-app-header);
   }
 
   body {
@@ -221,7 +228,7 @@
 
   .aa-app-nav {
     display: flex;
-    min-height: 4rem;
+    min-height: var(--height-aa-app-header);
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-aa-3);
