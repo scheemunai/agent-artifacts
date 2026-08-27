@@ -276,7 +276,9 @@ test('authenticated dashboard list to detail preserves history and share control
 
   await expect(page.getByRole('heading', { name: "Your agent's published work" })).toBeVisible();
   await expect(page.getByRole('link', { name: seed.dashboardArtifactTitle })).toBeVisible();
-  const dashboardCard = page.locator('.aa-card').filter({
+  // The list is the published aligned-row pattern now, not a stack of cards: `.aa-list` owns the
+  // columns and each `.aa-list-row` borrows them, so badges and meta line up down the whole list.
+  const dashboardRow = page.locator('.aa-list-row').filter({
     has: page.getByRole('link', { name: seed.dashboardArtifactTitle }),
   });
   // The row's share-state affordance. It used to read "◆ shared", asserted on the glyph; the
@@ -285,8 +287,23 @@ test('authenticated dashboard list to detail preserves history and share control
   // protected here is unchanged: a shared artifact says so on its own row, at both viewports.
   // `exact` still earns its keep — this share carries no password, and the protected variant
   // reads "Shared · password".
-  await expect(dashboardCard.getByText('Shared', { exact: true })).toBeVisible();
-  await expect(dashboardCard.getByText('e2e-dashboard')).toBeVisible();
+  await expect(dashboardRow.getByText('Shared', { exact: true })).toBeVisible();
+  await expect(dashboardRow.getByText('e2e-dashboard')).toBeVisible();
+
+  // B-N3: the whole row is the target, not the title text alone. Asked as a hit test rather than
+  // a click, because a click also depends on where the row happens to sit and what is above it —
+  // this asks the one question that matters: at the far side of the row from the title, which
+  // element would receive the press? A stretched link resolves to the anchor itself.
+  // Vertically only: the row sits below the fold at 375, and `elementFromPoint` answers about the
+  // viewport. The row is not inside a horizontally scrolling container, so this cannot flatter the
+  // result the way scrolling a scroll region would.
+  await dashboardRow.scrollIntoViewIfNeeded();
+  const hitAtFarEdge = await dashboardRow.evaluate((row) => {
+    const box = row.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.right - 8, box.top + box.height / 2);
+    return hit instanceof Element ? hit.className : 'nothing-in-the-viewport';
+  });
+  expect(hitAtFarEdge, 'the far side of the row is not the link').toContain('aa-list-row__link');
 
   await page.getByRole('link', { name: seed.dashboardArtifactTitle }).click();
 

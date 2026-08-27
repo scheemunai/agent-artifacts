@@ -171,9 +171,13 @@ export function DashboardHomePage({
           )
         ) : (
           <div class="aa-stack">
-            {artifacts.map((artifact) => (
-              <ArtifactRow artifact={artifact} />
-            ))}
+            {/* `.aa-list` owns the columns; each row borrows them with subgrid, so badges and meta
+                line up down the whole list instead of every row sizing itself. */}
+            <div class="aa-list">
+              {artifacts.map((artifact) => (
+                <ArtifactRow artifact={artifact} />
+              ))}
+            </div>
             {/* One slot, one component. It used to be a Button for one account and a neutral
                 Badge for another, which made "there is more" and "that was all" different kinds
                 of object rather than two states of the same one. */}
@@ -608,6 +612,7 @@ export function DashboardSettingsPage({
           )}
         </div>
         <Card
+          tone="danger"
           title="Delete account"
           description="Removes everything you own. Shared links stop working immediately and read as missing."
         >
@@ -861,30 +866,42 @@ function ArtifactEmptyState({
   );
 }
 
+/**
+ * One artifact, as a row rather than a card.
+ *
+ * Three things move. The row is the click target instead of the title text alone, via the
+ * pattern's stretched link. The title is ink, not accent — a list where every title is coloured
+ * has no emphasis left for the one the reader is pointing at. And the slug comes up beside the
+ * title: two artifacts can share a title, the slug is what tells them apart, and it used to sit
+ * grey at the end of a meta line while the title carried all the weight.
+ */
 function ArtifactRow({ artifact }: { artifact: DashboardArtifactListItem }) {
   return (
-    <Card>
-      <div class="aa-stack">
-        <ButtonRow>
-          <a href={`/dashboard/artifacts/${artifact.id}`}>
-            <strong>{artifact.title}</strong>
-          </a>
-          <ArtifactTypeBadge type={artifact.type} />
-          {artifact.activeShare ? (
-            <Badge tone="accent">
-              Shared{artifact.activeShare.passwordProtected ? ' · password' : ''}
-            </Badge>
-          ) : (
-            <Badge tone="neutral">private</Badge>
-          )}
-          {artifact.expiresAt ? <ExpiresBadge expiresAt={artifact.expiresAt} /> : null}
-        </ButtonRow>
-        <p class="aa-section-note">
-          by {artifact.botName ?? 'unknown bot'} · <code>{artifact.slug}</code> · updated{' '}
-          {formatRelativeTime(artifact.updatedAt)} · {countOf(artifact.lifetimeViews, 'view')}
-        </p>
-      </div>
-    </Card>
+    <div class="aa-list-row">
+      <span class="aa-list-row__title">
+        <a class="aa-list-row__link" href={`/dashboard/artifacts/${artifact.id}`}>
+          {artifact.title}
+        </a>
+        <br />
+        <span class="aa-hint">
+          <code>{artifact.slug}</code> · {formatByline(artifact)}
+        </span>
+      </span>
+      <ButtonRow>
+        <ArtifactTypeBadge type={artifact.type} />
+        {artifact.activeShare ? (
+          <Badge tone="accent">
+            Shared{artifact.activeShare.passwordProtected ? ' · password' : ''}
+          </Badge>
+        ) : (
+          <Badge tone="neutral">private</Badge>
+        )}
+        {artifact.expiresAt ? <ExpiresBadge expiresAt={artifact.expiresAt} /> : null}
+      </ButtonRow>
+      <span class="aa-list-row__meta">
+        updated {formatRelativeTime(artifact.updatedAt)} · {countOf(artifact.lifetimeViews, 'view')}
+      </span>
+    </div>
   );
 }
 
