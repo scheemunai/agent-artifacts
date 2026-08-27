@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { ViewerContentResult, ViewerPageModel } from '../../src/services/viewer.js';
 import { isPinnedVersion, VersionBanner } from '../../src/ui/components/version-banner.js';
 import { ViewerPage } from '../../src/ui/pages/viewer.js';
+import { readClientSource } from '../support/client-assets.js';
 
 /**
  * The banner is a *pinned-version* affordance: "you are not looking at the current document, here
@@ -15,7 +16,7 @@ import { ViewerPage } from '../../src/ui/pages/viewer.js';
  * un-hid it on any picker change without comparing to the latest version. Two implementations of
  * one decision, and they disagreed. Now there is one predicate, and both call it.
  */
-const viewerScript = readFileSync('public/assets/viewer-0f4f9f6c8a7e.js', 'utf8');
+const viewerScript = readClientSource('viewer.js');
 
 const content: ViewerContentResult = {
   shareId: 'AbCdEfGhIjKlMnOpQrStUv',

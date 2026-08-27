@@ -3,6 +3,7 @@ import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { Button, ButtonRow } from '../../src/ui/components/primitives.js';
 import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
+import { readClientSource } from '../support/client-assets.js';
 import {
   declarationValue,
   parseStylesheet,
@@ -153,7 +154,7 @@ describe('icon-only controls read as controls', () => {
 
   it('keeps the mark in place while the control is busy', () => {
     // Swapping the glyph for the word "Refreshing…" reflowed a control that is now a fixed square.
-    const viewerScript = readFileSync('public/assets/viewer-0f4f9f6c8a7e.js', 'utf8');
+    const viewerScript = readClientSource('viewer.js');
 
     expect(viewerScript).not.toMatch(/refreshButton\.textContent\s*=/);
     expect(viewerScript).toContain("setAttribute('aria-busy'");

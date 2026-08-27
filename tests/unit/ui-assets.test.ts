@@ -1,10 +1,14 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { BUILD_MISSING_STYLESHEET_HREF, createStylesheetResolver } from '../../src/ui/assets.js';
+import {
+  type AssetKey,
+  BUILD_MISSING_STYLESHEET_HREF,
+  createAssetResolver,
+} from '../../src/ui/assets.js';
 
 const REPO_ROOT = new URL('../../', import.meta.url);
 const repoPath = (relative: string): string => fileURLToPath(new URL(relative, REPO_ROOT));
@@ -26,30 +30,32 @@ afterEach(() => {
   rmSync(workspace, { recursive: true, force: true });
 });
 
-function writeBuildOutput(href = '/assets/app-abcdef123456.css'): string {
-  writeFileSync(join(assetRoot, 'manifest.json'), `${JSON.stringify({ 'app.css': href })}\n`);
-  writeFileSync(join(servedRoot, href.replace('/assets/', 'assets/')), '.aa-page{color:#2f3a40}');
-  return href;
+function writeBuildOutput(entries: Record<string, string> = { 'app.css': '/assets/app-abcdef123456.css' }) {
+  writeFileSync(join(assetRoot, 'manifest.json'), `${JSON.stringify(entries)}\n`);
+  for (const href of Object.values(entries)) {
+    writeFileSync(join(servedRoot, href.replace('/assets/', 'assets/')), '.aa-page{color:#2f3a40}');
+  }
+  return entries;
 }
 
 function resolver(overrides: { watchForRebuilds?: boolean; servedRoot?: string } = {}) {
-  return createStylesheetResolver({
+  return createAssetResolver({
     assetRoots: [assetRoot],
     servedRoot: overrides.servedRoot ?? servedRoot,
-    report: (message) => problems.push(message),
+    report: (message: string) => problems.push(message),
     watchForRebuilds: overrides.watchForRebuilds ?? false,
   });
 }
 
-describe('stylesheet resolution', () => {
+describe('asset resolution', () => {
   it('resolves the manifest without depending on the working directory', () => {
-    const href = writeBuildOutput();
+    const { 'app.css': href } = writeBuildOutput();
     const elsewhere = mkdtempSync(join(tmpdir(), 'aa-cwd-'));
     const originalCwd = process.cwd();
 
     try {
       process.chdir(elsewhere);
-      expect(resolver()()).toBe(href);
+      expect(resolver()('app.css')).toBe(href);
     } finally {
       process.chdir(originalCwd);
       rmSync(elsewhere, { recursive: true, force: true });
@@ -59,25 +65,27 @@ describe('stylesheet resolution', () => {
   });
 
   it('reads the manifest once and serves the cached href afterwards', () => {
-    const href = writeBuildOutput();
+    const { 'app.css': href } = writeBuildOutput();
     const resolve = resolver();
 
-    expect(resolve()).toBe(href);
+    expect(resolve('app.css')).toBe(href);
 
     // Removing the manifest proves the second call never touched the filesystem again:
     // the pre-fix implementation read and parsed it on every single page render.
     rmSync(join(assetRoot, 'manifest.json'));
 
-    expect(resolve()).toBe(href);
-    expect(resolve()).toBe(href);
+    expect(resolve('app.css')).toBe(href);
+    expect(resolve('app.css')).toBe(href);
     expect(problems).toEqual([]);
   });
 
-  it('never points a page at a stylesheet that does not exist', () => {
+  it('returns nothing for an asset the build has not produced', () => {
     const resolve = resolver();
 
-    expect(resolve()).toBe(BUILD_MISSING_STYLESHEET_HREF);
-    expect(resolve()).not.toBe('/assets/app.css');
+    // Never a hashed name the page cannot keep, and never an unhashed guess: pages omit what is
+    // not there rather than emitting a reference that 404s.
+    expect(resolve('viewer.js')).toBeUndefined();
+    expect(resolve('app.css')).toBeUndefined();
     expect(existsSync(repoPath(`public${BUILD_MISSING_STYLESHEET_HREF}`))).toBe(true);
   });
 
@@ -85,75 +93,93 @@ describe('stylesheet resolution', () => {
     const resolve = resolver();
 
     for (let call = 0; call < 5; call += 1) {
-      expect(resolve()).toBe(BUILD_MISSING_STYLESHEET_HREF);
+      expect(resolve('app.css')).toBeUndefined();
+      expect(resolve('viewer.js')).toBeUndefined();
     }
 
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('STYLESHEET BUILD MISSING');
-    expect(problems[0]).toContain('pnpm run build:css');
+    expect(problems[0]).toContain('ASSET BUILD MISSING');
+    expect(problems[0]).toContain('pnpm run build:assets');
     expect(problems[0]).toContain(assetRoot);
+  });
+
+  it('names the key when the manifest is missing just that entry', () => {
+    writeBuildOutput();
+    const resolve = resolver();
+
+    expect(resolve('viewer.js')).toBeUndefined();
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('ASSET MISSING FROM MANIFEST');
+    expect(problems[0]).toContain('viewer.js');
   });
 
   it('treats an unusable manifest as a missing build rather than a usable href', () => {
     writeFileSync(join(assetRoot, 'manifest.json'), '{ this is not json');
-    expect(resolver()()).toBe(BUILD_MISSING_STYLESHEET_HREF);
-    expect(problems[0]).toContain('STYLESHEET MANIFEST UNREADABLE');
+    expect(resolver()('app.css')).toBeUndefined();
+    expect(problems[0]).toContain('ASSET MISSING FROM MANIFEST');
 
     problems = [];
     writeFileSync(join(assetRoot, 'manifest.json'), JSON.stringify({ 'app.css': 42 }));
-    expect(resolver()()).toBe(BUILD_MISSING_STYLESHEET_HREF);
-    expect(problems[0]).toContain('STYLESHEET MANIFEST UNREADABLE');
+    expect(resolver()('app.css')).toBeUndefined();
+    expect(problems[0]).toContain('ASSET MISSING FROM MANIFEST');
   });
 
-  it('picks the stylesheet up as soon as the build lands, without a restart', () => {
+  it('picks an asset up as soon as the build lands, without a restart', () => {
     const resolve = resolver();
-    expect(resolve()).toBe(BUILD_MISSING_STYLESHEET_HREF);
+    expect(resolve('app.css')).toBeUndefined();
 
-    const href = writeBuildOutput();
+    const { 'app.css': href } = writeBuildOutput();
 
-    expect(resolve()).toBe(href);
+    expect(resolve('app.css')).toBe(href);
   });
 
-  it('warns when the resolved stylesheet is not reachable from the served root', () => {
-    const href = writeBuildOutput();
+  it('warns when a resolved asset is not reachable from the served root', () => {
+    const { 'app.css': href } = writeBuildOutput();
     const emptyRoot = join(workspace, 'not-the-app-root');
     mkdirSync(emptyRoot, { recursive: true });
 
-    // Exactly the wrong-working-directory start: the manifest is found next to the code, but
-    // `serveStatic({ root: './public' })` would answer 404 for the href it names.
-    expect(resolver({ servedRoot: emptyRoot })()).toBe(href);
+    expect(resolver({ servedRoot: emptyRoot })('app.css')).toBe(href);
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('STYLESHEET WILL 404');
+    expect(problems[0]).toContain('ASSET WILL 404');
     expect(problems[0]).toContain(href);
     expect(problems[0]).toContain(process.cwd());
   });
 });
 
 /**
- * The producer of `manifest.json` is `scripts/hash-css.mjs`; the consumer is the resolver above.
- * Nothing else asserts that the two agree on the key name and the href shape, and a drift there
- * would un-style every page while both halves look correct in isolation.
+ * The producer of `manifest.json` is `scripts/build-assets.mjs`; the consumer is the resolver
+ * above. Nothing else asserts that the two agree on the key names and the href shape, and a drift
+ * there would strip the stylesheet and every client bundle while both halves look correct alone.
  *
- * This runs the real script into a temporary tree. It deliberately does NOT read the repository's
- * own build output: a test that builds the artefact it is about to assert on cannot fail, and an
- * assertion that cannot fail is not evidence. Whether *this* checkout happens to be built is
- * covered where it is a real user-visible claim rather than ambient state — an unbuilt clean
- * checkout in `tests/integration/fresh-clone-assets.test.ts`, a built one in
- * `tests/integration/image-layout-runtime.test.ts`.
+ * This runs the real script over a copy of the real sources in a temporary tree. It deliberately
+ * does NOT read the repository's own build output: a test that builds the artefact it is about to
+ * assert on cannot fail, and an assertion that cannot fail is not evidence.
  */
 describe('the real build script and the resolver', () => {
-  it('agree on the manifest key and the href shape', () => {
-    const source = join(workspace, 'app.css');
-    writeFileSync(source, '.aa-page{color:#2f3a40}');
-    execFileSync(process.execPath, [repoPath('scripts/hash-css.mjs'), source], {
+  const KEYS: AssetKey[] = ['app.css', 'ui-foundation.js', 'viewer.js', 'dashboard.js', 'viewer.css'];
+
+  it('agree on every key the pages can ask for', () => {
+    mkdirSync(join(workspace, '.scratch'), { recursive: true });
+    writeFileSync(join(workspace, '.scratch/app.css'), '.aa-page{color:#2f3a40}');
+    cpSync(repoPath('src/ui/client'), join(workspace, 'src/ui/client'), { recursive: true });
+    mkdirSync(join(workspace, 'src/ui/assets'), { recursive: true });
+    cpSync(repoPath('src/ui/assets/viewer.css'), join(workspace, 'src/ui/assets/viewer.css'));
+
+    execFileSync(process.execPath, [repoPath('scripts/build-assets.mjs')], {
       cwd: workspace,
       stdio: ['ignore', 'ignore', 'pipe'],
     });
 
-    const href = resolver()();
+    const resolve = resolver();
+    for (const key of KEYS) {
+      const href = resolve(key);
+      expect(href, `manifest is missing "${key}"`).toBeDefined();
+      expect(href).toMatch(/^\/assets\/[a-z-]+-[a-f0-9]{12}\.(js|css)$/);
+      expect(existsSync(join(servedRoot, href as string))).toBe(true);
+    }
 
-    expect(href).toMatch(/^\/assets\/app-[a-f0-9]{12}\.css$/);
-    expect(existsSync(join(servedRoot, href))).toBe(true);
+    // One pass, one write: every key lands in the same manifest instead of the last writer
+    // erasing the others.
     expect(problems).toEqual([]);
   });
 });

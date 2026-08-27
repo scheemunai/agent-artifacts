@@ -20,30 +20,45 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` runs `pnpm run build:css` before starting the watcher, so a fresh checkout renders the real
-product on the first boot. Run the app from the repository root: `/assets/*` is served from `./public`
-relative to the working directory.
+`pnpm dev` runs `pnpm run build:assets` before starting the watcher, so a fresh checkout renders the
+real product on the first boot. The app finds `public/` from its own install location, so it can be
+started from any working directory.
 
 ### Generated assets
 
-`public/assets/app-<hash>.css` and `public/assets/manifest.json` are build output and are not committed —
-Tailwind hashes its output over the whole scanned source tree, so committing it would churn on unrelated
-UI edits. Everything that produces them is a command:
+Every hashed file under `public/assets/` is build output and is not committed. Its name is a content
+hash, so a checked-in copy goes stale the moment someone edits the source — which is exactly how three
+of these once shipped under names that no longer described their contents.
+
+Sources live in `src/`:
+
+| Source | Becomes |
+| --- | --- |
+| `src/ui/assets/app.css` | `public/assets/app-<hash>.css` (through Tailwind) |
+| `src/ui/assets/viewer.css` | `public/assets/viewer-<hash>.css` |
+| `src/ui/client/ui-foundation.js` | `public/assets/ui-foundation-<hash>.js` |
+| `src/ui/client/viewer.js` | `public/assets/viewer-<hash>.js` |
+| `src/ui/client/dashboard.js` | `public/assets/dashboard-<hash>.js` |
+
+Pages never name those files. They ask `assetHref('viewer.js')` (`src/ui/assets.ts`) and get the href
+from `public/assets/manifest.json`, which `scripts/build-assets.mjs` writes in a single pass.
 
 | Command | Produces |
 | --- | --- |
-| `pnpm run build:css` | `public/assets/app-<hash>.css`, `public/assets/manifest.json`, `public/assets/fonts/*` |
+| `pnpm run build:assets` | every hashed asset above, `manifest.json`, and `public/assets/fonts/*` |
 | `pnpm dev` | the above, then the watch server |
+| `pnpm test` | the above, then the unit/integration suite |
 | `pnpm run build` | the above, then `dist/` |
 | `pnpm run build:og-fallback` | `public/assets/og-fallback.png` from `src/lib/og.ts` (committed; a test asserts the bytes match) |
 
-Edit `src/ui/assets/app.css` while `pnpm dev` is running and the page will not change until you re-run
-`pnpm run build:css` in a second terminal — the running server watches `manifest.json` and picks the new
-stylesheet up without a restart.
+Edit any of those sources while `pnpm dev` is running and the page will not change until you re-run
+`pnpm run build:assets` in a second terminal — the running server watches `manifest.json` and picks the
+new hashes up without a restart.
 
-If the CSS build has not run, pages are served with `public/assets/build-missing.css`: a red banner reading
-"Stylesheet not built" and a matching `[agent-artifacts] STYLESHEET BUILD MISSING` block on stderr. That
-state is always a missing build step, never a design.
+If the build has not run, pages are served with `public/assets/build-missing.css` — a red banner reading
+"Stylesheet not built" — client scripts are omitted rather than pointed at a 404, and stderr carries a
+matching `[agent-artifacts] ASSET BUILD MISSING` block. That state is always a missing build step, never
+a design.
 
 Local app:
 
@@ -57,7 +72,7 @@ Required checks before opening a PR:
 
 ```bash
 pnpm check
-pnpm exec vitest run
+pnpm test
 pnpm run build
 ```
 
@@ -119,10 +134,11 @@ Useful commands:
 
 ```bash
 pnpm check                 # Biome CI + TypeScript typecheck
-pnpm exec vitest run       # full test suite
+pnpm test                  # build the hashed assets, then the full suite
+pnpm exec vitest run       # the suite alone (assumes the assets are already built)
 pnpm exec vitest run tests/integration/viewer
-pnpm run build:css         # stylesheet + manifest only
-pnpm run build             # CSS/assets + TypeScript build
+pnpm run build:assets      # hashed assets + manifest only
+pnpm run build             # assets + TypeScript build
 pnpm run build:og-fallback # regenerate public/assets/og-fallback.png after an OG card change
 ```
 
@@ -165,7 +181,7 @@ When changing schema, update both dialects and commit generated migrations under
 PR checklist:
 
 - [ ] `pnpm check` passes.
-- [ ] `pnpm exec vitest run` passes, or this is docs-only and the reason is stated.
+- [ ] `pnpm test` passes, or this is docs-only and the reason is stated.
 - [ ] `pnpm run build` passes for code/assets changes.
 - [ ] UI changes followed the style-guide-first rule.
 - [ ] Docs were updated for behavior/config/API/deploy changes.

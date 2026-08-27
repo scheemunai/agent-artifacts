@@ -3,6 +3,7 @@ import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { ConfirmDestructive } from '../../src/ui/components/primitives.js';
 import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
+import { readClientSource } from '../support/client-assets.js';
 import { type ElementSpec, parseStylesheet, winningDeclaration } from '../support/css-cascade.js';
 
 /**
@@ -16,7 +17,7 @@ import { type ElementSpec, parseStylesheet, winningDeclaration } from '../suppor
  */
 const appCssSource = readFileSync('src/ui/assets/app.css', 'utf8');
 const appRules = parseStylesheet(appCssSource);
-const foundationScript = readFileSync('public/assets/ui-foundation-9ff54f825be4.js', 'utf8');
+const foundationScript = readClientSource('ui-foundation.js');
 
 const render = () =>
   renderToString(

@@ -40,8 +40,10 @@ jobs:
       - name: Check
         run: pnpm run check
 
+      # `pnpm test` builds the hashed assets first: pages reference them, so the suite renders
+      # the real product rather than a half-built one.
       - name: Test
-        run: pnpm exec vitest run
+        run: pnpm run test
 
       - name: Build
         run: pnpm run build
@@ -132,8 +134,8 @@ jobs:
 
       # The e2e servers run from source via tsx, so they need the stylesheet the build produces —
       # without it every page renders the "stylesheet not built" fallback.
-      - name: Build stylesheet
-        run: pnpm run build:css
+      - name: Build assets
+        run: pnpm run build:assets
 
       - name: Run end-to-end suite
         run: pnpm run test:e2e

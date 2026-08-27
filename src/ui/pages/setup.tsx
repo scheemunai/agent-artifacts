@@ -151,7 +151,7 @@ export function SetupKeyPage({ baseUrl, email, botName, apiKey }: SetupKeyPagePr
     <Layout
       title="Your bot key · Agent Artifacts"
       description="Copy your Agent Artifacts bot key and install prompt."
-      scripts={['/assets/dashboard-m4.js']}
+      scripts={['dashboard.js']}
     >
       <main class="aa-main">
         <div class="aa-shell aa-shell--narrow aa-stack">

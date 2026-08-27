@@ -12,6 +12,7 @@ import {
   Toast,
 } from '../../src/ui/components/primitives.js';
 import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
+import { readClientSource } from '../support/client-assets.js';
 
 function stripTheme(css: string): string {
   return css.replace(/@theme\s*{[\s\S]*?}\n\n@layer base/, '@layer base');
@@ -232,7 +233,7 @@ describe('style guide page', () => {
 
   it('wires style-guide specimen controls to visible feedback and toast dismissal', () => {
     const html = renderToString(StyleGuidePage());
-    const foundationScript = readFileSync('public/assets/ui-foundation-9ff54f825be4.js', 'utf8');
+    const foundationScript = readClientSource('ui-foundation.js');
 
     expect(html).toContain('data-aa-toast-message="default button specimen."');
     expect(html).toContain(

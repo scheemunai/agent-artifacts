@@ -59,12 +59,15 @@ describe('a fresh checkout', () => {
       .scripts as Record<string, string>;
     // `pnpm dev` must build the stylesheet itself: the fix cannot depend on the contributor
     // knowing about an undocumented step.
-    expect(scripts.dev).toBe('pnpm run build:css && tsx watch src/index.ts');
-    expect(scripts.build).toContain('pnpm run build:css');
+    expect(scripts.dev).toBe('pnpm run build:assets && tsx watch src/index.ts');
+    expect(scripts.build).toContain('pnpm run build:assets');
+    // The suite renders pages that reference built assets, so the runner builds them first —
+    // in the script, never inside a test.
+    expect(scripts.test).toBe('pnpm run build:assets && vitest run');
 
     const contributing = readFileSync(join(checkout, 'CONTRIBUTING.md'), 'utf8');
-    expect(contributing).toContain('pnpm run build:css');
-    expect(contributing).toContain('build output and are not committed');
+    expect(contributing).toContain('pnpm run build:assets');
+    expect(contributing).toContain('build output and is not committed');
   });
 
   it(
@@ -85,8 +88,8 @@ describe('a fresh checkout', () => {
         expect(stylesheet.headers.get('content-type')).toContain('text/css');
         expect(await stylesheet.text()).toContain('Stylesheet not built');
 
-        expect(server.stderr()).toContain('STYLESHEET BUILD MISSING');
-        expect(server.stderr()).toContain('pnpm run build:css');
+        expect(server.stderr()).toContain('ASSET BUILD MISSING');
+        expect(server.stderr()).toContain('pnpm run build:assets');
       } finally {
         await server.stop();
       }
@@ -102,7 +105,7 @@ describe('a fresh checkout', () => {
       // directly, so pnpm never inspects (or offers to purge) the node_modules symlink above.
       const scripts = JSON.parse(readFileSync(join(checkout, 'package.json'), 'utf8'))
         .scripts as Record<string, string>;
-      execFileSync('bash', ['-c', scripts['build:css'] as string], {
+      execFileSync('bash', ['-c', scripts['build:assets'] as string], {
         cwd: checkout,
         env: { ...process.env, PATH: `${join(checkout, 'node_modules/.bin')}:${process.env.PATH}` },
         stdio: ['ignore', 'ignore', 'pipe'],
@@ -124,7 +127,8 @@ describe('a fresh checkout', () => {
         expect(css).toContain('--color-aa-bg:#f1f5f2');
         expect(css).toContain('#c2482a');
 
-        expect(server.stderr()).not.toContain('STYLESHEET');
+        expect(server.stderr()).not.toContain('ASSET BUILD MISSING');
+        expect(server.stderr()).not.toContain('ASSET WILL 404');
       } finally {
         await server.stop();
       }
@@ -177,7 +181,7 @@ describe('a fresh checkout', () => {
       );
 
       // Nothing to warn about any more: the href is right and it is servable.
-      expect(stderr.join('')).not.toContain('STYLESHEET');
+      expect(stderr.join('')).not.toContain('ASSET');
     } finally {
       write.mockRestore();
       process.chdir(originalCwd);

@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { TERMINAL_CAUSE_COPY, type TerminalCause } from '../../src/ui/copy/terminal-copy.js';
-import { VIEWER_SCRIPT_SRC, ViewerPage } from '../../src/ui/pages/viewer.js';
+import {ViewerPage} from '../../src/ui/pages/viewer.js';
+import { readClientSource } from '../support/client-assets.js';
 
 /**
  * N-2. The 410 envelope names its cause — `share_revoked`, `share_expired`, `share_disabled`,
@@ -13,7 +14,7 @@ import { VIEWER_SCRIPT_SRC, ViewerPage } from '../../src/ui/pages/viewer.js';
  *
  * So the same reader, at the same moment, got a worse answer from the live page than from a reload.
  */
-const viewerScript = readFileSync(`public${VIEWER_SCRIPT_SRC}`, 'utf8');
+const viewerScript = readClientSource('viewer.js');
 const html = renderToString(
   ViewerPage({
     model: {

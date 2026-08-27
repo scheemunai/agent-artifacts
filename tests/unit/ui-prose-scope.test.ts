@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { readClientSource } from '../support/client-assets.js';
 import {
   declarationValue,
   type ElementSpec,
@@ -18,9 +19,9 @@ import {
  * Prose scope and page geometry are two different jobs. This holds them apart.
  */
 const appCssSource = readFileSync('src/ui/assets/app.css', 'utf8');
-const viewerCssSource = readFileSync('public/assets/viewer-4fd0df5f2b2a.css', 'utf8');
+const viewerCssSource = readClientSource('viewer.css');
 const viewerPage = readFileSync('src/ui/pages/viewer.tsx', 'utf8');
-const viewerScript = readFileSync('public/assets/viewer-0f4f9f6c8a7e.js', 'utf8');
+const viewerScript = readClientSource('viewer.js');
 
 const appRules = parseStylesheet(appCssSource);
 const documentRules = [

@@ -11,36 +11,49 @@ export const BUILD_MISSING_STYLESHEET_HREF = '/assets/build-missing.css';
 
 const MANIFEST_FILENAME = 'manifest.json';
 const STYLESHEET_KEY = 'app.css';
+const BUILD_COMMAND = 'pnpm run build:assets';
+
+/**
+ * Every hashed asset a page may ask for. The names match the keys `scripts/build-assets.mjs`
+ * writes, and the union is what stops a page naming an asset the build does not produce.
+ */
+export type AssetKey = 'app.css' | 'ui-foundation.js' | 'viewer.js' | 'dashboard.js' | 'viewer.css';
 
 /** Mirrors the static root `src/app.ts` serves `/assets/*` from. Both resolve from the install. */
 const servedPublicRoot = (): string => appPath('public');
 
-export interface StylesheetResolverOptions {
+export interface AssetResolverOptions {
   /** Directories that may hold `manifest.json`, in priority order. */
   assetRoots: readonly string[];
   /** Directory the HTTP layer serves `/assets/*` from, used to detect hrefs that would 404. */
   servedRoot: string | (() => string);
   /** Receives one message per distinct problem, once per process. */
   report: (message: string) => void;
-  /** Drop the cached href when the manifest is rewritten, so a dev rebuild is picked up. */
+  /** Drop cached hrefs when the manifest is rewritten, so a dev rebuild is picked up. */
   watchForRebuilds?: boolean;
 }
 
 /**
- * Builds a `stylesheetHref()`. Exported so tests can point the resolver at a fixture tree and
- * assert the failure modes without touching the repository's real build output.
+ * Builds an `assetHref()`. Exported so tests can point the resolver at a fixture tree and assert
+ * the failure modes without touching the repository's real build output.
+ *
+ * Returns `undefined` for an asset the build has not produced. Pages must then omit the reference
+ * entirely: an `src` or `href` that 404s is the failure this whole module exists to prevent, and
+ * for scripts there is no honest fallback to serve in its place.
  */
-export function createStylesheetResolver(options: StylesheetResolverOptions): () => string {
+export function createAssetResolver(
+  options: AssetResolverOptions
+): (key: AssetKey) => string | undefined {
   const { assetRoots, servedRoot, report, watchForRebuilds = true } = options;
   const reported = new Set<string>();
-  let cachedHref: string | undefined;
+  const cache = new Map<AssetKey, string>();
   let watcher: FSWatcher | undefined;
 
-  const reportOnce = (key: string, message: string): void => {
-    if (reported.has(key)) {
+  const reportOnce = (id: string, message: string): void => {
+    if (reported.has(id)) {
       return;
     }
-    reported.add(key);
+    reported.add(id);
     report(message);
   };
 
@@ -51,20 +64,21 @@ export function createStylesheetResolver(options: StylesheetResolverOptions): ()
 
     try {
       watcher = watch(manifestPath, () => {
-        cachedHref = undefined;
+        cache.clear();
         watcher?.close();
         watcher = undefined;
       });
-      // A stale stylesheet href is worth a watcher, never a process that will not exit.
+      // A stale href is worth a watcher, never a process that will not exit.
       watcher.unref();
     } catch {
-      // Watching is a development convenience. Platforms without inotify keep the cached href.
+      // Watching is a development convenience. Platforms without inotify keep the cached hrefs.
     }
   };
 
-  return function stylesheetHref(): string {
-    if (cachedHref) {
-      return cachedHref;
+  return function assetHref(key: AssetKey): string | undefined {
+    const cached = cache.get(key);
+    if (cached) {
+      return cached;
     }
 
     const manifestPath = assetRoots
@@ -73,32 +87,32 @@ export function createStylesheetResolver(options: StylesheetResolverOptions): ()
 
     if (!manifestPath) {
       reportOnce('missing-manifest', missingManifestMessage(assetRoots));
-      // Deliberately not cached: the next render picks the stylesheet up once the build lands.
-      return BUILD_MISSING_STYLESHEET_HREF;
+      // Deliberately not cached: the next render picks the asset up once the build lands.
+      return undefined;
     }
 
-    const href = readStylesheetHref(manifestPath);
+    const href = readAssetHref(manifestPath, key);
     if (!href) {
-      reportOnce('unreadable-manifest', unreadableManifestMessage(manifestPath));
-      return BUILD_MISSING_STYLESHEET_HREF;
+      reportOnce(`missing-key:${key}`, missingKeyMessage(key, manifestPath));
+      return undefined;
     }
 
     const served = typeof servedRoot === 'function' ? servedRoot() : servedRoot;
     if (!existsSync(join(served, href))) {
-      reportOnce('unservable-stylesheet', unservableMessage(href, served, manifestPath));
+      reportOnce(`unservable:${key}`, unservableMessage(key, href, served, manifestPath));
     }
 
     watchManifest(manifestPath);
-    cachedHref = href;
+    cache.set(key, href);
     return href;
   };
 }
 
 /**
- * The href every page puts in `<link rel="stylesheet">`. Reads `manifest.json` at most once per
- * process (until a rebuild rewrites it) instead of on every render.
+ * The href a page puts in `src`/`href`. Reads `manifest.json` at most once per process (until a
+ * rebuild rewrites it) instead of on every render.
  */
-export const stylesheetHref: () => string = createStylesheetResolver({
+export const assetHref: (key: AssetKey) => string | undefined = createAssetResolver({
   assetRoots: shippedPathCandidates('public/assets'),
   servedRoot: servedPublicRoot,
   report: (message) => {
@@ -106,7 +120,15 @@ export const stylesheetHref: () => string = createStylesheetResolver({
   },
 });
 
-function readStylesheetHref(manifestPath: string): string | undefined {
+/**
+ * The stylesheet is the one asset with an honest fallback: a checked-in file that renders a
+ * "stylesheet not built" banner, so an unbuilt app looks broken on purpose rather than by accident.
+ */
+export function stylesheetHref(): string {
+  return assetHref(STYLESHEET_KEY) ?? BUILD_MISSING_STYLESHEET_HREF;
+}
+
+function readAssetHref(manifestPath: string, key: AssetKey): string | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(manifestPath, 'utf8'));
@@ -118,40 +140,45 @@ function readStylesheetHref(manifestPath: string): string | undefined {
     return undefined;
   }
 
-  const href = (parsed as Record<string, unknown>)[STYLESHEET_KEY];
+  const href = (parsed as Record<string, unknown>)[key];
   return typeof href === 'string' && href.startsWith('/assets/') ? href : undefined;
 }
 
 function missingManifestMessage(assetRoots: readonly string[]): string {
   return [
     '',
-    '[agent-artifacts] STYLESHEET BUILD MISSING',
+    '[agent-artifacts] ASSET BUILD MISSING',
     `  No ${MANIFEST_FILENAME} in: ${assetRoots.join(', ')}`,
-    '  Every page is being served with the fallback notice stylesheet and will look unstyled.',
-    '  Fix: pnpm run build:css   (pnpm dev and pnpm build already run it)',
+    '  Pages are being served without their stylesheet and client scripts.',
+    `  Fix: ${BUILD_COMMAND}   (pnpm dev, pnpm test and pnpm build already run it)`,
     '',
   ].join('\n');
 }
 
-function unreadableManifestMessage(manifestPath: string): string {
+function missingKeyMessage(key: AssetKey, manifestPath: string): string {
   return [
     '',
-    '[agent-artifacts] STYLESHEET MANIFEST UNREADABLE',
-    `  ${manifestPath} exists but has no usable "${STYLESHEET_KEY}" entry.`,
-    '  Every page is being served with the fallback notice stylesheet and will look unstyled.',
-    '  Fix: pnpm run build:css   (rewrites the manifest from src/ui/assets/app.css)',
+    '[agent-artifacts] ASSET MISSING FROM MANIFEST',
+    `  ${manifestPath} has no usable "${key}" entry.`,
+    '  Every page that references it is being rendered without it.',
+    `  Fix: ${BUILD_COMMAND}   (scripts/build-assets.mjs writes every entry in one pass)`,
     '',
   ].join('\n');
 }
 
-function unservableMessage(href: string, servedRoot: string, manifestPath: string): string {
+function unservableMessage(
+  key: AssetKey,
+  href: string,
+  servedRoot: string,
+  manifestPath: string
+): string {
   return [
     '',
-    '[agent-artifacts] STYLESHEET WILL 404',
-    `  ${manifestPath} resolves the stylesheet to ${href},`,
+    '[agent-artifacts] ASSET WILL 404',
+    `  ${manifestPath} resolves "${key}" to ${href},`,
     `  but /assets/* is served from ${servedRoot}, which does not contain it.`,
     `  Working directory: ${process.cwd()}`,
-    '  Fix: start the app from the directory that contains public/ (the repo root, or /app in Docker).',
+    `  Fix: ${BUILD_COMMAND}, and start the app from the directory that contains public/.`,
     '',
   ].join('\n');
 }

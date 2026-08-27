@@ -8,6 +8,7 @@ import {
   StatusHeading,
 } from '../../src/ui/components/primitives.js';
 import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
+import { readClientSource } from '../support/client-assets.js';
 import { declarationValue, parseStylesheet } from '../support/css-cascade.js';
 
 /**
@@ -22,7 +23,7 @@ import { declarationValue, parseStylesheet } from '../support/css-cascade.js';
  */
 const appCssSource = readFileSync('src/ui/assets/app.css', 'utf8');
 const appRules = parseStylesheet(appCssSource);
-const foundationScript = readFileSync('public/assets/ui-foundation-9ff54f825be4.js', 'utf8');
+const foundationScript = readClientSource('ui-foundation.js');
 
 const TONES: NoticeTone[] = ['info', 'success', 'warn', 'danger'];
 

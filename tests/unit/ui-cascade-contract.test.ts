@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { EmptyState } from '../../src/ui/components/primitives.js';
+import { readClientSource } from '../support/client-assets.js';
 import {
   declarationValue,
   type ElementSpec,
@@ -23,8 +24,8 @@ import {
  * them: matching, specificity, source order, media queries, and inheritance.
  */
 const appCssSource = readFileSync('src/ui/assets/app.css', 'utf8');
-const viewerCssSource = readFileSync('public/assets/viewer-4fd0df5f2b2a.css', 'utf8');
-const viewerScript = readFileSync('public/assets/viewer-0f4f9f6c8a7e.js', 'utf8');
+const viewerCssSource = readClientSource('viewer.css');
+const viewerScript = readClientSource('viewer.js');
 
 const appCss = stripComments(appCssSource);
 const variables = themeVariables(appCssSource);
@@ -104,6 +105,22 @@ describe('cascade repairs', () => {
     // the Menu button renders next to the full desktop nav on every page at 1440.
     expect(winningDeclaration(appRules, menuTrigger, 'display', 1440)?.value).toBe('none');
     expect(winningDeclaration(appRules, menuTrigger, 'display', 375)?.value).toBe('inline-flex');
+  });
+
+  const headerAccount: ElementSpec[] = [
+    { tag: 'header', classes: ['aa-app-header'] },
+    { tag: 'div', classes: ['aa-shell', 'aa-app-nav'] },
+    { tag: 'div', classes: ['aa-app-nav__account'] },
+  ];
+
+  it('carries the header identity block on desktop and stands it down on phones', () => {
+    // The header row on a phone is the one row that has to hold the artifact title. An identity
+    // block there competes with it, and the drawer footer already carries identity — so the header
+    // copy is hidden rather than shrunk. Resolved rather than asserted as a literal, because the
+    // two rules are an equal-specificity pair: what makes the desktop rule win is that it is in a
+    // `min-width` block *and* emitted later, and only a resolver can tell that from a typo.
+    expect(winningDeclaration(appRules, headerAccount, 'display', 1440)?.value).toBe('flex');
+    expect(winningDeclaration(appRules, headerAccount, 'display', 375)?.value).toBe('none');
   });
 
   it('never lets a button rule depend on source order to beat the base rule', () => {

@@ -3,11 +3,8 @@ import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import type { ViewerContentResult, ViewerPageModel } from '../../src/services/viewer.js';
 import { ShareTerminalPage } from '../../src/ui/pages/share-terminal.js';
-import {
-  VIEWER_SCRIPT_SRC,
-  VIEWER_STYLESHEET_HREF,
-  ViewerPage,
-} from '../../src/ui/pages/viewer.js';
+import {ViewerPage} from '../../src/ui/pages/viewer.js';
+import { readClientSource } from '../support/client-assets.js';
 
 const htmlContent: ViewerContentResult = {
   shareId: 'AbCdEfGhIjKlMnOpQrStUv',
@@ -77,8 +74,8 @@ describe('viewer page UI polish', () => {
 
   it('keeps HTML artifacts sandboxed while enabling safe frame-height handshakes', () => {
     const html = renderToString(ViewerPage({ model, abuseEmail: 'abuse@example.test' }));
-    const viewerScript = readFileSync(`public${VIEWER_SCRIPT_SRC}`, 'utf8');
-    const viewerCss = readFileSync(`public${VIEWER_STYLESHEET_HREF}`, 'utf8');
+    const viewerScript = readClientSource('viewer.js');
+    const viewerCss = readClientSource('viewer.css');
 
     expect(html).toContain('sandbox="allow-scripts"');
     expect(html).not.toContain('allow-same-origin');
@@ -96,7 +93,7 @@ describe('viewer page UI polish', () => {
   });
 
   it('guards refresh polling while a content request is in flight', () => {
-    const viewerScript = readFileSync(`public${VIEWER_SCRIPT_SRC}`, 'utf8');
+    const viewerScript = readClientSource('viewer.js');
 
     expect(viewerScript).toContain('let contentRequestInFlight = false;');
     expect(viewerScript).toContain('if (contentRequestInFlight) {');
@@ -106,7 +103,7 @@ describe('viewer page UI polish', () => {
   });
 
   it('renders terminal pages with retry and home affordances', () => {
-    const viewerScript = readFileSync(`public${VIEWER_SCRIPT_SRC}`, 'utf8');
+    const viewerScript = readClientSource('viewer.js');
     const html = renderToString(
       ShareTerminalPage({
         title: 'This link has been revoked.',

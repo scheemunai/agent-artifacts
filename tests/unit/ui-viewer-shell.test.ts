@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { readClientSource } from '../support/client-assets.js';
 import { type ElementSpec, parseStylesheet, winningDeclaration } from '../support/css-cascade.js';
 
 /**
@@ -20,10 +21,7 @@ import { type ElementSpec, parseStylesheet, winningDeclaration } from '../suppor
 const appRules = parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8'));
 const documentRules = [
   ...appRules,
-  ...parseStylesheet(
-    readFileSync('public/assets/viewer-4fd0df5f2b2a.css', 'utf8'),
-    (appRules.at(-1)?.order ?? 0) + 1
-  ),
+  ...parseStylesheet(readClientSource('viewer.css'), (appRules.at(-1)?.order ?? 0) + 1),
 ];
 
 const body: ElementSpec = { tag: 'body', classes: ['aa-page', 'aa-public-page'] };

@@ -1,3 +1,4 @@
+import { assetHref } from '../../src/ui/assets.js';
 import { describe, expect, it } from 'vitest';
 import { createViewerTestContext, publishSharedArtifact } from './viewer/viewer-test-utils.js';
 
@@ -31,12 +32,17 @@ describe('sandbox host guard', () => {
     const sandboxOrigin = 'https://usercontent.example.test';
     const ctx = await createViewerTestContext({ sandboxOrigin });
     try {
-      const assetPath = '/assets/viewer-0f4f9f6c8a7e.js';
-      const appHostAsset = await ctx.app.request(`https://agentartifact.example.test${assetPath}`);
+      // Resolved from the manifest rather than named: the hash changes with the file, and the
+      // guard under test is about the host, not about which asset it is.
+      const assetPath = assetHref('viewer.js');
+      expect(assetPath, 'run pnpm run build:assets before the suite').toBeDefined();
+      const appHostAsset = await ctx.app.request(
+        `https://agentartifact.example.test${assetPath as string}`
+      );
       expect(appHostAsset.status).toBe(200);
       expect(appHostAsset.headers.get('content-type')).toContain('javascript');
 
-      const sandboxHostAsset = await ctx.app.request(`${sandboxOrigin}${assetPath}`);
+      const sandboxHostAsset = await ctx.app.request(`${sandboxOrigin}${assetPath as string}`);
       expect(sandboxHostAsset.status).toBe(404);
       await expect(sandboxHostAsset.text()).resolves.toBe('Not found');
       expect(sandboxHostAsset.headers.get('set-cookie')).toBeNull();

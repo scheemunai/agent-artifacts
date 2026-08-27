@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { CopyBlock } from '../../src/ui/components/primitives.js';
+import { readClientSource } from '../support/client-assets.js';
 
 /**
  * "Does this scroll?" had two answers in one product: the Table measured it, the CopyBlock sniffed
@@ -15,7 +16,7 @@ import { CopyBlock } from '../../src/ui/components/primitives.js';
  * `data-aa-scroll-region` attributes `ui-foundation` already implements — which needed no change to
  * serve a second component, because it never knew about the first.
  */
-const foundation = readFileSync('public/assets/ui-foundation-9ff54f825be4.js', 'utf8');
+const foundation = readClientSource('ui-foundation.js');
 
 /**
  * Long and single-line, which is all this test needs — and deliberately *not* shaped like a real

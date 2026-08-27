@@ -1,6 +1,6 @@
 import { raw } from 'hono/html';
 import type { Child } from 'hono/jsx';
-import { stylesheetHref } from '../assets.js';
+import { type AssetKey, assetHref, stylesheetHref } from '../assets.js';
 
 /**
  * Without this, every server-rendered page in the product is served with no doctype, which puts
@@ -9,18 +9,22 @@ import { stylesheetHref } from '../assets.js';
  */
 export const DOCTYPE = raw('<!doctype html>');
 
-export const UI_FOUNDATION_SCRIPT_SRC = '/assets/ui-foundation-9ff54f825be4.js';
-
 export interface LayoutProps {
   title: string;
   children: Child;
   description?: string;
-  scripts?: string[];
+  /** Client bundles by manifest key; the page never handles a URL. */
+  scripts?: AssetKey[];
 }
 
 export function Layout({ title, description, children, scripts = [] }: LayoutProps) {
   const stylesheet = stylesheetHref();
-  const allScripts = [UI_FOUNDATION_SCRIPT_SRC, ...scripts];
+  // An asset the build has not produced resolves to undefined and is dropped rather than emitted
+  // as a script tag pointing at a 404. Both bundles are progressive enhancement over the rendered
+  // HTML, so a page without them degrades instead of breaking.
+  const allScripts = (['ui-foundation.js', ...scripts] as AssetKey[])
+    .map((key) => assetHref(key))
+    .filter((src): src is string => src !== undefined);
 
   return (
     <>

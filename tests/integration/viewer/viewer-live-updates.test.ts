@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { readClientSource } from '../../support/client-assets.js';
 import {
   createViewerTestContext,
   publishSharedArtifact,
@@ -91,7 +92,7 @@ describe('viewer live updates, downloads, and OG', () => {
   });
 
   it('ships a viewer module that polls every 30s and marks revalidation requests as poll=1', () => {
-    const asset = readFileSync('public/assets/viewer-0f4f9f6c8a7e.js', 'utf8');
+    const asset = readClientSource('viewer.js');
     expect(asset).toContain('POLL_INTERVAL_MS = 30_000');
     expect(asset).toContain("url.searchParams.set('poll', '1')");
     expect(asset).toContain("window.addEventListener('focus'");

@@ -140,7 +140,8 @@ describe('the released image layout', () => {
         expect(png.byteLength).toBeGreaterThan(1000);
 
         expect(server.stderr()).not.toContain('MISSING RUNTIME ASSET');
-        expect(server.stderr()).not.toContain('STYLESHEET');
+        expect(server.stderr()).not.toContain('ASSET BUILD MISSING');
+        expect(server.stderr()).not.toContain('ASSET WILL 404');
       } finally {
         await server.stop();
         rmSync(dataDir, { recursive: true, force: true });

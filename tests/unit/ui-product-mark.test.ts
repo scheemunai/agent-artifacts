@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { EmptyState, ProductMark } from '../../src/ui/components/primitives.js';
 import { FrameTerminalDocument } from '../../src/ui/pages/frame-document.js';
 import { ViewerFooter } from '../../src/ui/pages/viewer.js';
+import { clientSourcePath, readClientSource } from '../support/client-assets.js';
 
 /**
  * Five marks shipped at once for one brand: the `ProductMark` SVG, a `◆` text glyph in
@@ -16,7 +17,7 @@ import { ViewerFooter } from '../../src/ui/pages/viewer.js';
  * glyph rather than negative space.
  */
 const primitives = readFileSync('src/ui/components/primitives.tsx', 'utf8');
-const viewerScript = readFileSync('public/assets/viewer-0f4f9f6c8a7e.js', 'utf8');
+const viewerScript = readClientSource('viewer.js');
 
 /** Files this batch owns. The mark must be the component in every one of them. */
 const OWNED_SOURCES = [
@@ -27,8 +28,8 @@ const OWNED_SOURCES = [
   'src/ui/pages/error-page.tsx',
   'src/ui/pages/frame-document.ts',
   'src/ui/pages/style-guide.tsx',
-  'public/assets/viewer-0f4f9f6c8a7e.js',
-  'public/assets/ui-foundation-9ff54f825be4.js',
+  clientSourcePath('viewer.js'),
+  clientSourcePath('ui-foundation.js'),
 ];
 
 describe('ProductMark', () => {

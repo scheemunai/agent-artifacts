@@ -1,7 +1,7 @@
 import type { Child } from 'hono/jsx';
 import type { ViewerContentResult, ViewerPageModel } from '../../services/viewer.js';
-import { stylesheetHref } from '../assets.js';
-import { DOCTYPE, UI_FOUNDATION_SCRIPT_SRC } from '../components/layout.js';
+import { assetHref, stylesheetHref } from '../assets.js';
+import { DOCTYPE } from '../components/layout.js';
 import { Button, Notice, ProductMark } from '../components/primitives.js';
 import {
   CLIENT_TERMINAL_COPY,
@@ -11,8 +11,6 @@ import {
 import { VersionBanner } from '../components/version-banner.js';
 import { TERMINAL_CAUSE_COPY, type TerminalCause } from '../copy/terminal-copy.js';
 
-export const VIEWER_SCRIPT_SRC = '/assets/viewer-0f4f9f6c8a7e.js';
-export const VIEWER_STYLESHEET_HREF = '/assets/viewer-4fd0df5f2b2a.css';
 
 interface ViewerPageProps {
   model: ViewerPageModel;
@@ -181,6 +179,11 @@ export function ViewerDocument({
   includeViewerScript = false,
 }: ViewerDocumentProps) {
   const pageTitle = title;
+  // Resolved from the manifest, never named literally: a hash in page source is a promise the page
+  // cannot keep. Anything the build has not produced is omitted rather than emitted as a 404.
+  const viewerStylesheet = assetHref('viewer.css');
+  const foundationScript = assetHref('ui-foundation.js');
+  const viewerScript = assetHref('viewer.js');
   const ogImage = imageUrl ?? new URL('/assets/og-fallback.png', canonicalUrl).toString();
 
   return (
@@ -202,7 +205,7 @@ export function ViewerDocument({
           <meta name="twitter:description" content={description} />
           <link rel="canonical" href={canonicalUrl} />
           <link rel="stylesheet" href={stylesheetHref()} />
-          <link rel="stylesheet" href={VIEWER_STYLESHEET_HREF} />
+          {viewerStylesheet ? <link rel="stylesheet" href={viewerStylesheet} /> : null}
           <title>{pageTitle}</title>
         </head>
         <body class="aa-page aa-public-page">
@@ -214,8 +217,10 @@ export function ViewerDocument({
               dangerouslySetInnerHTML={{ __html: bootJson }}
             />
           ) : null}
-          <script type="module" src={UI_FOUNDATION_SCRIPT_SRC}></script>
-          {includeViewerScript ? <script type="module" src={VIEWER_SCRIPT_SRC}></script> : null}
+          {foundationScript ? <script type="module" src={foundationScript}></script> : null}
+          {includeViewerScript && viewerScript ? (
+            <script type="module" src={viewerScript}></script>
+          ) : null}
         </body>
       </html>
     </>

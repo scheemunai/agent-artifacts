@@ -7,7 +7,8 @@ import {
   type ClientTerminalStatus,
   ShareTerminalPage,
 } from '../../src/ui/pages/share-terminal.js';
-import { VIEWER_SCRIPT_SRC, ViewerPage } from '../../src/ui/pages/viewer.js';
+import {ViewerPage} from '../../src/ui/pages/viewer.js';
+import { readClientSource } from '../support/client-assets.js';
 
 /**
  * When a poll discovers the share has gone, the client used to *decorate* the live page: it set the
@@ -30,7 +31,7 @@ import { VIEWER_SCRIPT_SRC, ViewerPage } from '../../src/ui/pages/viewer.js';
  * client replaces the whole viewer root with the markup the server would have sent, and the proof
  * below is a byte comparison rather than a description.
  */
-const viewerScript = readFileSync(`public${VIEWER_SCRIPT_SRC}`, 'utf8');
+const viewerScript = readClientSource('viewer.js');
 
 const content: ViewerContentResult = {
   shareId: 'AbCdEfGhIjKlMnOpQrStUv',

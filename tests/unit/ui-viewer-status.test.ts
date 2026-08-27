@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import type { ViewerContentResult, ViewerPageModel } from '../../src/services/viewer.js';
-import { VIEWER_SCRIPT_SRC, ViewerFooter, ViewerPage } from '../../src/ui/pages/viewer.js';
+import {ViewerFooter, ViewerPage} from '../../src/ui/pages/viewer.js';
+import { readClientSource } from '../support/client-assets.js';
 import { declarationValue, parseStylesheet } from '../support/css-cascade.js';
 
 /**
@@ -14,8 +15,8 @@ import { declarationValue, parseStylesheet } from '../support/css-cascade.js';
  * makes `fetch` *reject*, which never reached that branch; and the one message it could produce was
  * a bare `<p class="aa-error">` prepended outside the prose column, full-bleed at x=0.
  */
-const viewerScript = readFileSync(`public${VIEWER_SCRIPT_SRC}`, 'utf8');
-const viewerCss = readFileSync('public/assets/viewer-4fd0df5f2b2a.css', 'utf8');
+const viewerScript = readClientSource('viewer.js');
+const viewerCss = readClientSource('viewer.css');
 const viewerRules = parseStylesheet(viewerCss);
 
 const content: ViewerContentResult = {
