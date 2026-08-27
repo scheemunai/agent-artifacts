@@ -88,7 +88,11 @@ describe('viewer page UI polish', () => {
     expect(viewerScript).toContain('FRAME_MAX_HEIGHT = 2400');
     expect(viewerCss).toContain('height: clamp(18rem, 48vh, 34rem)');
     expect(viewerCss).toMatch(/\.aa-viewer\s*{\s*min-height: 0;/);
-    expect(viewerCss).toMatch(/\.aa-viewer-document\s*{\s*min-height: 0;/);
+    // A-24 changed this deliberately: the document main reserves the footer's strip so the
+    // footer cannot float mid-page on a short artifact. The value lives in
+    // ui-viewer-shell.test.ts, which asserts both viewer states agree on it; this line only
+    // needs the frame's own box to be unaffected by that change.
+    expect(viewerCss).toMatch(/\.aa-viewer-document\s*{[^}]*min-height: calc\(100vh - 4rem\);/);
   });
 
   it('guards refresh polling while a content request is in flight', () => {
