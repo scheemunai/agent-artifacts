@@ -306,9 +306,23 @@
     display: inline-flex;
   }
 
+  /* Identity in the header is a desktop affordance. Below 760px the drawer footer carries it, and
+     a second copy in the header competes with the artifact title for the row that matters most on a
+     phone — so the header stands down rather than shrinking. */
+  .aa-app-nav__account {
+    display: none;
+  }
+
   @media (min-width: 760px) {
     .aa-desktop-nav {
       display: flex;
+    }
+
+    .aa-app-nav__account {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: var(--spacing-aa-3);
     }
 
     /* Specificity, not source order. The trigger is a `.aa-btn`, and `.aa-btn { display:
@@ -2129,6 +2143,104 @@
   .aa-placeholder-card {
     width: 100%;
     text-align: left;
+  }
+
+  /* The list row: one aligned grid for title, badge and meta.
+     `.aa-list` owns the columns and each row borrows them with `subgrid`, so the badge and meta
+     columns line up down the whole list instead of each row sizing itself. Independent per-row
+     `auto` columns look aligned in a specimen and drift the moment real titles differ in length,
+     which is the failure this replaces.
+     Titles are ink, not accent: a list where every title is coloured has no emphasis left for the
+     one the reader is pointing at, so accent is spent on hover and focus only. */
+  .aa-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .aa-list-row {
+    position: relative;
+    display: grid;
+    grid-column: 1 / -1;
+    /* Fallback first, enhancement second: a browser without subgrid gets its own matching template
+       and rows that align whenever their content is similar, rather than a broken single column. */
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--spacing-aa-1) var(--spacing-aa-3);
+    border-bottom: 1px solid var(--color-aa-line);
+    padding: var(--spacing-aa-3) var(--spacing-aa-4);
+  }
+
+  @supports (grid-template-columns: subgrid) {
+    .aa-list-row {
+      grid-template-columns: subgrid;
+    }
+  }
+
+  .aa-list-row__title {
+    min-width: 0;
+    color: var(--color-aa-ink);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .aa-list-row__meta {
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+    white-space: nowrap;
+  }
+
+  /* Stretched link: the whole row is the target, so the hit area matches what looks clickable
+     instead of being the title's text box. The row is the visible focus surface, so the link's own
+     ring is suppressed and `:focus-within` draws it — otherwise focus lands on a zero-size overlay
+     and the ring appears in the wrong place, or nowhere. */
+  .aa-list-row__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .aa-list-row__link::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+  }
+
+  .aa-list-row:last-child {
+    border-bottom: 0;
+  }
+
+  .aa-list-row:hover,
+  .aa-list-row[data-aa-state="hover"] {
+    background: var(--color-aa-surface);
+  }
+
+  .aa-list-row:hover .aa-list-row__title,
+  .aa-list-row:focus-within .aa-list-row__title,
+  .aa-list-row[data-aa-state="hover"] .aa-list-row__title,
+  .aa-list-row[data-aa-state="focus"] .aa-list-row__title {
+    color: var(--color-aa-accent);
+  }
+
+  .aa-list-row:focus-within,
+  .aa-list-row[data-aa-state="focus"] {
+    outline: 2px solid var(--color-aa-focus);
+    outline-offset: -2px;
+  }
+
+  .aa-list-row__link:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* A card whose subject is destructive. The tint is on the header only: tinting the body would
+     make the card's content read as the warning, when the content is usually the thing being
+     protected. */
+  .aa-card--danger {
+    border-color: var(--color-aa-danger-line);
+  }
+
+  .aa-card--danger .aa-card__header {
+    border-bottom: 1px solid var(--color-aa-danger-line);
+    background: var(--color-aa-danger-soft);
   }
 
   .aa-token-card {

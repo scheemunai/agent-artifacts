@@ -524,11 +524,27 @@ interface CardProps {
    * what it describes — so a panel's result never has to travel to the top of the page to be seen.
    */
   notice?: Child | undefined;
+  /**
+   * `danger` reddens the border and tints the header, for a card whose subject is destructive. The
+   * tint stops at the header on purpose: tinting the body would make the card's contents read as
+   * the warning, when the contents are usually the thing being protected.
+   */
+  tone?: 'danger' | undefined;
 }
 
-export function Card({ title, description, children, footer, raised = false, notice }: CardProps) {
+export function Card({
+  title,
+  description,
+  children,
+  footer,
+  raised = false,
+  notice,
+  tone,
+}: CardProps) {
   return (
-    <section class={cx('aa-card', raised && 'aa-card--raised')}>
+    <section
+      class={cx('aa-card', raised && 'aa-card--raised', tone === 'danger' && 'aa-card--danger')}
+    >
       {title || description ? (
         <header class="aa-card__header">
           {title ? <h3 class="aa-card__title">{title}</h3> : null}

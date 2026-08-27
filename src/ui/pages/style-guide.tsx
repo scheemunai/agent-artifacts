@@ -296,6 +296,8 @@ export function StyleGuidePage() {
             {noticeSection()}
             {destructiveSection()}
             {cardTableSection()}
+            {listRowSection()}
+            {dangerCardSection()}
             {feedbackSection()}
             {navigationSection()}
             {loadingSection()}
@@ -765,6 +767,73 @@ function badgeSection() {
           </Badge>
         ))}
       </ButtonRow>
+    </Card>
+  );
+}
+
+function listRowSection() {
+  const rows: Array<[string, string, BadgeTone, string]> = [
+    ['default', 'Weekly Ops Report', 'success', 'v3'],
+    ['hover', 'Q3 revenue breakdown', 'accent', 'v11'],
+    ['focus', 'Customer interview notes', 'neutral', 'v1'],
+  ];
+
+  return (
+    <Card
+      title="List row"
+      description="The row pattern for every list of artifacts: aligned columns, one target, accent spent only on the row being pointed at."
+    >
+      <div class="aa-list">
+        {rows.map(([state, title, tone, version]) => (
+          <div class="aa-list-row" data-aa-state={state === 'default' ? undefined : state}>
+            <span class="aa-list-row__title">
+              <a class="aa-list-row__link" href="/style-guide#components">
+                {title}
+              </a>
+            </span>
+            <Badge tone={tone}>Shared</Badge>
+            <span class="aa-list-row__meta">
+              {version} · updated {'{relative}'}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p class="aa-hint">
+        <code>.aa-list</code> owns the columns and each <code>.aa-list-row</code> borrows them with{' '}
+        <code>subgrid</code>, so badge and meta line up down the whole list instead of every row
+        sizing itself. Titles are ink: a list where every title is coloured has no emphasis left for
+        the one under the cursor, so accent is spent on hover and focus only. The whole row is the
+        click target via a stretched link, and the row — not the invisible overlay — is what shows
+        the focus ring.
+      </p>
+    </Card>
+  );
+}
+
+function dangerCardSection() {
+  return (
+    <Card
+      title="Card · danger tone"
+      description="For a card whose subject is destructive. Border reddens, header tints, body stays neutral."
+    >
+      <Card
+        tone="danger"
+        title="Delete this artifact"
+        description="This removes every version and breaks any link already shared."
+      >
+        <ButtonRow>
+          <Button variant="danger" {...specimenToastData('Specimen only — nothing was deleted.')}>
+            Delete artifact
+          </Button>
+          <Button variant="ghost" {...specimenToastData()}>
+            Cancel
+          </Button>
+        </ButtonRow>
+      </Card>
+      <p class="aa-hint">
+        The tint stops at the header. Tinting the body would make the card's contents read as the
+        warning, when the contents are usually the thing being protected.
+      </p>
     </Card>
   );
 }
