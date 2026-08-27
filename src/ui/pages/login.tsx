@@ -146,9 +146,23 @@ export function MagicLinkInterstitialPage({ token }: { token: string }) {
   );
 }
 
-export function MagicLinkExpiredPage({ email = '' }: { email?: string }) {
+/**
+ * Rendered whenever a sign-in link cannot be consumed. That is three states, not one: the token was
+ * already used, it timed out, or it never existed. `consumeMagicLink` can tell them apart, and this
+ * page deliberately does not.
+ *
+ * The remedy is identical in all three cases, so naming the cause buys the reader nothing. It costs
+ * something, though: the screen before this one promises that the confirmation "is identical for
+ * known and unknown addresses", and telling a visitor whether a token was ever real would contradict
+ * a promise this flow makes out loud. Naming a cause would also put us back where A-38 was, since a
+ * fabricated token would have to be labelled "used" or "expired" and it is neither.
+ */
+export function MagicLinkInvalidPage({ email = '' }: { email?: string }) {
   return (
-    <Layout title="Link expired · Agent Artifacts" description="Magic sign-in link expired.">
+    <Layout
+      title="Sign-in link · Agent Artifacts"
+      description="This sign-in link can no longer be used."
+    >
       <main class="aa-placeholder">
         <div class="aa-shell aa-shell--narrow">
           <Card raised>
@@ -156,9 +170,10 @@ export function MagicLinkExpiredPage({ email = '' }: { email?: string }) {
               <div>
                 <ProductMark />
                 <p class="aa-page-kicker">Sign-in link</p>
-                <h1 class="aa-section-title">That link has expired.</h1>
+                <h1 class="aa-section-title">That sign-in link is no longer valid.</h1>
                 <p class="aa-section-note">
-                  Links are single-use and last 15 minutes. Send yourself a fresh link to continue.
+                  Sign-in links are single-use and last 15 minutes, so this one has either been used
+                  already or timed out. Send yourself a fresh link to continue.
                 </p>
               </div>
               <form class="aa-stack" method="post" action="/login">

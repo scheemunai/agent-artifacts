@@ -10,8 +10,8 @@ import {
   EmailChangeExpiredPage,
   EmailChangeInterstitialPage,
   LoginPage,
-  MagicLinkExpiredPage,
   MagicLinkInterstitialPage,
+  MagicLinkInvalidPage,
 } from '../ui/pages/login.js';
 
 export interface HumanVariables {
@@ -129,7 +129,7 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
     const token = stringField(form, 'token');
     const result = await options.auth.consumeMagicLink(token);
     if (!result.ok || !result.session) {
-      return context.html(MagicLinkExpiredPage({ email: result.email ?? '' }), 200);
+      return context.html(MagicLinkInvalidPage({ email: result.email ?? '' }), 200);
     }
 
     await options.sessions.deleteCookieSession(getCookie(context, SESSION_COOKIE_NAME));

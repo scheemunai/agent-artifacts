@@ -105,7 +105,51 @@ describe('M4 auth flow', () => {
     });
     expect(replay.status).toBe(200);
     expect(replay.headers.get('set-cookie')).toBeNull();
-    expect(await replay.text()).toContain('That link has expired');
+
+    // This token was USED, not expired. The page must not name a cause it did not observe, and it
+    // must not name the other one either: the remedy is the same and the state is not the
+    // recipient's business.
+    const replayHtml = await replay.text();
+    expect(replayHtml).toContain('That sign-in link is no longer valid.');
+    expect(replayHtml).not.toContain('That link has expired');
+    expect(replayHtml).not.toMatch(/already been used|already used/i);
+  });
+
+  it('answers used, expired and unknown links with the same honest page', async () => {
+    const ctx = await makeContext();
+    const auth = new AuthService(ctx.db, ctx.config, ctx.logger);
+    const account = await auth.createPasswordAccount('states@example.test', 'password123');
+
+    // 1. used
+    const issued = await auth.requestMagicLink(account.email);
+    await ctx.app.request('/auth/verify', {
+      method: 'POST',
+      ...formBody({ token: issued.token ?? '' }),
+    });
+    const used = await ctx.app.request('/auth/verify', {
+      method: 'POST',
+      ...formBody({ token: issued.token ?? '' }),
+    });
+
+    // 2. never existed
+    const unknown = await ctx.app.request('/auth/verify', {
+      method: 'POST',
+      ...formBody({ token: 'this-token-was-never-issued' }),
+    });
+
+    const usedHtml = await used.text();
+    const unknownHtml = await unknown.text();
+
+    for (const html of [usedHtml, unknownHtml]) {
+      expect(html).toContain('That sign-in link is no longer valid.');
+      expect(html).not.toContain('has expired.');
+    }
+
+    // The same flow promises non-enumeration one screen earlier. A fabricated token must not be
+    // distinguishable from a real one that was already spent.
+    expect(usedHtml.replace(/states@example\.test/g, '')).toBe(
+      unknownHtml.replace(/states@example\.test/g, '')
+    );
   });
 
   it('magic-link tokens expire after 15 minutes', async () => {
