@@ -3,6 +3,11 @@ import type { ViewerContentResult, ViewerPageModel } from '../../services/viewer
 import { stylesheetHref } from '../assets.js';
 import { DOCTYPE, UI_FOUNDATION_SCRIPT_SRC } from '../components/layout.js';
 import { Button, ProductMark } from '../components/primitives.js';
+import {
+  CLIENT_TERMINAL_COPY,
+  type ClientTerminalStatus,
+  ShareTerminalMain,
+} from '../components/share-terminal-main.js';
 import { VersionBanner } from '../components/version-banner.js';
 
 export const VIEWER_SCRIPT_SRC = '/assets/viewer-0f4f9f6c8a7e.js';
@@ -83,7 +88,36 @@ export function ViewerPage({ model, abuseEmail, pinnedVersion }: ViewerPageProps
         showProductFooter={model.footer}
         abuseHref={abuseHref(abuseEmail, model.canonicalUrl)}
       />
+      <ClientTerminalTemplates shareUrl={model.canonicalUrl} />
     </ViewerDocument>
+  );
+}
+
+/**
+ * The terminal states a mid-view poll can discover, rendered by the server and parked inert until
+ * the client needs one.
+ *
+ * A screen's header is part of its state, not a constant. When the poll finds the share gone, the
+ * client replaces the whole viewer root with one of these — so the chrome that was asserting the
+ * previous state (the title, the version picker, Download, refresh) leaves with it, the failure is
+ * stated once instead of twice, and `.aa-viewer-terminal`'s full-page min-height has nothing above
+ * it, which is what keeps the footer's "Report abuse" on screen. Rendering them here rather than
+ * building markup in the script is what makes the server and client one implementation.
+ */
+function ClientTerminalTemplates({ shareUrl }: { shareUrl: string }) {
+  return (
+    <>
+      {(Object.keys(CLIENT_TERMINAL_COPY) as unknown as ClientTerminalStatus[]).map((status) => (
+        <template data-aa-terminal-template={String(status)}>
+          <ShareTerminalMain
+            title={CLIENT_TERMINAL_COPY[status].title}
+            message={CLIENT_TERMINAL_COPY[status].message}
+            shareUrl={shareUrl}
+            headingId={`terminal-title-${status}`}
+          />
+        </template>
+      ))}
+    </>
   );
 }
 

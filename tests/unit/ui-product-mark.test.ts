@@ -78,12 +78,18 @@ describe('one mark everywhere', () => {
     expect(html).toContain('Agent Artifacts');
   });
 
-  it('draws the same vector in the client-side terminal and on the sandbox origin', () => {
-    // Both build markup as strings, outside JSX, and both used to diverge from the component.
-    expect(viewerScript).toContain('M6 6 H16 L26 16 V26 H6 Z');
+  it('draws the same vector on the sandbox origin, which cannot import the component', () => {
+    // The sandbox document is built as a string, outside JSX, and used to have no mark at all.
     expect(FrameTerminalDocument({ status: 404, homeUrl: 'https://example.test' })).toContain(
       'M6 6 H16 L26 16 V26 H6 Z'
     );
+  });
+
+  it('leaves the client script with no mark of its own to get wrong', () => {
+    // The viewer's terminal card is now cloned from server-rendered markup, so the script has no
+    // vector, no glyph and no opinion about the brand. See ui-terminal-parity.test.ts.
+    expect(viewerScript).not.toContain('M6 6 H16 L26 16 V26 H6 Z');
+    expect(viewerScript).not.toContain('aa-mark');
   });
 
   it('keeps the component as the single definition in JSX', () => {

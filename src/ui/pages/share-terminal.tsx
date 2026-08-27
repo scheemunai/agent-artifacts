@@ -1,10 +1,18 @@
-import { Button, ButtonRow, ProductMark } from '../components/primitives.js';
+import { ShareTerminalMain } from '../components/share-terminal-main.js';
 import { abuseHref, ViewerDocument, ViewerFooter } from './viewer.js';
+
+export type ShareTerminalStatus = 404 | 410 | 429;
+
+export {
+  CLIENT_TERMINAL_COPY,
+  type ClientTerminalStatus,
+  ShareTerminalMain,
+} from '../components/share-terminal-main.js';
 
 interface ShareTerminalPageProps {
   title: string;
   message: string;
-  status: 404 | 410 | 429;
+  status: ShareTerminalStatus;
   shareUrl: string;
   abuseEmail: string;
   showProductFooter?: boolean;
@@ -25,21 +33,12 @@ export function ShareTerminalPage({
       description={message}
       canonicalUrl={shareUrl}
     >
-      <main class="aa-viewer-terminal" data-aa-terminal="true">
-        <section class="aa-viewer-terminal-card" aria-labelledby="terminal-title">
-          <ProductMark />
-          <h1 id="terminal-title">{pageTitle}</h1>
-          <p>{message}</p>
-          <ButtonRow align="center" class="aa-viewer-terminal-actions">
-            <Button variant="secondary" href={shareUrl}>
-              Try again
-            </Button>
-            <Button variant="ghost" href="/">
-              Go home
-            </Button>
-          </ButtonRow>
-        </section>
-      </main>
+      <ShareTerminalMain
+        title={pageTitle}
+        message={message}
+        shareUrl={shareUrl}
+        headingId={`terminal-title-${status}`}
+      />
       <ViewerFooter
         showProductFooter={showProductFooter}
         abuseHref={abuseHref(abuseEmail, shareUrl)}

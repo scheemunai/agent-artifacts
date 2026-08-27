@@ -19,17 +19,6 @@ const versionBannerText = document.querySelector('[data-aa-version-banner-text]'
 const viewLatestLink = document.querySelector('[data-aa-view-latest]');
 const updatedPill = document.querySelector('[data-aa-updated-pill]');
 
-/**
- * The `ProductMark` vector, as markup. This card is built as an HTML string rather than JSX, and
- * it used to substitute a diamond text glyph for the mark — so the same terminal state carried two
- * different brands depending on whether the server or the poller rendered it.
- */
-const PRODUCT_MARK_SVG =
-  '<span class="aa-mark" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false" aria-hidden="true" role="presentation">' +
-  '<g transform="rotate(45 16 16)">' +
-  '<path fill="currentColor" fill-rule="evenodd" d="M6 6 H16 L26 16 V26 H6 Z M16 6 L26 16 H16 Z"></path>' +
-  '</g></svg></span>';
-
 const POLL_INTERVAL_MS = 30_000;
 const FRAME_MIN_HEIGHT = 288;
 const FRAME_MAX_HEIGHT = 2400;
@@ -203,7 +192,7 @@ async function fetchContent({ poll, manual = false }) {
 
     if (response.status === 404 || response.status === 410) {
       stopped = true;
-      showTerminal(response.status === 410 ? 'This link is no longer available.' : 'Not found');
+      showTerminal(response.status);
       return;
     }
 
@@ -434,24 +423,31 @@ function showUpdatedPill() {
   }, 4000);
 }
 
-function showTerminal(message) {
-  if (documentShell) {
-    documentShell.hidden = false;
+/**
+ * Enters the terminal state by replacing the whole viewer root with the markup the server would
+ * have sent for the same status.
+ *
+ * A screen's header is part of its state, not a constant. Decorating the live page instead — which
+ * is what this used to do — left the version picker, Download and refresh live on a dead page, put
+ * the failure message on screen twice (chrome title and card heading), and pushed the footer's
+ * "Report abuse" below the fold, because `.aa-viewer-terminal` is sized as a full page and was
+ * being stacked under 76-123px of chrome. Replacing the root takes all of that with it.
+ *
+ * The markup comes from `<template data-aa-terminal-template>`, rendered by the same component the
+ * server page uses, so there is exactly one implementation of this screen.
+ */
+function showTerminal(status) {
+  const template = document.querySelector(`[data-aa-terminal-template="${status}"]`);
+  const currentRoot = document.querySelector('[data-aa-viewer-root]');
+
+  if (!(template instanceof HTMLTemplateElement) || !currentRoot) {
+    // No template to swap in — ask the server, which owns the canonical terminal page and knows
+    // the cause behind the status. Never hand-build the card here.
+    window.location.reload();
+    return;
   }
-  hideGate();
-  if (titleNode) {
-    titleNode.textContent = message;
-  }
-  if (bylineNode) {
-    bylineNode.hidden = true;
-  }
-  if (updatedNode) {
-    updatedNode.textContent = '';
-  }
-  if (contentNode) {
-    const currentUrl = escapeHtml(window.location.href);
-    contentNode.innerHTML = `<section class="aa-viewer-terminal"><section class="aa-viewer-terminal-card">${PRODUCT_MARK_SVG}<h1>${escapeHtml(message)}</h1><div class="aa-button-row aa-button-row--center aa-viewer-terminal-actions"><a class="aa-btn aa-btn--secondary" href="${currentUrl}"><span>Try again</span></a><a class="aa-btn aa-btn--ghost" href="/"><span>Go home</span></a></div></section></section>`;
-  }
+
+  currentRoot.replaceWith(template.content.cloneNode(true));
 }
 
 function showInlineError(message) {
@@ -491,13 +487,4 @@ function formatRelativeTime(input) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(
     timestamp
   );
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }

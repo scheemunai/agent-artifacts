@@ -68,7 +68,11 @@ describe('viewer page UI polish', () => {
 
     expect(html).toContain('class="aa-viewer-title"');
     expect(html).not.toContain('data-aa-title="true">Short HTML artifact</h1>');
-    expect(html.match(/<h1\b/g) ?? []).toHaveLength(1);
+    // `<template>` content is inert: it is not in the document tree, the heading outline or the
+    // accessibility tree, so the parked terminal states do not count. Strip them and the served
+    // document must still have exactly one h1.
+    const served = html.replace(/<template[\s\S]*?<\/template>/g, '');
+    expect(served.match(/<h1\b/g) ?? []).toHaveLength(1);
   });
 
   it('keeps HTML artifacts sandboxed while enabling safe frame-height handshakes', () => {
@@ -113,6 +117,10 @@ describe('viewer page UI polish', () => {
     expect(html).toContain('Try again');
     expect(html).toContain('Go home');
     expect(html).toContain('aa-viewer-terminal-actions');
-    expect(viewerScript).toContain('aa-viewer-terminal-actions');
+    // The client no longer builds this card: it clones the server-rendered `<template>`, which is
+    // why the class does not appear in the script at all. Parity is asserted byte-for-byte in
+    // tests/unit/ui-terminal-parity.test.ts.
+    expect(viewerScript).not.toContain('aa-viewer-terminal-actions');
+    expect(viewerScript).toContain('data-aa-terminal-template');
   });
 });
