@@ -1,6 +1,7 @@
 import type { QueryResult, QueryResultRow } from 'pg';
 import type { DatabaseHandle, PostgresDatabaseHandle } from '../db/client.js';
 import { renderMarkdown } from '../lib/markdown.js';
+import { caseInsensitiveContainsClause, likeContainsParam } from '../lib/search-query.js';
 
 export type DashboardArtifactType = 'markdown' | 'html';
 
@@ -152,11 +153,10 @@ export class DashboardReadModelService {
     const clauses = ['a.account_id = ?', 'a.deleted_at IS NULL'];
 
     if (input.filters.q) {
-      // PRD §4.6: case-insensitive search is always lower(column) LIKE lower(?), never the
-      // Postgres-only ILIKE. Bare LIKE is case-insensitive on SQLite but case-sensitive on
-      // Postgres, which would silently split this from the §8.4.3 `q` parameter it mirrors.
-      clauses.push('(lower(a.title) LIKE lower(?) OR lower(a.slug) LIKE lower(?))');
-      const like = `%${escapeLike(input.filters.q)}%`;
+      // PRD §9.3: dashboard search is the §8.4.3 `q` parameter, so it shares one predicate
+      // with /v1 rather than keeping a lookalike of its own.
+      clauses.push(caseInsensitiveContainsClause(['a.title', 'a.slug']));
+      const like = likeContainsParam(input.filters.q);
       params.push(like, like);
     }
     if (input.filters.botId) {
@@ -395,8 +395,4 @@ function decodeCursor(value: string): { updatedAt: number; id: string } | null {
     return null;
   }
   return null;
-}
-
-function escapeLike(value: string): string {
-  return value.replace(/[%_]/g, '');
 }

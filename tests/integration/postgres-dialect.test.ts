@@ -400,9 +400,19 @@ describePostgres('PostgreSQL dialect support', () => {
         title: 'launch checklist',
         now: POSTGRES_TEST_NOW - 1,
       });
+      await publishPostgresArtifact(ctx, {
+        slug: 'margin-report',
+        title: 'Margin hit 100% this quarter',
+        now: POSTGRES_TEST_NOW - 2,
+      });
+      await publishPostgresArtifact(ctx, {
+        slug: 'volume-report',
+        title: 'Volume hit 1000 units this quarter',
+        now: POSTGRES_TEST_NOW - 3,
+      });
 
       const readModels = new DashboardReadModelService(ctx.db, { baseUrl: ctx.config.baseUrl });
-      const search = async (q: string): Promise<string[]> => {
+      const dashboardSearch = async (q: string): Promise<string[]> => {
         const result = await readModels.listDashboardArtifacts({
           accountId: ctx.account.id,
           filters: { q, botId: '', type: '', cursor: '' },
@@ -410,14 +420,38 @@ describePostgres('PostgreSQL dialect support', () => {
         });
         return result.artifacts.map((artifact) => artifact.slug);
       };
+      const apiSearch = async (q: string): Promise<string[]> => {
+        const response = await ctx.app.request(`/v1/artifacts?q=${encodeURIComponent(q)}`, {
+          headers: ctx.authHeaders,
+        });
+        expect(response.status).toBe(200);
+        const body = await postgresJson(response);
+        return (body.items as Array<{ slug: string }>).map((item) => item.slug);
+      };
 
       // PRD §4.6: lower(column) LIKE lower(?) — bare LIKE is case-sensitive on PostgreSQL, so
       // each of these misses unless both sides are lowered, exactly as §8.4.3 `q` already does.
-      expect(await search('report')).toEqual(['weekly-ops-report']);
-      expect(await search('WEEKLY OPS')).toEqual(['weekly-ops-report']);
-      expect(await search('LAUNCH-CHECKLIST')).toEqual(['launch-checklist']);
-      expect(await search('Checklist')).toEqual(['launch-checklist']);
-      expect(await search('nothing-matches-this')).toEqual([]);
+      expect(await dashboardSearch('report')).toEqual([
+        'weekly-ops-report',
+        'margin-report',
+        'volume-report',
+      ]);
+      expect(await dashboardSearch('WEEKLY OPS')).toEqual(['weekly-ops-report']);
+      expect(await dashboardSearch('LAUNCH-CHECKLIST')).toEqual(['launch-checklist']);
+      expect(await dashboardSearch('Checklist')).toEqual(['launch-checklist']);
+      expect(await dashboardSearch('nothing-matches-this')).toEqual([]);
+
+      // PostgreSQL defaults LIKE's escape character to a backslash while SQLite has none, so
+      // the shared predicate names it. Both dialects must land on the same rows for the same q.
+      for (const q of ['100%', '1000', '%', '%%%%%%', 'weekly_ops', 'WEEKLY OPS', 'Report']) {
+        expect(
+          await dashboardSearch(q),
+          `dashboard and /v1 disagree on q=${JSON.stringify(q)}`
+        ).toEqual(await apiSearch(q));
+      }
+      expect(await dashboardSearch('100%')).toEqual(['margin-report']);
+      expect(await dashboardSearch('1000')).toEqual(['volume-report']);
+      expect(await dashboardSearch('%%%%%%')).toEqual([]);
     } finally {
       await ctx.cleanup();
     }

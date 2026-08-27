@@ -15,6 +15,7 @@ import {
   type ArtifactType,
   BOT_KEY_PATTERN,
 } from '../lib/schemas/artifacts.js';
+import { caseInsensitiveContainsClause, likeContainsParam } from '../lib/search-query.js';
 import { ArtifactService, type ArtifactSnapshot, type ShareSnapshot } from './artifacts.js';
 import { hashPassword } from './auth.js';
 import { hashSecret } from './bots.js';
@@ -949,8 +950,10 @@ async function listArtifactsRows(
     params.push(options.updatedSince);
   }
   if (options.q) {
-    clauses.push('(lower(title) LIKE lower(?) OR lower(slug) LIKE lower(?))');
-    params.push(`%${options.q}%`, `%${options.q}%`);
+    // PRD §8.4.3 `q` is a search term, not a LIKE pattern: "100%" means those four characters.
+    clauses.push(caseInsensitiveContainsClause(['title', 'slug']));
+    const like = likeContainsParam(options.q);
+    params.push(like, like);
   }
   if (cursor) {
     clauses.push('(updated_at < ? OR (updated_at = ? AND id < ?))');
