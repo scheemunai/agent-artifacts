@@ -20,7 +20,7 @@ function testApp() {
   const config = loadConfig(
     {
       DEPLOYMENT: 'self-hosted',
-      BASE_URL: 'https://agentartifact.anacreon.ai',
+      BASE_URL: 'https://example.test',
       AA_SQLITE_PATH: './data/app.db',
     },
     { cwd }
@@ -31,7 +31,7 @@ function testApp() {
 describe('web UI routes', () => {
   it('redirects self-hosted root to setup placeholder', async () => {
     const app = testApp();
-    const response = await app.request('https://agentartifact.anacreon.ai/');
+    const response = await app.request('https://example.test/');
 
     expect(response.status).toBe(302);
     expect(response.headers.get('location')).toBe('/setup');
@@ -40,7 +40,7 @@ describe('web UI routes', () => {
 
   it('renders the style guide with app-origin CSP and no CDN references', async () => {
     const app = testApp();
-    const response = await app.request('https://agentartifact.anacreon.ai/style-guide');
+    const response = await app.request('https://example.test/style-guide');
     const html = await response.text();
 
     expect(response.status).toBe(200);
@@ -54,8 +54,8 @@ describe('web UI routes', () => {
 
   it('renders login and setup placeholders for M4-owned auth pages', async () => {
     const app = testApp();
-    const setup = await app.request('https://agentartifact.anacreon.ai/setup');
-    const login = await app.request('https://agentartifact.anacreon.ai/login');
+    const setup = await app.request('https://example.test/setup');
+    const login = await app.request('https://example.test/login');
 
     expect(setup.status).toBe(200);
     expect(await setup.text()).toContain('Setup is coming next');

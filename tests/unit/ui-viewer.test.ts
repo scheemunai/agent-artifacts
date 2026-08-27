@@ -30,14 +30,14 @@ const htmlContent: ViewerContentResult = {
 
 const model: ViewerPageModel = {
   shareId: htmlContent.shareId,
-  canonicalUrl: `https://agentartifact.anacreon.ai/a/${htmlContent.shareId}`,
+  canonicalUrl: `https://example.test/a/${htmlContent.shareId}`,
   passwordProtected: false,
   footer: true,
   meta: {
     title: htmlContent.title,
     description: 'Published with Agent Artifacts',
-    imageUrl: `https://agentartifact.anacreon.ai/a/${htmlContent.shareId}/og.png`,
-    canonicalUrl: `https://agentartifact.anacreon.ai/a/${htmlContent.shareId}`,
+    imageUrl: `https://example.test/a/${htmlContent.shareId}/og.png`,
+    canonicalUrl: `https://example.test/a/${htmlContent.shareId}`,
     protected: false,
   },
   initialContent: htmlContent,
@@ -104,7 +104,7 @@ describe('viewer page UI polish', () => {
         title: 'This link has been revoked.',
         message: 'The owner turned off sharing for this artifact.',
         status: 410,
-        shareUrl: 'https://agentartifact.example.test/a/AbCdEfGhIjKlMnOpQrStUv',
+        shareUrl: 'https://example.test/a/AbCdEfGhIjKlMnOpQrStUv',
         abuseEmail: 'abuse@example.test',
       })
     );
