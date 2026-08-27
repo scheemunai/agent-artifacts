@@ -211,7 +211,6 @@ export interface DashboardArtifactPageProps {
   artifact: DashboardArtifactDetail;
   versions: DashboardArtifactVersion[];
   diff: { left: DashboardArtifactVersion; right: DashboardArtifactVersion } | null;
-  baseUrl: string;
   extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
   promoteError?: string | null | undefined;
@@ -222,7 +221,6 @@ export function DashboardArtifactPage({
   artifact,
   versions,
   diff,
-  baseUrl,
   extensionNavItems,
   notice,
   promoteError,
@@ -289,7 +287,7 @@ export function DashboardArtifactPage({
 
         <VersionHistory artifact={artifact} versions={versions} />
         {diff ? <VersionDiff diff={diff} /> : null}
-        <PromotePanel artifact={artifact} baseUrl={baseUrl} errorCode={promoteError ?? null} />
+        <PromotePanel artifact={artifact} errorCode={promoteError ?? null} />
       </div>
     </DashboardChrome>
   );
@@ -1130,11 +1128,9 @@ function promoteFailureMessage(code: string | null): string | null {
 
 function PromotePanel({
   artifact,
-  baseUrl,
   errorCode,
 }: {
   artifact: DashboardArtifactDetail;
-  baseUrl: string;
   errorCode: string | null;
 }) {
   const error = promoteFailureMessage(errorCode);

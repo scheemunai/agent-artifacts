@@ -438,7 +438,6 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         artifact,
         versions,
         diff,
-        baseUrl: services.config.baseUrl,
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
         promoteError: routeContext.req.query('promote_error') ?? null,
@@ -1097,13 +1096,6 @@ async function promoteTemplate(
     slug: input.slug,
     description: input.description || null,
   });
-}
-
-function dashboardErrorMessage(error: unknown): string {
-  if (error instanceof AppError) {
-    return error.message;
-  }
-  return authErrorMessage(error);
 }
 
 async function enforceQuota(
