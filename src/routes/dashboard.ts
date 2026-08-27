@@ -5,6 +5,7 @@ import type { DatabaseHandle } from '../db/client.js';
 import type { Account, CloudModule, QuotaAction } from '../extension/cloud-module.js';
 import { createDefaultCloudModule } from '../extension/default-module.js';
 import { AppError } from '../lib/errors.js';
+import { dashboardPreviewFrameHeaders } from '../lib/frame-policy.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import type { Logger } from '../logger.js';
 import { ArtifactService } from '../services/artifacts.js';
@@ -315,9 +316,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (artifact?.type !== 'html') {
       return routeContext.notFound();
     }
-    routeContext.header('Content-Security-Policy', htmlFrameCsp());
-    routeContext.header('X-Content-Type-Options', 'nosniff');
-    return routeContext.html(artifact.content);
+    return routeContext.body(artifact.content, 200, dashboardPreviewFrameHeaders(services.config));
   });
 
   app.get('/dashboard/artifacts/:id/download', async (routeContext) => {
@@ -1205,18 +1204,4 @@ function escapeLike(value: string): string {
 
 function downloadFilename(slug: string, type: string): string {
   return `${slug}.${type === 'markdown' ? 'md' : 'html'}`.replace(/[^a-zA-Z0-9._-]/g, '-');
-}
-
-function htmlFrameCsp(): string {
-  return [
-    "default-src 'none'",
-    "script-src 'unsafe-inline'",
-    "style-src 'unsafe-inline'",
-    'img-src data: https:',
-    "font-src 'none'",
-    "connect-src 'none'",
-    "form-action 'none'",
-    "base-uri 'none'",
-    'sandbox allow-scripts',
-  ].join('; ');
 }

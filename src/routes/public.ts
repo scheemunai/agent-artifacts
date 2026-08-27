@@ -4,8 +4,16 @@ import type { AppConfig } from '../config.js';
 import type { DatabaseHandle } from '../db/client.js';
 import type { CloudModule } from '../extension/cloud-module.js';
 import { createDefaultCloudModule } from '../extension/default-module.js';
+import { FRAME_CONTENT_TYPE, frameHeaders } from '../lib/frame-policy.js';
+import { isSandboxHostRequest } from '../lib/host-guard.js';
 import { generateCachedOgImage } from '../lib/og.js';
-import { clientIp } from '../lib/rate-limit.js';
+import {
+  clientIp,
+  InMemoryRateLimitStore,
+  rateLimitDecision,
+  rateLimitKey,
+  retryAfterResponseHeaders,
+} from '../lib/rate-limit.js';
 import type { Logger } from '../logger.js';
 import { ServiceError, toErrorEnvelope } from '../services/errors.js';
 import {
@@ -35,8 +43,6 @@ const PUBLIC_RATE_LIMIT = 120;
 const PUBLIC_RATE_WINDOW_MS = 60 * 1000;
 const VERIFY_RATE_LIMIT = 10;
 const VERIFY_RATE_WINDOW_MS = 15 * 60 * 1000;
-const FRAME_CONTENT_TYPE = 'text/html; charset=utf-8';
-const APP_PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=()';
 
 export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRoutesContext): void {
   const cloudModule = ctx.cloudModule ?? createDefaultCloudModule(ctx.config);
@@ -48,22 +54,7 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         logger: ctx.logger,
       })
     : null;
-  const rateLimiter = new FixedWindowRateLimiter();
-
-  app.use('*', async (context, next) => {
-    if (!isSandboxHost(context as unknown as PublicContext, ctx.config)) {
-      await next();
-      return;
-    }
-
-    const path = new URL(context.req.url).pathname;
-    if (/^\/a\/[A-Za-z0-9_-]{22}\/frame$/.test(path)) {
-      await next();
-      return;
-    }
-
-    return context.text('Not found', 404);
-  });
+  const rateLimitStore = new InMemoryRateLimitStore();
 
   app.use('/a/*', async (context, next) => {
     if (ctx.config.rateLimitsDisabled) {
@@ -71,13 +62,13 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       return;
     }
 
-    const decision = rateLimiter.take({
-      key: `public:${clientIp(context, ctx.config.trustProxy)}`,
-      limit: PUBLIC_RATE_LIMIT,
-      windowMs: PUBLIC_RATE_WINDOW_MS,
-    });
+    const decision = rateLimitDecision(
+      rateLimitStore,
+      rateLimitKey(['public', clientIp(context, ctx.config.trustProxy)]),
+      { limit: PUBLIC_RATE_LIMIT, windowMs: PUBLIC_RATE_WINDOW_MS }
+    );
     if (!decision.allowed) {
-      return rateLimited(context as unknown as PublicContext, decision.retryAfterSeconds);
+      return rateLimited(context as unknown as PublicContext, decision.retryAfter);
     }
 
     await next();
@@ -113,7 +104,7 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         await viewer.recordView({
           shareId: content.shareId,
           artifactId: content.artifactId,
-          accountId: await accountIdForShare(ctx.db, content.shareId),
+          accountId: content.accountId,
           viewerId,
         });
       }
@@ -133,13 +124,13 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
     }
 
     if (!ctx.config.rateLimitsDisabled) {
-      const decision = rateLimiter.take({
-        key: `verify:${clientIp(context, ctx.config.trustProxy)}:${shareId}`,
-        limit: VERIFY_RATE_LIMIT,
-        windowMs: VERIFY_RATE_WINDOW_MS,
-      });
+      const decision = rateLimitDecision(
+        rateLimitStore,
+        rateLimitKey(['verify', clientIp(context, ctx.config.trustProxy), shareId]),
+        { limit: VERIFY_RATE_LIMIT, windowMs: VERIFY_RATE_WINDOW_MS }
+      );
       if (!decision.allowed) {
-        return rateLimited(context as unknown as PublicContext, decision.retryAfterSeconds);
+        return rateLimited(context as unknown as PublicContext, decision.retryAfter);
       }
     }
 
@@ -241,15 +232,15 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         throw new ServiceError(404, 'not_found', 'Not found');
       }
 
-      return context.body(content.content, 200, {
-        'Content-Type': FRAME_CONTENT_TYPE,
-        'Content-Security-Policy': frameCsp(ctx.config),
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'no-referrer',
-        'Cross-Origin-Resource-Policy': 'cross-origin',
-        'Permissions-Policy': APP_PERMISSIONS_POLICY,
-        'Cache-Control': content.passwordProtected ? 'no-store' : 'public, max-age=3600',
-      });
+      return context.body(
+        content.content,
+        200,
+        frameHeaders({
+          config: ctx.config,
+          variant: 'public-artifact',
+          passwordProtected: content.passwordProtected,
+        })
+      );
     });
   });
 
@@ -478,28 +469,12 @@ function safeShareUrl(context: PublicContext, config: AppConfig): string {
   return new URL('/a/not-found', config.baseUrl).toString();
 }
 
-function frameCsp(config: AppConfig): string {
-  const appOrigin = new URL(config.baseUrl).origin;
-  return [
-    'sandbox allow-scripts',
-    "default-src 'none'",
-    "script-src https: 'unsafe-inline' 'unsafe-eval'",
-    "style-src https: 'unsafe-inline'",
-    'img-src https: data: blob:',
-    'font-src https: data:',
-    'connect-src https:',
-    'media-src https: data:',
-    "form-action 'none'",
-    `frame-ancestors ${appOrigin}`,
-  ].join('; ');
-}
-
 function frameRedirectUrl(context: PublicContext, config: AppConfig): string | null {
   if (!config.sandboxOrigin) {
     return null;
   }
 
-  if (isSandboxHost(context, config)) {
+  if (isSandboxHostRequest(config, context.req.url, context.req.header('host'))) {
     return null;
   }
 
@@ -510,86 +485,14 @@ function frameRedirectUrl(context: PublicContext, config: AppConfig): string | n
   return target.toString();
 }
 
-function isSandboxHost(context: PublicContext, config: AppConfig): boolean {
-  if (!config.sandboxOrigin) {
-    return false;
-  }
-
-  const sandboxHost = new URL(config.sandboxOrigin).host.toLowerCase();
-  const host =
-    context.req.header('host')?.toLowerCase() ?? new URL(context.req.url).host.toLowerCase();
-  return host === sandboxHost;
-}
-
 function rateLimited(context: PublicContext, retryAfterSeconds: number): Response {
-  context.header('Retry-After', String(retryAfterSeconds));
+  Object.entries(retryAfterResponseHeaders({ retryAfter: retryAfterSeconds })).forEach(
+    ([name, value]) => {
+      context.header(name, value);
+    }
+  );
   return context.json(
     toErrorEnvelope(new ServiceError(429, 'rate_limited', 'Too many requests')),
     429
   );
-}
-
-interface RateLimitInput {
-  key: string;
-  limit: number;
-  windowMs: number;
-}
-
-interface RateLimitDecision {
-  allowed: boolean;
-  retryAfterSeconds: number;
-}
-
-class FixedWindowRateLimiter {
-  private readonly buckets = new Map<string, { start: number; count: number }>();
-
-  take(input: RateLimitInput): RateLimitDecision {
-    const now = Date.now();
-    const current = this.buckets.get(input.key);
-    if (!current || now - current.start >= input.windowMs) {
-      this.buckets.set(input.key, { start: now, count: 1 });
-      return { allowed: true, retryAfterSeconds: 0 };
-    }
-
-    if (current.count >= input.limit) {
-      return {
-        allowed: false,
-        retryAfterSeconds: Math.max(1, Math.ceil((input.windowMs - (now - current.start)) / 1000)),
-      };
-    }
-
-    current.count += 1;
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
-}
-
-async function accountIdForShare(db: DatabaseHandle | undefined, shareId: string): Promise<string> {
-  if (!db) {
-    return 'unknown';
-  }
-
-  if (db.dialect === 'sqlite') {
-    const row = db.sqlite
-      .prepare(
-        `
-          SELECT a.account_id
-          FROM shares s
-          JOIN artifacts a ON a.id = s.artifact_id
-          WHERE s.id = ?
-        `
-      )
-      .get(shareId) as { account_id: string } | undefined;
-    return row?.account_id ?? 'unknown';
-  }
-
-  const result = await db.pool.query<{ account_id: string }>(
-    `
-      SELECT a.account_id
-      FROM shares s
-      JOIN artifacts a ON a.id = s.artifact_id
-      WHERE s.id = $1
-    `,
-    [shareId]
-  );
-  return result.rows[0]?.account_id ?? 'unknown';
 }

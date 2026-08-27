@@ -9,9 +9,19 @@ export interface RateLimitResult {
   retryAfter: number;
 }
 
+export interface RateLimitPolicy {
+  limit: number;
+  windowMs: number;
+  headers?: boolean;
+}
+
 export interface RateLimitStore {
   take(key: string, limit: number, windowMs: number, now?: number): RateLimitResult;
   reset(): void;
+}
+
+export interface FixedWindowLimiterOptions {
+  now?: () => number;
 }
 
 interface Bucket {
@@ -45,6 +55,45 @@ export class InMemoryRateLimitStore implements RateLimitStore {
 }
 
 export const globalRateLimitStore = new InMemoryRateLimitStore();
+
+export function rateLimitDecision(
+  store: RateLimitStore,
+  key: string,
+  policy: RateLimitPolicy,
+  now?: number
+): RateLimitResult {
+  return store.take(key, policy.limit, policy.windowMs, now);
+}
+
+export function retryAfterResponseHeaders(
+  result: Pick<RateLimitResult, 'retryAfter'>
+): Record<string, string> {
+  return { 'Retry-After': String(result.retryAfter) };
+}
+
+export function rateLimitKey(parts: Array<string | number | null | undefined>): string {
+  return parts
+    .filter((part): part is string | number => part !== null && part !== undefined)
+    .map((part) => String(part))
+    .join(':');
+}
+
+export class FixedWindowLimiter {
+  private readonly store = new InMemoryRateLimitStore();
+  private readonly now: () => number;
+
+  constructor(options: FixedWindowLimiterOptions = {}) {
+    this.now = options.now ?? Date.now;
+  }
+
+  check(key: string, limit: number, windowMs: number): boolean {
+    return rateLimitDecision(this.store, key, { limit, windowMs }, this.now()).allowed;
+  }
+
+  reset(): void {
+    this.store.reset();
+  }
+}
 
 export function enforceRateLimit(
   context: Context,

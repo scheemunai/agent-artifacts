@@ -10,6 +10,7 @@ import {
 
 const htmlContent: ViewerContentResult = {
   shareId: 'AbCdEfGhIjKlMnOpQrStUv',
+  accountId: 'acc_ui_viewer',
   artifactId: 'art_html_short',
   slug: 'short-html',
   type: 'html',

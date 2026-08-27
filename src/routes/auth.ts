@@ -1,7 +1,7 @@
 import type { Context, Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { AppConfig } from '../config.js';
-import { clientIp } from '../lib/rate-limit.js';
+import { clientIp, FixedWindowLimiter, rateLimitKey } from '../lib/rate-limit.js';
 import type { Logger } from '../logger.js';
 import { AuthError, type AuthService, normalizeEmail } from '../services/auth.js';
 import { hasConfiguredMail, type MailService } from '../services/mail.js';
@@ -15,32 +15,7 @@ export interface HumanVariables {
 
 export type HumanApp = Hono<{ Variables: HumanVariables }>;
 
-export interface FixedWindowLimiterOptions {
-  now?: () => number;
-}
-
-export class FixedWindowLimiter {
-  private readonly entries = new Map<string, { count: number; resetAt: number }>();
-  private readonly now: () => number;
-
-  constructor(options: FixedWindowLimiterOptions = {}) {
-    this.now = options.now ?? Date.now;
-  }
-
-  check(key: string, limit: number, windowMs: number): boolean {
-    const now = this.now();
-    const existing = this.entries.get(key);
-    if (!existing || existing.resetAt <= now) {
-      this.entries.set(key, { count: 1, resetAt: now + windowMs });
-      return true;
-    }
-    if (existing.count >= limit) {
-      return false;
-    }
-    existing.count += 1;
-    return true;
-  }
-}
+export { FixedWindowLimiter };
 
 export interface AuthRoutesOptions {
   config: AppConfig;
@@ -96,7 +71,7 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
 
     if (!options.config.rateLimitsDisabled) {
       const allowed = options.passwordLimiter.check(
-        `password:${clientIp(context, options.config.trustProxy)}`,
+        rateLimitKey(['password', clientIp(context, options.config.trustProxy)]),
         10,
         15 * 60 * 1000
       );
@@ -160,9 +135,13 @@ async function requestMagicLink(
 ): Promise<Response> {
   const email = normalizeEmail(emailInput);
   if (!options.config.rateLimitsDisabled) {
-    const emailAllowed = options.magicEmailLimiter.check(`magic-email:${email}`, 5, 60 * 60 * 1000);
+    const emailAllowed = options.magicEmailLimiter.check(
+      rateLimitKey(['magic-email', email]),
+      5,
+      60 * 60 * 1000
+    );
     const ipAllowed = options.magicIpLimiter.check(
-      `magic-ip:${clientIp(context, options.config.trustProxy)}`,
+      rateLimitKey(['magic-ip', clientIp(context, options.config.trustProxy)]),
       10,
       60 * 60 * 1000
     );

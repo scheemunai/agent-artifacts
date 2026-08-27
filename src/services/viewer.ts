@@ -32,6 +32,7 @@ export interface ViewerBotRef {
 
 export interface ViewerContentResult {
   shareId: string;
+  accountId: string;
   artifactId: string;
   slug: string;
   type: ArtifactType;
@@ -420,6 +421,7 @@ export class ViewerService {
 
     return {
       shareId: share.shareId,
+      accountId: share.account.id,
       artifactId: share.artifact.id,
       slug: share.artifact.slug,
       type: source.type,
