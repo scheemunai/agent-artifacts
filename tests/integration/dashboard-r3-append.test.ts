@@ -88,8 +88,8 @@ describe('V2-N8 · counts of one read as one', () => {
   });
 });
 
-describe('B-G3 · the account block is mounted once, at every width', () => {
-  it('renders identity and Log out exactly once on every dashboard page', async () => {
+describe('B-G3 / V2-N7 · the account block is mounted by the chrome, and lives once', () => {
+  it('renders exactly two mounts from one prop, and puts each in its own region', async () => {
     const ctx = await makeContext();
     const { cookie, artifactId, email } = await seed(ctx, 1);
 
@@ -101,11 +101,41 @@ describe('B-G3 · the account block is mounted once, at every width', () => {
       `/dashboard/artifacts/${artifactId}`,
     ]) {
       const html = await (await ctx.app.request(path, { headers: { Cookie: cookie } })).text();
-      // The drawer copy and the main copy were both live at 375 with the drawer open. One
-      // component rendered twice is still two things on the page.
-      expect(html.split(`<span class="aa-hint">${email}</span>`).length - 1, path).toBe(1);
-      expect(html.split('action="/dashboard/api/logout"').length - 1, path).toBe(1);
+
+      // This asserted ONE mount, and that was right while the page mounted it by hand: two
+      // callers agreeing was the only thing keeping both copies from being live at 375. NavShell
+      // owns the invariant now and renders the slot twice on purpose — header and drawer footer,
+      // from a single prop — so exactly one is live at any width without anyone remembering to
+      // arrange it. Asserting one mount here would defend the weaker goal and block the stronger
+      // one, while looking like coverage the whole time.
+      expect(html.split(`<span class="aa-hint">${email}</span>`).length - 1, path).toBe(2);
+      expect(html.split('action="/dashboard/api/logout"').length - 1, path).toBe(2);
+
+      // One in the header, one in the drawer: two mounts in one region would be the old defect
+      // wearing the new shape.
+      const header = html.split('<main')[0] ?? '';
+      expect(header.split('aa-app-nav__account').length - 1, path).toBe(1);
+      expect(header.split('aa-drawer__footer').length - 1, path).toBe(1);
+      // And none of it in `main` any more — that ~100px band is what V2-N7 was about.
+      const main = html.split('<main')[1] ?? '';
+      expect(main).not.toContain('/dashboard/api/logout');
     }
+  });
+
+  it('carries no id into a slot the component renders twice', async () => {
+    const ctx = await makeContext();
+    const { cookie } = await seed(ctx, 1);
+
+    const html = await (
+      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+    ).text();
+
+    // The cost of the component owning the invariant: the content really is in the DOM twice, so
+    // an id on anything inside the slot is a duplicate id on every dashboard page.
+    const block = html.split('aa-app-nav__account')[1]?.split('</div>')[0] ?? '';
+    expect(block).not.toMatch(/\sid="/);
+    expect(block).not.toMatch(/\sfor="/);
+    expect(block).not.toMatch(/aria-(labelledby|describedby)=/);
   });
 
   it('leaves no empty drawer footer behind', async () => {

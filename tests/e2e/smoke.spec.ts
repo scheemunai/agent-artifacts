@@ -275,6 +275,34 @@ test('authenticated dashboard list to detail preserves history and share control
   await loginToDashboard(page);
 
   await expect(page.getByRole('heading', { name: "Your agent's published work" })).toBeVisible();
+
+  // V2-N7: identity is chrome now, and NavShell mounts it twice on purpose — header and drawer
+  // footer — so at most one is ever live. Only a real viewport can settle which: the DOM says two
+  // at both widths, and the integration test covers that half. What is asserted here is reach.
+  //
+  // "Exactly one visible" would be wrong, and finding out why was the useful part: at 375 the
+  // answer at rest is ZERO, because the drawer is closed and identity is deliberately behind the
+  // Menu. So the invariant is per width — never in `main`, never two at once, and always exactly
+  // one way to get to it.
+  await expect(page.locator('main').getByRole('button', { name: 'Log out' })).toHaveCount(0);
+  const wide = (page.viewportSize()?.width ?? 0) >= 760;
+  if (wide) {
+    await expect(page.getByRole('button', { name: 'Log out' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Open navigation' })).toBeHidden();
+  } else {
+    // Closed drawer: the header copy has stood down and the drawer has not arrived yet.
+    await expect(page.getByRole('button', { name: 'Log out' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+    await expect(page.getByRole('button', { name: 'Log out' })).toHaveCount(1);
+    await expect(
+      page.locator('.aa-drawer__footer').getByRole('button', { name: 'Log out' })
+    ).toBeVisible();
+    // Close it and prove it closed: the scrim outlives a click that is only assumed to have
+    // worked, and it would sit over every later assertion in this test.
+    await page.getByRole('button', { name: 'Close navigation' }).first().click();
+    await expect(page.getByRole('button', { name: 'Log out' })).toHaveCount(0);
+    await expect(page.locator('.aa-drawer__scrim')).toBeHidden();
+  }
   await expect(page.getByRole('link', { name: seed.dashboardArtifactTitle })).toBeVisible();
   // The list is the published aligned-row pattern now, not a stack of cards. Its columns align
   // down the list above 480px and collapse below it — title on its own line, badge and meta

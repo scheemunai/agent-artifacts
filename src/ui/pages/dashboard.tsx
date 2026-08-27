@@ -717,12 +717,13 @@ function DashboardChrome({
       title={`${title} · Agent Artifacts`}
       description="Manage Agent Artifacts published by your bots."
     >
-      {/* One mount, not one component rendered twice. The drawer footer used to carry a second
-          copy, and at 375 with the drawer open both were live — which is the defect surviving the
-          de-duplication of its *treatment*. Main's copy is the one that works at every width, so
-          it is the one that stays. Moving it into the header (V2-N7) needs a rule in app.css to
-          stand it down below the nav breakpoint, and that file is not this worker's to edit. */}
+      {/* Identity belongs to the chrome, not to `main`. It sat in a ~100px band between the app
+          header and the page's own header on every screen, which is V2-N7; it is now handed to
+          NavShell, which mounts it in the header and in the drawer footer and guarantees exactly
+          one is live at any width. Passing it once here is the whole point: the version where
+          both were live at 375 came from two callers mounting it by hand. */}
       <NavShell
+        account={<AccountMenu email={account.email} />}
         items={[
           { label: 'Artifacts', href: '/dashboard', current: active === 'artifacts' },
           { label: 'Bots', href: '/dashboard/bots', current: active === 'bots' },
@@ -733,7 +734,6 @@ function DashboardChrome({
       ></NavShell>
       <main class="aa-main">
         <div class="aa-shell aa-stack">
-          <AccountMenu email={account.email} />
           {notice ? (
             <Notice tone={notice.tone} placement="page" dismissible>
               {notice.message}
@@ -747,7 +747,7 @@ function DashboardChrome({
 }
 
 /**
- * Who you are signed in as, and the way out. One component, mounted twice.
+ * Who you are signed in as, and the way out.
  *
  * These were two hand-rolled blocks that disagreed: in `<main>` the address was an info `Badge`
  * with a small secondary button; in the drawer footer it was hint text with a full-width one. C5
@@ -755,8 +755,9 @@ function DashboardChrome({
  * of identical shape and size, so the product's chrome and the product's feedback read as the same
  * kind of object. Identity is text.
  *
- * The remaining half of B-G3 — mounting this once, in the header, so it is not on the page twice
- * at 375 — needs `NavShell` to host it, which is shared chrome outside this file.
+ * It carries no `id` and must not grow one. NavShell renders this in two places from a single
+ * prop, so an id here would become a duplicate id on every dashboard page — the cost of the
+ * component owning the one-live-copy invariant instead of asking its callers to.
  */
 function AccountMenu({ email }: { email: string }) {
   return (

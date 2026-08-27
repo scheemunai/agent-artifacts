@@ -165,8 +165,8 @@ describe('B-C2 · the Promote panel does not offer a form that can never submit'
   });
 });
 
-describe('B-G3 / B-G4 · one account block, and identity is not a status', () => {
-  it('renders the email as text, once', async () => {
+describe('B-G4 · identity is not a status', () => {
+  it("renders the email as text, in the product's one account block", async () => {
     const ctx = await makeContext();
     const { cookie, email } = await seed(ctx);
 
@@ -177,15 +177,18 @@ describe('B-G3 / B-G4 · one account block, and identity is not a status', () =>
     // C5 reserves badge tones for state. As an info Badge the identity sat directly above
     // notice pills of identical shape and size, so chrome and feedback read as one object.
     expect(html).not.toMatch(new RegExp(`<span class="aa-badge[^"]*">${email}</span>`));
-    // This asserted TWO identical renderings, which was right while the goal was "one treatment
-    // instead of two hand-rolled ones that disagree". It was still two things on the page: the
-    // validator's drawer pixels caught both live at 375. One component, mounted once.
+    // How MANY times the block appears is not this test's question, and it has changed three
+    // times: two hand-rolled renderings, then one hand-mounted, and now two mounted by NavShell
+    // from one prop so exactly one is ever live. Chasing that count here meant editing this file
+    // every time the invariant improved, and two tests owning one number is how they drift apart.
+    // The count lives in dashboard-r3-append.test.ts, which owns the mount invariant; this asks
+    // only what B-G4 asked — that identity is text rather than a status pill.
     const block =
       `<div class="aa-button-row"><span class="aa-hint">${email}</span>` +
       '<form method="post" action="/dashboard/api/logout">' +
       '<button class="aa-btn aa-btn--secondary aa-btn--sm" type="submit">' +
       '<span>Log out</span></button></form></div>';
-    expect(html.split(block).length - 1).toBe(1);
+    expect(html).toContain(block);
   });
 });
 
