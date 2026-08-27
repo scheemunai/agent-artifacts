@@ -1,6 +1,6 @@
 import { Layout } from '../components/layout.js';
 import { Badge, Button, Card, CopyBlock, Input, ProductMark } from '../components/primitives.js';
-import { buildArtifactCurl, buildInstallPrompt } from './dashboard.js';
+import { buildArtifactCurl, buildInstallPrompt, buildRedactedInstallPrompt } from './dashboard.js';
 
 export interface SetupPageProps {
   baseUrl: string;
@@ -134,6 +134,62 @@ export function SetupKeyPage({ baseUrl, email, botName, apiKey }: SetupKeyPagePr
                   dataAttrs={{ 'data-aa-setup-continue': 'true' }}
                 >
                   Open dashboard →
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </main>
+    </Layout>
+  );
+}
+
+export interface SetupKeyHiddenPageProps {
+  baseUrl: string;
+  email: string;
+  botName?: string | undefined;
+  apiKeyLast4?: string | null | undefined;
+}
+
+export function SetupKeyHiddenPage({
+  baseUrl,
+  email,
+  botName = 'your bot',
+  apiKeyLast4,
+}: SetupKeyHiddenPageProps) {
+  return (
+    <Layout
+      title="Key hidden · Agent Artifacts"
+      description="The first bot key was already shown once."
+    >
+      <main class="aa-main">
+        <div class="aa-shell aa-shell--narrow aa-stack">
+          <header>
+            <p class="aa-page-kicker">Setup complete</p>
+            <h1 class="aa-page-title">Your key was already shown once.</h1>
+            <p class="aa-page-lede">
+              The admin account {email} is ready. For safety, full API keys are hidden after their
+              first reveal. If you lost the key, regenerate it from the dashboard.
+            </p>
+          </header>
+          <Card title="Safe state" description="No secret is rendered on refresh.">
+            <div class="aa-stack">
+              <Badge tone="warn">
+                {apiKeyLast4 ? `Hidden now · aa_bot_…${apiKeyLast4}` : 'Hidden now'}
+              </Badge>
+              {apiKeyLast4 ? (
+                <CopyBlock
+                  id="setup-install-prompt-redacted"
+                  label="Install prompt (key redacted)"
+                  value={buildRedactedInstallPrompt({ baseUrl, botName, last4: apiKeyLast4 })}
+                />
+              ) : null}
+              <div class="aa-specimen-row">
+                <Button variant="primary" href="/dashboard">
+                  Open dashboard →
+                </Button>
+                <Button variant="secondary" href="/dashboard/bots">
+                  Regenerate key
                 </Button>
               </div>
             </div>

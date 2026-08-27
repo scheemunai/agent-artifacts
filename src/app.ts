@@ -1,6 +1,6 @@
 import { serveStatic } from '@hono/node-server/serve-static';
 import type { OpenAPIHono } from '@hono/zod-openapi';
-import { Hono } from 'hono';
+import { type Context, Hono } from 'hono';
 import { nanoid } from 'nanoid';
 import type { AppConfig } from './config.js';
 import type { DatabaseHandle } from './db/client.js';
@@ -17,6 +17,14 @@ import { createWebRoute } from './routes/web.js';
 interface AppVariables {
   requestId: string;
   logger: Logger;
+  requestPrincipal?: RequestPrincipalLog;
+  auth?: { account?: { id: string }; bot?: { id: string } };
+}
+
+export interface RequestPrincipalLog {
+  kind: 'bot' | 'dashboard';
+  account_id: string;
+  bot_id?: string;
 }
 
 export interface CreateAppOptions {
@@ -51,6 +59,7 @@ export function createApp({
         path: new URL(context.req.url).pathname,
         status: context.res.status,
         duration_ms: Math.round(performance.now() - start),
+        principal: requestPrincipalFromContext(context),
       },
       'request.complete'
     );
@@ -126,6 +135,26 @@ export function createApp({
   });
 
   return app;
+}
+
+function requestPrincipalFromContext(
+  context: Context<{ Variables: AppVariables }>
+): RequestPrincipalLog | undefined {
+  const dashboardPrincipal = context.get('requestPrincipal');
+  if (dashboardPrincipal) {
+    return dashboardPrincipal;
+  }
+
+  const auth = context.get('auth');
+  if (auth?.account?.id && auth.bot?.id) {
+    return {
+      kind: 'bot',
+      account_id: auth.account.id,
+      bot_id: auth.bot.id,
+    };
+  }
+
+  return undefined;
 }
 
 function appOriginCsp(frameOrigin: string): string {

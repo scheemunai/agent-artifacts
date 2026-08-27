@@ -43,6 +43,19 @@ export interface MagicLinkConsumeResult {
   email?: string | undefined;
 }
 
+export interface EmailChangeIssueResult {
+  email: string;
+  token: string;
+  url: string;
+}
+
+export interface EmailChangeConsumeResult {
+  ok: boolean;
+  account?: SessionAccount;
+  session?: NewSessionMaterial;
+  email?: string | undefined;
+}
+
 export interface SetupState {
   accountCount: number;
   hasSetupToken: boolean;
@@ -389,6 +402,57 @@ export class AuthService {
     return this.db.dialect === 'sqlite'
       ? this.consumeMagicLinkSqlite(tokenHash)
       : this.consumeMagicLinkPostgres(tokenHash);
+  }
+
+  async requestEmailChange(accountId: string, emailInput: string): Promise<EmailChangeIssueResult> {
+    const account = await this.findAccountById(accountId);
+    if (!account || account.suspendedAt) {
+      throw new AuthError(403, 'unauthorized', 'Log in to continue');
+    }
+    const email = normalizeEmail(emailInput);
+    if (!email?.includes('@')) {
+      throw new AuthError(400, 'validation_failed', 'Enter a valid email address');
+    }
+    const existing = await this.findAccountByEmail(email);
+    if (existing && existing.id !== accountId) {
+      throw new AuthError(409, 'email_conflict', 'Email is already in use');
+    }
+
+    const token = nanoid(32);
+    const now = this.now();
+    const expiresAt = now + MAGIC_LINK_TTL_MS;
+    const tokenHash = hashToken(token);
+    if (this.db.dialect === 'sqlite') {
+      this.db.sqlite
+        .prepare(
+          `
+            INSERT INTO magic_link_tokens (
+              id, token_hash, email, account_id, created_at, expires_at, consumed_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, NULL)
+          `
+        )
+        .run(`mlt_${nanoid(21)}`, tokenHash, email, accountId, now, expiresAt);
+    } else {
+      await this.db.pool.query(
+        `
+          INSERT INTO magic_link_tokens (
+            id, token_hash, email, account_id, created_at, expires_at, consumed_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, NULL)
+        `,
+        [`mlt_${nanoid(21)}`, tokenHash, email, accountId, now, expiresAt]
+      );
+    }
+
+    return { email, token, url: `${this.config.baseUrl}/auth/change-email?token=${token}` };
+  }
+
+  async consumeEmailChangeToken(token: string): Promise<EmailChangeConsumeResult> {
+    const tokenHash = hashToken(token);
+    return this.db.dialect === 'sqlite'
+      ? this.consumeEmailChangeTokenSqlite(tokenHash)
+      : this.consumeEmailChangeTokenPostgres(tokenHash);
   }
 
   async findAccountByEmail(emailInput: string): Promise<SessionAccount | null> {
@@ -763,6 +827,113 @@ export class AuthService {
       );
       await client.query('COMMIT');
       return { ok: true, account, session };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  private consumeEmailChangeTokenSqlite(tokenHash: string): EmailChangeConsumeResult {
+    const handle = this.db as SqliteDatabaseHandle;
+    const transaction = handle.sqlite.transaction(() => {
+      const now = this.now();
+      const token = handle.sqlite
+        .prepare('SELECT * FROM magic_link_tokens WHERE token_hash = ?')
+        .get(tokenHash) as MagicLinkTokenRow | undefined;
+
+      if (!token || token.consumed_at !== null || token.expires_at <= now || !token.account_id) {
+        return { ok: false, email: token?.email } satisfies EmailChangeConsumeResult;
+      }
+
+      const account = this.findAccountByIdSync(handle, token.account_id);
+      if (!account || account.suspendedAt) {
+        return { ok: false, email: token.email } satisfies EmailChangeConsumeResult;
+      }
+
+      const existing = this.findAccountByEmailSync(handle, token.email);
+      if (existing && existing.id !== account.id) {
+        return { ok: false, email: token.email } satisfies EmailChangeConsumeResult;
+      }
+
+      const updatedAccount = { ...account, email: token.email, updatedAt: now };
+      handle.sqlite
+        .prepare('UPDATE accounts SET email = ?, updated_at = ? WHERE id = ?')
+        .run(updatedAccount.email, now, updatedAccount.id);
+      handle.sqlite
+        .prepare(
+          'UPDATE magic_link_tokens SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL'
+        )
+        .run(now, token.id);
+      const session = createSessionMaterial(this.config.sessionSecret, now);
+      insertSqliteSession(handle, updatedAccount.id, session);
+      return { ok: true, account: updatedAccount, session } satisfies EmailChangeConsumeResult;
+    });
+
+    return transaction.immediate();
+  }
+
+  private async consumeEmailChangeTokenPostgres(
+    tokenHash: string
+  ): Promise<EmailChangeConsumeResult> {
+    const handle = this.db as PostgresDatabaseHandle;
+    const client = await handle.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const now = this.now();
+      const token = (
+        await client.query<MagicLinkTokenRow>(
+          'SELECT * FROM magic_link_tokens WHERE token_hash = $1 FOR UPDATE',
+          [tokenHash]
+        )
+      ).rows[0];
+      if (!token || token.consumed_at !== null || token.expires_at <= now || !token.account_id) {
+        await client.query('ROLLBACK');
+        return { ok: false, email: token?.email };
+      }
+
+      const accountRow = (
+        await client.query<AccountDbRow>('SELECT * FROM accounts WHERE id = $1 FOR UPDATE', [
+          token.account_id,
+        ])
+      ).rows[0];
+      if (!accountRow || accountRow.suspended_at !== null) {
+        await client.query('ROLLBACK');
+        return { ok: false, email: token.email };
+      }
+
+      const existingRow = (
+        await client.query<AccountDbRow>('SELECT * FROM accounts WHERE email = $1', [token.email])
+      ).rows[0];
+      if (existingRow && existingRow.id !== accountRow.id) {
+        await client.query('ROLLBACK');
+        return { ok: false, email: token.email };
+      }
+
+      await client.query('UPDATE accounts SET email = $1, updated_at = $2 WHERE id = $3', [
+        token.email,
+        now,
+        accountRow.id,
+      ]);
+      await client.query(
+        'UPDATE magic_link_tokens SET consumed_at = $1 WHERE id = $2 AND consumed_at IS NULL',
+        [now, token.id]
+      );
+      const session = createSessionMaterial(this.config.sessionSecret, now);
+      await client.query(
+        `
+          INSERT INTO sessions (id, account_id, created_at, expires_at, last_seen_at)
+          VALUES ($1, $2, $3, $4, NULL)
+        `,
+        [session.tokenHash, accountRow.id, session.createdAt, session.expiresAt]
+      );
+      await client.query('COMMIT');
+      return {
+        ok: true,
+        account: accountFromRow({ ...accountRow, email: token.email, updated_at: now }),
+        session,
+      };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

@@ -6,16 +6,29 @@ import type { Logger } from '../logger.js';
 import { AuthError, type AuthService, normalizeEmail } from '../services/auth.js';
 import { hasConfiguredMail, type MailService } from '../services/mail.js';
 import { SESSION_COOKIE_NAME, type SessionService } from '../services/sessions.js';
-import { LoginPage, MagicLinkExpiredPage, MagicLinkInterstitialPage } from '../ui/pages/login.js';
+import {
+  EmailChangeExpiredPage,
+  EmailChangeInterstitialPage,
+  LoginPage,
+  MagicLinkExpiredPage,
+  MagicLinkInterstitialPage,
+} from '../ui/pages/login.js';
 
 export interface HumanVariables {
   requestId: string;
   logger: Logger;
+  requestPrincipal?: DashboardRequestPrincipalLog;
 }
 
 export type HumanApp = Hono<{ Variables: HumanVariables }>;
 
 export { FixedWindowLimiter };
+
+interface DashboardRequestPrincipalLog {
+  kind: 'bot' | 'dashboard';
+  account_id: string;
+  bot_id?: string;
+}
 
 export interface AuthRoutesOptions {
   config: AppConfig;
@@ -102,6 +115,7 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
       result.session.cookieValue,
       result.session.expiresAt
     );
+    setDashboardRequestPrincipal(context, result.account.id);
     return context.redirect('/dashboard', 303);
   });
 
@@ -124,7 +138,33 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
       result.session.cookieValue,
       result.session.expiresAt
     );
+    if (result.account) {
+      setDashboardRequestPrincipal(context, result.account.id);
+    }
     return context.redirect('/dashboard', 303);
+  });
+
+  app.get('/auth/change-email', (context) => {
+    const token = context.req.query('token') ?? '';
+    return context.html(EmailChangeInterstitialPage({ token }));
+  });
+
+  app.post('/auth/change-email', async (context) => {
+    const form = await parseForm(context);
+    const token = stringField(form, 'token');
+    const result = await options.auth.consumeEmailChangeToken(token);
+    if (!result.ok || !result.session || !result.account) {
+      return context.html(EmailChangeExpiredPage({ email: result.email ?? '' }), 200);
+    }
+
+    await options.sessions.deleteCookieSession(getCookie(context, SESSION_COOKIE_NAME));
+    options.sessions.setSessionCookie(
+      context,
+      result.session.cookieValue,
+      result.session.expiresAt
+    );
+    setDashboardRequestPrincipal(context, result.account.id);
+    return context.redirect('/dashboard/settings?notice=email_updated', 303);
   });
 }
 
@@ -213,4 +253,8 @@ export function authErrorMessage(error: unknown): string {
     return error.message;
   }
   return 'Something went wrong. Try again.';
+}
+
+export function setDashboardRequestPrincipal(context: Context, accountId: string): void {
+  context.set('requestPrincipal', { kind: 'dashboard', account_id: accountId });
 }

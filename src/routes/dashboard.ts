@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
+import { nanoid } from 'nanoid';
 import type { AppConfig } from '../config.js';
 import type { DatabaseHandle } from '../db/client.js';
 import type { Account, CloudModule, QuotaAction } from '../extension/cloud-module.js';
@@ -21,7 +22,7 @@ import {
   DashboardReadModelService,
   readDashboardListFilters,
 } from '../services/dashboard-read-models.js';
-import { createMailService } from '../services/mail.js';
+import { createMailService, type MailService } from '../services/mail.js';
 import {
   type AuthenticatedSession,
   assertDashboardMutationOrigin,
@@ -46,13 +47,19 @@ import {
   DashboardSettingsPage,
   DashboardTemplatesPage,
 } from '../ui/pages/dashboard.js';
-import { SetupKeyPage, SetupPage, SetupUnavailablePage } from '../ui/pages/setup.js';
+import {
+  SetupKeyHiddenPage,
+  SetupKeyPage,
+  SetupPage,
+  SetupUnavailablePage,
+} from '../ui/pages/setup.js';
 import {
   authErrorMessage,
   FixedWindowLimiter,
   type HumanApp,
   parseForm,
   registerAuthRoutes,
+  setDashboardRequestPrincipal,
   stringField,
 } from './auth.js';
 
@@ -70,9 +77,30 @@ interface HumanServices {
   cloudModule: CloudModule;
   auth: AuthService;
   sessions: SessionService;
+  mail: MailService;
   artifacts: ArtifactService;
   dashboardReads: DashboardReadModelService;
 }
+
+interface KeyReveal {
+  accountId: string;
+  apiKey: string;
+  botName: string;
+  createdAt: number;
+}
+
+interface TemplatePreviewRow {
+  id: string;
+  account_id: string | null;
+  slug: string;
+  name: string;
+  description: string | null;
+  type: 'markdown' | 'html';
+  content: string;
+  slots: string;
+}
+
+const keyRevealTtlMs = 10 * 60 * 1000;
 
 export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext): void {
   if (!context.db) {
@@ -80,6 +108,8 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
   }
 
   const cloudModule = context.cloudModule ?? createDefaultCloudModule(context.config);
+  const keyReveals = new Map<string, KeyReveal>();
+  const mail = createMailService(context.config, context.logger);
   const services: HumanServices = {
     config: context.config,
     logger: context.logger,
@@ -87,6 +117,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     cloudModule,
     auth: new AuthService(context.db, context.config, context.logger),
     sessions: new SessionService(context.db, context.config),
+    mail,
     artifacts: new ArtifactService({
       db: context.db,
       extension: cloudModule,
@@ -107,7 +138,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     logger: context.logger,
     auth: services.auth,
     sessions: services.sessions,
-    mail: createMailService(context.config, context.logger),
+    mail: services.mail,
     magicEmailLimiter: new FixedWindowLimiter(),
     magicIpLimiter: new FixedWindowLimiter(),
     passwordLimiter: new FixedWindowLimiter(),
@@ -155,14 +186,13 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         result.session.cookieValue,
         result.session.expiresAt
       );
-      return routeContext.html(
-        SetupKeyPage({
-          baseUrl: services.config.baseUrl,
-          email: result.account.email,
-          botName: result.bot.name,
-          apiKey: result.apiKey,
-        })
-      );
+      setDashboardRequestPrincipal(routeContext, result.account.id);
+      const revealId = storeKeyReveal(keyReveals, {
+        accountId: result.account.id,
+        botName: result.bot.name,
+        apiKey: result.apiKey,
+      });
+      return routeContext.redirect(`/setup/key?reveal=${encodeURIComponent(revealId)}`, 303);
     } catch (error) {
       return routeContext.html(
         SetupPage({
@@ -175,6 +205,41 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         { status: htmlStatus(error) }
       );
     }
+  });
+
+  app.get('/setup/key', async (routeContext) => {
+    if (services.config.deployment !== 'self-hosted') {
+      return routeContext.redirect('/login', 302);
+    }
+    const session = await requirePageSession(routeContext, services);
+    if (session instanceof Response) {
+      return session;
+    }
+    const reveal = consumeKeyReveal(
+      keyReveals,
+      session.account.id,
+      scalarQuery(routeContext.req.query('reveal'))
+    );
+    if (reveal) {
+      return routeContext.html(
+        SetupKeyPage({
+          baseUrl: services.config.baseUrl,
+          email: session.account.email,
+          botName: reveal.botName,
+          apiKey: reveal.apiKey,
+        })
+      );
+    }
+
+    const latestBot = await services.auth.getLatestBot(session.account.id);
+    return routeContext.html(
+      SetupKeyHiddenPage({
+        baseUrl: services.config.baseUrl,
+        email: session.account.email,
+        botName: latestBot?.name,
+        apiKeyLast4: latestBot?.apiKeyLast4,
+      })
+    );
   });
 
   app.get('/dashboard', async (routeContext) => {
@@ -281,13 +346,27 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (session instanceof Response) {
       return session;
     }
+    const revealParam = scalarQuery(routeContext.req.query('reveal'));
+    const reveal = consumeKeyReveal(keyReveals, session.account.id, revealParam);
+    const revealNotice: DashboardNotice | undefined = reveal
+      ? { tone: 'success', message: 'Copy this key now. It is shown only once.' }
+      : revealParam
+        ? {
+            tone: 'warn',
+            message: 'That key was shown once and is now hidden. Regenerate it if you lost it.',
+          }
+        : undefined;
     return routeContext.html(
       DashboardBotsPage({
         account: accountView(session.account),
         bots: await services.auth.listBots(session.account.id),
         baseUrl: services.config.baseUrl,
         extensionNavItems: dashboardNavItems(services, session.account),
-        notice: noticeFromQuery(routeContext.req.query('notice')),
+        shownKey: reveal ? { apiKey: reveal.apiKey, botName: reveal.botName } : undefined,
+        notice:
+          revealParam && !reveal
+            ? revealNotice
+            : (noticeFromQuery(routeContext.req.query('notice')) ?? revealNotice),
       })
     );
   });
@@ -297,10 +376,16 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (session instanceof Response) {
       return session;
     }
+    const templates = await services.dashboardReads.listDashboardTemplates(session.account.id);
     return routeContext.html(
       DashboardTemplatesPage({
         account: accountView(session.account),
-        templates: await services.dashboardReads.listDashboardTemplates(session.account.id),
+        templates,
+        previewTemplate: await getTemplatePreview(
+          services,
+          session.account.id,
+          scalarQuery(routeContext.req.query('preview'))
+        ),
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
       })
@@ -315,6 +400,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     return routeContext.html(
       DashboardSettingsPage({
         account: accountView(session.account),
+        deployment: services.config.deployment,
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
         error: routeContext.req.query('error') ?? undefined,
@@ -358,15 +444,14 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         name,
         byline
       );
-      return routeContext.html(
-        DashboardBotsPage({
-          account: accountView(session.account),
-          bots: await services.auth.listBots(session.account.id),
-          baseUrl: services.config.baseUrl,
-          extensionNavItems: dashboardNavItems(services, session.account),
-          shownKey: { apiKey, botName: bot.name },
-          notice: { tone: 'success', message: 'Bot created. Copy the key now.' },
-        })
+      const revealId = storeKeyReveal(keyReveals, {
+        accountId: session.account.id,
+        botName: bot.name,
+        apiKey,
+      });
+      return routeContext.redirect(
+        `/dashboard/bots?reveal=${encodeURIComponent(revealId)}&notice=bot_created`,
+        303
       );
     } catch (error) {
       return routeContext.html(
@@ -394,15 +479,14 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         routeContext.req.param('id'),
         stringField(form, 'confirm_name')
       );
-      return routeContext.html(
-        DashboardBotsPage({
-          account: accountView(session.account),
-          bots: await services.auth.listBots(session.account.id),
-          baseUrl: services.config.baseUrl,
-          extensionNavItems: dashboardNavItems(services, session.account),
-          shownKey: { apiKey: result.apiKey, botName: result.bot.name },
-          notice: { tone: 'success', message: 'Key regenerated. Old key is invalid now.' },
-        })
+      const revealId = storeKeyReveal(keyReveals, {
+        accountId: session.account.id,
+        botName: result.bot.name,
+        apiKey: result.apiKey,
+      });
+      return routeContext.redirect(
+        `/dashboard/bots?reveal=${encodeURIComponent(revealId)}&notice=bot_key_regenerated`,
+        303
       );
     } catch (error) {
       return routeContext.html(
@@ -588,6 +672,22 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return session;
     }
     const form = await parseForm(routeContext);
+    if (services.config.deployment === 'cloud') {
+      try {
+        const issued = await services.auth.requestEmailChange(
+          session.account.id,
+          stringField(form, 'new_email')
+        );
+        await services.mail.sendMagicLink({ to: issued.email, url: issued.url });
+        return routeContext.redirect('/dashboard/settings?notice=email_change_link_sent', 303);
+      } catch (error) {
+        return routeContext.redirect(
+          `/dashboard/settings?error=${encodeURIComponent(authErrorMessage(error))}`,
+          303
+        );
+      }
+    }
+
     const account = await services.auth.findAccountById(session.account.id);
     if (
       !account?.passwordHash ||
@@ -612,6 +712,12 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     const session = await requireApiSession(routeContext, services);
     if (session instanceof Response) {
       return session;
+    }
+    if (services.config.deployment === 'cloud') {
+      return routeContext.redirect(
+        '/dashboard/settings?error=Password%20changes%20are%20unavailable%20in%20cloud%20mode',
+        303
+      );
     }
     const form = await parseForm(routeContext);
     try {
@@ -668,6 +774,7 @@ async function requirePageSession(
   if (!session) {
     return routeContext.redirect('/login', 302);
   }
+  setDashboardRequestPrincipal(routeContext, session.account.id);
   return session;
 }
 
@@ -682,11 +789,109 @@ async function requireApiSession(
       401
     );
   }
+  setDashboardRequestPrincipal(routeContext, session.account.id);
   return session;
 }
 
 function scalarQuery(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+}
+
+function storeKeyReveal(
+  reveals: Map<string, KeyReveal>,
+  input: Omit<KeyReveal, 'createdAt'>
+): string {
+  pruneKeyReveals(reveals);
+  const id = nanoid(24);
+  reveals.set(id, { ...input, createdAt: Date.now() });
+  return id;
+}
+
+function consumeKeyReveal(
+  reveals: Map<string, KeyReveal>,
+  accountId: string,
+  revealId: string
+): KeyReveal | null {
+  if (!revealId) {
+    return null;
+  }
+  pruneKeyReveals(reveals);
+  const reveal = reveals.get(revealId);
+  reveals.delete(revealId);
+  if (!reveal || reveal.accountId !== accountId) {
+    return null;
+  }
+  return reveal;
+}
+
+function pruneKeyReveals(reveals: Map<string, KeyReveal>): void {
+  const cutoff = Date.now() - keyRevealTtlMs;
+  for (const [id, reveal] of reveals.entries()) {
+    if (reveal.createdAt < cutoff) {
+      reveals.delete(id);
+    }
+  }
+}
+
+async function getTemplatePreview(
+  services: HumanServices,
+  accountId: string,
+  templateId: string
+): Promise<{
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  type: 'markdown' | 'html';
+  slots: string[];
+  builtIn: boolean;
+  content: string;
+} | null> {
+  if (!templateId) {
+    return null;
+  }
+
+  const sql = `
+    SELECT *
+    FROM templates
+    WHERE id = ? AND (account_id IS NULL OR account_id = ?)
+    LIMIT 1
+  `;
+  const row =
+    services.db.dialect === 'sqlite'
+      ? (services.db.sqlite.prepare(sql).get(templateId, accountId) as
+          | TemplatePreviewRow
+          | undefined)
+      : (
+          await services.db.pool.query<TemplatePreviewRow>(
+            sql.replace('?', '$1').replace('?', '$2'),
+            [templateId, accountId]
+          )
+        ).rows[0];
+
+  return row
+    ? {
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        description: row.description,
+        type: row.type,
+        slots: parseTemplateSlotNames(row.slots),
+        builtIn: row.account_id === null,
+        content: row.content,
+      }
+    : null;
+}
+
+function parseTemplateSlotNames(slotsJson: string): string[] {
+  try {
+    const value = JSON.parse(slotsJson) as Array<string | { name?: string }>;
+    return value
+      .map((slot) => (typeof slot === 'string' ? slot : (slot.name ?? '')))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 
 function dashboardPrincipal(account: AuthenticatedSession['account']): AuthPrincipal {
@@ -816,6 +1021,10 @@ function accountView(account: AuthenticatedSession['account']) {
 
 function noticeFromQuery(value: string | undefined): DashboardNotice | undefined {
   switch (value) {
+    case 'bot_created':
+      return { tone: 'success', message: 'Bot created. Copy the key now.' };
+    case 'bot_key_regenerated':
+      return { tone: 'success', message: 'Key regenerated. Old key is invalid now.' };
     case 'bot_revoked':
       return { tone: 'success', message: 'Bot key revoked.' };
     case 'artifact_restored':
@@ -834,6 +1043,8 @@ function noticeFromQuery(value: string | undefined): DashboardNotice | undefined
       return { tone: 'success', message: 'Password changed and other sessions signed out.' };
     case 'email_updated':
       return { tone: 'success', message: 'Email updated.' };
+    case 'email_change_link_sent':
+      return { tone: 'success', message: 'Check the new email address to confirm the change.' };
     case 'template_promoted':
       return { tone: 'success', message: 'Template promoted.' };
     case 'password_required':

@@ -63,9 +63,13 @@ describe('M4 auth flow', () => {
       }),
     });
 
-    expect(accepted.status).toBe(200);
+    expect(accepted.status).toBe(303);
     expect(accepted.headers.get('set-cookie')).toContain('aa_session=');
-    const body = await accepted.text();
+    const keyLocation = accepted.headers.get('location');
+    expect(keyLocation).toMatch(/^\/setup\/key\?reveal=/);
+    const body = await (
+      await ctx.app.request(keyLocation ?? '/', { headers: { Cookie: cookieFrom(accepted) } })
+    ).text();
     expect(body).toContain('aa_bot_');
     expect(body).toContain('Confirm setup by creating your first artifact');
     expect(existsSync(setupTokenPath)).toBe(false);

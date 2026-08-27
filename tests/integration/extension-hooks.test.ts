@@ -79,6 +79,6 @@ async function completeSetup(ctx: AuthTestContext): Promise<string> {
       bot_byline: 'Hook test bot',
     }),
   });
-  expect(response.status).toBe(200);
+  expect(response.status).toBe(303);
   return cookieFrom(response);
 }

@@ -85,6 +85,10 @@ export interface DashboardTemplateView {
   builtIn: boolean;
 }
 
+export interface DashboardTemplatePreview extends DashboardTemplateView {
+  content: string;
+}
+
 export interface DashboardNotice {
   tone: 'success' | 'warn' | 'danger' | 'info';
   message: string;
@@ -351,6 +355,7 @@ export function DashboardBotsPage({
 export interface DashboardTemplatesPageProps {
   account: DashboardAccountView;
   templates: DashboardTemplateView[];
+  previewTemplate?: DashboardTemplatePreview | null | undefined;
   extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
 }
@@ -358,6 +363,7 @@ export interface DashboardTemplatesPageProps {
 export function DashboardTemplatesPage({
   account,
   templates,
+  previewTemplate,
   extensionNavItems,
   notice,
 }: DashboardTemplatesPageProps) {
@@ -393,6 +399,7 @@ export function DashboardTemplatesPage({
           templates={personal}
           empty="Promote any artifact into a reusable template — write {{slots}} into its content, then choose Promote."
         />
+        {previewTemplate ? <TemplatePreviewPanel template={previewTemplate} /> : null}
       </div>
     </DashboardChrome>
   );
@@ -400,6 +407,7 @@ export function DashboardTemplatesPage({
 
 export interface DashboardSettingsPageProps {
   account: DashboardAccountView;
+  deployment: 'self-hosted' | 'cloud';
   extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
   error?: string | undefined;
@@ -407,10 +415,12 @@ export interface DashboardSettingsPageProps {
 
 export function DashboardSettingsPage({
   account,
+  deployment,
   extensionNavItems,
   notice,
   error,
 }: DashboardSettingsPageProps) {
+  const isCloud = deployment === 'cloud';
   return (
     <DashboardChrome
       title="Settings"
@@ -425,7 +435,9 @@ export function DashboardSettingsPage({
             <p class="aa-page-kicker">Settings</p>
             <h1 class="aa-section-title">Account settings</h1>
             <p class="aa-section-note">
-              Update your email/password, or permanently delete the account and all public shares.
+              {isCloud
+                ? 'Update your email by magic link, or permanently delete the account and all public shares.'
+                : 'Update your email/password, or permanently delete the account and all public shares.'}
             </p>
           </header>
           {error ? <p class="aa-error">{error}</p> : null}
@@ -433,7 +445,11 @@ export function DashboardSettingsPage({
         <div class="aa-grid aa-grid--2">
           <Card
             title="Email"
-            description="Self-hosted email changes require your current password."
+            description={
+              isCloud
+                ? 'Cloud email changes are confirmed by a link sent to the new address.'
+                : 'Self-hosted email changes require your current password.'
+            }
           >
             <form class="aa-stack" method="post" action="/dashboard/api/settings/email">
               <Input
@@ -443,40 +459,61 @@ export function DashboardSettingsPage({
                 type="email"
                 value={account.email}
               />
-              <Input
-                id="email_current_password"
-                name="current_password"
-                label="Current password"
-                type="password"
-              />
+              {isCloud ? (
+                <p class="aa-hint">
+                  We will email a one-time confirmation link before changing the address.
+                </p>
+              ) : (
+                <Input
+                  id="email_current_password"
+                  name="current_password"
+                  label="Current password"
+                  type="password"
+                />
+              )}
               <Button variant="primary" type="submit">
-                Update email
+                {isCloud ? 'Send confirmation link' : 'Update email'}
               </Button>
             </form>
           </Card>
-          <Card
-            title="Password"
-            description="Changing password rotates this session and invalidates all others."
-          >
-            <form class="aa-stack" method="post" action="/dashboard/api/settings/password">
-              <Input
-                id="current_password"
-                name="current_password"
-                label="Current password"
-                type="password"
-              />
-              <Input id="new_password" name="new_password" label="New password" type="password" />
-              <Input
-                id="confirm_password"
-                name="confirm_password"
-                label="Confirm new password"
-                type="password"
-              />
-              <Button variant="primary" type="submit">
-                Change password
+          {isCloud ? (
+            <Card
+              title="Passwordless cloud account"
+              description="Cloud dashboard access uses email links instead of local passwords."
+            >
+              <p class="aa-section-note">
+                Password fields are intentionally unavailable in cloud mode. Sign out, then request
+                a fresh magic link whenever you need to return.
+              </p>
+              <Button variant="secondary" href="/login?mode=magic">
+                Request magic link
               </Button>
-            </form>
-          </Card>
+            </Card>
+          ) : (
+            <Card
+              title="Password"
+              description="Changing password rotates this session and invalidates all others."
+            >
+              <form class="aa-stack" method="post" action="/dashboard/api/settings/password">
+                <Input
+                  id="current_password"
+                  name="current_password"
+                  label="Current password"
+                  type="password"
+                />
+                <Input id="new_password" name="new_password" label="New password" type="password" />
+                <Input
+                  id="confirm_password"
+                  name="confirm_password"
+                  label="Confirm new password"
+                  type="password"
+                />
+                <Button variant="primary" type="submit">
+                  Change password
+                </Button>
+              </form>
+            </Card>
+          )}
         </div>
         <Card
           title="Delete account"
@@ -750,7 +787,8 @@ function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
           <>
             <CopyBlock id="share-url" label="Public URL" value={share.url} />
             <p class="aa-section-note">
-              {share.viewCount} views on this share · {artifact.lifetimeViews} lifetime views ·{' '}
+              {share.viewCount} views on this share · {share.uniqueViewerCount} unique viewers ·{' '}
+              {artifact.lifetimeViews} lifetime views ·{' '}
               {share.lastViewedAt
                 ? `last viewed ${formatRelativeTime(share.lastViewedAt)}`
                 : 'never viewed'}
@@ -985,6 +1023,39 @@ function BotActionForms({ bot }: { bot: DashboardBotView }) {
         </Button>
       </form>
     </div>
+  );
+}
+
+function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview }) {
+  return (
+    <Card
+      title={`Template preview: ${template.name}`}
+      description="Review the raw markdown template before using it from the API."
+    >
+      <div class="aa-stack">
+        <div class="aa-specimen-row">
+          <Badge tone={template.builtIn ? 'info' : 'accent'}>
+            {template.builtIn ? 'starter' : 'yours'}
+          </Badge>
+          <Badge tone="neutral">{template.slug}</Badge>
+          <Badge tone={template.type === 'markdown' ? 'success' : 'info'}>
+            {template.type === 'markdown' ? 'markdown' : 'html'}
+          </Badge>
+        </div>
+        {template.description ? <p class="aa-section-note">{template.description}</p> : null}
+        <p class="aa-hint">
+          Slots:{' '}
+          {template.slots.length > 0
+            ? template.slots.map((slot) => <Badge tone="neutral">{`{{${slot}}}`}</Badge>)
+            : 'none'}
+        </p>
+        <CopyBlock
+          id={`template-preview-${template.id}`}
+          label="Template source"
+          value={template.content}
+        />
+      </div>
+    </Card>
   );
 }
 

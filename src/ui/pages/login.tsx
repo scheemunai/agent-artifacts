@@ -161,6 +161,69 @@ export function MagicLinkExpiredPage({ email = '' }: { email?: string }) {
   );
 }
 
+export function EmailChangeInterstitialPage({ token }: { token: string }) {
+  return (
+    <Layout
+      title="Confirm email change · Agent Artifacts"
+      description="Confirm your Agent Artifacts email change."
+    >
+      <main class="aa-placeholder">
+        <div class="aa-shell aa-shell--narrow">
+          <Card raised>
+            <div class="aa-stack aa-placeholder-card">
+              <div>
+                <ProductMark />
+                <p class="aa-page-kicker">Email change</p>
+                <h1 class="aa-section-title">Confirm your new email</h1>
+                <p class="aa-section-note">
+                  Continue below to update the dashboard email. This page is safe for email scanners
+                  because it does not consume the link until you submit the form.
+                </p>
+              </div>
+              <form method="post" action="/auth/change-email" class="aa-specimen-row">
+                <input type="hidden" name="token" value={token} />
+                <Button variant="primary" type="submit">
+                  Update email
+                </Button>
+                <Button variant="secondary" href="/dashboard/settings">
+                  Back to settings
+                </Button>
+              </form>
+            </div>
+          </Card>
+        </div>
+      </main>
+    </Layout>
+  );
+}
+
+export function EmailChangeExpiredPage({ email = '' }: { email?: string }) {
+  return (
+    <Layout title="Email link expired · Agent Artifacts" description="Email-change link expired.">
+      <main class="aa-placeholder">
+        <div class="aa-shell aa-shell--narrow">
+          <Card raised>
+            <div class="aa-stack aa-placeholder-card">
+              <div>
+                <ProductMark />
+                <p class="aa-page-kicker">Email change</p>
+                <h1 class="aa-section-title">That email-change link is no longer valid.</h1>
+                <p class="aa-section-note">
+                  Links are single-use and last 15 minutes. Return to settings and request a fresh
+                  link{email ? ` for ${email}` : ''}.
+                </p>
+              </div>
+              <Button variant="primary" href="/dashboard/settings">
+                Back to settings
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </main>
+    </Layout>
+  );
+}
+
 function MagicLinkSentCard({ email }: { email: string }) {
   return (
     <section class="aa-stack" aria-live="polite">
