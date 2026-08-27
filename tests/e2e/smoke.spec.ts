@@ -349,8 +349,15 @@ test('authenticated dashboard list to detail preserves history and share control
   await expect(page.getByRole('button', { name: 'Revoke link' })).toBeVisible();
   const versionHistory = page.getByRole('heading', { name: 'Version history' });
   await expect(versionHistory).toBeVisible();
-  await expect(page.getByText('v2', { exact: true })).toBeVisible();
-  await expect(page.getByText('v1', { exact: true })).toBeVisible();
+  // Scoped to the table, because "v1" is now legitimately on this page twice: Restore has its own
+  // typed confirmation and the dialog says "Type v1 to confirm". The assertion was always about
+  // what the version history lists, so it says so rather than searching the whole document.
+  // Scoped to the Version cell's own element, not just the table: each row's Restore dialog also
+  // lives inside the table and says "Type v1 to confirm", so the table alone still matches twice.
+  // The cell renders the number in `strong`; the dialog renders it in `code`.
+  const versionCells = page.locator('table#artifact-versions td strong');
+  await expect(versionCells.filter({ hasText: /^v2$/ })).toBeVisible();
+  await expect(versionCells.filter({ hasText: /^v1$/ })).toBeVisible();
 
   // Below 480px the version table drops its `secondary` columns rather than keeping a 42rem
   // minimum width and pushing the Actions column off-screen behind an unsignposted scroll. The
