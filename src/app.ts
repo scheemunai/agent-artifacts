@@ -8,7 +8,6 @@ import type { DatabaseHandle } from './db/client.js';
 import type { CloudModule } from './extension/cloud-module.js';
 import { AppError, errorEnvelope, internalErrorEnvelope } from './lib/errors.js';
 import { appPath } from './lib/runtime-paths.js';
-import { isHashedAssetPath } from './ui/assets.js';
 import type { Logger } from './logger.js';
 import { registerHumanRoutes } from './routes/dashboard.js';
 import { healthRoute } from './routes/health.js';
@@ -17,6 +16,7 @@ import { registerRobotsAndSandboxGuard } from './routes/robots.js';
 import { registerV1Routes } from './routes/v1/index.js';
 import { createWebRoute } from './routes/web.js';
 import { SESSION_COOKIE_NAME } from './services/sessions.js';
+import { isHashedAssetPath } from './ui/assets.js';
 import { ErrorPage } from './ui/pages/error-page.js';
 
 interface AppVariables {

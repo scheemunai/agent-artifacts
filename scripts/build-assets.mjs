@@ -14,7 +14,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 
 const OUTPUT_DIR = 'public/assets';
@@ -51,7 +51,9 @@ for (const asset of ASSETS) {
 
 // Old hashes are dead weight and a source of confusion about which file is live; sweep every
 // hashed name this build owns and did not just write.
-const ownedPattern = new RegExp(`^(${ASSETS.map((asset) => asset.name).join('|')})-[a-f0-9]{12}\\.(js|css)$`);
+const ownedPattern = new RegExp(
+  `^(${ASSETS.map((asset) => asset.name).join('|')})-[a-f0-9]{12}\\.(js|css)$`
+);
 for (const file of readdirSync(OUTPUT_DIR)) {
   if (ownedPattern.test(file) && !built.has(file)) {
     rmSync(join(OUTPUT_DIR, file));

@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { MarketingApiBlock } from '../../src/ui/components/marketing.js';

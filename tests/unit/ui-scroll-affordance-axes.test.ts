@@ -37,7 +37,9 @@ describe('the scroll measurement', () => {
   it('keeps the edge fade horizontal, because that is what it means', () => {
     // `data-aa-overflow` and `data-aa-scroll-end` drive a sideways gradient; a vertical reading
     // there would paint a fade against an edge nothing scrolls past.
-    expect(mechanism).toMatch(/setAttribute\('data-aa-overflow', overflowingX \? 'true' : 'false'\)/);
+    expect(mechanism).toMatch(
+      /setAttribute\('data-aa-overflow', overflowingX \? 'true' : 'false'\)/
+    );
     expect(mechanism).toMatch(/overflowingX && atEnd/);
   });
 });
@@ -49,8 +51,7 @@ describe('the constraint the second axis introduces', () => {
     // adding one except this.
     const bounded = parseStylesheet(appCss).filter(
       (rule) =>
-        rule.selector.includes('.aa-table-scroll') &&
-        /(^|;|\s)max-height\s*:/.test(rule.block)
+        rule.selector.includes('.aa-table-scroll') && /(^|;|\s)max-height\s*:/.test(rule.block)
     );
 
     expect(

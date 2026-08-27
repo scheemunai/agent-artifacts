@@ -1,8 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import type { ViewerContentResult, ViewerPageModel } from '../../src/services/viewer.js';
-import {ViewerFooter, ViewerPage} from '../../src/ui/pages/viewer.js';
+import { ViewerFooter, ViewerPage } from '../../src/ui/pages/viewer.js';
 import { readClientSource } from '../support/client-assets.js';
 import { declarationValue, parseStylesheet } from '../support/css-cascade.js';
 

@@ -1,8 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { TERMINAL_CAUSE_COPY, type TerminalCause } from '../../src/ui/copy/terminal-copy.js';
-import {ViewerPage} from '../../src/ui/pages/viewer.js';
+import { ViewerPage } from '../../src/ui/pages/viewer.js';
 import { readClientSource } from '../support/client-assets.js';
 
 /**

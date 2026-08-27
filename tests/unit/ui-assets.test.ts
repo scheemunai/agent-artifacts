@@ -30,7 +30,9 @@ afterEach(() => {
   rmSync(workspace, { recursive: true, force: true });
 });
 
-function writeBuildOutput(entries: Record<string, string> = { 'app.css': '/assets/app-abcdef123456.css' }) {
+function writeBuildOutput(
+  entries: Record<string, string> = { 'app.css': '/assets/app-abcdef123456.css' }
+) {
   writeFileSync(join(assetRoot, 'manifest.json'), `${JSON.stringify(entries)}\n`);
   for (const href of Object.values(entries)) {
     writeFileSync(join(servedRoot, href.replace('/assets/', 'assets/')), '.aa-page{color:#2f3a40}');
@@ -156,7 +158,13 @@ describe('asset resolution', () => {
  * assert on cannot fail, and an assertion that cannot fail is not evidence.
  */
 describe('the real build script and the resolver', () => {
-  const KEYS: AssetKey[] = ['app.css', 'ui-foundation.js', 'viewer.js', 'dashboard.js', 'viewer.css'];
+  const KEYS: AssetKey[] = [
+    'app.css',
+    'ui-foundation.js',
+    'viewer.js',
+    'dashboard.js',
+    'viewer.css',
+  ];
 
   it('agree on every key the pages can ask for', () => {
     mkdirSync(join(workspace, '.scratch'), { recursive: true });

@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import type { ViewerContentResult, ViewerPageModel } from '../../src/services/viewer.js';

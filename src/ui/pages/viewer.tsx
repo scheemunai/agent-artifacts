@@ -11,7 +11,6 @@ import {
 import { VersionBanner } from '../components/version-banner.js';
 import { TERMINAL_CAUSE_COPY, type TerminalCause } from '../copy/terminal-copy.js';
 
-
 interface ViewerPageProps {
   model: ViewerPageModel;
   abuseEmail: string;

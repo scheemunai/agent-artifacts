@@ -1,5 +1,5 @@
-import { assetHref } from '../../src/ui/assets.js';
 import { describe, expect, it } from 'vitest';
+import { assetHref } from '../../src/ui/assets.js';
 import { createViewerTestContext, publishSharedArtifact } from './viewer/viewer-test-utils.js';
 
 describe('sandbox host guard', () => {
