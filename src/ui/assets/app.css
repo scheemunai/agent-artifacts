@@ -18,7 +18,12 @@
   /* Text and line tokens: neutral, high contrast, no decorative color drift. */
   --color-aa-ink: #2f3a40;
   --color-aa-muted: #5b6870;
-  --color-aa-subtle: #7a858b;
+  /* A-22. Was #7a858b, which is 3.78:1 on the raised surface — under the 4.5:1 text floor, and
+     every place it lands IS text: the `Optional` tag, control placeholders, disabled control
+     values. "Subtle" is a position in the ink ramp, not permission to fall below the floor.
+     #68737a is 4.86:1 on white with margin above 4.5, and still visibly lighter than muted at
+     5.74:1, so the three-step ramp survives the correction. */
+  --color-aa-subtle: #68737a;
   --color-aa-line: #dde4e0;
   --color-aa-line-strong: #cbd6d0;
 
@@ -296,10 +301,36 @@
     text-decoration: none;
   }
 
-  .aa-nav-link:hover,
-  .aa-nav-link[aria-current="page"] {
+  .aa-nav-link:hover {
     color: var(--color-aa-ink);
     background: var(--color-aa-surface);
+  }
+
+  /* A-45. Current page and hover shared one rule, so "you are here" rendered identically to "your
+     cursor is here" — and the fill carrying both computed to 1.06:1 against the drawer's white,
+     which is not a state a reader can see. No tint fixes it: accent-soft is 1.14:1 on white, LOWER
+     than the surface it would replace, so a fill cannot carry this at any honest contrast.
+
+     So the label keeps ink (11.67:1 — the most readable thing on the surface, and unchanged) and
+     the state is carried by a solid accent rule on the leading edge, which is a non-text UI mark at
+     4.94:1 against white, well clear of the 3:1 floor. Weight comes with it so the cue is not
+     colour alone. Accent TYPE was the other candidate and was rejected on measurement: 4.94:1 on
+     white but 4.49:1 on the page background, which is a rounding-edge fail to build a convention
+     on. */
+  .aa-nav-link[aria-current="page"] {
+    color: var(--color-aa-ink);
+    background: transparent;
+    font-weight: 650;
+  }
+
+  /* The bar follows the axis the list runs on: leading edge down a stacked drawer, under-rule
+     across a horizontal nav, which is where each reads as "current" rather than as a stray line. */
+  .aa-drawer__body .aa-nav-link[aria-current="page"] {
+    box-shadow: inset 3px 0 0 0 var(--color-aa-accent);
+  }
+
+  .aa-desktop-nav .aa-nav-link[aria-current="page"] {
+    box-shadow: inset 0 -2px 0 0 var(--color-aa-accent);
   }
 
   .aa-mobile-trigger {
@@ -578,6 +609,21 @@
     background: var(--color-aa-surface);
   }
 
+  /* A-15. Only `--primary` had a background step on press; secondary, ghost and danger had nothing
+     but the `translateY(0)` reset they inherit from `.aa-btn`, so the guide showed two identical
+     specimens for three of its four variants and called one of them "active" — a state the product
+     could not produce, which is the specimen-truthfulness failure aimed at press instead of focus.
+
+     One formula rather than four tokens: active is the variant's own hover colour taken one step
+     toward ink. Primary already has that step pre-baked as `--color-aa-accent-active`, so it keeps
+     its token and the other three derive theirs, which means a retone of any variant carries its
+     press state with it instead of stranding a hardcoded pair. */
+  .aa-btn--secondary:active,
+  .aa-btn--secondary[data-aa-state="active"] {
+    border-color: var(--color-aa-line-strong);
+    background: color-mix(in srgb, var(--color-aa-surface) 90%, var(--color-aa-ink));
+  }
+
   .aa-btn--ghost {
     color: var(--color-aa-muted);
     background: transparent;
@@ -587,6 +633,12 @@
   .aa-btn--ghost[data-aa-state="hover"] {
     color: var(--color-aa-ink);
     background: var(--color-aa-surface);
+  }
+
+  .aa-btn--ghost:active,
+  .aa-btn--ghost[data-aa-state="active"] {
+    color: var(--color-aa-ink);
+    background: color-mix(in srgb, var(--color-aa-surface) 90%, var(--color-aa-ink));
   }
 
   /* The one case where the surface the ring lands on IS the control. A destructive button focused
@@ -608,6 +660,16 @@
     color: var(--color-aa-accent-ink);
     border-color: var(--color-aa-danger-hover);
     background: var(--color-aa-danger-hover);
+  }
+
+  /* Danger's hover already flips from pale fill to solid, so its press step darkens the solid
+     rather than introducing one — same formula as the other variants, applied to what hover
+     actually leaves on screen. */
+  .aa-btn--danger:active,
+  .aa-btn--danger[data-aa-state="active"] {
+    color: var(--color-aa-accent-ink);
+    border-color: color-mix(in srgb, var(--color-aa-danger-hover) 88%, var(--color-aa-ink));
+    background: color-mix(in srgb, var(--color-aa-danger-hover) 88%, var(--color-aa-ink));
   }
 
   .aa-btn--sm {
@@ -862,10 +924,18 @@
     letter-spacing: -0.015em;
   }
 
+  /* A-40. The description is a card's lede: it sits above the body and introduces it. At
+     `--text-aa-sm` it was 14px introducing 16px, so every card ranked its own opening line below
+     the supporting text underneath it. Size now matches the body and the muted colour carries the
+     subordination instead — secondary by tone rather than by being harder to read.
+
+     Product-wide by design, because the inversion was product-wide; the type ramp is not a
+     per-page decision. Card heights grow slightly wherever a description wraps, which is a
+     composed-result change other lanes' screenshots predate. */
   .aa-card__description {
     margin: var(--spacing-aa-1) 0 0;
     color: var(--color-aa-muted);
-    font-size: var(--text-aa-sm);
+    font-size: var(--text-aa-base);
   }
 
   /* A card whose subject is destructive: the border reddens and the header tints. The tint stops
@@ -1507,9 +1577,20 @@
     text-transform: uppercase;
   }
 
+  /* A-44. The kicker and the headline are one unit, so they are one grid item with their own gap.
+     The title used to sit in the section's 24px gap and pull 16px back with a negative margin,
+     which put the pair's real spacing in the difference between two rules — retuning the section
+     gap would have silently retuned the header, and the pull persisted through three rounds
+     because nothing named it. */
+  .aa-marketing-section-header {
+    display: grid;
+    justify-items: center;
+    gap: var(--spacing-aa-2);
+  }
+
   .aa-marketing-section-title {
     max-width: 18ch;
-    margin: calc(var(--spacing-aa-4) * -1) 0 0;
+    margin: 0;
     color: var(--color-aa-ink);
     font-size: clamp(1.65rem, 4vw, 2.15rem);
     font-weight: 600;
@@ -1862,12 +1943,18 @@
     line-height: 1;
   }
 
+  /* A-36. The block stays centred; the prose inside it does not. Centred text gives every line a
+     different starting x, so the eye has to find the left edge again on each return sweep — a
+     tolerable cost for a two-line display line and a real one at 46ch over four or five lines.
+     `justify-items: center` on the parent keeps the panel centred in the page, so this changes the
+     reading, not the layout. */
   .aa-marketing-origin__quote {
     max-width: 46ch;
     margin: 0 0 var(--spacing-aa-5);
     color: var(--color-aa-ink);
     font-size: clamp(1.05rem, 2.4vw, 1.18rem);
     line-height: 1.66;
+    text-align: left;
   }
 
   .aa-marketing-origin__byline {
@@ -1900,12 +1987,15 @@
     line-height: 1.45;
   }
 
+  /* A-36, same rule. `__price` above stays centred: it is a short display line, which is the case
+     centring is for. This one is 46ch of running prose. */
   .aa-marketing-terms__oss {
     max-width: 46ch;
     margin: 0;
     color: var(--color-aa-muted);
     font-size: 1rem;
     line-height: 1.62;
+    text-align: left;
   }
 
   .aa-marketing-cta {
@@ -1951,8 +2041,13 @@
     margin-top: var(--spacing-aa-2);
   }
 
+  /* A-33. These are glyphs, and they were wearing a LINE token: `--color-aa-line-strong` is sized
+     for hairlines against a fill, and as type it computed to 1.36:1 on the page background —
+     present in the DOM, absent to the reader, which is the failure mode that reads as "the dots
+     did not load". A separator between two links is text and takes a text token. Subtle rather
+     than muted, so it still sits below the links it divides instead of competing with them. */
   .aa-marketing-separator {
-    color: var(--color-aa-line-strong);
+    color: var(--color-aa-subtle);
   }
 
   @media (max-width: 720px) {

@@ -221,16 +221,22 @@ export function MarketingSection({
 }) {
   return (
     <section class={cx('aa-marketing-section', className)} aria-labelledby={`${id}-title`}>
-      <MarketingSectionLabel>{label}</MarketingSectionLabel>
-      {title ? (
-        <h2 class="aa-marketing-section-title" id={`${id}-title`}>
-          {title}
-        </h2>
-      ) : (
-        <h2 class="sr-only" id={`${id}-title`}>
-          {label}
-        </h2>
-      )}
+      {/* A-44. The kicker and the headline are one unit and now say so structurally. They used to
+          be two siblings in a grid with a 24px gap, and the title clawed 16px of it back with a
+          negative margin — which meant the pair's spacing was the difference between two numbers in
+          different rules, and any change to the section gap silently retuned it. */}
+      <header class="aa-marketing-section-header">
+        <MarketingSectionLabel>{label}</MarketingSectionLabel>
+        {title ? (
+          <h2 class="aa-marketing-section-title" id={`${id}-title`}>
+            {title}
+          </h2>
+        ) : (
+          <h2 class="sr-only" id={`${id}-title`}>
+            {label}
+          </h2>
+        )}
+      </header>
       {children}
     </section>
   );
