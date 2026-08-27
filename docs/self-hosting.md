@@ -181,7 +181,8 @@ Variables are read once at boot.
 | `SMTP_USER` | no | unset | both | no | SMTP username. |
 | `SMTP_PASS` | no | unset | both | yes | SMTP password. |
 | `SMTP_FROM` | no | unset | both | no | From address, for example `Agent Artifacts <no-reply@example.com>`. Required if any SMTP setting is present. |
-| `RESEND_API_KEY` | no | unset | both | yes | Resend mail adapter key; takes precedence over SMTP when set. |
+| `AA_MAIL_TRANSPORT` | no | unset | both | no | Optional mail transport override: `smtp`, `resend`, or `log`. Unset auto-detects: `RESEND_API_KEY` → Resend; else complete SMTP (`SMTP_HOST` + `SMTP_FROM`) → SMTP; else no mail configured. In cloud mode, unset with neither configured is a fatal boot error. `smtp` forces SMTP and requires `SMTP_HOST` + `SMTP_FROM` (`SMTP_USER`/`SMTP_PASS` optional). `resend` forces Resend and requires `RESEND_API_KEY`; `SMTP_FROM` may supply the From address. `log` is development only: no network delivery, satisfies the cloud boot gate, writes magic links to the log at warn level, and prints `MAIL TRANSPORT IS 'log' — NOT FOR PRODUCTION` on every boot. Never use `log` in production because users receive no email and login links are written to logs. |
+| `RESEND_API_KEY` | no | unset | both | yes | Resend mail adapter key; takes precedence over SMTP when auto-detecting. |
 | `AA_RATE_LIMIT_RPM` | no | `60` | both | no | Per-API-key requests per minute. |
 | `AA_RATE_LIMIT_WRITES_PER_MIN` | no | `10` | both | no | Per-API-key write requests per minute. |
 | `AA_RATE_LIMITS_DISABLED` | no | `false` | both | no | Disables rate limiting for tests/CI; do not enable on a public instance. |
