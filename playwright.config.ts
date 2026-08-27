@@ -30,6 +30,10 @@ const cloudEnv = [
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // Asserts the hashed assets exist before a single page is opened. `pnpm run test:e2e` builds
+  // them first; this is what stops a direct `playwright test` against an unbuilt checkout from
+  // reporting an unstyled app as a wall of visual defects.
+  globalSetup: './tests/e2e/assets-built.setup.ts',
   timeout: 45_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,

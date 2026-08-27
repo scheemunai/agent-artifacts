@@ -132,11 +132,9 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
 
-      # The e2e servers run from source via tsx, so they need the stylesheet the build produces —
-      # without it every page renders the "stylesheet not built" fallback.
-      - name: Build assets
-        run: pnpm run build:assets
-
+      # `pnpm run test:e2e` builds the hashed assets first — the e2e servers run from source via
+      # tsx, and without them every page renders the "stylesheet not built" fallback and the suite
+      # reports layout defects that do not exist.
       - name: Run end-to-end suite
         run: pnpm run test:e2e
 

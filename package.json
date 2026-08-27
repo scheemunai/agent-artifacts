@@ -23,7 +23,7 @@
     "db:generate:postgres": "drizzle-kit generate --dialect postgresql --schema ./src/db/schema.postgres.ts --out ./drizzle/postgres --name init",
     "migrate": "tsx src/db/migrate-cli.ts",
     "test:postgres": "vitest run tests/integration/postgres-dialect.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "pnpm run build:assets && playwright test"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",
