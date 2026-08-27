@@ -259,16 +259,26 @@ function bindNotices() {
  * changes, plus an end-of-scroll flag so the edge fade lifts once the last column is visible.
  */
 function updateScrollRegion(region) {
-  const overflowing = region.scrollWidth - region.clientWidth > 1;
-  region.setAttribute('data-aa-overflow', overflowing ? 'true' : 'false');
+  // Both axes, for different consumers. `data-aa-overflow` drives an edge fade, which is a
+  // sideways affordance, so it stays horizontal. The hint answers "is there more here", which is
+  // true in either direction — a region that scrolls only vertically used to measure as "no
+  // overflow" and have its hint hidden, so callers with that shape had to settle the question
+  // themselves and withhold the hint from this measurement.
+  //
+  // The constraint that comes with the second axis: a region whose hint copy names a direction
+  // must not be able to overflow the other one. Held by
+  // `tests/unit/ui-scroll-affordance-axes.test.ts`, not by this file.
+  const overflowingX = region.scrollWidth - region.clientWidth > 1;
+  const overflowingY = region.scrollHeight - region.clientHeight > 1;
+  region.setAttribute('data-aa-overflow', overflowingX ? 'true' : 'false');
 
   const atEnd = region.scrollLeft + region.clientWidth >= region.scrollWidth - 1;
-  region.setAttribute('data-aa-scroll-end', overflowing && atEnd ? 'true' : 'false');
+  region.setAttribute('data-aa-scroll-end', overflowingX && atEnd ? 'true' : 'false');
 
   const hintId = region.getAttribute('data-aa-scroll-hint-for');
   const hint = hintId ? document.getElementById(hintId) : null;
   if (hint) {
-    hint.hidden = !overflowing;
+    hint.hidden = !(overflowingX || overflowingY);
   }
 }
 
