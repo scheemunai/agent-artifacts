@@ -147,9 +147,27 @@ export function DashboardHomePage({
             share it.
           </p>
         </header>
-        <ArtifactFilters bots={bots} filters={filters} />
+        {/* A search form over an empty list is dead UI at the exact moment the product has to
+            teach. It stays when a filter is what emptied the list, because removing it there
+            would leave no way back to the full one. */}
+        {artifacts.length > 0 || filtersApplied(filters) ? (
+          <ArtifactFilters bots={bots} filters={filters} />
+        ) : null}
         {artifacts.length === 0 ? (
-          <ArtifactEmptyState baseUrl={baseUrl} latestBot={latestBot} />
+          filtersApplied(filters) ? (
+            <EmptyState
+              id="artifacts-no-matches"
+              title="No artifacts match those filters."
+              description="Widen the search, or clear the filters to see everything this account has published."
+              action={
+                <Button variant="secondary" href="/dashboard">
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : (
+            <ArtifactEmptyState baseUrl={baseUrl} latestBot={latestBot} />
+          )
         ) : (
           <div class="aa-stack">
             {artifacts.map((artifact) => (
@@ -330,6 +348,23 @@ export function DashboardBotsPage({
           />
         ) : null}
 
+        {/* First run leads with the empty state, because the copy it carries is an instruction and
+            an instruction has to come before the thing it is about. Below the form it read
+            "create one" while pointing back up the page at a form already scrolled past — and at
+            1440 it started at y≈724, below the fold. */}
+        {bots.length === 0 ? (
+          <EmptyState
+            id="bots-empty"
+            title="Register your first bot."
+            description="A bot is your agent's identity: it gets an API key, shown once, and an install prompt to paste into your agent."
+            action={
+              <Button variant="primary" href="#new-bot">
+                Register your first bot →
+              </Button>
+            }
+          />
+        ) : null}
+
         <Card
           title="New bot"
           description="The key appears once after creation."
@@ -341,7 +376,7 @@ export function DashboardBotsPage({
             ) : undefined
           }
         >
-          <form class="aa-stack" method="post" action="/dashboard/api/bots">
+          <form class="aa-stack" id="new-bot" method="post" action="/dashboard/api/bots">
             <Input
               id="name"
               name="name"
@@ -362,12 +397,7 @@ export function DashboardBotsPage({
           </form>
         </Card>
 
-        {bots.length === 0 ? (
-          <EmptyState
-            title="No bots yet."
-            description="A bot is your agent's identity and API key. Create one, copy the key once, and paste the install prompt into your agent."
-          />
-        ) : (
+        {bots.length === 0 ? null : (
           <Table
             id="dashboard-bots"
             caption="Registered bots"
@@ -753,6 +783,13 @@ function ArtifactFilters({
   );
 }
 
+/**
+ * The action slot holds one next step. The install prompt is content, so it gets a card.
+ *
+ * Putting a ~350px `CopyBlock` in the action slot made the empty state the largest object on the
+ * page — a white card inside a dashed card inside a grey slab — and the slot's inherited
+ * `text-align: center` rendered the preformatted prompt centre-aligned line by line.
+ */
 function ArtifactEmptyState({
   baseUrl,
   latestBot,
@@ -760,33 +797,48 @@ function ArtifactEmptyState({
   baseUrl: string;
   latestBot: DashboardBotView | null;
 }) {
-  const action = latestBot ? (
-    <div class="aa-stack">
-      <CopyBlock
-        id="empty-install-prompt"
-        label="Install prompt (key redacted)"
-        value={buildRedactedInstallPrompt({
-          baseUrl,
-          botName: latestBot.name,
-          last4: latestBot.apiKeyLast4,
-        })}
+  if (!latestBot) {
+    return (
+      <EmptyState
+        id="artifacts-no-bot"
+        title="No artifacts yet — your bot creates them."
+        description="Register a bot first: it gets an API key, and the install prompt that teaches your agent to publish here."
+        action={
+          <Button variant="primary" href="/dashboard/bots">
+            Register a bot →
+          </Button>
+        }
       />
-      <Button variant="secondary" href="/dashboard/bots">
-        Regenerate key if you need the full value
-      </Button>
-    </div>
-  ) : (
-    <Button variant="primary" href="/dashboard/bots">
-      Register a bot →
-    </Button>
-  );
+    );
+  }
 
   return (
-    <EmptyState
-      title="No artifacts yet — your bot creates them."
-      description="Paste the install prompt into your agent and it will publish here."
-      action={action}
-    />
+    <>
+      <EmptyState
+        id="artifacts-with-bot"
+        title="No artifacts yet — your bot creates them."
+        description="Paste the install prompt below into your agent and its first artifact will appear here."
+        action={
+          <Button variant="secondary" href="/dashboard/bots">
+            Manage bots
+          </Button>
+        }
+      />
+      <Card
+        title={`Install prompt for ${latestBot.name}`}
+        description="The key is redacted here. Regenerate it on the Bots page if you need the full value."
+      >
+        <CopyBlock
+          id="empty-install-prompt"
+          label="Install prompt (key redacted)"
+          value={buildRedactedInstallPrompt({
+            baseUrl,
+            botName: latestBot.name,
+            last4: latestBot.apiKeyLast4,
+          })}
+        />
+      </Card>
+    </>
   );
 }
 
@@ -1243,6 +1295,11 @@ function TemplateTable({
       />
     </Card>
   );
+}
+
+/** Whether the reader narrowed the list themselves. `cursor` is paging, not filtering. */
+function filtersApplied(filters: DashboardHomePageProps['filters']): boolean {
+  return Boolean(filters.q || filters.botId || filters.type);
 }
 
 function dashboardListHref(filters: DashboardHomePageProps['filters']): string {
