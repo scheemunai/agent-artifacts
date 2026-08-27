@@ -10,8 +10,10 @@ Requirements:
 - pnpm 11.9.0 (`corepack enable` is recommended).
 - Docker if you are changing packaging or want to test self-host boot.
 
+The public GitHub repository is not published yet. Until launch, work from the source checkout or archive provided to you; the future public repo placeholder lives in [docs/decisions.md](./docs/decisions.md#repository-publication-status).
+
 ```bash
-git clone https://github.com/ZeroPointRepo/agent-artifacts.git
+# From an Agent Artifacts source checkout:
 cd agent-artifacts
 corepack enable
 pnpm install

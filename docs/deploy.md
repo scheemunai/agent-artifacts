@@ -30,6 +30,8 @@ Why: the app is a long-running Hono/Node process and the default database is SQL
 
 ## Docker Compose
 
+The published GHCR image is not live yet. The compose file builds from the local checkout and tags the result as `agent-artifacts:local` unless you set `AA_IMAGE` yourself.
+
 ```bash
 docker compose up
 ```
@@ -42,7 +44,7 @@ Default storage is the `aa_data` Docker volume mounted at `/data`.
 
 Config file: [`railway.json`](../railway.json)
 
-[![Deploy on Railway](https://img.shields.io/badge/Deploy-Railway-6f57ff?style=for-the-badge)](https://railway.com/new/template?template=https://github.com/ZeroPointRepo/agent-artifacts)
+One-click Railway deploy is **pending** until the public GitHub repository is published. See [repository publication status](./decisions.md#repository-publication-status). The manual CLI path below assumes you already have a source checkout.
 
 Railway's current config-as-code support covers build and deploy settings. Persistent volumes are managed as Railway resources, so attach one to the web service before real use:
 
@@ -70,7 +72,7 @@ If you provision Railway Postgres instead of SQLite, set `DATABASE_URL` to the P
 
 Config file: [`render.yaml`](../render.yaml)
 
-[![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46e3b7?style=for-the-badge)](https://render.com/deploy?repo=https://github.com/ZeroPointRepo/agent-artifacts)
+One-click Render deploy is **pending** until the public GitHub repository is published. See [repository publication status](./decisions.md#repository-publication-status). Use the blueprint only after Render can access the real repository.
 
 The blueprint defines one Docker web service, one instance, `/healthz` health checks, and a persistent disk mounted at `/data`. Render persistent disks require a paid web service and cannot be used with multiple running instances, so keep `numInstances: 1` for SQLite.
 
@@ -79,8 +81,6 @@ After creation, update `BASE_URL` if Render assigns a different subdomain than t
 ## Fly.io
 
 Config file: [`fly.toml`](../fly.toml)
-
-[![Deploy on Fly.io](https://img.shields.io/badge/Deploy-Fly.io-8b5cf6?style=for-the-badge)](#flyio)
 
 Fly app names are globally unique. Edit `app` and `BASE_URL` in `fly.toml`, then create the volume and deploy:
 
@@ -99,12 +99,10 @@ Use one Machine for SQLite. For multiple regions or horizontal scale, move to Po
 
 Config file: [`docker-compose.yml`](../docker-compose.yml)
 
-[![Deploy with Coolify](https://img.shields.io/badge/Deploy-Coolify-2563eb?style=for-the-badge)](#coolify)
-
-Coolify can deploy directly from a public GitHub repository and uses the compose file as the source of truth for environment variables, service ports, and volumes. Use the root `docker-compose.yml`.
+Coolify can deploy directly from a public GitHub repository and uses the compose file as the source of truth for environment variables, service ports, and volumes. That direct public-repo path is **pending** until the repository is published; see [repository publication status](./decisions.md#repository-publication-status). Use the root `docker-compose.yml` once Coolify can access the source.
 
 1. New resource → Public Repository.
-2. Repository URL: `https://github.com/ZeroPointRepo/agent-artifacts`.
+2. Repository URL: pending until launch; after publication, use the final URL from [decisions.md](./decisions.md#repository-publication-status).
 3. Build pack: Docker Compose.
 4. Service port: `3000`.
 5. Set `BASE_URL` to the Coolify public URL.

@@ -14,8 +14,10 @@ Vercel, Netlify, Cloudflare Pages/Workers, and similar serverless platforms are 
 
 ## Docker Compose walkthrough
 
+The public GitHub repository is not published yet. Until launch, start from the source checkout or release archive provided to you; the future repo/image placeholders are tracked in [decisions.md](./decisions.md#repository-publication-status).
+
 ```bash
-git clone https://github.com/ZeroPointRepo/agent-artifacts.git
+# From an Agent Artifacts source checkout:
 cd agent-artifacts
 cp .env.example .env   # optional; docker compose works without it
 docker compose up

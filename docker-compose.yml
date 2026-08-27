@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/zeropointrepo/agent-artifacts:latest
+    image: ${AA_IMAGE:-agent-artifacts:local}
     build:
       context: .
       dockerfile: docker/Dockerfile

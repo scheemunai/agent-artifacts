@@ -23,7 +23,7 @@ For local development, a subdomain can prove the flow. For production with real 
 - app: `agentartifact.ai`
 - usercontent: `aausercontent.com`
 
-Do **not** rely on `usercontent.agentartifact.ai` for the final hosted product unless you have explicitly accepted the cookie/security trade-off. A subdomain shares the same site (`agentartifact.ai`) for browser policy, and any future cookie set with `Domain=.agentartifact.ai` could be sent to sibling subdomains. A separate registrable domain keeps app cookies, storage, and SameSite behavior outside the artifact-content site even if a future change accidentally relaxes an iframe sandbox flag or proxy rule.
+Do **not** rely on a sibling subdomain such as `usercontent.example.com` for the final hosted product if the app is on `example.com`, unless you have explicitly accepted the cookie/security trade-off. A subdomain shares the same site for browser policy, and any future cookie set with the parent domain could be sent to sibling subdomains. A separate registrable domain keeps app cookies, storage, and SameSite behavior outside the artifact-content site even if a future change accidentally relaxes an iframe sandbox flag or proxy rule.
 
 The iframe sandbox still matters: HTML artifacts are served with `sandbox allow-scripts` and without `allow-same-origin`, so artifact code runs in an opaque origin. The separate usercontent domain is defense in depth for the day somebody changes a header, cookie, or sandbox attribute.
 
@@ -396,6 +396,7 @@ Do not open signups until every required item is true.
 ### Product readiness
 
 - [ ] Public repository exists and contains README, license, contribution guide, security policy, and deployment docs.
+- [ ] Public repository is published and the container image is pushed before clone/deploy instructions are marked live.
 - [ ] `/style-guide` is reachable and reflects the current UI system.
 - [ ] `/v1/contract` and `/v1/openapi.json` are reachable on the app origin.
 - [ ] `robots.txt` is reachable on app and usercontent origins.
@@ -409,5 +410,5 @@ Do not open signups until every required item is true.
 - [ ] Real production mail credentials and verified sending domain.
 - [ ] Final distinct registrable usercontent domain, not just a development subdomain.
 - [ ] Production DNS and TLS for both origins.
-- [ ] Public GitHub repository under the intended org/name.
+- [ ] Public GitHub repository under the intended org/name, with the release image pushed.
 - [ ] Founder sign-off on the final launch smoke test.

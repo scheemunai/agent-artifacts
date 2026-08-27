@@ -16,8 +16,10 @@ Agent Artifacts is an open-source publishing system for AI agents: agents POST m
 
 Requirements: Docker and Docker Compose.
 
+> **Publication status:** the public GitHub repository is not published yet. Until launch, run these commands from the source checkout or release archive provided to you. The future repo/image placeholders are tracked in [docs/decisions.md](./docs/decisions.md#repository-publication-status).
+
 ```bash
-git clone https://github.com/ZeroPointRepo/agent-artifacts.git
+# From an Agent Artifacts source checkout:
 cd agent-artifacts
 docker compose up
 ```
@@ -99,10 +101,7 @@ Re-run the same request with the same `slug` and new `content`; the artifact get
 
 ## Deploy
 
-[![Deploy on Railway](https://img.shields.io/badge/Deploy-Railway-6f57ff?style=for-the-badge)](https://railway.com/new/template?template=https://github.com/ZeroPointRepo/agent-artifacts)
-[![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46e3b7?style=for-the-badge)](https://render.com/deploy?repo=https://github.com/ZeroPointRepo/agent-artifacts)
-[![Deploy on Fly.io](https://img.shields.io/badge/Deploy-Fly.io-8b5cf6?style=for-the-badge)](./docs/deploy.md#flyio)
-[![Deploy with Coolify](https://img.shields.io/badge/Deploy-Coolify-2563eb?style=for-the-badge)](./docs/deploy.md#coolify)
+> **Deploy buttons pending:** the public repository and published container image are not live yet. The Railway/Render/Coolify one-click links are intentionally omitted until they can point at a working repo; otherwise a badge would look actionable and send users to a dead URL. Use the manual deploy guide from a source checkout for now.
 
 The checked-in deploy configs are:
 
