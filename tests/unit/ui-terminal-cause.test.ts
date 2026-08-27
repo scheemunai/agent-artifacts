@@ -47,7 +47,12 @@ describe('mid-view terminal states name the cause the server named', () => {
 
   it('selects by cause and still falls back to the bare status', () => {
     expect(viewerScript).toContain('terminalCause');
-    expect(viewerScript).toContain('body.error.code');
+    // Amended, not relaxed: the guard used to read `body && body.error && body.error.code` and now
+    // reads `body?.error?.code`. Same path through the same envelope, same nullish protection —
+    // only the syntax moved, when the migration brought this file under the linter for the first
+    // time. The assertion still fails the moment the client stops reading the cause the server
+    // sent, which is the claim it was written to make.
+    expect(viewerScript).toContain('body?.error?.code');
     // Both lookups present: a cause that has no template, or a body that will not parse, must still
     // produce a page rather than nothing.
     expect(viewerScript).toMatch(/data-aa-terminal-template="\$\{cause\}"/);

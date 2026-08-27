@@ -456,7 +456,7 @@ function showUpdatedPill() {
 async function terminalCause(response) {
   try {
     const body = await response.json();
-    const code = body && body.error && body.error.code;
+    const code = body?.error?.code;
     return typeof code === 'string' ? code : null;
   } catch {
     // A body that will not parse is not a reason to show nothing; the status template still applies.
