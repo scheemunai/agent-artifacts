@@ -833,6 +833,36 @@
     font-size: var(--text-aa-sm);
   }
 
+  /* A card whose subject is destructive: the border reddens and the header tints. The tint stops
+     at the header on purpose — tinting the body would make the card's contents read as the
+     warning, when the contents are usually the thing being protected.
+     The tone sits after the whole card family rather than beside `--raised`, so every rule it
+     overrides is already declared above it. Each one wins on specificity, but a modifier written
+     before the thing it modifies reads as though it were relying on order, and this file has
+     already paid for one of those. */
+  .aa-card--danger {
+    border-color: var(--color-aa-danger-line);
+  }
+
+  /* The header is the first child of a rounded, un-clipped box, so a flat fill would paint square
+     corners inside the card's rounded ones. Matching the top corners here rather than adding
+     `overflow: hidden` to the card: clipping is a behaviour, and a tone that silently starts
+     cropping whatever the body contains is a surprise the next author has to discover. Less 1px
+     for the card's own border, which the header sits inside. */
+  .aa-card--danger .aa-card__header {
+    border-radius: calc(var(--radius-aa-lg) - 1px) calc(var(--radius-aa-lg) - 1px) 0 0;
+    background: var(--color-aa-danger-soft);
+  }
+
+  /* Retone the separator that already exists rather than adding one. `.aa-card__header +
+     .aa-card__body` draws that line on the *body*, so a `border-bottom` on the header would sit
+     directly against it and render as two stacked 1px rules — one red, one grey — which reads as
+     a rendering fault rather than as a tone. */
+  .aa-card--danger .aa-card__header + .aa-card__body,
+  .aa-card--danger .aa-card__header + .aa-card__notice {
+    border-top-color: var(--color-aa-danger-line);
+  }
+
   .aa-table-wrap {
     display: grid;
     min-width: 0;
@@ -2155,6 +2185,11 @@
   .aa-list {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
+    /* Column gutter only. A row gap would separate the rows, and the rows are meant to sit flush
+       with a rule between them. Declared here as well as on the row because a subgridded axis
+       takes its gutters from the parent unless it sets its own: stating the same value in both
+       places keeps the subgrid and the no-subgrid fallback measuring identically. */
+    column-gap: var(--spacing-aa-3);
   }
 
   .aa-list-row {
@@ -2192,7 +2227,11 @@
   /* Stretched link: the whole row is the target, so the hit area matches what looks clickable
      instead of being the title's text box. The row is the visible focus surface, so the link's own
      ring is suppressed and `:focus-within` draws it — otherwise focus lands on a zero-size overlay
-     and the ring appears in the wrong place, or nowhere. */
+     and the ring appears in the wrong place, or nowhere.
+     The cost, stated so the next author does not have to find it: the overlay is a positioned
+     descendant, so it paints above the row's ordinary content. A second control in a row — a menu
+     button, a checkbox — has to be positioned to sit above it, or it is unclickable. A row that
+     needs several targets is not this pattern. */
   .aa-list-row__link {
     color: inherit;
     text-decoration: none;
@@ -2220,10 +2259,18 @@
     color: var(--color-aa-accent);
   }
 
+  /* Inset ring, and the halo explicitly off. Rows sit flush against each other, so the base
+     `--shadow-aa-focus` glow would spread 3px onto the neighbouring row and read as that row
+     lighting up too. Stating `box-shadow: none` rather than leaving it unset also keeps the
+     specimen honest: `[data-aa-state="focus"]` matches the base focus rule as well, so without
+     this the style guide would paint a halo the real `:focus-within` path never draws — a guide
+     showing a state the product cannot produce. Colour still comes from `--color-aa-focus`, so a
+     retoned surface retones this ring with it. */
   .aa-list-row:focus-within,
   .aa-list-row[data-aa-state="focus"] {
     outline: 2px solid var(--color-aa-focus);
     outline-offset: -2px;
+    box-shadow: none;
   }
 
   .aa-list-row__link:focus-visible {
@@ -2231,16 +2278,31 @@
     box-shadow: none;
   }
 
-  /* A card whose subject is destructive. The tint is on the header only: tinting the body would
-     make the card's content read as the warning, when the content is usually the thing being
-     protected. */
-  .aa-card--danger {
-    border-color: var(--color-aa-danger-line);
-  }
+  /* Below 480 the three columns cannot share a line. The meta is `nowrap` and the badge is a pill,
+     so on a 375px screen they take everything and leave the title about forty pixels — which
+     `overflow-wrap: anywhere` then shreds one character at a time into a 127px-tall row. The
+     columns exist to align rows against each other, and at this width there is nothing to align:
+     a phone reads one row at a time. So the title takes its own line and the badge and meta sit
+     under it.
 
-  .aa-card--danger .aa-card__header {
-    border-bottom: 1px solid var(--color-aa-danger-line);
-    background: var(--color-aa-danger-soft);
+     This is the failure the desktop rule above warns about, arriving from the other direction: a
+     specimen at 1280 says the pattern works, and only a narrow viewport disagrees. */
+  @media (max-width: 480px) {
+    .aa-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Overrides the `subgrid` above — same specificity, later in the file, and the parent has one
+       column here anyway. `minmax(0, 1fr)` on the second track, not `auto`: an auto track sizes to
+       its content, and the meta would sooner push the row sideways than wrap. */
+    .aa-list-row {
+      grid-template-columns: auto minmax(0, 1fr);
+      row-gap: var(--spacing-aa-2);
+    }
+
+    .aa-list-row__title {
+      grid-column: 1 / -1;
+    }
   }
 
   .aa-token-card {
