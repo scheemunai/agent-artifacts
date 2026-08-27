@@ -315,3 +315,51 @@ describe('ButtonRow adoption · no page in this batch ships aa-specimen-row', ()
     });
   }
 });
+
+/**
+ * The style guide documents `autocomplete` as the browser's own vocabulary, required on every
+ * password field the product ships. Three of these boxes are passwords. The fourth only looks like
+ * one.
+ */
+describe('password fields declare what they hold', () => {
+  const attr = (html: string, id: string) => {
+    const tag = new RegExp(`<input[^>]*id="${id}"[^>]*>`).exec(html)?.[0] ?? '';
+    return /autocomplete="([^"]*)"/.exec(tag)?.[1];
+  };
+
+  it('tells a manager which password is the current one on the log-in form', () => {
+    const html = renderToString(LoginPage({ mode: 'password', mailAvailable: true }));
+
+    expect(attr(html, 'password')).toBe('current-password');
+  });
+
+  it('marks both setup password boxes as new, so neither is filled with an existing one', () => {
+    const html = renderToString(SetupPage({ baseUrl: BASE }));
+
+    expect(attr(html, 'password')).toBe('new-password');
+    expect(attr(html, 'password_confirm')).toBe('new-password');
+  });
+
+  it('does not let the one-time setup token be saved as the site password', () => {
+    const html = renderToString(SetupPage({ baseUrl: BASE }));
+
+    // It is masked because it is a secret, not because it is a password. It is a code the operator
+    // reads out of the boot log once and never again, so it gets the vocabulary for that.
+    expect(attr(html, 'setup_token')).toBe('one-time-code');
+    expect(attr(html, 'setup_token')).not.toBe('current-password');
+    expect(attr(html, 'setup_token')).not.toBe('new-password');
+  });
+
+  it('leaves no password box in this batch without a declared purpose', () => {
+    const pages = [
+      renderToString(LoginPage({ mode: 'password', mailAvailable: true })),
+      renderToString(SetupPage({ baseUrl: BASE })),
+    ];
+
+    for (const html of pages) {
+      for (const tag of html.match(/<input[^>]*type="password"[^>]*>/g) ?? []) {
+        expect(tag).toMatch(/autocomplete="/);
+      }
+    }
+  });
+});

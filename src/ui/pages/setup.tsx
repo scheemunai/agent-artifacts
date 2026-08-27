@@ -79,6 +79,12 @@ export function SetupPage({
                   name="setup_token"
                   label="Setup token"
                   type="password"
+                  // Masked because it is a secret, not because it is a password. This is a code the
+                  // operator reads out of the boot log once and never uses again, so a manager must
+                  // not offer to save it as the site password. `off` would be the wrong instrument:
+                  // browsers deliberately ignore it on password-typed fields so that managers keep
+                  // working. Naming the field truthfully is what actually changes the behaviour.
+                  autocomplete="one-time-code"
                   value={setupToken}
                   hint="Find this one-time token in the server boot log."
                   error={fieldError('setup_token')}
@@ -96,6 +102,7 @@ export function SetupPage({
                   name="password"
                   label="Password"
                   type="password"
+                  autocomplete="new-password"
                   error={fieldError('password')}
                 />
                 <Input
@@ -103,6 +110,7 @@ export function SetupPage({
                   name="password_confirm"
                   label="Confirm password"
                   type="password"
+                  autocomplete="new-password"
                   error={fieldError('password_confirm')}
                 />
                 <Input
