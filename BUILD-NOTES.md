@@ -228,3 +228,62 @@ card stop being indigo Inter and start being coral Source Sans 3, and why" will 
 a commit about OG and find none. The answer is `7723be1`, and the reasoning is in the OG entry of
 the round-1 consolidation above. Blame on `src/lib/og.ts` points at a Postgres commit; that is an
 accident of tooling, not a sign that the palette change was slipped in.
+
+## 2026-08-27 — Corrections to the section-12 registrations, and one more archaeology note
+
+Appended rather than edited in place. The entries above record what was true when they were
+written; overwriting them would make this file read as though it had always been right.
+
+### The dashboard-preview framing gap is closed
+
+The registration above says the dashboard-preview headers carry no `frame-ancestors`, making that
+the only frame response in the codebase without a framing restriction. That was true when it was
+written and stopped being true the same evening: `22cfbd5` added `frame-ancestors 'self'` to
+`dashboardPreviewFrameCsp`, and the deploy verification confirmed it live by diffing the response's
+CSP directive set before and after (exactly one directive added, none removed, public frame headers
+byte-identical).
+
+`'self'` rather than the configured base URL is deliberate and the commit explains why: the
+dashboard embeds this route with a relative `src`, so the framing parent is whatever origin served
+the dashboard, which is not always `BASE_URL` behind a proxy, on a custom domain, or in
+development. `'self'` is that origin by definition and cannot drift from it. The public variant
+names an origin for the opposite reason: it is served from the sandbox host and framed by the app
+host, so the two genuinely differ.
+
+So the registration above should now be read as history. Every frame response in the product has a
+framing restriction.
+
+### `6ef8917` and `6213cd8` are one logical change
+
+`6ef8917` stops the viewer telling a recipient that a suspended owner revoked their link: it
+changes the thrown code from `share_revoked` to `share_disabled`, and updates
+`revoked-share-410.test.ts` to assert the new terminal copy, "This link is no longer available."
+
+It does not contain the branch that produces that copy. The mapping from `share_disabled` to that
+title lives in `src/routes/public.ts`, and it arrives nine seconds later in `6213cd8`, a commit
+titled and described as being about download content negotiation. `6ef8917` touches `public.ts`
+zero times, so at that commit the viewer throws a code the terminal page has no branch for and the
+test it ships fails.
+
+The consequence is narrow and specific: anyone bisecting through this range lands on a commit whose
+suite is red for a reason unrelated to whatever they are bisecting for, and neither message tells
+them why. Treat the pair as a single change. Same remedy as the `7723be1` note above, and the same
+reason: the history stands, so the explanation goes here.
+
+### §7.2.8 view recording: the shape deviates from the PRD, deliberately
+
+PRD §7.2.8 prescribes a literal `INSERT … ON CONFLICT (share_id, viewer_id) DO UPDATE` upsert on
+both engines. What ships is three steps on both engines: a throttled `UPDATE`, then a capped
+`INSERT … ON CONFLICT DO NOTHING`, then an existence probe that separates "throttled" from "at the
+50,000-row unique-viewer cap".
+
+The deviation is real and it is deliberate. A single `DO UPDATE` upsert cannot express the
+50,000-row cap, because the cap has to be evaluated before the insert is allowed to create a new
+viewer row, and it cannot distinguish "this viewer was throttled inside the 10-second window" from
+"this share is at its cap", which are different outcomes that the counting rules treat differently.
+The three-step form keeps every counting semantic §8.6 specifies, is race-proof on both engines
+(the `23505` that used to 500 the public content endpoint is now structurally impossible), and was
+verified red-before-green.
+
+Until now this was explained only in a code comment. PRD §7.2.8 still prescribes the shape that is
+not shipped, so a v1.2 amendment is owed there too.
