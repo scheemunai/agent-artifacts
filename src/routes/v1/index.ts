@@ -296,7 +296,9 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
     return context.json(
       await deleteShareResponse({
         db: requireDb(ctx),
-        accountId: auth.account.id,
+        cloudModule: requireCloudModule(ctx),
+        config: ctx.config,
+        account: auth.account,
         idOrSlug: context.req.param('id_or_slug'),
       })
     );

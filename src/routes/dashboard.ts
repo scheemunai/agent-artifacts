@@ -9,7 +9,7 @@ import { AppError } from '../lib/errors.js';
 import { dashboardPreviewFrameHeaders } from '../lib/frame-policy.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import type { Logger } from '../logger.js';
-import { ArtifactService } from '../services/artifacts.js';
+import { ArtifactService, type TemplatePreview } from '../services/artifacts.js';
 import {
   AuthError,
   AuthService,
@@ -33,12 +33,6 @@ import {
   SessionService,
 } from '../services/sessions.js';
 import { promoteArtifactToTemplate } from '../services/templates.js';
-import {
-  type AuthPrincipal,
-  createShareResponse,
-  deleteShareResponse,
-  patchShareResponse,
-} from '../services/v1.js';
 import {
   DashboardArtifactPage,
   DashboardBotsPage,
@@ -88,17 +82,6 @@ interface KeyReveal {
   apiKey: string;
   botName: string;
   createdAt: number;
-}
-
-interface TemplatePreviewRow {
-  id: string;
-  account_id: string | null;
-  slug: string;
-  name: string;
-  description: string | null;
-  type: 'markdown' | 'html';
-  content: string;
-  slots: string;
 }
 
 const keyRevealTtlMs = 10 * 60 * 1000;
@@ -838,75 +821,16 @@ async function getTemplatePreview(
   services: HumanServices,
   accountId: string,
   templateId: string
-): Promise<{
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  type: 'markdown' | 'html';
-  slots: string[];
-  builtIn: boolean;
-  content: string;
-  htmlPreview: string | null;
-} | null> {
-  if (!templateId) {
+): Promise<(TemplatePreview & { htmlPreview: string | null }) | null> {
+  const template = await services.artifacts.getTemplatePreview(accountId, templateId);
+  if (!template) {
     return null;
   }
 
-  const sql = `
-    SELECT *
-    FROM templates
-    WHERE id = ? AND (account_id IS NULL OR account_id = ?)
-    LIMIT 1
-  `;
-  const row =
-    services.db.dialect === 'sqlite'
-      ? (services.db.sqlite.prepare(sql).get(templateId, accountId) as
-          | TemplatePreviewRow
-          | undefined)
-      : (
-          await services.db.pool.query<TemplatePreviewRow>(
-            sql.replace('?', '$1').replace('?', '$2'),
-            [templateId, accountId]
-          )
-        ).rows[0];
-
-  return row
-    ? {
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        description: row.description,
-        type: row.type,
-        slots: parseTemplateSlotNames(row.slots),
-        builtIn: row.account_id === null,
-        content: row.content,
-        htmlPreview:
-          row.type === 'markdown' ? renderMarkdown(row.content, { headingOffset: 1 }) : null,
-      }
-    : null;
-}
-
-function parseTemplateSlotNames(slotsJson: string): string[] {
-  try {
-    const value = JSON.parse(slotsJson) as Array<string | { name?: string }>;
-    return value
-      .map((slot) => (typeof slot === 'string' ? slot : (slot.name ?? '')))
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-function dashboardPrincipal(account: AuthenticatedSession['account']): AuthPrincipal {
   return {
-    account: accountToCloudAccount(account),
-    bot: {
-      id: 'dashboard',
-      name: 'Dashboard',
-      byline: null,
-    },
-    apiKeyHash: 'dashboard',
+    ...template,
+    htmlPreview:
+      template.type === 'markdown' ? renderMarkdown(template.content, { headingOffset: 1 }) : null,
   };
 }
 
@@ -916,11 +840,8 @@ async function createDashboardShare(
   artifactId: string,
   password: string
 ): Promise<void> {
-  await createShareResponse({
-    db: services.db,
-    cloudModule: services.cloudModule,
-    config: services.config,
-    auth: dashboardPrincipal(session.account),
+  await services.artifacts.createShare({
+    account: accountToCloudAccount(session.account),
     idOrSlug: artifactId,
     ...(password ? { passwordHash: await hashPassword(password) } : {}),
   });
@@ -932,11 +853,8 @@ async function setDashboardSharePassword(
   artifactId: string,
   password: string
 ): Promise<void> {
-  await patchShareResponse({
-    db: services.db,
-    cloudModule: services.cloudModule,
-    config: services.config,
-    auth: dashboardPrincipal(session.account),
+  await services.artifacts.setSharePassword({
+    account: accountToCloudAccount(session.account),
     idOrSlug: artifactId,
     passwordHash: await hashPassword(password),
   });
@@ -947,11 +865,8 @@ async function removeDashboardSharePassword(
   session: AuthenticatedSession,
   artifactId: string
 ): Promise<void> {
-  await patchShareResponse({
-    db: services.db,
-    cloudModule: services.cloudModule,
-    config: services.config,
-    auth: dashboardPrincipal(session.account),
+  await services.artifacts.setSharePassword({
+    account: accountToCloudAccount(session.account),
     idOrSlug: artifactId,
     passwordHash: null,
   });
@@ -962,9 +877,8 @@ async function revokeDashboardShare(
   session: AuthenticatedSession,
   artifactId: string
 ): Promise<void> {
-  await deleteShareResponse({
-    db: services.db,
-    accountId: session.account.id,
+  await services.artifacts.revokeShare({
+    account: accountToCloudAccount(session.account),
     idOrSlug: artifactId,
   });
 }

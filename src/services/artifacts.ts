@@ -88,6 +88,7 @@ export interface ArtifactVersionSnapshot {
 
 export interface ShareSnapshot {
   shareId: string;
+  artifactId: string;
   url: string;
   passwordProtected: boolean;
   passwordUpdatedAt: number | null;
@@ -108,6 +109,44 @@ export interface ArtifactWriteResult {
 export interface SoftDeleteArtifactResult {
   deleted: boolean;
   revokedShareCount: number;
+}
+
+export interface CreateShareInput {
+  account: Account;
+  idOrSlug: string;
+  passwordHash?: string;
+}
+
+export interface SetSharePasswordInput {
+  account: Account;
+  idOrSlug: string;
+  passwordHash: string | null;
+}
+
+export interface RevokeShareInput {
+  account: Account;
+  idOrSlug: string;
+}
+
+export interface ShareMutationResult {
+  share: ShareSnapshot;
+  reused: boolean;
+}
+
+export interface RevokeShareResult {
+  revoked: boolean;
+  revokedShareIds: string[];
+}
+
+export interface TemplatePreview {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  type: ArtifactType;
+  content: string;
+  slots: string[];
+  builtIn: boolean;
 }
 
 export interface ArtifactServiceOptions {
@@ -160,10 +199,26 @@ interface ShareDbRow {
   created_at: number;
 }
 
+interface TemplatePreviewDbRow {
+  id: string;
+  account_id: string | null;
+  slug: string;
+  name: string;
+  description: string | null;
+  type: ArtifactType;
+  content: string;
+  slots: string;
+}
+
 interface PendingShareEvent {
   accountId: string;
   artifactId: string;
   shareId: string;
+}
+
+interface ShareRevokeOutcome {
+  revokedShareIds: string[];
+  events: ArtifactEvent[];
 }
 
 interface PatchArtifactTarget {
@@ -378,6 +433,150 @@ export class ArtifactService {
       deleted: outcome.deleted,
       revokedShareCount: outcome.revokedShareCount,
     };
+  }
+
+  /**
+   * Create a share for an artifact, or reuse the one that is already active.
+   *
+   * This is the only supported way to mint a share: it owns the `set_share_password`
+   * quota check, the one-active-share race fallback, and the `share.created` event
+   * required by the CloudModule hook surface (PRD §4.5).
+   */
+  async createShare(input: CreateShareInput): Promise<ShareMutationResult> {
+    const artifact = await this.resolveLiveArtifact(input.account.id, input.idOrSlug);
+    if (!artifact) {
+      throw new ServiceError(404, 'not_found', 'Artifact not found');
+    }
+    if (input.passwordHash !== undefined) {
+      await this.enforceQuota(input.account, { type: 'set_share_password' });
+    }
+
+    const now = this.now();
+    const existing = await this.findActiveShare(artifact.id);
+    if (existing) {
+      if (input.passwordHash !== undefined) {
+        await this.writeSharePassword(existing.id, input.passwordHash, now);
+      }
+      const share = (await this.findActiveShare(artifact.id)) ?? existing;
+      return { share: shareFromRow(share, this.baseUrl), reused: true };
+    }
+
+    const shareId = nanoid(22);
+    try {
+      await this.insertShare(shareId, artifact.id, input.passwordHash ?? null, now);
+    } catch (error) {
+      if (!isUniqueConstraintError(error)) {
+        throw error;
+      }
+      // Another writer won the one-active-share index; it owns the share.created event.
+      const raced = await this.findActiveShare(artifact.id);
+      if (!raced) {
+        throw error;
+      }
+      return { share: shareFromRow(raced, this.baseUrl), reused: true };
+    }
+
+    const created = await this.findActiveShare(artifact.id);
+    if (!created) {
+      throw new ServiceError(500, 'internal_error', 'Share was not persisted');
+    }
+
+    this.emitEvent(shareCreatedEvent(input.account.id, artifact.id, shareId, now));
+    return { share: shareFromRow(created, this.baseUrl), reused: false };
+  }
+
+  /**
+   * Set or clear the password on the artifact's active share. Password changes are not
+   * part of the §4.5 event surface, so this path emits nothing by design.
+   */
+  async setSharePassword(input: SetSharePasswordInput): Promise<ShareSnapshot> {
+    const artifact = await this.resolveLiveArtifact(input.account.id, input.idOrSlug);
+    if (!artifact) {
+      throw new ServiceError(404, 'not_found', 'Artifact not found');
+    }
+    const share = await this.findActiveShare(artifact.id);
+    if (!share) {
+      throw new ServiceError(404, 'not_found', 'Active share not found');
+    }
+
+    await this.enforceQuota(input.account, { type: 'set_share_password' });
+    await this.writeSharePassword(share.id, input.passwordHash, this.now());
+    const updated = (await this.findActiveShare(artifact.id)) ?? share;
+    return shareFromRow(updated, this.baseUrl);
+  }
+
+  /**
+   * Soft-revoke the artifact's active share and emit one `share.revoked` per revoked row.
+   */
+  async revokeShare(input: RevokeShareInput): Promise<RevokeShareResult> {
+    const artifact = await this.resolveLiveArtifact(input.account.id, input.idOrSlug);
+    if (!artifact) {
+      throw new ServiceError(404, 'not_found', 'Artifact not found');
+    }
+
+    const outcome =
+      this.db.dialect === 'sqlite'
+        ? this.revokeSqliteShares(input.account.id, artifact.id)
+        : await this.revokePostgresShares(input.account.id, artifact.id);
+
+    for (const event of outcome.events) {
+      this.emitEvent(event);
+    }
+
+    return {
+      revoked: outcome.revokedShareIds.length > 0,
+      revokedShareIds: outcome.revokedShareIds,
+    };
+  }
+
+  /**
+   * Read a built-in or account-owned template for the dashboard preview pane.
+   *
+   * TODO(R2-001 follow-up): this is a template read model, not artifact state. It lives here
+   * only so the dashboard route stops owning SQL; consolidate it into a template read-model
+   * service alongside `dashboard-read-models.ts` when that seam is next opened.
+   */
+  async getTemplatePreview(accountId: string, templateId: string): Promise<TemplatePreview | null> {
+    if (!templateId) {
+      return null;
+    }
+
+    const row =
+      this.db.dialect === 'sqlite'
+        ? ((this.db.sqlite
+            .prepare(
+              `
+                SELECT *
+                FROM templates
+                WHERE id = ? AND (account_id IS NULL OR account_id = ?)
+                LIMIT 1
+              `
+            )
+            .get(templateId, accountId) as TemplatePreviewDbRow | undefined) ?? null)
+        : ((
+            await this.db.pool.query<TemplatePreviewDbRow>(
+              `
+                SELECT *
+                FROM templates
+                WHERE id = $1 AND (account_id IS NULL OR account_id = $2)
+                LIMIT 1
+              `,
+              [templateId, accountId]
+            )
+          ).rows[0] ?? null);
+
+    return row
+      ? {
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          description: row.description,
+          type: row.type,
+          content: row.content,
+          slots: parseTemplateSlotNames(row.slots),
+          builtIn: row.account_id === null,
+        }
+      : null;
   }
 
   async getArtifactBySlug(accountId: string, slug: string): Promise<ArtifactSnapshot | null> {
@@ -1452,6 +1651,103 @@ export class ArtifactService {
     return { accountId: input.account.id, artifactId, shareId };
   }
 
+  private async insertShare(
+    shareId: string,
+    artifactId: string,
+    passwordHash: string | null,
+    now: number
+  ): Promise<void> {
+    const columns = `
+      INSERT INTO shares (
+        id, artifact_id, password_hash, password_updated_at, expires_at,
+        revoked_at, view_count, unique_viewer_count, last_viewed_at, created_at
+      )
+    `;
+    const values = [shareId, artifactId, passwordHash, passwordHash === null ? null : now, now];
+
+    if (this.db.dialect === 'sqlite') {
+      this.db.sqlite
+        .prepare(`${columns} VALUES (?, ?, ?, ?, NULL, NULL, 0, 0, NULL, ?)`)
+        .run(...values);
+      return;
+    }
+
+    await this.db.pool.query(`${columns} VALUES ($1, $2, $3, $4, NULL, NULL, 0, 0, NULL, $5)`, [
+      ...values,
+    ]);
+  }
+
+  private async writeSharePassword(
+    shareId: string,
+    passwordHash: string | null,
+    now: number
+  ): Promise<void> {
+    if (this.db.dialect === 'sqlite') {
+      this.db.sqlite
+        .prepare('UPDATE shares SET password_hash = ?, password_updated_at = ? WHERE id = ?')
+        .run(passwordHash, now, shareId);
+      return;
+    }
+
+    await this.db.pool.query(
+      'UPDATE shares SET password_hash = $1, password_updated_at = $2 WHERE id = $3',
+      [passwordHash, now, shareId]
+    );
+  }
+
+  private revokeSqliteShares(accountId: string, artifactId: string): ShareRevokeOutcome {
+    const handle = this.db as SqliteDatabaseHandle;
+    const transaction = handle.sqlite.transaction(() => {
+      const now = this.now();
+      const active = handle.sqlite
+        .prepare('SELECT * FROM shares WHERE artifact_id = ? AND revoked_at IS NULL')
+        .all(artifactId) as ShareDbRow[];
+
+      handle.sqlite
+        .prepare('UPDATE shares SET revoked_at = ? WHERE artifact_id = ? AND revoked_at IS NULL')
+        .run(now, artifactId);
+
+      return {
+        revokedShareIds: active.map((share) => share.id),
+        events: active.map((share) => shareRevokedEvent(accountId, artifactId, share.id, now)),
+      };
+    });
+
+    return transaction.immediate();
+  }
+
+  private async revokePostgresShares(
+    accountId: string,
+    artifactId: string
+  ): Promise<ShareRevokeOutcome> {
+    const handle = this.db as PostgresDatabaseHandle;
+    const client = await handle.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+      const now = this.now();
+      const active = await client.query<ShareDbRow>(
+        'SELECT * FROM shares WHERE artifact_id = $1 AND revoked_at IS NULL FOR UPDATE',
+        [artifactId]
+      );
+      await client.query(
+        'UPDATE shares SET revoked_at = $1 WHERE artifact_id = $2 AND revoked_at IS NULL',
+        [now, artifactId]
+      );
+      await client.query('COMMIT');
+
+      return {
+        revokedShareIds: active.rows.map((share) => share.id),
+        events: active.rows.map((share) => shareRevokedEvent(accountId, artifactId, share.id, now)),
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   private updateSqliteMetadataIfNeeded(
     handle: SqliteDatabaseHandle,
     current: ArtifactDbRow,
@@ -1681,6 +1977,7 @@ function versionFromRow(row: ArtifactVersionDbRow): ArtifactVersionSnapshot {
 function shareFromRow(row: ShareDbRow, baseUrl: string): ShareSnapshot {
   return {
     shareId: row.id,
+    artifactId: row.artifact_id,
     url: `${baseUrl}/a/${row.id}`,
     passwordProtected: row.password_hash !== null,
     passwordUpdatedAt: row.password_updated_at,
@@ -1733,25 +2030,39 @@ function artifactEvent(
   };
 }
 
+function shareCreatedEvent(
+  accountId: string,
+  artifactId: string,
+  shareId: string,
+  now: number
+): ArtifactEvent {
+  return {
+    type: 'share.created',
+    accountId,
+    artifactId,
+    shareId,
+    at: new Date(now).toISOString(),
+  };
+}
+
 function shareCreatedEvents(
   accountId: string,
   artifactId: string,
   share: PendingShareEvent | null,
   now: number
 ): ArtifactEvent[] {
-  if (!share) {
+  return share ? [shareCreatedEvent(accountId, artifactId, share.shareId, now)] : [];
+}
+
+function parseTemplateSlotNames(slotsJson: string): string[] {
+  try {
+    const value = JSON.parse(slotsJson) as Array<string | { name?: string }>;
+    return value
+      .map((slot) => (typeof slot === 'string' ? slot : (slot.name ?? '')))
+      .filter(Boolean);
+  } catch {
     return [];
   }
-
-  return [
-    {
-      type: 'share.created',
-      accountId,
-      artifactId,
-      shareId: share.shareId,
-      at: new Date(now).toISOString(),
-    },
-  ];
 }
 
 function shareRevokedEvent(

@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { nanoid } from 'nanoid';
 import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 import type { AppConfig } from '../config.js';
 import type { DatabaseHandle, PostgresDatabaseHandle } from '../db/client.js';
@@ -16,7 +15,7 @@ import {
   type ArtifactType,
   BOT_KEY_PATTERN,
 } from '../lib/schemas/artifacts.js';
-import { ArtifactService, type ArtifactSnapshot } from './artifacts.js';
+import { ArtifactService, type ArtifactSnapshot, type ShareSnapshot } from './artifacts.js';
 import { hashPassword } from './auth.js';
 import { hashSecret } from './bots.js';
 import {
@@ -506,46 +505,16 @@ export async function createShareResponse(input: {
   idOrSlug: string;
   passwordHash?: string;
 }): Promise<{ status: 200 | 201; body: Record<string, unknown> }> {
-  const artifact = await resolveLiveArtifact(input.db, input.auth.account.id, input.idOrSlug);
-  if (!artifact) {
-    throw new AppError(404, 'not_found', 'Artifact not found');
-  }
-  if (input.passwordHash !== undefined) {
-    await assertSharePasswordQuota(input.cloudModule, input.auth.account);
-  }
+  const result = await artifactService(input).createShare({
+    account: input.auth.account,
+    idOrSlug: input.idOrSlug,
+    ...(input.passwordHash !== undefined ? { passwordHash: input.passwordHash } : {}),
+  });
 
-  const now = Date.now();
-  const existing = await findActiveShare(input.db, artifact.id);
-  if (existing) {
-    if (input.passwordHash !== undefined) {
-      await updateSharePassword(input.db, existing.id, input.passwordHash, now);
-    }
-    const share = (await findActiveShare(input.db, artifact.id)) ?? existing;
-    return {
-      status: 200,
-      body: await formatShare(input.db, share, input.config.baseUrl, true),
-    };
-  }
-
-  const shareId = nanoid(22);
-  try {
-    await insertShare(input.db, shareId, artifact.id, input.passwordHash ?? null, now);
-  } catch (error) {
-    if (!isUniqueConstraintError(error)) {
-      throw error;
-    }
-    const raced = await findActiveShare(input.db, artifact.id);
-    if (!raced) {
-      throw error;
-    }
-    return { status: 200, body: await formatShare(input.db, raced, input.config.baseUrl, true) };
-  }
-
-  const created = await findActiveShare(input.db, artifact.id);
-  if (!created) {
-    throw new AppError(500, 'internal_error', 'Share was not persisted');
-  }
-  return { status: 201, body: await formatShare(input.db, created, input.config.baseUrl, false) };
+  return {
+    status: result.reused ? 200 : 201,
+    body: await formatShare(input.db, result.share, result.reused),
+  };
 }
 
 export async function patchShareResponse(input: {
@@ -556,33 +525,28 @@ export async function patchShareResponse(input: {
   idOrSlug: string;
   passwordHash: string | null;
 }): Promise<Record<string, unknown>> {
-  const artifact = await resolveLiveArtifact(input.db, input.auth.account.id, input.idOrSlug);
-  if (!artifact) {
-    throw new AppError(404, 'not_found', 'Artifact not found');
-  }
-  const share = await findActiveShare(input.db, artifact.id);
-  if (!share) {
-    throw new AppError(404, 'not_found', 'Active share not found');
-  }
+  const share = await artifactService(input).setSharePassword({
+    account: input.auth.account,
+    idOrSlug: input.idOrSlug,
+    passwordHash: input.passwordHash,
+  });
 
-  await assertSharePasswordQuota(input.cloudModule, input.auth.account);
-  await updateSharePassword(input.db, share.id, input.passwordHash, Date.now());
-  const updated = (await findActiveShare(input.db, artifact.id)) ?? share;
-  return formatShare(input.db, updated, input.config.baseUrl);
+  return formatShare(input.db, share);
 }
 
 export async function deleteShareResponse(input: {
   db: DatabaseHandle;
-  accountId: string;
+  cloudModule: CloudModule;
+  config: AppConfig;
+  account: Account;
   idOrSlug: string;
 }): Promise<Record<string, unknown>> {
-  const artifact = await resolveLiveArtifact(input.db, input.accountId, input.idOrSlug);
-  if (!artifact) {
-    throw new AppError(404, 'not_found', 'Artifact not found');
-  }
+  const result = await artifactService(input).revokeShare({
+    account: input.account,
+    idOrSlug: input.idOrSlug,
+  });
 
-  const changes = await revokeActiveShare(input.db, artifact.id, Date.now());
-  return { revoked: changes > 0 };
+  return { revoked: result.revoked };
 }
 
 export async function listTemplatesResponse(input: {
@@ -743,24 +707,35 @@ async function formatVersion(
   };
 }
 
+function artifactService(input: {
+  db: DatabaseHandle;
+  cloudModule: CloudModule;
+  config: AppConfig;
+}): ArtifactService {
+  return new ArtifactService({
+    db: input.db,
+    extension: input.cloudModule,
+    baseUrl: input.config.baseUrl,
+  });
+}
+
 async function formatShare(
   db: DatabaseHandle,
-  share: ShareRow,
-  baseUrl: string,
+  share: ShareSnapshot,
   reused?: boolean
 ): Promise<Record<string, unknown>> {
-  const views = await shareViews(db, share.artifact_id, share);
+  const views = await shareViews(db, share.artifactId, share);
   return {
-    share_id: share.id,
-    url: `${baseUrl}/a/${share.id}`,
-    artifact_id: share.artifact_id,
-    password_protected: share.password_hash !== null,
+    share_id: share.shareId,
+    url: share.url,
+    artifact_id: share.artifactId,
+    password_protected: share.passwordProtected,
     ...(reused !== undefined ? { reused } : {}),
     views,
-    last_viewed_at: share.last_viewed_at === null ? null : toIso(share.last_viewed_at),
-    created_at: toIso(share.created_at),
-    expires_at: share.expires_at === null ? null : toIso(share.expires_at),
-    revoked_at: share.revoked_at === null ? null : toIso(share.revoked_at),
+    last_viewed_at: share.lastViewedAt === null ? null : toIso(share.lastViewedAt),
+    created_at: toIso(share.createdAt),
+    expires_at: share.expiresAt === null ? null : toIso(share.expiresAt),
+    revoked_at: share.revokedAt === null ? null : toIso(share.revokedAt),
   };
 }
 
@@ -773,7 +748,10 @@ async function formatArtifactShare(
     share_id: share.id,
     url: `${baseUrl}/a/${share.id}`,
     password_protected: share.password_hash !== null,
-    views: await shareViews(db, share.artifact_id, share),
+    views: await shareViews(db, share.artifact_id, {
+      viewCount: share.view_count,
+      uniqueViewerCount: share.unique_viewer_count,
+    }),
     created_at: toIso(share.created_at),
     expires_at: share.expires_at === null ? null : toIso(share.expires_at),
   };
@@ -813,13 +791,6 @@ function parseJsonObject(value: string): Record<string, unknown> {
       : {};
   } catch {
     return {};
-  }
-}
-
-async function assertSharePasswordQuota(cloudModule: CloudModule, account: Account): Promise<void> {
-  const quota = await cloudModule.checkQuota(account, { type: 'set_share_password' });
-  if (!quota.allow) {
-    throw new AppError(403, 'quota_exceeded', quota.message, { code: quota.code });
   }
 }
 
@@ -1051,55 +1022,10 @@ async function findActiveShare(db: DatabaseHandle, artifactId: string): Promise<
   );
 }
 
-async function insertShare(
-  db: DatabaseHandle,
-  shareId: string,
-  artifactId: string,
-  passwordHash: string | null,
-  now: number
-): Promise<void> {
-  await execute(
-    db,
-    `
-      INSERT INTO shares (
-        id, artifact_id, password_hash, password_updated_at, expires_at,
-        revoked_at, view_count, unique_viewer_count, last_viewed_at, created_at
-      )
-      VALUES (?, ?, ?, ?, NULL, NULL, 0, 0, NULL, ?)
-    `,
-    [shareId, artifactId, passwordHash, passwordHash === null ? null : now, now]
-  );
-}
-
-async function updateSharePassword(
-  db: DatabaseHandle,
-  shareId: string,
-  passwordHash: string | null,
-  now: number
-): Promise<void> {
-  await execute(db, 'UPDATE shares SET password_hash = ?, password_updated_at = ? WHERE id = ?', [
-    passwordHash,
-    now,
-    shareId,
-  ]);
-}
-
-async function revokeActiveShare(
-  db: DatabaseHandle,
-  artifactId: string,
-  now: number
-): Promise<number> {
-  return execute(
-    db,
-    'UPDATE shares SET revoked_at = ? WHERE artifact_id = ? AND revoked_at IS NULL',
-    [now, artifactId]
-  );
-}
-
 async function shareViews(
   db: DatabaseHandle,
   artifactId: string,
-  share: ShareRow
+  share: { viewCount: number; uniqueViewerCount: number }
 ): Promise<Record<string, number>> {
   const lifetime = await queryOne<{ total: number | string }>(
     db,
@@ -1112,8 +1038,8 @@ async function shareViews(
     [artifactId]
   );
   return {
-    share_views: share.view_count,
-    unique_viewers: share.unique_viewer_count,
+    share_views: share.viewCount,
+    unique_viewers: share.uniqueViewerCount,
     lifetime_views: Number(lifetime?.total ?? 0),
     previous_shares: Number(previous?.count ?? 0),
   };
@@ -1145,15 +1071,6 @@ async function queryAll<T extends QueryResultRow>(
   return result.rows;
 }
 
-async function execute(db: DatabaseHandle, sql: string, params: unknown[]): Promise<number> {
-  if (db.dialect === 'sqlite') {
-    return Number(db.sqlite.prepare(sql).run(...params).changes);
-  }
-
-  const result = await pgQuery(db.pool, sql, params);
-  return result.rowCount ?? 0;
-}
-
 async function pgQuery<T extends QueryResultRow>(
   executor: PostgresDatabaseHandle['pool'] | PoolClient,
   sql: string,
@@ -1162,14 +1079,6 @@ async function pgQuery<T extends QueryResultRow>(
   let index = 0;
   const text = sql.replace(/\?/g, () => `$${++index}`);
   return executor.query<T>(text, params);
-}
-
-function isUniqueConstraintError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-  const code = 'code' in error ? String(error.code) : '';
-  return code === 'SQLITE_CONSTRAINT_UNIQUE' || code === '23505';
 }
 
 export function sha256(value: string): string {
