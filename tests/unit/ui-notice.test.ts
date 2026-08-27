@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
-import { Notice, type NoticeTone } from '../../src/ui/components/primitives.js';
+import {
+  Card,
+  Notice,
+  type NoticeTone,
+  StatusHeading,
+} from '../../src/ui/components/primitives.js';
 import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
 import { declarationValue, parseStylesheet } from '../support/css-cascade.js';
 
@@ -102,5 +107,82 @@ describe('Notice', () => {
     // The regenerate-key outcome is the canonical warn case: a breaking, security-relevant change
     // that shipped in success green.
     expect(html).toContain('Old key is invalid now');
+  });
+
+  it('is attached by default, and detaching it is an explicit choice with a cost', () => {
+    // Measured across the product: every status except the viewer's Updated pill is detached from
+    // its subject — "Link sent" floats 32px above its own heading, the setup validation error
+    // ~300px above the field it names. A prettier component placed the same way is the same defect,
+    // so the default posture is attached, and the page-level posture has to be asked for.
+    const attached = renderToString(Notice({ tone: 'danger', children: 'Nothing was deleted.' }));
+    const page = renderToString(
+      Notice({ tone: 'danger', children: 'Nothing was deleted.', placement: 'page' })
+    );
+
+    expect(attached).not.toContain('tabindex');
+    expect(attached).not.toContain('data-aa-notice-page');
+
+    // If a notice must sit away from what it describes, it has to be reachable: focusable, and
+    // taken to on load, so it is announced instead of scrolled past.
+    expect(page).toContain('tabindex="-1"');
+    expect(page).toContain('data-aa-notice-page="true"');
+    expect(foundationScript).toContain('data-aa-notice-page');
+    expect(foundationScript).toContain('focus');
+  });
+
+  it('has a slot inside the card whose outcome it reports', () => {
+    const html = renderToString(
+      Card({
+        title: 'Password',
+        notice: Notice({ tone: 'success', children: 'Password updated.' }),
+        children: 'body',
+      })
+    );
+
+    const header = html.indexOf('aa-card__header');
+    const notice = html.indexOf('aa-notice');
+    const body = html.indexOf('aa-card__body');
+
+    expect(notice).toBeGreaterThan(header);
+    expect(notice).toBeLessThan(body);
+    expect(html).toContain('aa-card__notice');
+  });
+});
+
+describe('StatusHeading', () => {
+  it('binds a status into the heading row it describes', () => {
+    // The generalisation of the viewer's Updated pill: the status lives inside the heading row,
+    // not 32px above it in a stack gap.
+    const html = renderToString(
+      StatusHeading({
+        level: 2,
+        children: 'Check your email',
+        status: 'Link sent',
+        tone: 'success',
+      })
+    );
+
+    const heading = /<h2[\s\S]*?<\/h2>/.exec(html);
+    expect(heading).not.toBeNull();
+
+    const badge = html.indexOf('aa-badge');
+    const rowEnd = html.lastIndexOf('</div>');
+    expect(badge).toBeGreaterThan(html.indexOf('aa-status-heading'));
+    expect(badge).toBeLessThan(rowEnd);
+    expect(html).toContain('Link sent');
+  });
+
+  it('renders the heading alone when there is no status to attach', () => {
+    const html = renderToString(StatusHeading({ level: 3, children: 'Your templates' }));
+
+    expect(html).toContain('<h3');
+    expect(html).not.toContain('aa-badge');
+  });
+
+  it('is registered in the style guide beside the attachment rule', () => {
+    const guide = renderToString(StyleGuidePage());
+
+    expect(guide).toContain('aa-status-heading');
+    expect(guide).toContain('Where a status goes');
   });
 });

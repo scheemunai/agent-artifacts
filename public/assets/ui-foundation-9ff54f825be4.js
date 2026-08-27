@@ -230,8 +230,17 @@ function bindConfirmDestructive() {
 }
 
 function bindNotices() {
-  // A Notice is server-rendered in normal flow, so dismissal is the only client behaviour it has:
-  // remove the element the user asked to be rid of, and nothing else on the page moves sideways.
+  // A page-level notice is one that could not be attached to what it describes. That costs
+  // something, and this is the price: it is focusable, and focus goes to it on load, so a message
+  // the reader would otherwise have to scroll to find is announced and brought on screen. An
+  // attached notice needs none of this, which is the point of preferring one.
+  const detached = document.querySelector('[data-aa-notice-page]');
+  if (detached instanceof HTMLElement) {
+    detached.focus();
+  }
+
+  // A Notice is server-rendered in normal flow, so dismissal is the only other client behaviour it
+  // has: remove the element the user asked to be rid of, and nothing else on the page moves.
   document.addEventListener('click', (event) => {
     const trigger =
       event.target instanceof Element ? event.target.closest('[data-aa-notice-dismiss]') : null;

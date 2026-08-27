@@ -33,6 +33,12 @@ interface ButtonProps {
   fullWidth?: boolean | undefined;
   /** Associates a submit button with a form it is not nested inside — dialog footers need this. */
   form?: string | undefined;
+  /**
+   * A control whose whole label is a mark. It gets a square 44px box and the same border treatment
+   * as a labelled button, because a bare glyph beside a bordered button does not read as a control
+   * at all — and `min-height` alone left icon buttons 33px wide, under the touch floor.
+   */
+  iconOnly?: boolean | undefined;
   href?: string | undefined;
   class?: string | undefined;
   id?: string | undefined;
@@ -51,6 +57,7 @@ export function Button({
   loading = false,
   fullWidth = false,
   form,
+  iconOnly = false,
   href,
   class: className,
   id,
@@ -64,6 +71,7 @@ export function Button({
     `aa-btn--${variant}`,
     size !== 'md' && `aa-btn--${size}`,
     fullWidth && 'aa-btn--full',
+    iconOnly && 'aa-btn--icon',
     className
   );
   const content = (
@@ -311,6 +319,18 @@ export function Badge({ children, tone = 'neutral', size = 'sm' }: BadgeProps) {
 
 export type NoticeTone = 'info' | 'success' | 'warn' | 'danger';
 
+/**
+ * Where a notice sits relative to the thing it is about.
+ *
+ * `attached` — the default and the point of the component — means it renders inside the container
+ * whose outcome it reports: a `Card`'s `notice` slot, a form's own region, the panel that just
+ * acted. `page` means it could not be, and that costs something: a detached notice must be
+ * focusable and focused on load, because a message the reader has to go looking for is a message
+ * that gets missed. Measured across this product, every status except the viewer's Updated pill was
+ * detached — "Link sent" 32px above its own heading, a validation error ~300px above its field.
+ */
+export type NoticePlacement = 'attached' | 'page';
+
 interface NoticeProps {
   tone?: NoticeTone;
   title?: string | undefined;
@@ -320,6 +340,7 @@ interface NoticeProps {
   id?: string | undefined;
   /** Optional follow-up action, e.g. "Undo" or "Back to artifacts". */
   action?: Child;
+  placement?: NoticePlacement | undefined;
 }
 
 /**
@@ -339,15 +360,19 @@ export function Notice({
   dismissible = false,
   id,
   action,
+  placement = 'attached',
 }: NoticeProps) {
   const interrupts = tone === 'warn' || tone === 'danger';
+  const detached = placement === 'page';
 
   return (
     <div
-      class={cx('aa-notice', `aa-notice--${tone}`)}
+      class={cx('aa-notice', `aa-notice--${tone}`, detached && 'aa-notice--page')}
       id={id}
       role={interrupts ? 'alert' : 'status'}
       data-aa-notice={tone}
+      data-aa-notice-page={detached ? 'true' : undefined}
+      tabindex={detached ? -1 : undefined}
     >
       <span class="aa-notice__icon" aria-hidden="true">
         <NoticeIcon tone={tone} />
@@ -428,15 +453,55 @@ function NoticeIcon({ tone }: { tone: NoticeTone }) {
   );
 }
 
+interface StatusHeadingProps {
+  children: Child;
+  level?: 1 | 2 | 3 | 4;
+  /** The status this heading's subject is in, e.g. "Link sent", "Revoked", "Expires soon". */
+  status?: string | undefined;
+  tone?: BadgeTone | undefined;
+  class?: string | undefined;
+}
+
+/**
+ * A heading with its status attached to it.
+ *
+ * This is the viewer's "Updated ✓" pill generalised — the one status in the product the audit
+ * found correctly placed, because it sits *inside* the title row of the thing that changed. Every
+ * other status floats: "Link sent" 32px above the "Check your email" heading it belongs to, a
+ * validation error ~300px above its field. A badge in a stack gap is a chip with no owner; a badge
+ * in the heading row is a status.
+ */
+export function StatusHeading({
+  children,
+  level = 2,
+  status,
+  tone = 'neutral',
+  class: className,
+}: StatusHeadingProps) {
+  const Heading = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4';
+
+  return (
+    <div class={cx('aa-status-heading', className)}>
+      <Heading class="aa-status-heading__title">{children}</Heading>
+      {status ? <Badge tone={tone}>{status}</Badge> : null}
+    </div>
+  );
+}
+
 interface CardProps {
   title?: string;
   description?: string | undefined;
   children: Child;
   footer?: Child | undefined;
   raised?: boolean | undefined;
+  /**
+   * A `Notice` about this card's own outcome. It renders between the header and the body — beside
+   * what it describes — so a panel's result never has to travel to the top of the page to be seen.
+   */
+  notice?: Child | undefined;
 }
 
-export function Card({ title, description, children, footer, raised = false }: CardProps) {
+export function Card({ title, description, children, footer, raised = false, notice }: CardProps) {
   return (
     <section class={cx('aa-card', raised && 'aa-card--raised')}>
       {title || description ? (
@@ -445,6 +510,7 @@ export function Card({ title, description, children, footer, raised = false }: C
           {description ? <p class="aa-card__description">{description}</p> : null}
         </header>
       ) : null}
+      {notice ? <div class="aa-card__notice">{notice}</div> : null}
       <div class="aa-card__body">{children}</div>
       {footer ? <footer class="aa-card__footer">{footer}</footer> : null}
     </section>

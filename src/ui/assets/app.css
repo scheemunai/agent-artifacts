@@ -539,6 +539,15 @@
     justify-self: stretch;
   }
 
+  /* `min-height` alone left an icon-only button 33px wide — under the touch floor — and a bare
+     glyph with no box beside a bordered button does not read as a control at all. */
+  .aa-btn--icon {
+    width: var(--spacing-aa-touch);
+    min-width: var(--spacing-aa-touch);
+    padding-inline: 0;
+    font-size: var(--text-aa-base);
+  }
+
   .sr-only {
     position: absolute;
     width: 1px;
@@ -745,7 +754,15 @@
     padding: var(--spacing-aa-5);
   }
 
+  /* A panel's own outcome, beside the panel — not at the top of the page. */
+  .aa-card__notice {
+    min-width: 0;
+    padding: var(--spacing-aa-5) var(--spacing-aa-5) 0;
+  }
+
   .aa-card__header + .aa-card__body,
+  .aa-card__header + .aa-card__notice,
+  .aa-card__notice + .aa-card__body,
   .aa-card__body + .aa-card__footer {
     border-top: 1px solid var(--color-aa-line);
   }
@@ -1018,6 +1035,29 @@
     padding: var(--spacing-aa-4);
     color: var(--color-aa-ink);
     background: var(--color-aa-surface-raised);
+  }
+
+  /* A notice that could not be attached to its subject. It is focusable and focused on load, so a
+     message the reader would otherwise have to go looking for is announced and brought on screen. */
+  .aa-notice--page {
+    scroll-margin-block: var(--spacing-aa-6);
+  }
+
+  .aa-status-heading {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-aa-3);
+  }
+
+  .aa-status-heading__title {
+    min-width: 0;
+    margin: 0;
+    font-size: var(--text-aa-xl);
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
   }
 
   .aa-notice__icon {

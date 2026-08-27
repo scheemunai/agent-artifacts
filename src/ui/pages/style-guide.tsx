@@ -31,6 +31,7 @@ import {
   Select,
   Skeleton,
   Spinner,
+  StatusHeading,
   Table,
   Tabs,
   Textarea,
@@ -919,6 +920,52 @@ function noticeSection() {
       title="Notice"
       description="Page-level feedback about something that just happened. Four tones, one mark each, optional dismissal, and no layout movement."
     >
+      <div class="aa-usage">
+        <strong>Where a status goes — in this order. Fall down a rung only when you must.</strong>
+        <br />
+        <strong>1. In the heading row of the thing it describes.</strong> <code>StatusHeading</code>
+        , the generalisation of the viewer's "Updated" pill — the one status in this product that is
+        placed correctly, because it sits inside the title row of the object that changed.
+        <br />
+        <strong>2. On the field that caused it.</strong> <code>Input error</code>, which puts the
+        red ring, <code>aria-invalid</code> and <code>aria-describedby</code> on the control itself.
+        <br />
+        <strong>3. In the card whose action produced it.</strong> <code>Card notice</code>, which
+        renders between that panel's header and its body.
+        <br />
+        <strong>4. At page level.</strong> <code>{'<Notice placement="page" />'}</code>, and only
+        when the outcome belongs to the page rather than to anything on it. This rung has a price:
+        the notice is focusable and takes focus on load, because a message the reader has to go
+        looking for is a message that gets missed.
+        <br />
+        Measured across the screens: every status except the Updated pill was detached from its
+        subject — "Link sent" floating 32px above its own heading, a validation error ~300px above
+        the field it names. Prettier components placed the same way are the same defect.
+      </div>
+      <div class="aa-stack">
+        <StatusHeading level={3} status="Link sent" tone="success">
+          Check your email
+        </StatusHeading>
+        <StatusHeading level={3} status="Revoked" tone="danger">
+          Weekly Ops Report
+        </StatusHeading>
+        <Card
+          title="Password"
+          description="A panel reports its own outcome, beside itself."
+          notice={
+            <Notice tone="success" title="Password updated.">
+              Every other session was signed out.
+            </Notice>
+          }
+        >
+          <p class="aa-hint">
+            This notice sits between the card's header and its body — not at the top of the page.
+          </p>
+        </Card>
+        <Notice tone="danger" title="That page no longer exists." placement="page">
+          A page-level notice: focusable, and focused on load, because nothing on the page owns it.
+        </Notice>
+      </div>
       <div class="aa-usage">
         Use a <code>Notice</code> for the outcome of an action the page just performed. Use a{' '}
         <code>Badge</code> for the state of an object (the viewer's "Updated" pill is the correct
