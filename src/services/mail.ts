@@ -58,6 +58,29 @@ function resolveMailTransport(mail: MailConfig): Exclude<MailTransport, 'auto'> 
   return 'log';
 }
 
+/**
+ * Resend's error shape is `{ statusCode, message, name }`. A failing send must not be turned into a
+ * parse crash by a proxy answering HTML, so every step here is allowed to come back empty.
+ */
+async function readResendError(
+  response: Response
+): Promise<{ resend_message?: string; resend_name?: string }> {
+  try {
+    const body: unknown = await response.json();
+    if (typeof body !== 'object' || body === null) {
+      return {};
+    }
+
+    const { message, name } = body as { message?: unknown; name?: unknown };
+    return {
+      ...(typeof message === 'string' ? { resend_message: message } : {}),
+      ...(typeof name === 'string' ? { resend_name: name } : {}),
+    };
+  } catch {
+    return {};
+  }
+}
+
 export function magicLinkEmailText(url: string): string {
   return [
     'Sign in to Agent Artifacts',
@@ -93,7 +116,11 @@ class ResendMailService implements MailService {
     });
 
     if (!response.ok) {
-      this.logger.warn({ status: response.status }, 'mail.resend_failed');
+      // Resend says why in the body; a status alone cannot separate an unverified domain from a
+      // recipient the account may not send to from a malformed field. Only the provider's own
+      // `message`/`name` are logged — never the recipient, which mail events do not carry.
+      const detail = await readResendError(response);
+      this.logger.warn({ status: response.status, ...detail }, 'mail.resend_failed');
       throw new Error('Unable to send email');
     }
   }
