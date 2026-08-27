@@ -3,7 +3,9 @@ import { Layout } from '../components/layout.js';
 import {
   Badge,
   Button,
+  ButtonRow,
   Card,
+  ConfirmDestructive,
   CopyBlock,
   EmptyState,
   Input,
@@ -218,28 +220,24 @@ export function DashboardArtifactPage({
               {formatRelativeTime(artifact.updatedAt)}
             </p>
           </header>
-          <div class="aa-specimen-row">
+          <ButtonRow>
             <Button variant="secondary" href={`/dashboard/artifacts/${artifact.id}/download`}>
               Download
             </Button>
             <Button variant="primary" href="#share-panel">
               Share
             </Button>
-            <form
-              class="aa-stack"
-              method="post"
+            <ConfirmDestructive
+              id={`delete-artifact-${artifact.id}`}
+              triggerLabel="Delete"
+              title="Delete this artifact?"
+              description={`${artifact.title} and every version of it are removed from your account.`}
+              consequence="This cannot be undone. Any share link for it stops working immediately."
+              confirmValue={artifact.title}
+              confirmLabel="Delete artifact"
               action={`/dashboard/api/artifacts/${artifact.id}/delete`}
-            >
-              <Input
-                id="delete_artifact_confirm"
-                name="confirm"
-                label={`Type ${artifact.title} to delete`}
-              />
-              <Button variant="danger" type="submit">
-                Delete
-              </Button>
-            </form>
-          </div>
+            />
+          </ButtonRow>
         </section>
 
         <div class="aa-grid aa-grid--2">
@@ -347,7 +345,7 @@ export function DashboardBotsPage({
               </span>,
               <code>aa_bot_…{bot.apiKeyLast4}</code>,
               <span>{bot.lastUsedAt ? formatRelativeTime(bot.lastUsedAt) : 'never'}</span>,
-              <BotActionForms bot={bot} />,
+              <BotActions bot={bot} />,
             ])}
           />
         )}
@@ -523,17 +521,16 @@ export function DashboardSettingsPage({
           title="Delete account"
           description="Hard-deletes everything you own. Existing public share URLs return 404, not 410."
         >
-          <form class="aa-stack" method="post" action="/dashboard/api/settings/delete">
-            <Input
-              id="delete_confirm_email"
-              name="confirm_email"
-              label={`Type ${account.email} to delete`}
-              type="email"
-            />
-            <Button variant="danger" type="submit">
-              Delete account permanently
-            </Button>
-          </form>
+          <ConfirmDestructive
+            id="delete-account"
+            triggerLabel="Delete account permanently"
+            title="Delete this account?"
+            description="Everything you own goes: artifacts, versions, bots, templates and share links."
+            consequence="This cannot be undone. Shared links stop working immediately and read as missing."
+            confirmValue={account.email}
+            confirmLabel="Delete account permanently"
+            action="/dashboard/api/settings/delete"
+          />
         </Card>
       </div>
     </DashboardChrome>
@@ -828,16 +825,16 @@ function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
                 </Button>
               </form>
             ) : null}
-            <form
-              class="aa-stack"
-              method="post"
+            <ConfirmDestructive
+              id={`revoke-share-${artifact.id}`}
+              triggerLabel="Revoke link"
+              title="Revoke this share link?"
+              description="The public page stops resolving for everyone who already has the link."
+              consequence="This cannot be undone. Sharing again creates a new link, never this one."
+              confirmValue={artifact.slug}
+              confirmLabel="Revoke link"
               action={`/dashboard/api/artifacts/${artifact.id}/share/revoke`}
-            >
-              <Input id="revoke_confirm" name="confirm" label={`Type ${artifact.slug} to revoke`} />
-              <Button variant="danger" type="submit">
-                Revoke link
-              </Button>
-            </form>
+            />
           </>
         ) : (
           <form
@@ -1007,26 +1004,43 @@ function BotKeyCard({
   );
 }
 
-function BotActionForms({ bot }: { bot: DashboardBotView }) {
+/**
+ * A revoked key has nothing left to regenerate or revoke, so the row stops offering either. The
+ * controls are not rendered disabled: a disabled button is still a control the reader has to
+ * reason about, and there is no state in which these two would come back for this bot.
+ */
+function BotActions({ bot }: { bot: DashboardBotView }) {
+  if (bot.revokedAt) {
+    return (
+      <p class="aa-hint">
+        This key was revoked {formatRelativeTime(bot.revokedAt)}. Create a new bot to replace it.
+      </p>
+    );
+  }
+
   return (
-    <div class="aa-stack">
-      <form class="aa-stack" method="post" action={`/dashboard/api/bots/${bot.id}/regenerate`}>
-        <Input
-          id={`regen_${bot.id}`}
-          name="confirm_name"
-          label={`Type ${bot.name} to regenerate`}
-        />
-        <Button variant="secondary" size="sm" type="submit">
-          Regenerate key
-        </Button>
-      </form>
-      <form class="aa-stack" method="post" action={`/dashboard/api/bots/${bot.id}/revoke`}>
-        <Input id={`revoke_${bot.id}`} name="confirm_name" label={`Type ${bot.name} to revoke`} />
-        <Button variant="danger" size="sm" type="submit">
-          Revoke key
-        </Button>
-      </form>
-    </div>
+    <ButtonRow>
+      <ConfirmDestructive
+        id={`regenerate-bot-${bot.id}`}
+        triggerLabel="Regenerate key"
+        title={`Regenerate the key for ${bot.name}?`}
+        description="A replacement key is issued and shown once. The current key stops working the moment it is."
+        consequence="This cannot be undone. Give your agent the new key before it next runs, or its requests will fail."
+        confirmValue={bot.name}
+        confirmLabel="Regenerate key"
+        action={`/dashboard/api/bots/${bot.id}/regenerate`}
+      />
+      <ConfirmDestructive
+        id={`revoke-bot-${bot.id}`}
+        triggerLabel="Revoke key"
+        title={`Revoke the key for ${bot.name}?`}
+        description="The key stops authenticating immediately and no replacement is issued."
+        consequence="This cannot be undone. Every request this bot makes afterwards is rejected."
+        confirmValue={bot.name}
+        confirmLabel="Revoke key"
+        action={`/dashboard/api/bots/${bot.id}/revoke`}
+      />
+    </ButtonRow>
   );
 }
 

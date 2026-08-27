@@ -451,6 +451,14 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     }
   });
 
+  /**
+   * Typed confirmations all post `confirm`.
+   *
+   * Three spellings for one concept — `confirm`, `confirm_name`, `confirm_email` — were three
+   * chances for a confirmation to be silently skipped by a form that named the field the other
+   * way. The server still validates the typed value on every one of these routes; the dialog's
+   * disabled button is a courtesy, not a control.
+   */
   app.post('/dashboard/api/bots/:id/regenerate', async (routeContext) => {
     const session = await requireApiSession(routeContext, services);
     if (session instanceof Response) {
@@ -461,7 +469,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       const result = await services.auth.regenerateBotKey(
         session.account.id,
         routeContext.req.param('id'),
-        stringField(form, 'confirm_name')
+        stringField(form, 'confirm')
       );
       const revealId = storeKeyReveal(keyReveals, {
         accountId: session.account.id,
@@ -496,7 +504,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       await services.auth.revokeBotKey(
         session.account.id,
         routeContext.req.param('id'),
-        stringField(form, 'confirm_name')
+        stringField(form, 'confirm')
       );
       return routeContext.redirect('/dashboard/bots?notice=bot_revoked', 303);
     } catch (error) {
@@ -738,7 +746,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return session;
     }
     const form = await parseForm(routeContext);
-    if (normalizeEmail(stringField(form, 'confirm_email')) !== session.account.email) {
+    if (normalizeEmail(stringField(form, 'confirm')) !== session.account.email) {
       return routeContext.redirect(
         '/dashboard/settings?error=Type%20the%20account%20email%20to%20confirm',
         303

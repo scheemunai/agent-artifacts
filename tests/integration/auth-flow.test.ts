@@ -192,7 +192,7 @@ describe('M4 auth flow', () => {
     expect(shareId).toBeTruthy();
 
     const cookie = await login(ctx, account.email, 'password123');
-    const deleteForm = formBody({ confirm_email: account.email });
+    const deleteForm = formBody({ confirm: account.email });
     const headers = originHeaders(ctx, cookie);
     headers.set('Content-Type', 'application/x-www-form-urlencoded');
     const deleted = await ctx.app.request('/dashboard/api/settings/delete', {

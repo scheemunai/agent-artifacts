@@ -106,7 +106,7 @@ describe('Batch C accepted dashboard fixes', () => {
     const regenerated = await ctx.app.request(`/dashboard/api/bots/${createdBot.id}/regenerate`, {
       method: 'POST',
       headers: regenHeaders,
-      body: formBody({ confirm_name: createdBot.name }).body,
+      body: formBody({ confirm: createdBot.name }).body,
     });
     expect(regenerated.status).toBe(303);
     expect(await regenerated.text()).not.toMatch(fullBotKeyPattern);
