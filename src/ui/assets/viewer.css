@@ -121,6 +121,20 @@
   min-width: 0;
 }
 
+/* An anchor the sanitizer disarmed is not a link, and must not look like one.
+   Hostile markdown reaches this surface, the sanitizer strips the href and keeps the text, and the
+   remains inherited `.aa-md a`'s accent colour — so a dead control sat in the product's own link
+   colour, distinguishable from a live one only by an underline that appears on hover. A reader
+   cannot tell those apart before clicking, and clicking teaches them nothing.
+   Scoped to the viewer deliberately: `.aa-md a` lives in app.css, and prose inside a dashboard card
+   is not this defect. The hover state is included, or the costume returns with the cursor. */
+.aa-viewer-content .aa-md a:not([href]),
+.aa-viewer-content .aa-md a:not([href]):hover {
+  color: inherit;
+  text-decoration: none;
+  cursor: text;
+}
+
 .aa-viewer-frame {
   display: block;
   width: 100%;

@@ -28,7 +28,11 @@ import {
 } from '../services/viewer.js';
 import { TERMINAL_CAUSE_COPY } from '../ui/copy/terminal-copy.js';
 import { FrameDocument, FrameTerminalDocument } from '../ui/pages/frame-document.js';
-import { ShareTerminalPage, type ShareTerminalStatus } from '../ui/pages/share-terminal.js';
+import {
+  CLIENT_TERMINAL_COPY,
+  ShareTerminalPage,
+  type ShareTerminalStatus,
+} from '../ui/pages/share-terminal.js';
 import { ViewerPage } from '../ui/pages/viewer.js';
 
 export interface PublicRoutesContext {
@@ -539,7 +543,11 @@ function terminalCopy(error: ServiceError): {
     };
   }
 
-  return { title: 'Not found', message: 'Not found', status: 404 };
+  // The heading and the body used to carry the identical string, so the sentence under the title
+  // added nothing. The one that does exists already: it is what the client renders when a poll
+  // discovers a 404 mid-read, and the server saying something different about the same event is the
+  // drift `terminal-copy.ts` exists to prevent.
+  return { ...CLIENT_TERMINAL_COPY[404], status: 404 };
 }
 
 function safeShareUrl(context: PublicContext, config: AppConfig): string {
