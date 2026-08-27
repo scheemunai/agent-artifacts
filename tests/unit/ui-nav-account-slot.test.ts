@@ -114,6 +114,19 @@ describe('NavShell account slot', () => {
   it('is registered in the design contract with the slot filled', () => {
     // The guide's own header is the live specimen, so the contract cannot document this slot
     // without also exercising it.
+    //
+    // Worth naming, because it is reusable and this is the first place the codebase does it
+    // deliberately — a SELF-EXERCISING SPECIMEN. Most specimens are a copy of the product posed
+    // next to it, and a copy can drift; that is the whole reason the parity test in
+    // `ui-specimen-state-parity.test.ts` has to exist. A specimen that IS the product cannot drift
+    // from it, which is a stronger guarantee than any test can give, because there is nothing left
+    // to compare.
+    //
+    // The precondition is the limit: it is available only where the guide already uses the thing it
+    // is describing. That is true of the shell, the nav, the drawer and the layout primitives, and
+    // false of anything the guide can only pose — a toast, a dialog, a danger card. Where it is
+    // available it should be preferred; where it is not, the parity test is the fallback, and this
+    // assertion is what keeps the guide from quietly downgrading to a posed copy.
     expect(renderToString(StyleGuidePage())).toContain('aa-app-nav__account');
   });
 });
