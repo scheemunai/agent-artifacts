@@ -153,6 +153,16 @@ describe('client-side terminal parity', () => {
     expect(viewerHtml.indexOf('</main>')).toBeLessThan(viewerHtml.indexOf('<footer'));
   });
 
+  it('renders no duplicate id, templates included', () => {
+    // Bounded extension of the duplicate-id sweep: this page parks two inert terminal states plus
+    // the live document, so it is the one composed page where the same component appears more than
+    // once. Template content is included deliberately — a clone of it lands in the real document.
+    const ids = Array.from(viewerHtml.matchAll(/\sid="([^"]+)"/g), (match) => String(match[1]));
+    const duplicates = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+
+    expect(duplicates, `duplicate ids: ${duplicates.join(', ')}`).toEqual([]);
+  });
+
   it('draws the product mark, not a text glyph', () => {
     for (const status of STATUSES) {
       expect(terminalTemplate(status)).toContain('M6 6 H16 L26 16 V26 H6 Z');

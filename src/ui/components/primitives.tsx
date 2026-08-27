@@ -18,6 +18,23 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
 }
 
+/**
+ * An id fragment derived from the human text a component was given.
+ *
+ * A component that hard-codes an id is unique only until a page uses it twice — which is an
+ * ordinary page, not an edge case: two empty lists, two tables, two terminal states. Deriving from
+ * content makes the common case unique without the caller thinking about it; every component that
+ * uses this also takes an explicit `id` for the cases where the content is not distinct either.
+ */
+export function slugId(value: string | undefined, fallback: string): string {
+  const slug = (value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, 48)
+    .replace(/^-+|-+$/g, '');
+  return slug || fallback;
+}
+
 interface ButtonProps {
   children: Child;
   variant?: ButtonVariant;
@@ -551,7 +568,7 @@ export function Table({ caption, columns, rows, label, columnPriority = false, i
   const normalized = columns.map((column) =>
     typeof column === 'string' ? { label: column } : column
   );
-  const hintId = `${id ?? 'aa-table'}-scroll-hint`;
+  const hintId = `${id ?? `aa-table-${slugId(caption ?? label, 'unnamed')}`}-scroll-hint`;
   const regionLabel = caption ?? label ?? 'Table';
 
   return (
@@ -828,15 +845,19 @@ interface EmptyStateProps {
   title: string;
   description: string;
   action?: Child;
+  /** Override the derived id where two empty states share a title. */
+  id?: string | undefined;
 }
 
-export function EmptyState({ title, description, action }: EmptyStateProps) {
+export function EmptyState({ title, description, action, id }: EmptyStateProps) {
+  const titleId = `${id ?? `aa-empty-${slugId(title, 'state')}`}-title`;
+
   return (
-    <section class="aa-empty" aria-labelledby="empty-title">
+    <section class="aa-empty" aria-labelledby={titleId}>
       <div class="aa-empty__icon">
         <ProductMark />
       </div>
-      <h3 class="aa-empty__title" id="empty-title">
+      <h3 class="aa-empty__title" id={titleId}>
         {title}
       </h3>
       <p class="aa-empty__description">{description}</p>

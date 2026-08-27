@@ -1,4 +1,4 @@
-import { Button, ButtonRow, ProductMark } from './primitives.js';
+import { Button, ButtonRow, ProductMark, slugId } from './primitives.js';
 
 /** The statuses a mid-view poll can discover. It sees an HTTP status and nothing finer. */
 export type ClientTerminalStatus = 404 | 410;
@@ -43,17 +43,14 @@ interface ShareTerminalMainProps {
  * the server renders it into a `<template>`, so the two can never drift back into being two
  * implementations of one screen.
  */
-export function ShareTerminalMain({
-  title,
-  message,
-  shareUrl,
-  headingId = 'terminal-title',
-}: ShareTerminalMainProps) {
+export function ShareTerminalMain({ title, message, shareUrl, headingId }: ShareTerminalMainProps) {
+  const titleId = headingId ?? `terminal-${slugId(title, 'title')}`;
+
   return (
     <main class="aa-viewer-terminal" data-aa-terminal="true">
-      <section class="aa-viewer-terminal-card" aria-labelledby={headingId}>
+      <section class="aa-viewer-terminal-card" aria-labelledby={titleId}>
         <ProductMark />
-        <h1 id={headingId}>{title}</h1>
+        <h1 id={titleId}>{title}</h1>
         <p>{message}</p>
         <ButtonRow align="center" class="aa-viewer-terminal-actions">
           <Button variant="secondary" href={shareUrl}>

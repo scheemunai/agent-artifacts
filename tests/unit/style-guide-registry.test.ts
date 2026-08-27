@@ -137,6 +137,16 @@ describe('style guide registry', () => {
     }
   });
 
+  it('renders no duplicate id anywhere in the design contract', () => {
+    // A necessary check, but NOT the one that catches the class — see the note in
+    // `tests/unit/ui-duplicate-ids.test.ts`. This guard only sees what the guide happens to render,
+    // and the guide is written by the same hands as the components, with the same blind spots.
+    const ids = Array.from(html.matchAll(/\sid="([^"]+)"/g), (match) => String(match[1]));
+    const duplicates = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+
+    expect(duplicates, `duplicate ids: ${duplicates.join(', ')}`).toEqual([]);
+  });
+
   it('has exactly one h1 and no inline executable script', () => {
     expect(html.match(/<h1\b/g) ?? []).toHaveLength(1);
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)[\s\S]*?>[\s\S]*?<\/script>/i);
