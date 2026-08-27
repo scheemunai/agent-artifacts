@@ -59,14 +59,14 @@ const declared = [
  * than left sitting here looking like policy.
  */
 const ARGUED_FOR: Array<{ className: string; reason: string }> = [
-  {
-    className: 'aa-preview-frame',
-    reason:
-      'Not an orphan rule — it shares its declaration block with `.aa-card__body > iframe`, which ' +
-      'is consumed, and exists as the name for that same box when a page needs it outside a card ' +
-      'body. `tests/unit/ui-prose-scope.test.ts` pins the class by name as a deliberate opt-in, so ' +
-      'retiring it is that contract owner’s call and not this guard’s.',
-  },
+  // Empty, and that is the goal state rather than an accident of timing.
+  //
+  // It had one entry for as long as it took to ask. `.aa-preview-frame` shared a declaration block
+  // with `.aa-card__body > iframe` and existed as a name a page could opt into outside a card body;
+  // nothing ever opted in. I argued for keeping it because another test pinned it — then its owner
+  // said they had no attachment to it, which removed the only leg the argument stood on, so it was
+  // retired instead. That is the mechanism working: the entry existed to make someone defend the
+  // class, and once nobody would, the class went.
 ];
 
 /**

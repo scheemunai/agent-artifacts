@@ -2478,8 +2478,12 @@
   }
 
   /* A framed document has no intrinsic size, so without this an owner's HTML preview fell back to
-     the UA's 300x150 replaced-element default in the corner of a full-width card. */
-  .aa-preview-frame,
+     the UA's 300x150 replaced-element default in the corner of a full-width card.
+     `.aa-preview-frame` shared this block as a name a page could opt into outside a card body.
+     Nothing ever opted in, and its owner has no attachment to it, so it is retired rather than left
+     available: an unused class is an invitation, which is the reasoning that retired
+     `.aa-specimen-row` after it reached 25 call sites. A page that needs this box outside a card
+     body adds the name back in one line, with a consumer in the same commit. */
   .aa-card__body > iframe {
     display: block;
     width: 100%;

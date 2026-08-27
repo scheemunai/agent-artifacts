@@ -135,7 +135,11 @@ describe('embedded preview frames', () => {
     expect(winningDeclaration(appRules, previewFrame, 'width', 1440)?.value).toBe('100%');
     expect(winningDeclaration(appRules, previewFrame, 'height', 1440)?.value).toBeDefined();
     expect(winningDeclaration(appRules, previewFrame, 'border', 1440)?.value).toBe('0');
-    // And the same box is available by name, so a page can opt in outside a card body.
-    expect(appRules.some((rule) => rule.selector.includes('.aa-preview-frame'))).toBe(true);
+    // This used to also assert `.aa-preview-frame` existed, so a page could opt into the same box
+    // outside a card body. Nothing ever opted in. The assertion is inverted rather than deleted,
+    // because a name removed with no test is a name that can come back silently — and it came back
+    // being the only thing the rebuilt placement guard had to make an exception for. Whoever needs
+    // this box outside a card body adds the class back with its consumer in the same commit.
+    expect(appRules.some((rule) => rule.selector.includes('.aa-preview-frame'))).toBe(false);
   });
 });
