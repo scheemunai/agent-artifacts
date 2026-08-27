@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { publishArtifactSchema } from '../../src/lib/schemas/index.js';
+import { promoteTemplateSchema, publishArtifactSchema } from '../../src/lib/schemas/index.js';
 import { createApiTestContext, json } from './api-test-utils.js';
 
 const documentedPublishFields = [
@@ -14,6 +14,15 @@ const documentedPublishFields = [
   'share',
   'password',
 ];
+
+const documentedPromoteTemplateFields = ['artifact_id', 'name', 'slug', 'description'];
+
+const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
+
+const CONTRACT_OMITTED: Record<string, string> = {
+  'GET /v1/openapi.json':
+    'Machine-readable spec endpoint linked by path, not duplicated as an operation.',
+};
 
 describe('V1 contract endpoint', () => {
   it('serves the agent contract as text/markdown without authentication', async () => {
@@ -42,6 +51,9 @@ describe('V1 contract endpoint', () => {
     const schemaKeys = Object.keys(publishArtifactSchema.shape).sort();
     expect(schemaKeys).toEqual([...documentedPublishFields].sort());
 
+    const promoteSchemaKeys = Object.keys(promoteTemplateSchema.shape).sort();
+    expect(promoteSchemaKeys).toEqual([...documentedPromoteTemplateFields].sort());
+
     const directPublishExample = {
       slug: 'weekly-report',
       type: 'markdown',
@@ -63,9 +75,16 @@ describe('V1 contract endpoint', () => {
       },
       share: true,
     };
+    const promoteTemplateExample = {
+      artifact_id: 'art_abcdefghijklmnopqrstu',
+      name: 'Ops Brief',
+      slug: 'ops-brief',
+      description: 'Optional short description',
+    };
 
     expect(publishArtifactSchema.safeParse(directPublishExample).success).toBe(true);
     expect(publishArtifactSchema.safeParse(templatePublishExample).success).toBe(true);
+    expect(promoteTemplateSchema.safeParse(promoteTemplateExample).success).toBe(true);
 
     const ctx = await createApiTestContext();
     try {
@@ -83,6 +102,41 @@ describe('V1 contract endpoint', () => {
       });
       expect(body.content).toContain('## Highlights');
       expect(body.content).toContain('Ship v2.2');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('keeps every OpenAPI path and method documented or explicitly omitted from the contract', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const [contractResponseValue, openApiResponse] = await Promise.all([
+        ctx.app.request('/v1/contract'),
+        ctx.app.request('/v1/openapi.json'),
+      ]);
+      expect(contractResponseValue.status).toBe(200);
+      expect(openApiResponse.status).toBe(200);
+
+      const contract = await contractResponseValue.text();
+      const spec = (await openApiResponse.json()) as {
+        paths: Record<string, unknown>;
+      };
+      const endpoints = openApiEndpoints(spec.paths);
+
+      for (const [endpoint, reason] of Object.entries(CONTRACT_OMITTED)) {
+        expect(endpoints).toContain(endpoint);
+        expect(reason.trim()).not.toBe('');
+        expect(reason.length).toBeLessThanOrEqual(120);
+      }
+
+      const undocumented = endpoints.filter(
+        (endpoint) => !contract.includes(endpoint) && !(endpoint in CONTRACT_OMITTED)
+      );
+      expect(undocumented).toEqual([]);
+      expect(contract).toContain('POST /v1/templates');
+      expect(contract).toContain('details.reason="html_not_supported"');
+      expect(contract).toContain('details.reason="no_slots"');
     } finally {
       await ctx.cleanup();
     }
@@ -122,3 +176,26 @@ describe('V1 contract endpoint', () => {
     }
   });
 });
+
+function openApiEndpoints(paths: Record<string, unknown>): string[] {
+  const endpoints: string[] = [];
+  for (const [path, operations] of Object.entries(paths)) {
+    if (!isRecord(operations)) {
+      continue;
+    }
+    for (const method of HTTP_METHODS) {
+      if (method in operations) {
+        endpoints.push(`${method.toUpperCase()} ${normalizeOpenApiPath(path)}`);
+      }
+    }
+  }
+  return endpoints.sort();
+}
+
+function normalizeOpenApiPath(path: string): string {
+  return `/v1${path.replace(/\{([^}]+)\}/g, ':$1')}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}

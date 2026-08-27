@@ -563,7 +563,25 @@ Auth:     every request needs this header:
           account-scoped.
 
 All bodies are JSON (snake_case). Timestamps are ISO-8601 UTC.
-Machine-readable spec: GET /v1/openapi.json
+This markdown is available at GET /v1/contract and GET /llms.txt.
+Machine-readable spec: /v1/openapi.json
+
+Documented endpoints:
+- POST /v1/artifacts
+- GET /v1/artifacts
+- GET /v1/artifacts/:id_or_slug
+- PUT /v1/artifacts/:id_or_slug
+- DELETE /v1/artifacts/:id_or_slug
+- GET /v1/artifacts/:id_or_slug/versions
+- GET /v1/artifacts/:id_or_slug/versions/:n
+- POST /v1/artifacts/:id_or_slug/versions/:n/restore
+- POST /v1/artifacts/:id_or_slug/share
+- PATCH /v1/artifacts/:id_or_slug/share
+- DELETE /v1/artifacts/:id_or_slug/share
+- GET /v1/templates
+- POST /v1/templates
+- GET /v1/templates/:slug
+- GET /v1/artifacts/:id_or_slug/download
 
 ## The one rule that matters: publish by slug
 
@@ -606,7 +624,36 @@ curl -X POST ${config.baseUrl}/v1/artifacts \\
 Send template + slots INSTEAD of type + content (server merges them).
 Missing/unknown slot names come back as a 400 that lists the valid slots.
 
-## 3. Read back — GET
+## 3. Promote an artifact into a template — POST /templates
+
+Markdown-only. Put {{slot_name}} markers in an existing markdown artifact, then
+promote it into an account template your bots can reuse with template + slots.
+HTML artifacts are rejected in v1.
+
+curl -X POST ${config.baseUrl}/v1/templates \\
+  -H "Authorization: Bearer aa_bot_YOUR_KEY" -H "Content-Type: application/json" \\
+  -d '{"artifact_id":"art_abcdefghijklmnopqrstu","name":"Ops Brief","slug":"ops-brief",
+       "description":"Optional short description"}'
+
+Request body:
+- artifact_id: existing markdown artifact id in your account.
+- name: template display name (1..80 chars).
+- slug: lowercase letters/numbers/dashes, unique among your account templates.
+- description: optional short description (max 300 chars).
+
+Response: 201 with id, slug, name, description, type:"markdown",
+built_in:false, content, slots, created_at, updated_at. The slots list is
+derived from {{slot_name}} markers in the artifact content.
+
+Errors:
+- 409 slug_conflict when the slug already exists.
+- 400 validation_failed with details.field="type" and
+  details.reason="html_not_supported" for HTML artifacts.
+- 400 validation_failed with details.field="content" and
+  details.reason="no_slots" when no {{slot}} markers are found.
+- 404 not_found when artifact_id is unknown or deleted.
+
+## 4. Read back — GET
 
 GET /v1/artifacts                        → list (newest first; no content)
     filters: ?bot=bot_ID  ?type=markdown  ?updated_since=2026-08-01T00:00:00Z
@@ -614,7 +661,7 @@ GET /v1/artifacts                        → list (newest first; no content)
 GET /v1/artifacts/weekly-report          → one artifact, full content + share state
     (works with the slug or the art_... id)
 
-## 4. Update explicitly — PUT /artifacts/:slug
+## 5. Update explicitly — PUT /artifacts/:slug
 
 Same as re-POSTing, useful for partial changes (title only, etc.):
 curl -X PUT .../v1/artifacts/weekly-report -H "Authorization: Bearer aa_bot_YOUR_KEY" \\
@@ -625,7 +672,7 @@ GET .../weekly-report/versions           POST .../versions/3/restore
 All versions of a shared artifact are publicly viewable via the version picker.
 To bury history, delete the artifact and re-publish under a new slug.
 
-## 5. Sharing — POST/PATCH/DELETE /artifacts/:slug/share
+## 6. Sharing — POST/PATCH/DELETE /artifacts/:slug/share
 
 POST   .../share                     → { "url": "${config.baseUrl}/a/..." }
 POST   .../share {"password":"s3cret"}  → password-protected link
