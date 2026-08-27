@@ -78,6 +78,13 @@ function dashboardPreviewFrameCsp(): string {
     "connect-src 'none'",
     "form-action 'none'",
     "base-uri 'none'",
+    // `'self'` rather than the configured base URL, and the difference matters: the dashboard
+    // embeds this route with a *relative* `src`, so the framing parent is whatever origin served
+    // the dashboard — which is not always `baseUrl` behind a proxy, on a custom domain, or in
+    // development. `'self'` is that origin by definition and cannot drift from it. The public
+    // variant has to name an origin for the opposite reason: it is served from the sandbox host
+    // and framed by the app host, so the two genuinely differ.
+    "frame-ancestors 'self'",
     'sandbox allow-scripts',
   ].join('; ');
 }
