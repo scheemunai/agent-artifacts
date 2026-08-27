@@ -523,15 +523,18 @@ function terminalCopy(error: ServiceError): {
     };
   }
 
-  if (error.status === 410) {
-    if (error.message.toLowerCase().includes('artifact has expired')) {
-      return {
-        title: 'This artifact has expired.',
-        message: 'The artifact is no longer available.',
-        status: 410,
-      };
-    }
+  if (error.status === 410 && error.code === 'artifact_expired') {
+    // Retention, not revocation. This branch used to be reached by lower-casing the error message
+    // and looking for "artifact has expired" — a cause recovered from prose, which would have gone
+    // silently wrong the first time anyone reworded the throw.
+    return {
+      title: 'This artifact has expired.',
+      message: 'The artifact is no longer available.',
+      status: 410,
+    };
+  }
 
+  if (error.status === 410) {
     return {
       title: 'This link has been revoked.',
       message: 'The owner turned off sharing for this artifact.',

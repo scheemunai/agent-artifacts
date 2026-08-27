@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   ageArtifact,
@@ -81,8 +82,33 @@ describe('viewer share lifecycle responses', () => {
       expect(response.status).toBe(410);
       expect(html).toContain('This artifact has expired.');
       expect(html).toContain('Report abuse');
+
+      // Retention expiry is its own cause and carries its own code. It used to be thrown as
+      // `share_revoked` — the code meaning "the owner turned this off" — which was untrue, and
+      // forced the page to recover the real cause by string-matching the error message.
+      const api = await expiredCtx.app.request(`/a/${shareId}/content`);
+      expect(api.status).toBe(410);
+      expect(await api.json()).toMatchObject({ error: { code: 'artifact_expired' } });
     } finally {
       await expiredCtx.cleanup();
     }
+  });
+
+  it('selects every terminal copy by error code, never by sniffing the message', () => {
+    // The class, not the instance. One branch recovering a cause from `error.message` is a
+    // stringly-typed fallback that works until someone rewords a message in an unrelated commit —
+    // and it survives precisely because the copy assertions above still pass when it breaks.
+    const source = readFileSync(new URL('../../../src/routes/public.ts', import.meta.url), 'utf8');
+    const start = source.indexOf('function terminalCopy(');
+    expect(start, 'terminalCopy not found in public.ts').toBeGreaterThan(-1);
+    // To the next top-level declaration, not to the next `\n}`: the function's return type is an
+    // object literal that closes at column 0, so a lazy brace match ends inside the signature and
+    // every assertion below it passes on an empty body. The positive assertion is what caught that.
+    const end = source.indexOf('\nfunction ', start + 1);
+    const terminalCopy = source.slice(start, end === -1 ? undefined : end);
+
+    expect(terminalCopy, 'extracted no function body').toMatch(/return\s*\{/);
+    expect(terminalCopy, 'terminal copy is selected by message text').not.toMatch(/error\.message/);
+    expect(terminalCopy).toMatch(/error\.code/);
   });
 });

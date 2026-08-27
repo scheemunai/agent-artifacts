@@ -377,7 +377,10 @@ export class ViewerService {
 
     const plan = await this.cloudModule.resolvePlan(account);
     if (this.isArtifactExpired(artifact, plan, now)) {
-      throw new ServiceError(410, 'share_revoked', 'This artifact has expired');
+      // Not `share_revoked`, for the same reason the suspended branch above is not: the owner
+      // revoked nothing, the plan's retention window closed. Reusing that code left the public page
+      // recovering the real cause by string-matching this message.
+      throw new ServiceError(410, 'artifact_expired', 'This artifact has expired');
     }
 
     return {
