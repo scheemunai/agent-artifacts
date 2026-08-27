@@ -130,7 +130,6 @@ Both origins may proxy to the same Node process/container, or to two identical a
 - app origin serves the product, API, dashboard, setup/login, static assets, and public share pages;
 - usercontent origin serves only:
   - `GET /a/:share_id/frame`
-  - static assets needed by frames, currently `/assets/*`
   - `GET /robots.txt`
 - every other usercontent path returns `404`.
 
@@ -170,11 +169,8 @@ server {
     proxy_pass http://127.0.0.1:4601;
   }
 
-  location ^~ /assets/ {
-    proxy_pass http://127.0.0.1:4601;
-  }
-
   location / {
+    types { }
     default_type text/plain;
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -336,7 +332,7 @@ Minimum things to watch from day one:
 - Postgres connection count, slow queries, storage, and backups if using Postgres.
 - Mail provider delivery, bounce, suppression, and rate-limit dashboards.
 - TLS certificate expiry for both app and usercontent domains.
-- Nginx/proxy logs for unexpected usercontent paths; anything except `/a/:share_id/frame`, `/assets/*`, and `/robots.txt` should be a `404`.
+- Nginx/proxy logs for unexpected usercontent paths; anything except `/a/:share_id/frame` and `/robots.txt` should be a `404`.
 
 Suggested smoke probe:
 

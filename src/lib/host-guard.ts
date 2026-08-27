@@ -2,7 +2,6 @@ import type { MiddlewareHandler } from 'hono';
 import type { AppConfig } from '../config.js';
 
 const SHARE_FRAME_PATH = /^\/a\/[A-Za-z0-9_-]{22}\/frame$/;
-const SANDBOX_ASSET_PATH = /^\/assets\//;
 
 export function sandboxHostGuard(config: AppConfig): MiddlewareHandler {
   return async (context, next) => {
@@ -36,7 +35,7 @@ export function isSandboxHostRequest(
 }
 
 export function isSandboxAllowedPath(path: string): boolean {
-  return path === '/robots.txt' || SHARE_FRAME_PATH.test(path) || SANDBOX_ASSET_PATH.test(path);
+  return path === '/robots.txt' || SHARE_FRAME_PATH.test(path);
 }
 
 function normalizedHost(origin: string): string | null {

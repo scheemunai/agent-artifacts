@@ -27,6 +27,24 @@ describe('sandbox host guard', () => {
     }
   });
 
+  it('blocks app assets on SANDBOX_ORIGIN while leaving the app host asset route available', async () => {
+    const sandboxOrigin = 'https://usercontent.example.test';
+    const ctx = await createViewerTestContext({ sandboxOrigin });
+    try {
+      const assetPath = '/assets/viewer-0f4f9f6c8a7e.js';
+      const appHostAsset = await ctx.app.request(`https://agentartifact.example.test${assetPath}`);
+      expect(appHostAsset.status).toBe(200);
+      expect(appHostAsset.headers.get('content-type')).toContain('javascript');
+
+      const sandboxHostAsset = await ctx.app.request(`${sandboxOrigin}${assetPath}`);
+      expect(sandboxHostAsset.status).toBe(404);
+      await expect(sandboxHostAsset.text()).resolves.toBe('Not found');
+      expect(sandboxHostAsset.headers.get('set-cookie')).toBeNull();
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('continues to serve artifact frames on SANDBOX_ORIGIN', async () => {
     const sandboxOrigin = 'https://usercontent.example.test';
     const ctx = await createViewerTestContext({ sandboxOrigin });
