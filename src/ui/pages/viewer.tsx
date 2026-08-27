@@ -3,6 +3,7 @@ import type { ViewerContentResult, ViewerPageModel } from '../../services/viewer
 import { stylesheetHref } from '../assets.js';
 import { DOCTYPE, UI_FOUNDATION_SCRIPT_SRC } from '../components/layout.js';
 import { Button, ProductMark } from '../components/primitives.js';
+import { VersionBanner } from '../components/version-banner.js';
 
 export const VIEWER_SCRIPT_SRC = '/assets/viewer-0f4f9f6c8a7e.js';
 export const VIEWER_STYLESHEET_HREF = '/assets/viewer-4fd0df5f2b2a.css';
@@ -66,20 +67,13 @@ export function ViewerPage({ model, abuseEmail, pinnedVersion }: ViewerPageProps
           hidden={model.passwordProtected ? true : undefined}
         >
           <ViewerChrome content={model.initialContent} pinnedVersion={pinnedVersion} />
-          <div
-            class="aa-viewer-version-banner"
-            data-aa-version-banner="true"
-            hidden={pinnedVersion ? undefined : true}
-          >
-            <span data-aa-version-banner-text="true">
-              {pinnedVersion && model.initialContent
-                ? `Viewing v${pinnedVersion} of v${model.initialContent.latestVersionNum}`
-                : ''}
-            </span>
-            <a href={model.canonicalUrl} data-aa-view-latest="true">
-              View latest
-            </a>
-          </div>
+          <VersionBanner
+            shownVersion={pinnedVersion ?? null}
+            latestVersion={
+              model.initialContent?.latestVersionNum ?? model.initialContent?.versionNum ?? 1
+            }
+            canonicalUrl={model.canonicalUrl}
+          />
           <section class="aa-viewer-content" data-aa-content="true" aria-live="polite">
             {model.initialContent ? <InitialContent content={model.initialContent} /> : null}
           </section>

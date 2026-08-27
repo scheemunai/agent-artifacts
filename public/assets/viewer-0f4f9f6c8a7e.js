@@ -334,15 +334,32 @@ function renderVersionControls(payload) {
     versionPicker.value = String(pinnedVersion || payload.version_num || latest);
   }
 
-  if (versionBanner && versionBannerText) {
-    versionBanner.hidden = !pinnedVersion;
-    if (pinnedVersion) {
-      versionBannerText.textContent = `Viewing v${pinnedVersion} of v${latest}`;
+  // Same predicate as `src/ui/components/version-banner.tsx`. The banner is a pinned-version
+  // affordance: on the latest version there is nothing to go back to, so both the banner and its
+  // "View latest" link must be gone rather than pointing at the page already on screen.
+  const pinned = isPinnedVersion(pinnedVersion, latest);
+  if (versionBanner) {
+    versionBanner.hidden = !pinned;
+    versionBanner.setAttribute('data-aa-pinned', pinned ? 'true' : 'false');
+  }
+  if (versionBannerText) {
+    versionBannerText.textContent = pinned ? `Viewing v${pinnedVersion} of v${latest}` : '';
+  }
+  if (viewLatestLink) {
+    viewLatestLink.hidden = !pinned;
+    if (boot.canonicalUrl) {
+      viewLatestLink.setAttribute('href', boot.canonicalUrl);
     }
   }
-  if (viewLatestLink && boot.canonicalUrl) {
-    viewLatestLink.setAttribute('href', boot.canonicalUrl);
-  }
+}
+
+function isPinnedVersion(shownVersion, latestVersion) {
+  return (
+    typeof shownVersion === 'number' &&
+    Number.isFinite(shownVersion) &&
+    shownVersion > 0 &&
+    shownVersion !== latestVersion
+  );
 }
 
 function showGate() {
