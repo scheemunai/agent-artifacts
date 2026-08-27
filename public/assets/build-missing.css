@@ -1,0 +1,82 @@
+/*
+ * Fallback stylesheet. First-party source, hand-written, never generated.
+ *
+ * `src/ui/assets.ts` serves this file instead of the hashed `app-<hash>.css` when
+ * `public/assets/manifest.json` is missing — i.e. when the CSS build has not run. The point is
+ * that a missing build is impossible to mistake for a design: the page says so, in the product's
+ * own colours, and the server prints the same instruction to stderr.
+ *
+ * Fix: pnpm run build:css
+ */
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  padding: 0 1.25rem 3rem;
+  background: #f1f5f2;
+  color: #2f3a40;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+body::before {
+  content: "Stylesheet not built — this page is unstyled. Run: pnpm run build:css";
+  display: block;
+  margin: 0 -1.25rem 2rem;
+  padding: 0.875rem 1.25rem;
+  background: #c2482a;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+}
+
+body > * {
+  max-width: 60rem;
+  margin-inline: auto;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: #c2482a;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid #dde4e0;
+}
+
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.9375em;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 1px solid #dde4e0;
+  border-radius: 0.5rem;
+}
+
+img,
+svg,
+table {
+  max-width: 100%;
+}
+
+small,
+footer {
+  color: #5b6870;
+}

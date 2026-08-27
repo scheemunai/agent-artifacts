@@ -220,6 +220,21 @@ docker compose logs app --tail=100
 
 Common causes: invalid `BASE_URL` with a trailing slash, a bad `DATABASE_URL`, or a persistent volume permission problem.
 
+### Pages render unstyled, with a red "Stylesheet not built" banner
+
+The stylesheet is build output, not a checked-in file. The Docker image builds it (`pnpm run build`
+runs inside the image build), so this only appears when you run the app straight from a source
+checkout. The boot log carries the same message:
+
+```text
+[agent-artifacts] STYLESHEET BUILD MISSING
+```
+
+Fix it with `pnpm run build:css`, then restart. If the log instead says
+`[agent-artifacts] STYLESHEET WILL 404`, the build ran but the process was started from the wrong
+directory: `/assets/*` is served from `./public` relative to the working directory, so start the app
+from the directory that contains `public/` (the repository root, or `/app` in the container).
+
 ### Share URLs point to localhost in production
 
 Set `BASE_URL` to your public HTTPS origin and restart.

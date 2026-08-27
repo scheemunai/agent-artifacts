@@ -9,7 +9,9 @@ render time or at page load. Licensing is recorded in `THIRD-PARTY-NOTICES.md`.
 | `source-sans-3-latin-regular.ttf` | Open Graph renderer (`src/lib/og.ts`) | Static `wght` 400 instance of the woff2 above. |
 | `source-sans-3-latin-semibold.ttf` | Open Graph renderer (`src/lib/og.ts`) | Static `wght` 600 instance of the woff2 above. |
 | `source-sans-3-OFL.md` | Licence text | SIL OFL 1.1 for all Source Sans 3 files. |
-| `inter-latin-regular.ttf`, `inter-latin-semibold.ttf`, `OFL.txt` | Nothing | Retired with the Fresh Air repaint of the OG card. Kept only until a cleanup pass removes them. |
+
+Source Sans 3 is the only bundled family. The retired Inter files (`inter-latin-*.ttf`, `OFL.txt`)
+were deleted with the Fresh Air repaint of the OG card; nothing in the repository referenced them.
 
 ## Why the OG renderer needs `.ttf`
 

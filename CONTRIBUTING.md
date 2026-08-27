@@ -20,6 +20,31 @@ pnpm install
 pnpm dev
 ```
 
+`pnpm dev` runs `pnpm run build:css` before starting the watcher, so a fresh checkout renders the real
+product on the first boot. Run the app from the repository root: `/assets/*` is served from `./public`
+relative to the working directory.
+
+### Generated assets
+
+`public/assets/app-<hash>.css` and `public/assets/manifest.json` are build output and are not committed —
+Tailwind hashes its output over the whole scanned source tree, so committing it would churn on unrelated
+UI edits. Everything that produces them is a command:
+
+| Command | Produces |
+| --- | --- |
+| `pnpm run build:css` | `public/assets/app-<hash>.css`, `public/assets/manifest.json`, `public/assets/fonts/*` |
+| `pnpm dev` | the above, then the watch server |
+| `pnpm run build` | the above, then `dist/` |
+| `pnpm run build:og-fallback` | `public/assets/og-fallback.png` from `src/lib/og.ts` (committed; a test asserts the bytes match) |
+
+Edit `src/ui/assets/app.css` while `pnpm dev` is running and the page will not change until you re-run
+`pnpm run build:css` in a second terminal — the running server watches `manifest.json` and picks the new
+stylesheet up without a restart.
+
+If the CSS build has not run, pages are served with `public/assets/build-missing.css`: a red banner reading
+"Stylesheet not built" and a matching `[agent-artifacts] STYLESHEET BUILD MISSING` block on stderr. That
+state is always a missing build step, never a design.
+
 Local app:
 
 - App: <http://localhost:3000>
@@ -96,7 +121,9 @@ Useful commands:
 pnpm check                 # Biome CI + TypeScript typecheck
 pnpm exec vitest run       # full test suite
 pnpm exec vitest run tests/integration/viewer
+pnpm run build:css         # stylesheet + manifest only
 pnpm run build             # CSS/assets + TypeScript build
+pnpm run build:og-fallback # regenerate public/assets/og-fallback.png after an OG card change
 ```
 
 PostgreSQL dialect checks use a disposable local database. Pick a short id (for example, your initials and the date), then run:
