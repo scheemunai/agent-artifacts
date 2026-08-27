@@ -7,8 +7,12 @@
   min-height: 0;
 }
 
+/* The same floor the terminal state uses, for the same reason: the body is block flow, so a short
+   artifact let the footer sit directly under the content with the rest of the viewport empty below
+   it — ~540px of nothing at 1440. `min-height: 0` here was inert, not protective. Reserving the
+   footer's own strip puts "Report abuse" at the bottom of the screen in both states. */
 .aa-viewer-document {
-  min-height: 0;
+  min-height: calc(100vh - 4rem);
 }
 
 .aa-viewer-chrome {
