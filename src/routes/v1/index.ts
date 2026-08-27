@@ -10,6 +10,7 @@ import {
   artifactListQuerySchema,
   createShareSchema,
   patchShareSchema,
+  promoteTemplateSchema,
   publishArtifactSchema,
   restoreVersionSchema,
   templateListQuerySchema,
@@ -17,6 +18,12 @@ import {
   versionListQuerySchema,
 } from '../../lib/schemas/index.js';
 import type { Logger } from '../../logger.js';
+import {
+  getTemplateResponse,
+  listTemplatesResponse,
+  mergeTemplate,
+  promoteTemplateResponse,
+} from '../../services/templates.js';
 import {
   type AuthPrincipal,
   authenticateBotToken,
@@ -30,12 +37,9 @@ import {
   ensureContentLimit,
   ensureMetadataLimit,
   getArtifactResponse,
-  getTemplateResponse,
   getVersionResponse,
   listArtifactsResponse,
-  listTemplatesResponse,
   listVersionsResponse,
-  mergeTemplate,
   parsePositiveVersion,
   parseUpdatedSince,
   patchShareResponse,
@@ -367,6 +371,25 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
     );
   });
 
+  v1.post('/templates', async (context) => {
+    const auth = requireAuth(context);
+    const body = parseBody(
+      await readJson(context, ctx.config.jsonBodyLimitBytes),
+      promoteTemplateSchema
+    );
+    return context.json(
+      await promoteTemplateResponse({
+        db: requireDb(ctx),
+        accountId: auth.account.id,
+        artifactId: body.artifact_id,
+        name: body.name,
+        slug: body.slug,
+        ...(body.description !== undefined ? { description: body.description } : {}),
+      }),
+      201
+    );
+  });
+
   v1.get('/templates/:slug', async (context) => {
     const auth = requireAuth(context);
     return context.json(
@@ -387,7 +410,7 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
   methodNotAllowed(v1, '/artifacts/:id_or_slug/versions/:n/restore', 'POST');
   methodNotAllowed(v1, '/artifacts/:id_or_slug/share', 'POST, PATCH, DELETE');
   methodNotAllowed(v1, '/artifacts/:id_or_slug/download', 'GET');
-  methodNotAllowed(v1, '/templates', 'GET');
+  methodNotAllowed(v1, '/templates', 'GET, POST');
   methodNotAllowed(v1, '/templates/:slug', 'GET');
 
   app.route('/v1', v1);
@@ -565,6 +588,7 @@ curl -X POST ${config.baseUrl}/v1/artifacts \\
   separate need distinct slugs.
 - share:true → response includes share.url — a stable public link. Send it to
   your human. The link LIVE-UPDATES when you re-publish: same URL, new content.
+- In the JSON response, the public URL is exactly at response.share.url.
 - "password":"secret123" → the public page requires that password (share implied).
 - Response: 201 created / 200 updated, with id, slug, version_num, share.url.
 
@@ -761,6 +785,12 @@ function openApiDocument(config: AppConfig): Record<string, unknown> {
           parameters: queryParameters(['limit', 'cursor']),
           responses: { '200': { description: 'Template page' }, ...errorResponses },
         },
+        post: {
+          summary: 'Promote a markdown artifact to an account template',
+          security,
+          requestBody: requestBodyRef('PromoteTemplateRequest'),
+          responses: { '201': { description: 'Template created' }, ...errorResponses },
+        },
       },
       '/templates/{slug}': {
         get: {
@@ -820,6 +850,7 @@ function openApiDocument(config: AppConfig): Record<string, unknown> {
         RestoreVersionRequest: jsonSchema(restoreVersionSchema),
         CreateShareRequest: jsonSchema(createShareSchema),
         PatchShareRequest: jsonSchema(patchShareSchema),
+        PromoteTemplateRequest: jsonSchema(promoteTemplateSchema),
         ArtifactListQuery: jsonSchema(artifactListQuerySchema),
         VersionListQuery: jsonSchema(versionListQuerySchema),
         TemplateListQuery: jsonSchema(templateListQuerySchema),

@@ -2,8 +2,8 @@ import { resolve } from 'node:path';
 import { migrate as migrateSqlite } from 'drizzle-orm/better-sqlite3/migrator';
 import { migrate as migratePostgres } from 'drizzle-orm/node-postgres/migrator';
 import type { Logger } from '../logger.js';
+import { seedStarterTemplates } from '../services/templates.js';
 import type { DatabaseHandle } from './client.js';
-import { seedStarterTemplates } from './starter-templates.js';
 
 export async function runMigrations(handle: DatabaseHandle, logger: Logger): Promise<void> {
   const migrationsFolder = resolve(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { publishArtifactSchema } from '../../src/lib/schemas/index.js';
-import { createApiTestContext } from './api-test-utils.js';
+import { createApiTestContext, json } from './api-test-utils.js';
 
 const documentedPublishFields = [
   'slug',
@@ -28,6 +28,7 @@ describe('V1 contract endpoint', () => {
       expect(text).toContain(`# Agent Artifacts — API Contract (v1)`);
       expect(text).toContain(`Base URL: ${ctx.config.baseUrl}/v1`);
       expect(text).toContain('POST the same slug again = UPDATE');
+      expect(text).toContain('the public URL is exactly at response.share.url');
 
       const llms = await ctx.app.request('/llms.txt');
       expect(llms.status).toBe(200);
@@ -37,7 +38,7 @@ describe('V1 contract endpoint', () => {
     }
   });
 
-  it('keeps documented publish examples aligned with the real Zod schema', async () => {
+  it('keeps documented publish examples aligned with the real Zod schema and template API', async () => {
     const schemaKeys = Object.keys(publishArtifactSchema.shape).sort();
     expect(schemaKeys).toEqual([...documentedPublishFields].sort());
 
@@ -65,6 +66,26 @@ describe('V1 contract endpoint', () => {
 
     expect(publishArtifactSchema.safeParse(directPublishExample).success).toBe(true);
     expect(publishArtifactSchema.safeParse(templatePublishExample).success).toBe(true);
+
+    const ctx = await createApiTestContext();
+    try {
+      const response = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify(templatePublishExample),
+      });
+      expect(response.status).toBe(201);
+      const body = await json(response);
+      expect(body).toMatchObject({
+        slug: 'weekly-report',
+        type: 'markdown',
+        share: { url: expect.stringMatching(new RegExp(`^${ctx.config.baseUrl}/a/`)) },
+      });
+      expect(body.content).toContain('## Highlights');
+      expect(body.content).toContain('Ship v2.2');
+    } finally {
+      await ctx.cleanup();
+    }
   });
 
   it('serves an OpenAPI document with every v1 path', async () => {

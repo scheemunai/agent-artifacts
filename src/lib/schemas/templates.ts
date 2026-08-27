@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { artifactTypeSchema, limitSchema, slugSchema } from './artifacts.js';
+import { ARTIFACT_ID_PATTERN, artifactTypeSchema, limitSchema, slugSchema } from './artifacts.js';
 
 export const templateSlotSchema = z.object({
   name: z.string().regex(/^[a-z0-9_]{1,40}$/),
@@ -26,4 +26,14 @@ export const templateObjectSchema = z.object({
   updated_at: z.string(),
 });
 
+export const promoteTemplateSchema = z
+  .object({
+    artifact_id: z.string().regex(ARTIFACT_ID_PATTERN),
+    slug: slugSchema,
+    name: z.string().min(1).max(80),
+    description: z.string().max(300).optional(),
+  })
+  .strict();
+
 export type TemplateSlot = z.infer<typeof templateSlotSchema>;
+export type PromoteTemplateInput = z.infer<typeof promoteTemplateSchema>;

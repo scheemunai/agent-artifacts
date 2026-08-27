@@ -73,12 +73,12 @@ describe('V1 API auth and errors', () => {
       expect(await json(notFound)).toMatchObject({ error: { code: 'not_found' } });
 
       const method = await ctx.app.request('/v1/templates', {
-        method: 'POST',
+        method: 'PUT',
         headers: { ...ctx.authHeaders, ...jsonContent },
         body: '{}',
       });
       expect(method.status).toBe(405);
-      expect(method.headers.get('Allow')).toBe('GET');
+      expect(method.headers.get('Allow')).toBe('GET, POST');
       expect(await json(method)).toMatchObject({ error: { code: 'method_not_allowed' } });
 
       const validation = await ctx.app.request('/v1/artifacts', {

@@ -19,6 +19,11 @@ import {
 } from '../lib/schemas/artifacts.js';
 import { ArtifactService, type ArtifactSnapshot, computeContentHash } from './artifacts.js';
 import { hashSecret } from './bots.js';
+import {
+  getTemplateResponse as getTemplateResponseFromService,
+  listTemplatesResponse as listTemplatesResponseFromService,
+  mergeTemplate as mergeTemplateFromService,
+} from './templates.js';
 
 export interface AuthPrincipal {
   account: Account;
@@ -624,19 +629,7 @@ export async function listTemplatesResponse(input: {
   accountId: string;
   options: ListTemplatesOptions;
 }): Promise<Record<string, unknown>> {
-  const cursor = decodeSortCursor(input.options.cursor);
-  const rows = await listTemplateRows(input.db, input.accountId, input.options.limit + 1, cursor);
-  const pageRows = rows.slice(0, input.options.limit);
-  return {
-    items: pageRows.map((row) => formatTemplate(row, false)),
-    next_cursor:
-      rows.length > input.options.limit
-        ? encodeSortCursor({
-            u: pageRows.at(-1)?.updated_at ?? 0,
-            id: pageRows.at(-1)?.id ?? '',
-          })
-        : null,
-  };
+  return listTemplatesResponseFromService(input);
 }
 
 export async function getTemplateResponse(input: {
@@ -644,12 +637,7 @@ export async function getTemplateResponse(input: {
   accountId: string;
   slug: string;
 }): Promise<Record<string, unknown>> {
-  const template = await resolveTemplate(input.db, input.accountId, input.slug);
-  if (!template) {
-    throw new AppError(404, 'not_found', 'Template not found');
-  }
-
-  return formatTemplate(template, true);
+  return getTemplateResponseFromService(input);
 }
 
 export async function mergeTemplate(input: {
@@ -658,34 +646,7 @@ export async function mergeTemplate(input: {
   slug: string;
   slots?: Record<string, string>;
 }): Promise<TemplateMergeResult> {
-  const template = await resolveTemplate(input.db, input.accountId, input.slug);
-  if (!template) {
-    throw new AppError(400, 'validation_failed', 'Unknown template', {
-      unknown_template: input.slug,
-    });
-  }
-
-  const slots = parseSlots(template.slots);
-  const values = input.slots ?? {};
-  const validSlots = slots.map((slot) => slot.name);
-  const missingSlots = slots
-    .filter((slot) => slot.required && values[slot.name] === undefined)
-    .map((slot) => slot.name);
-  const unknownSlots = Object.keys(values).filter((slot) => !validSlots.includes(slot));
-
-  if (missingSlots.length > 0 || unknownSlots.length > 0) {
-    throw new AppError(400, 'validation_failed', 'Template slots are invalid', {
-      ...(missingSlots.length > 0 ? { missing_slots: missingSlots } : {}),
-      ...(unknownSlots.length > 0 ? { unknown_slots: unknownSlots } : {}),
-      valid_slots: validSlots,
-    });
-  }
-
-  const content = template.content.replace(
-    /{{([a-z0-9_]{1,40})}}/g,
-    (_match, name: string) => values[name] ?? ''
-  );
-  return { template, content, type: template.type };
+  return mergeTemplateFromService(input);
 }
 
 export function deriveSlug(title: string): string {
@@ -865,23 +826,6 @@ function formatReducedShare(share: ShareRow, baseUrl: string): Record<string, un
   };
 }
 
-function formatTemplate(row: TemplateRow, includeContent: boolean): Record<string, unknown> {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    description: row.description,
-    type: row.type,
-    built_in: row.account_id === null,
-    ...(includeContent
-      ? { content: row.content }
-      : { content_length: Buffer.byteLength(row.content, 'utf8') }),
-    slots: parseSlots(row.slots),
-    created_at: toIso(row.created_at),
-    updated_at: toIso(row.updated_at),
-  };
-}
-
 function artifactSnapshotFromRow(row: ArtifactRow): ArtifactSnapshot {
   return {
     id: row.id,
@@ -898,22 +842,6 @@ function artifactSnapshotFromRow(row: ArtifactRow): ArtifactSnapshot {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
-}
-
-function parseSlots(
-  slots: string
-): Array<{ name: string; description: string; required: boolean }> {
-  const parsed = JSON.parse(slots) as unknown;
-  return Array.isArray(parsed)
-    ? parsed.map((slot) => {
-        const value = slot as { name?: unknown; description?: unknown; required?: unknown };
-        return {
-          name: typeof value.name === 'string' ? value.name : '',
-          description: typeof value.description === 'string' ? value.description : '',
-          required: value.required === true,
-        };
-      })
-    : [];
 }
 
 function parseJsonObject(value: string): Record<string, unknown> {
@@ -1397,49 +1325,6 @@ async function shareViews(
     lifetime_views: Number(lifetime?.total ?? 0),
     previous_shares: Number(previous?.count ?? 0),
   };
-}
-
-async function listTemplateRows(
-  db: DatabaseHandle,
-  accountId: string,
-  limit: number,
-  cursor: { u: number; id: string } | null
-): Promise<TemplateRow[]> {
-  const params: unknown[] = [accountId];
-  const cursorClause = cursor ? 'AND (updated_at < ? OR (updated_at = ? AND id < ?))' : '';
-  if (cursor) {
-    params.push(cursor.u, cursor.u, cursor.id);
-  }
-  params.push(limit);
-  return queryAll<TemplateRow>(
-    db,
-    `
-      SELECT *
-      FROM templates
-      WHERE (account_id = ? OR account_id IS NULL) ${cursorClause}
-      ORDER BY updated_at DESC, id DESC
-      LIMIT ?
-    `,
-    params
-  );
-}
-
-async function resolveTemplate(
-  db: DatabaseHandle,
-  accountId: string,
-  slug: string
-): Promise<TemplateRow | null> {
-  return queryOne<TemplateRow>(
-    db,
-    `
-      SELECT *
-      FROM templates
-      WHERE slug = ? AND (account_id = ? OR account_id IS NULL)
-      ORDER BY account_id IS NOT NULL DESC
-      LIMIT 1
-    `,
-    [slug, accountId]
-  );
 }
 
 async function queryOne<T extends QueryResultRow>(
