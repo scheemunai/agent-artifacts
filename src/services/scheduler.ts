@@ -8,6 +8,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_SWEEP_INTERVAL_MS = DAY_MS;
 const SHARE_VIEWER_RETENTION_MS = 365 * DAY_MS;
 
+export type Clock = () => number;
+
 export interface BackgroundSweepCounts {
   softDeletedArtifactsPurged: number;
   expiredSessionsDeleted: number;
@@ -22,7 +24,7 @@ export interface RunBackgroundSweepsOptions {
   config: Pick<AppConfig, 'artifactPurgeDays' | 'baseUrl'>;
   cloudModule: CloudModule;
   logger: Logger;
-  now?: () => number;
+  now?: Clock;
 }
 
 export interface BackgroundSchedulerOptions extends RunBackgroundSweepsOptions {
