@@ -275,7 +275,7 @@ export function DashboardArtifactPage({
 
         <VersionHistory artifact={artifact} versions={versions} />
         {diff ? <VersionDiff diff={diff} /> : null}
-        <PromotePanel artifact={artifact} baseUrl={baseUrl} error={promoteError ?? null} />
+        <PromotePanel artifact={artifact} baseUrl={baseUrl} errorCode={promoteError ?? null} />
       </div>
     </DashboardChrome>
   );
@@ -374,14 +374,14 @@ export function DashboardBotsPage({
               id="name"
               name="name"
               label="Bot name"
-              placeholder="R2"
+              placeholder="Research bot"
               error={createError?.field === 'name' ? createError.message : undefined}
             />
             <Input
               id="byline"
               name="byline"
               label="Byline"
-              placeholder="Andrej's Chief of Staff"
+              placeholder="Research assistant"
               optional
             />
             <Button variant="primary" type="submit">
@@ -489,7 +489,6 @@ export interface DashboardSettingsPageProps {
   deployment: 'self-hosted' | 'cloud';
   extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
-  error?: string | undefined;
 }
 
 export function DashboardSettingsPage({
@@ -497,7 +496,6 @@ export function DashboardSettingsPage({
   deployment,
   extensionNavItems,
   notice,
-  error,
 }: DashboardSettingsPageProps) {
   const isCloud = deployment === 'cloud';
   return (
@@ -519,7 +517,6 @@ export function DashboardSettingsPage({
                 : 'Update your email/password, or permanently delete the account and all public shares.'}
             </p>
           </header>
-          {error ? <p class="aa-error">{error}</p> : null}
         </section>
         <div class="aa-grid aa-grid--2">
           <Card
@@ -754,10 +751,7 @@ function ArtifactFilters({
   filters: DashboardHomePageProps['filters'];
 }) {
   return (
-    <Card
-      title="Filter artifacts"
-      description="Search maps to the agent API q filter: title and slug only."
-    >
+    <Card title="Filter artifacts" description="Searches titles and slugs.">
       <form method="get" action="/dashboard" class="aa-grid aa-grid--3">
         <Input id="q" name="q" label="Search" value={filters.q} placeholder="title or slug" />
         <Select
@@ -1063,15 +1057,40 @@ function VersionDiff({
   );
 }
 
+/**
+ * Server-owned copy for a promote refusal, looked up from the code the route put in the URL.
+ *
+ * The route decides WHICH refusal happened; this decides how to say it. Keeping the sentence on
+ * this side is what makes the query parameter a closed vocabulary — an unknown code says nothing
+ * rather than printing whatever it was handed.
+ */
+function promoteFailureMessage(code: string | null): string | null {
+  switch (code) {
+    case 'slug_taken':
+      return 'That template slug is already in use. Choose another.';
+    case 'needs_a_slot':
+      return 'Add at least one {{slot}} placeholder to the artifact first.';
+    case 'markdown_only':
+      return 'Only markdown artifacts can be promoted to templates.';
+    case 'artifact_missing':
+      return 'That artifact is no longer here.';
+    case 'promote_unavailable':
+      return 'That promotion did not go through, and no template was created.';
+    default:
+      return null;
+  }
+}
+
 function PromotePanel({
   artifact,
   baseUrl,
-  error,
+  errorCode,
 }: {
   artifact: DashboardArtifactDetail;
   baseUrl: string;
-  error: string | null;
+  errorCode: string | null;
 }) {
+  const error = promoteFailureMessage(errorCode);
   // An HTML artifact used to get the whole panel: a prefilled name, a prefilled slug, an editable
   // description, an error line and a submit at 55% opacity — a form the reader can type into that
   // can never be sent. State the rule once and offer nothing to fill in.
@@ -1104,9 +1123,7 @@ function PromotePanel({
         method="post"
         action={`/dashboard/api/artifacts/${artifact.id}/promote-template`}
       >
-        <p class="aa-hint">
-          Detected slots: {slots.length > 0 ? slots.join(' ') : 'none yet'} · {baseUrl}
-        </p>
+        <p class="aa-hint">Detected slots: {slots.length > 0 ? slots.join(' ') : 'none yet'}</p>
         <Input id="template_name" name="name" label="Template name" value={artifact.title} />
         <Input
           id="template_slug"

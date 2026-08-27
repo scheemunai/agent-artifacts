@@ -122,6 +122,45 @@ function botFailureMessage(code: string): string {
 }
 
 /**
+ * The settings failures, and the promote refusals, as codes.
+ *
+ * Same closed-vocabulary rule as `BOT_FAILURE_COPY`, applied to the two remaining places the
+ * dashboard put a sentence in a query parameter. Specificity is kept where it is actionable —
+ * "the passwords do not match" and "use at least 8 characters" are different instructions, and
+ * collapsing them into one generic failure would have been a real loss — so the vocabulary has a
+ * code per distinct remedy rather than a code per route.
+ */
+function settingsFailureCode(error: unknown): string {
+  if (error instanceof AuthError) {
+    if (error.code === 'invalid_password') {
+      return 'password_incorrect';
+    }
+    if (error.code === 'email_conflict') {
+      return 'email_in_use';
+    }
+    if (error.code === 'validation_failed') {
+      return 'email_invalid';
+    }
+  }
+  return 'settings_unavailable';
+}
+
+function promoteFailureCode(error: unknown): string {
+  if (error instanceof AppError) {
+    if (error.code === 'slug_conflict') {
+      return 'slug_taken';
+    }
+    if (error.code === 'not_found') {
+      return 'artifact_missing';
+    }
+    if (error.code === 'validation_failed') {
+      return /slot/i.test(error.message) ? 'needs_a_slot' : 'markdown_only';
+    }
+  }
+  return 'promote_unavailable';
+}
+
+/**
  * Rebuilds the keyed failure on the far side of the redirect, so it still lands on its subject.
  *
  * This is what makes Post/Redirect/Get affordable here: the error had an address before — the
@@ -522,7 +561,6 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         deployment: services.config.deployment,
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
-        error: routeContext.req.query('error') ?? undefined,
       })
     );
   });
@@ -799,8 +837,9 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       });
       return routeContext.redirect('/dashboard/templates?notice=template_promoted', 303);
     } catch (error) {
+      services.logger.error({ err: error }, 'dashboard.promote_failed');
       return routeContext.redirect(
-        `/dashboard/artifacts/${routeContext.req.param('id')}?promote_error=${encodeURIComponent(dashboardErrorMessage(error))}`,
+        `/dashboard/artifacts/${routeContext.req.param('id')}?promote_error=${promoteFailureCode(error)}`,
         303
       );
     }
@@ -821,8 +860,9 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         await services.mail.sendMagicLink({ to: issued.email, url: issued.url });
         return routeContext.redirect('/dashboard/settings?notice=email_change_link_sent', 303);
       } catch (error) {
+        services.logger.error({ err: error }, 'dashboard.email_change_failed');
         return routeContext.redirect(
-          `/dashboard/settings?error=${encodeURIComponent(authErrorMessage(error))}`,
+          `/dashboard/settings?notice=${settingsFailureCode(error)}`,
           303
         );
       }
@@ -836,16 +876,22 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         stringField(form, 'current_password')
       ))
     ) {
-      return routeContext.redirect(
-        '/dashboard/settings?error=Current%20password%20is%20incorrect',
-        303
-      );
+      return routeContext.redirect('/dashboard/settings?notice=password_incorrect', 303);
     }
-    await services.auth.updateAccountEmail(
-      session.account.id,
-      normalizeEmail(stringField(form, 'new_email'))
+    return answerWithRedirect(
+      routeContext,
+      services.logger,
+      {
+        ok: '/dashboard/settings?notice=email_updated',
+        failed: '/dashboard/settings?notice=email_change_failed',
+      },
+      async () => {
+        await services.auth.updateAccountEmail(
+          session.account.id,
+          normalizeEmail(stringField(form, 'new_email'))
+        );
+      }
     );
-    return routeContext.redirect('/dashboard/settings?notice=email_updated', 303);
   });
 
   app.post('/dashboard/api/settings/password', async (routeContext) => {
@@ -854,18 +900,15 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return session;
     }
     if (services.config.deployment === 'cloud') {
-      return routeContext.redirect(
-        '/dashboard/settings?error=Password%20changes%20are%20unavailable%20in%20cloud%20mode',
-        303
-      );
+      return routeContext.redirect('/dashboard/settings?notice=password_cloud_unavailable', 303);
     }
     const form = await parseForm(routeContext);
     try {
       if (stringField(form, 'new_password') !== stringField(form, 'confirm_password')) {
-        throw new AuthError(400, 'validation_failed', 'Passwords do not match');
+        return routeContext.redirect('/dashboard/settings?notice=password_mismatch', 303);
       }
       if (stringField(form, 'new_password').length < 8) {
-        throw new AuthError(400, 'validation_failed', 'Password must be at least 8 characters');
+        return routeContext.redirect('/dashboard/settings?notice=password_too_short', 303);
       }
       await services.auth.changePassword(
         session.account.id,
@@ -881,10 +924,8 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       );
       return routeContext.redirect('/dashboard/settings?notice=password_changed', 303);
     } catch (error) {
-      return routeContext.redirect(
-        `/dashboard/settings?error=${encodeURIComponent(authErrorMessage(error))}`,
-        303
-      );
+      services.logger.error({ err: error }, 'dashboard.password_change_failed');
+      return routeContext.redirect(`/dashboard/settings?notice=${settingsFailureCode(error)}`, 303);
     }
   });
 
@@ -1173,6 +1214,27 @@ function noticeFromQuery(value: string | undefined): DashboardNotice | undefined
       return { tone: 'danger', message: 'That did not go through — the account was not deleted.' };
     case 'artifact_missing':
       return { tone: 'warn', message: 'That artifact is no longer here.' };
+
+    /* Settings failures. Codes, not sentences, for the reason above the vocabulary. */
+    case 'password_incorrect':
+      return { tone: 'danger', message: 'That current password is not right.' };
+    case 'password_mismatch':
+      return { tone: 'danger', message: 'The new passwords do not match.' };
+    case 'password_too_short':
+      return { tone: 'danger', message: 'Use at least 8 characters for the new password.' };
+    case 'password_cloud_unavailable':
+      return {
+        tone: 'info',
+        message: 'Cloud accounts sign in by email link, so there is no password to change.',
+      };
+    case 'email_in_use':
+      return { tone: 'danger', message: 'That email address is already in use.' };
+    case 'email_invalid':
+      return { tone: 'danger', message: 'Enter a valid email address.' };
+    case 'email_change_failed':
+      return { tone: 'danger', message: 'That email change did not go through.' };
+    case 'settings_unavailable':
+      return { tone: 'danger', message: 'That did not go through, and nothing was changed.' };
     default:
       return undefined;
   }
