@@ -399,10 +399,7 @@ function marketingComponentsSection() {
           can make an HTTP request.
         </MarketingWorksWith>
 
-        <MarketingOriginNote
-          quote="I asked my bot for something simple: a visual list of newsletters I should probably unsubscribe from, so I could make quick decisions. It did the work, then handed me an HTML file to download. I didn't want a file. I wanted a link I could open, look through, and reply to, with the bot fixing what I flagged. That link is what we built."
-          byline="Why this exists"
-        />
+        <MarketingOriginNote quote="I asked my bot for something simple: a visual list of newsletters I should probably unsubscribe from, so I could make quick decisions. It did the work, then handed me an HTML file to download. I didn't want a file. I wanted a link I could open, look through, and reply to, with the bot fixing what I flagged. That link is what we built." />
       </div>
     </StyleGuideSection>
   );

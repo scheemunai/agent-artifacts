@@ -115,7 +115,10 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
               <h1 class="aa-marketing-hero__title" id="home-title">
                 {HOME_HERO}
               </h1>
-              <p class="aa-marketing-hero__sub">{HOME_SUBLINE}</p>
+              <p class="aa-marketing-hero__sub">
+                Shareable Artifacts your agent
+                <br aria-hidden="true" /> can use to show its work.
+              </p>
             </div>
 
             <MarketingArtifactEmbed
@@ -182,7 +185,7 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
           </MarketingSection>
 
           <MarketingSection id="home-origin" label="Why this exists">
-            <MarketingOriginNote quote={HOME_ORIGIN_QUOTE} byline="Why this exists" />
+            <MarketingOriginNote quote={HOME_ORIGIN_QUOTE} />
           </MarketingSection>
 
           <MarketingSection id="home-terms" label="Pricing and open source">

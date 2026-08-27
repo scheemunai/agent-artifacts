@@ -1029,7 +1029,7 @@
   }
 
   .aa-marketing-hero__sub {
-    max-width: 42ch;
+    max-width: 34ch;
     margin: 0;
     color: var(--color-aa-muted);
     font-size: clamp(1.09rem, 2.3vw, 1.22rem);
@@ -1504,12 +1504,17 @@
     }
 
     .aa-marketing-artifact__meta {
-      align-items: flex-start;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .aa-marketing-artifact__agent,
+    .aa-marketing-artifact__sep {
+      display: none;
     }
 
     .aa-marketing-artifact__updated {
-      width: 100%;
-      margin-left: 1.05rem;
+      margin-left: auto;
       text-align: left;
     }
 

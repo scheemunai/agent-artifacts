@@ -121,7 +121,7 @@ export function MarketingWorksWith({ children }: { children: Child }) {
 
 export interface MarketingOriginNoteProps {
   quote: string;
-  byline: string;
+  byline?: string | undefined;
 }
 
 export function MarketingOriginNote({ quote, byline }: MarketingOriginNoteProps) {
@@ -131,7 +131,7 @@ export function MarketingOriginNote({ quote, byline }: MarketingOriginNoteProps)
         “
       </p>
       <p class="aa-marketing-origin__quote">{quote}</p>
-      <p class="aa-marketing-origin__byline">{byline}</p>
+      {byline ? <p class="aa-marketing-origin__byline">{byline}</p> : null}
     </aside>
   );
 }
