@@ -19,6 +19,7 @@ import {
   Card,
   type ComponentState,
   ConfirmationDialog,
+  ConfirmDestructive,
   CopyBlock,
   Dialog,
   EmptyState,
@@ -273,6 +274,7 @@ export function StyleGuidePage() {
             {fieldSection()}
             {badgeSection()}
             {noticeSection()}
+            {destructiveSection()}
             {cardTableSection()}
             {feedbackSection()}
             {navigationSection()}
@@ -790,6 +792,68 @@ function tableColumnPrioritySection() {
           ],
         ]}
       />
+    </Card>
+  );
+}
+
+function destructiveSection() {
+  return (
+    <Card
+      title="Destructive confirmation"
+      description="The canonical shape for anything that cannot be taken back: trigger, then dialog, then a typed confirmation inside the dialog."
+    >
+      <div class="aa-usage">
+        At rest a destructive action is <strong>one button</strong>. The typed confirmation lives
+        inside the dialog it opens, never on the page — a screen with eight live destructive inputs
+        sitting open has no second step and therefore no confirmation at all. Cancel takes initial
+        focus; the confirming button stays inert until the typed value matches exactly; and inside
+        the dialog the danger variant is solid, so the most consequential control on screen is not
+        also the quietest. The client-side match is a courtesy — the server revalidates the typed
+        confirmation, and must keep doing so.
+      </div>
+      <ButtonRow>
+        <ConfirmDestructive
+          id="style-guide-revoke"
+          triggerLabel="Revoke link"
+          title="Revoke this share link?"
+          description="The current URL stops working immediately. Re-sharing creates a new URL."
+          consequence="This cannot be undone. Anyone holding the old link will see a missing page."
+          confirmValue="weekly-ops"
+          confirmLabel="Revoke link"
+          action="/style-guide#components"
+          fields={{ specimen: 'true' }}
+        />
+        <ConfirmDestructive
+          id="style-guide-delete-account"
+          triggerLabel="Delete account"
+          title="Delete this account permanently?"
+          description="Every artifact, share link and bot key belonging to this account is removed."
+          consequence="This cannot be undone. Shared links stop working immediately and show as missing."
+          confirmValue="you@example.com"
+          confirmLabel="Delete account permanently"
+          action="/style-guide#components"
+          fields={{ specimen: 'true' }}
+        />
+      </ButtonRow>
+      <ConfirmationDialog
+        id="style-guide-confirm-simple"
+        title="Restore this version?"
+        description="Restoring rewrites the current content with the contents of this version."
+        confirmLabel="Restore version"
+      />
+      <div class="aa-usage">
+        Where there is nothing to type — a reversible action that still deserves a beat, like
+        restoring a version — use <code>ConfirmationDialog</code> instead. Reach for a typed
+        confirmation only when the action is irreversible.
+      </div>
+      <ButtonRow>
+        <Button
+          variant="secondary"
+          dataAttrs={{ 'data-aa-open-dialog': 'style-guide-confirm-simple' }}
+        >
+          Restore version
+        </Button>
+      </ButtonRow>
     </Card>
   );
 }

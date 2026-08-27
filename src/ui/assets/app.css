@@ -923,6 +923,33 @@
     background: var(--color-aa-surface-raised);
   }
 
+  /* Hierarchy, restored. `.aa-btn--danger` is a pale fill with red text — right for a trigger that
+     merely opens a question, wrong for the control that actually destroys something. Inside a
+     destructive dialog the confirming action is solid, so the most consequential button on screen
+     stops being the quietest one. */
+  .aa-dialog--destructive .aa-dialog__actions .aa-btn--danger {
+    color: var(--color-aa-accent-ink);
+    border-color: var(--color-aa-danger);
+    background: var(--color-aa-danger);
+  }
+
+  .aa-dialog--destructive .aa-dialog__actions .aa-btn--danger:hover {
+    border-color: var(--color-aa-danger-hover);
+    background: var(--color-aa-danger-hover);
+  }
+
+  .aa-confirm-form {
+    display: grid;
+    gap: var(--spacing-aa-4);
+  }
+
+  .aa-confirm-form__consequence {
+    margin: 0;
+    color: var(--color-aa-danger);
+    font-size: var(--text-aa-sm);
+    font-weight: 650;
+  }
+
   .aa-dialog__title {
     margin: 0;
     font-size: var(--text-aa-xl);

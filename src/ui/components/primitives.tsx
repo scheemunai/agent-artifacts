@@ -31,6 +31,8 @@ interface ButtonProps {
    * Default is intrinsic width; set this where the design calls for a full-bleed action.
    */
   fullWidth?: boolean | undefined;
+  /** Associates a submit button with a form it is not nested inside — dialog footers need this. */
+  form?: string | undefined;
   href?: string | undefined;
   class?: string | undefined;
   id?: string | undefined;
@@ -48,6 +50,7 @@ export function Button({
   disabled = false,
   loading = false,
   fullWidth = false,
+  form,
   href,
   class: className,
   id,
@@ -93,6 +96,7 @@ export function Button({
       id={id}
       class={classes}
       type={type}
+      form={form}
       disabled={isDisabled}
       aria-busy={loading ? 'true' : undefined}
       aria-label={ariaLabel}
@@ -614,6 +618,110 @@ export function ConfirmationDialog({
         Safe default: Cancel receives initial focus; the destructive action is styled separately.
       </p>
     </Dialog>
+  );
+}
+
+export interface ConfirmDestructiveProps {
+  /** Base id; the dialog, form and input derive theirs from it. */
+  id: string;
+  triggerLabel: string;
+  title: string;
+  description: string;
+  /** The one sentence about what cannot be taken back. */
+  consequence: string;
+  /** The exact words that must be typed — the slug, the bot name, the account email. */
+  confirmValue: string;
+  confirmLabel: string;
+  /** Where the confirmed action posts. */
+  action: string;
+  /** Extra fields the action needs, rendered as hidden inputs. */
+  fields?: Record<string, string> | undefined;
+}
+
+/**
+ * The product's canonical destructive action: **trigger → dialog → typed confirmation inside the
+ * dialog**.
+ *
+ * What it replaces is eight always-open, permanently expanded type-to-confirm forms sitting live
+ * at rest on a single page, with no deliberate second step and no "this cannot be undone" moment
+ * anywhere. Progressive disclosure is the point: at rest this is one button.
+ *
+ * Two deliberate choices. Cancel takes initial focus, because the safe option should be the one
+ * under the reader's hands. And the confirming button is inert until the typed value matches —
+ * which is a courtesy, not a control: the server revalidates the typed confirmation, and must
+ * continue to, because nothing here is a security boundary.
+ */
+export function ConfirmDestructive({
+  id,
+  triggerLabel,
+  title,
+  description,
+  consequence,
+  confirmValue,
+  confirmLabel,
+  action,
+  fields = {},
+}: ConfirmDestructiveProps) {
+  const dialogId = `${id}-dialog`;
+  const formId = `${id}-form`;
+  const inputId = `${id}-confirm`;
+
+  return (
+    <>
+      <Button variant="danger" dataAttrs={{ 'data-aa-open-dialog': dialogId }}>
+        {triggerLabel}
+      </Button>
+      <Dialog
+        id={dialogId}
+        title={title}
+        description={description}
+        destructive
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              dataAttrs={{ 'data-aa-close-dialog': 'true', 'data-aa-cancel': 'true' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              type="submit"
+              form={formId}
+              disabled
+              dataAttrs={{ 'data-aa-confirm-submit': id }}
+            >
+              {confirmLabel}
+            </Button>
+          </>
+        }
+      >
+        <form class="aa-confirm-form" id={formId} method="post" action={action}>
+          {Object.entries(fields).map(([name, value]) => (
+            <input type="hidden" name={name} value={value} />
+          ))}
+          <p class="aa-confirm-form__consequence">{consequence}</p>
+          <div class="aa-field">
+            <div class="aa-label-row">
+              <label class="aa-label" for={inputId}>
+                Type <code>{confirmValue}</code> to confirm
+              </label>
+            </div>
+            <input
+              class="aa-control"
+              id={inputId}
+              name="confirm"
+              type="text"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck={false}
+              data-aa-confirm-match={confirmValue}
+              data-aa-confirm-for={id}
+            />
+          </div>
+        </form>
+      </Dialog>
+    </>
   );
 }
 

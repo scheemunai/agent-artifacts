@@ -204,6 +204,31 @@ function bindToasts() {
   });
 }
 
+/**
+ * Keeps a destructive confirmation inert until the typed value matches exactly.
+ *
+ * This is a courtesy, not a control. The server revalidates the typed confirmation and must keep
+ * doing so — nothing on this side of the wire is a security boundary.
+ */
+function bindConfirmDestructive() {
+  document.addEventListener('input', (event) => {
+    const field =
+      event.target instanceof Element ? event.target.closest('[data-aa-confirm-match]') : null;
+    if (!(field instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const expected = field.getAttribute('data-aa-confirm-match') || '';
+    const owner = field.getAttribute('data-aa-confirm-for');
+    const submit = owner
+      ? document.querySelector(`[data-aa-confirm-submit="${owner}"]`)
+      : field.closest('dialog')?.querySelector('[data-aa-confirm-submit]');
+    if (submit instanceof HTMLButtonElement) {
+      submit.disabled = field.value !== expected;
+    }
+  });
+}
+
 function bindNotices() {
   // A Notice is server-rendered in normal flow, so dismissal is the only client behaviour it has:
   // remove the element the user asked to be rid of, and nothing else on the page moves sideways.
@@ -380,6 +405,7 @@ bindCopyBlocks();
 bindDialogs();
 bindToasts();
 bindNotices();
+bindConfirmDestructive();
 bindScrollRegions();
 bindTabs();
 bindDrawer();
