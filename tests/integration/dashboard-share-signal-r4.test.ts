@@ -130,4 +130,40 @@ describe('V3-N1 · the end-of-list count says which count it is', () => {
     expect(later).not.toContain('3 artifacts · end of list');
     expect(later).toContain('3 on this page · end of list');
   });
+
+  it('does not claim the end of the list while a next page exists', async () => {
+    const ctx = await makeContext();
+    const auth = new AuthService(ctx.db, ctx.config, ctx.logger);
+    const account = await auth.createPasswordAccount('paged-r4@example.test', 'password123');
+    const { bot } = await auth.createBot(accountToCloudAccount(account), 'Paged Bot');
+    const artifacts = new ArtifactService({
+      db: ctx.db,
+      extension: createDefaultCloudModule(ctx.config),
+      baseUrl: ctx.config.baseUrl,
+    });
+    // One more than the page size, so the first page has a next cursor.
+    for (let index = 0; index < 21; index += 1) {
+      await artifacts.upsertArtifact({
+        account: accountToCloudAccount(account),
+        bot: { id: bot.id, name: bot.name, byline: bot.byline },
+        slug: `paged-${index}`,
+        type: 'markdown',
+        title: `Paged ${index}`,
+        content: `# Paged ${index}`,
+        share: false,
+      });
+    }
+    const cookie = await login(ctx, account.email, 'password123');
+
+    const html = await (
+      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+    ).text();
+
+    // The third branch of the summary, and the one a large account sees on every page but the
+    // last. The other two were pinned when V3-N1 landed and this one was not, which left the
+    // most-seen state of the three free to start claiming "20 artifacts · end of list" — the
+    // exact defect V3-N1 fixed — without failing anything.
+    expect(html).toContain('20 shown so far');
+    expect(html).not.toContain('end of list');
+  });
 });
