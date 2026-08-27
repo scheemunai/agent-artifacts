@@ -107,7 +107,17 @@ const FRAME_HEIGHT_SENDER = [
   'if(window.parent===window)return;',
   'var last=0;',
   'function send(){',
-  'var h=Math.ceil(document.documentElement.scrollHeight);',
+  // `documentElement.scrollHeight` is the initial containing block: it can never report less than
+  // the frame's own viewport, so the frame's CSS height was the smallest number it could ever send
+  // and a two-line fragment measured 432px. The body's box is the only thing here that can be
+  // shorter than the viewport. Taking the smaller of the two keeps the tall path exact — for long
+  // content both agree — while letting short content tell the truth.
+  'var d=document.documentElement,b=document.body;',
+  'var outer=Math.ceil(d.scrollHeight);',
+  'var rect=b?b.getBoundingClientRect():null;',
+  'var below=b?parseFloat(getComputedStyle(b).marginBottom)||0:0;',
+  'var inner=rect?Math.ceil(rect.bottom+below+(window.pageYOffset||0)):outer;',
+  'var h=Math.max(1,Math.min(outer,inner));',
   'if(!isFinite(h)||h<=0||h===last)return;',
   'last=h;',
   "window.parent.postMessage({type:'aa:frame-height',height:h},'*');",

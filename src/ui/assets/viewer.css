@@ -138,11 +138,18 @@
 .aa-viewer-frame {
   display: block;
   width: 100%;
-  min-height: 18rem;
   height: clamp(18rem, 48vh, 34rem);
   border: 0;
   background: var(--color-aa-bg);
   transition: height 160ms ease;
+}
+
+/* The floor belongs to the state before anything has been measured — a frame that has not answered
+   yet, or a reader with no scripts. Once the frame reports its own height, an unconditional
+   `min-height` would outrank the measured inline height and hold a two-line fragment at 288px,
+   which is the shape this defect took for three rounds. */
+.aa-viewer-frame:not([data-aa-frame-height="measured"]) {
+  min-height: 18rem;
 }
 
 .aa-viewer-gate,

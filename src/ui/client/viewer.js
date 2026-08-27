@@ -21,7 +21,10 @@ const updatedPill = document.querySelector('[data-aa-updated-pill]');
 const statusRegion = document.querySelector('[data-aa-viewer-status-region]');
 
 const POLL_INTERVAL_MS = 30_000;
-const FRAME_MIN_HEIGHT = 288;
+// A sanity floor against a broken or zero-ish measurement, not a default. It used to sit at the
+// frame's own CSS height, which meant an honest short answer — a two-line fragment measuring 60px —
+// was silently clamped back up to the box it was trying to shrink.
+const FRAME_MIN_HEIGHT = 48;
 const FRAME_MAX_HEIGHT = 2400;
 let contentHash = boot.initialContent?.content_hash || null;
 let contentRequestInFlight = false;
