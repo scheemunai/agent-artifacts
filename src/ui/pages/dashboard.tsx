@@ -369,8 +369,15 @@ export function DashboardBotsPage({
           />
         ) : (
           <Table
+            id="dashboard-bots"
             caption="Registered bots"
-            columns={['Bot', 'Key', 'Last used', 'Actions']}
+            columnPriority
+            columns={[
+              'Bot',
+              { label: 'Key', priority: 'secondary' },
+              { label: 'Last used', priority: 'secondary' },
+              'Actions',
+            ]}
             rows={bots.map((bot) => [
               <span>
                 <strong>{bot.name}</strong>
@@ -430,14 +437,23 @@ export function DashboardTemplatesPage({
           </header>
         </section>
         <TemplateTable
+          id="templates-starter"
           title="Starter templates"
           templates={starters}
-          empty="Starter templates seed at boot."
+          emptyTitle="No starter templates are installed."
+          empty="Starter templates seed at boot, so this is usually a sign the seed has not run yet."
         />
         <TemplateTable
+          id="templates-personal"
           title="Your templates"
           templates={personal}
-          empty="Promote any artifact into a reusable template — write {{slots}} into its content, then choose Promote."
+          emptyTitle="No templates of your own yet."
+          empty="Write {{slots}} into a markdown artifact, then choose Promote on its detail page to reuse it."
+          emptyAction={
+            <Button variant="primary" href="/dashboard">
+              Pick an artifact to promote →
+            </Button>
+          }
         />
         {previewTemplate ? <TemplatePreviewPanel template={previewTemplate} /> : null}
       </div>
@@ -914,7 +930,10 @@ function VersionHistory({
       description="Restores create a new version; history is never rewritten."
     >
       <Table
-        columns={['Version', 'Summary', 'Actions']}
+        id="artifact-versions"
+        label="Version history"
+        columnPriority
+        columns={['Version', { label: 'Summary', priority: 'secondary' }, 'Actions']}
         rows={versions
           .slice()
           .sort((left, right) => right.versionNum - left.versionNum)
@@ -1159,23 +1178,45 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
   );
 }
 
+/**
+ * The empty state names the state, never the section.
+ *
+ * This card used to render `Card title="Your templates"` around `EmptyState title="Your
+ * templates"` — the same heading twice, 60px apart — because the empty state was handed the
+ * section's title for want of one of its own. A heading repeated is a heading that stops being
+ * read; and with nothing to do next, the state described the absence and left the reader in it.
+ */
 function TemplateTable({
+  id,
   title,
   templates,
+  emptyTitle,
   empty,
+  emptyAction,
 }: {
+  id: string;
   title: string;
   templates: DashboardTemplateView[];
+  emptyTitle: string;
   empty: string;
+  emptyAction?: Child | undefined;
 }) {
   return templates.length === 0 ? (
     <Card title={title}>
-      <EmptyState title={title} description={empty} />
+      <EmptyState id={id} title={emptyTitle} description={empty} action={emptyAction} />
     </Card>
   ) : (
     <Card title={title}>
       <Table
-        columns={['Name', 'Slug', 'Slots', 'Action']}
+        id={id}
+        label={title}
+        columnPriority
+        columns={[
+          'Name',
+          { label: 'Slug', priority: 'secondary' },
+          { label: 'Slots', priority: 'secondary' },
+          'Actions',
+        ]}
         rows={templates.map((template) => [
           <span>
             <strong>{template.name}</strong>{' '}
