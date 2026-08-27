@@ -10,6 +10,7 @@ import type { Logger } from './logger.js';
 import { registerHumanRoutes } from './routes/dashboard.js';
 import { healthRoute } from './routes/health.js';
 import { registerPublicRoutes } from './routes/public.js';
+import { registerRobotsAndSandboxGuard } from './routes/robots.js';
 import { registerV1Routes } from './routes/v1/index.js';
 import { createWebRoute } from './routes/web.js';
 
@@ -80,7 +81,8 @@ export function createApp({
     }
   });
 
-  // Route mounting order is deliberate: static/literal routes before future parameterized routers.
+  // Route mounting order is deliberate: sandbox host guard before app/API routes.
+  registerRobotsAndSandboxGuard(app, config);
   app.get('/assets/*', serveStatic({ root: './public' }));
   app.route('/healthz', healthRoute);
   const routesContext = {
