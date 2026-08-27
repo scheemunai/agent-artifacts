@@ -778,6 +778,12 @@
   }
 
   .aa-dialog {
+    /* The Tailwind preflight emits `*, ::before, ::after, ::backdrop { margin: 0 }`, which beats
+       the UA sheet's `dialog { margin: auto }` and drops every showModal() dialog flush into the
+       viewport's top-left corner. Restoring the auto margins re-centres it; `inset: 0` keeps the
+       containing block the whole viewport so the auto margins have something to distribute. */
+    inset: 0;
+    margin: auto;
     width: min(calc(100vw - 2rem), 36rem);
     max-height: min(42rem, calc(100dvh - 2rem));
     border: 1px solid var(--color-aa-line);
@@ -1670,7 +1676,10 @@
     inset: 0;
     z-index: 70;
     display: grid;
-    grid-template-columns: minmax(0, 80vw) 1fr;
+    /* The first track must never be wider than the panel it holds. `minmax(0, 80vw)` handed the
+       panel column 1152px at 1440 while `.aa-drawer__panel` paints only 24rem, leaving 768px of
+       undimmed, still-clickable page inside something claiming `aria-modal="true"`. */
+    grid-template-columns: min(80vw, 24rem) 1fr;
     background: transparent;
   }
 

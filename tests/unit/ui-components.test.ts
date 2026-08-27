@@ -139,7 +139,9 @@ describe('ui css contract', () => {
     expect(css).toMatch(
       /@media \(max-width: 480px\)[\s\S]*?\.aa-grid--2,[\s\S]*?\.aa-grid--3\s*{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/
     );
-    expect(css).toContain('grid-template-columns: minmax(0, 80vw) 1fr');
+    // Capped at the panel's own width so the scrim covers everything the panel does not; see
+    // `tests/unit/ui-cascade-contract.test.ts` for the geometry proof.
+    expect(css).toContain('grid-template-columns: min(80vw, 24rem) 1fr');
     expect(css).toMatch(/html\.aa-lock-scroll,[\s\S]*?body\.aa-lock-scroll\s*{/);
     expect(css).toContain('overscroll-behavior: none');
     expect(css).toContain('scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface)');
