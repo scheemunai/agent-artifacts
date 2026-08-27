@@ -1,6 +1,13 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { type APIRequestContext, expect, type Page, type TestInfo, test } from '@playwright/test';
+import {
+  type APIRequestContext,
+  expect,
+  type Locator,
+  type Page,
+  type TestInfo,
+  test,
+} from '@playwright/test';
 
 const selfPort = Number(process.env.E2E_SELF_PORT ?? 3197);
 const cloudPort = Number(process.env.E2E_CLOUD_PORT ?? 3198);
@@ -272,7 +279,13 @@ test('authenticated dashboard list to detail preserves history and share control
   const dashboardCard = page.locator('.aa-card').filter({
     has: page.getByRole('link', { name: seed.dashboardArtifactTitle }),
   });
-  await expect(dashboardCard.getByText('◆ shared', { exact: true })).toBeVisible();
+  // The row's share-state affordance. It used to read "◆ shared", asserted on the glyph; the
+  // diamond was retired because one symbol was doing two unrelated jobs — the brand mark and a
+  // status marker — and the same fact had three different renderings across the product. What is
+  // protected here is unchanged: a shared artifact says so on its own row, at both viewports.
+  // `exact` still earns its keep — this share carries no password, and the protected variant
+  // reads "Shared · password".
+  await expect(dashboardCard.getByText('Shared', { exact: true })).toBeVisible();
   await expect(dashboardCard.getByText('e2e-dashboard')).toBeVisible();
 
   await page.getByRole('link', { name: seed.dashboardArtifactTitle }).click();
@@ -288,11 +301,26 @@ test('authenticated dashboard list to detail preserves history and share control
   );
   await expect(page.getByRole('button', { name: 'Set password' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Revoke link' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Version history' })).toBeVisible();
+  const versionHistory = page.getByRole('heading', { name: 'Version history' });
+  await expect(versionHistory).toBeVisible();
   await expect(page.getByText('v2', { exact: true })).toBeVisible();
   await expect(page.getByText('v1', { exact: true })).toBeVisible();
-  await expect(page.getByText('second dashboard smoke version')).toBeVisible();
+
+  // Below 480px the version table drops its `secondary` columns rather than keeping a 42rem
+  // minimum width and pushing the Actions column off-screen behind an unsignposted scroll. The
+  // change summary is that demoted column, deliberately: a reader who cannot reach Diff or
+  // Restore is worse off than one who cannot read the summary. Asserting the drop rather than
+  // skipping it keeps the trade honest — if a future change demotes something else, this fails.
+  const narrow = (page.viewportSize()?.width ?? 0) <= 480;
+  const summary = page.getByText('second dashboard smoke version');
+  if (narrow) {
+    await expect(summary).toBeHidden();
+  } else {
+    await expect(summary).toBeVisible();
+  }
+
   await expect(page.getByRole('link', { name: 'Diff' }).first()).toBeVisible();
+  await expectActionsColumnReachable(page, versionHistory);
   await expectNoHorizontalOverflow(page);
 });
 
@@ -456,6 +484,27 @@ async function loginToDashboard(page: Page): Promise<void> {
   await page.getByLabel('Password').fill(seed.password);
   await page.getByRole('button', { name: 'Log in' }).click();
   await expect(page).toHaveURL(`${SELF_BASE_URL}/dashboard`);
+}
+
+/**
+ * The Actions column is on screen, not merely in the DOM.
+ *
+ * `toBeVisible` cannot see this defect: an element scrolled outside its container's overflow still
+ * has a non-empty box, so the old spec passed at 375 while Diff and Restore sat several hundred
+ * pixels beyond the right edge. This scrolls the page to the table's heading — which is outside
+ * the scroll container, so the table's own horizontal offset stays at rest — and then measures
+ * where the control actually landed.
+ */
+async function expectActionsColumnReachable(page: Page, heading: Locator): Promise<void> {
+  await heading.scrollIntoViewIfNeeded();
+  const control = page.getByRole('link', { name: 'Diff' }).first();
+  const box = await control.boundingBox();
+  const viewportWidth = page.viewportSize()?.width ?? 0;
+  expect(box, 'the Diff control has no box at all').not.toBeNull();
+  expect(
+    Math.round(box?.x ?? 0) + Math.round(box?.width ?? 0),
+    `Diff ends at ${Math.round((box?.x ?? 0) + (box?.width ?? 0))}px in a ${viewportWidth}px viewport`
+  ).toBeLessThanOrEqual(viewportWidth);
 }
 
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
