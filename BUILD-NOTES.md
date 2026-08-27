@@ -93,3 +93,75 @@ with the live artifact, the concrete uses, and the whole API. The origin note is
 own account of why the product exists, which is worth more once the reader already believes the
 product is real, and it hands off naturally into pricing and open source. Recording it here
 because the deck requires the reasoning to be stated somewhere durable.
+
+## 2026-08-27 — GAUNTLET round 1 consolidation
+
+Round 1 landed as seven commits from five parallel workers plus a thirteen-commit foundation
+phase. Each worker's decision is recorded below so the repository explains itself without the
+orchestrator's log.
+
+### OG cards: static TTF instances of a variable font
+
+OG cards render Source Sans 3 from static TTF instances of the bundled variable woff2, because
+satori cannot consume woff2. The card previously shipped the retired Inter and indigo `#4f46e5`
+palette while every page shipped Source Sans 3 on coral, so every share link unfurled off-brand.
+The fonts served to browsers stay the variable woff2; only the raster pipeline needs the static
+instances. (`src/lib/og.ts`)
+
+### Search `q` is literal, and the escape character is named
+
+Search `q` is literal: one shared escaped predicate (`src/lib/search-query.ts`) with explicit
+`ESCAPE`, used by `/v1` and dashboard; SQLite has no default LIKE escape char while PG defaults
+backslash, so the clause names it. Before this, `%` and `_` in a query were wildcards rather than
+characters, which is both a correctness bug and an abuse surface, and the dashboard's predicate had
+drifted from `/v1`'s: it omitted `lower()`, so dashboard search was silently case-sensitive on
+Postgres while the API's was not. One predicate now serves both.
+
+### Share lifecycle belongs to ArtifactService
+
+Share lifecycle is owned by `ArtifactService` (persist and emit); `deleteShareResponse`'s signature
+gained `cloudModule`/`config`/`account`; R2-001 closed. The explicit share endpoints and the four
+dashboard share mutations previously wrote through a parallel persistence layer in `src/services/v1.ts`
+that emitted no domain events, so a CloudModule analytics consumer missed every share created or
+revoked outside the artifact write path. `deleteShareResponse` could not emit even in principle: it
+never received the module. That is why the signature changed rather than the body alone.
+
+### Generated CSS stays generated, and a missing build says so
+
+`pnpm dev` now runs `build:css` before the watcher, so the documented first run works by command
+rather than by luck. Generated CSS stays gitignored: Tailwind hashes its output over the whole
+scanned source tree, so committing it would churn on unrelated UI edits, and a stale committed copy
+would reintroduce the 404 class this change closes. `pnpm build` remains the authoritative producer
+for the image and the release archive. `src/ui/assets.ts` resolves the manifest from
+`import.meta.url` rather than the working directory, caches the resolved href instead of re-reading
+JSON on every render, and invalidates on rebuild. A missing build is now impossible to miss: one
+stderr block naming `pnpm run build:css`, and pages link the tracked
+`public/assets/build-missing.css`, which paints its own diagnosis as a red banner rather than
+resolving to a file that has never existed. `public/assets/og-fallback.png` is guarded by a
+byte-equality test against `generateOgFallbackImage()` rather than being regenerated during the
+build, because the render is deterministic and a build step would let the committed card drift
+silently the way the palette already had.
+
+### Phase F: twelve foundation steps, and the discovery underneath them
+
+Phase F took the shared UI foundation (`primitives.tsx`, `app.css`, the `ui-foundation` module,
+the style guide) through twelve sequential steps: modal re-centring and full-viewport drawer scrim,
+three cascade repairs, width as a token and a prop, the Notice primitive, a real document shell for
+sandboxed HTML artifacts, standards-mode documents, human navigations answered with a page instead
+of the API error envelope, a named and affordanced Table scroll region, markdown prose scope split
+from page geometry, the version picker no longer offering "View latest" on the latest version, a
+single brand mark with a properly cut notch, and destructive confirmation as one pattern rather
+than eight open forms.
+
+The step that matters most was not on the list. No page in the product emitted a doctype, so every
+surface rendered in quirks mode: a different box model, different percentage-height resolution,
+different line-height behaviour. Spacing defects recorded before this fix were measured in the
+wrong rendering mode and must be re-measured rather than trusted.
+
+One caveat ships with this phase. The `ui-foundation` and `viewer` runtime assets were edited under
+their existing content-hashed filenames, so those names no longer describe their contents. There is
+no `Cache-Control` on `/assets`, so exposure is limited to heuristic browser caching, but a
+returning visitor can receive stale drawer and modal JavaScript after this deploy. Verification of
+this release therefore uses cold browser contexts. The S4-remainder work re-mints asset names from
+content on every build, which makes the filename a promise again; `immutable` must not be added to
+`/assets` until it does.
