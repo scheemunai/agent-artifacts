@@ -591,7 +591,10 @@ document ("weekly-report", "deploy-status") and re-POST whenever it changes.
 If content is identical, nothing happens (response has "unchanged": true).
 Re-POSTing is always safe.
 Re-POSTing a slug with a different type converts the artifact.
-Artifacts may carry expires_at (null = permanent). Re-publishing the same slug resets the clock.
+Retention is server-owned: artifact and share responses may include response-only
+expires_at metadata (null = permanent), but expires_at is never accepted in
+POST/PUT/PATCH request bodies. Re-publishing the same slug resets only the
+server-managed retention clock.
 
 ## 1. Publish (create or update) — POST /artifacts
 
@@ -600,6 +603,9 @@ curl -X POST ${config.baseUrl}/v1/artifacts \\
   -d '{"slug":"weekly-report","type":"markdown","title":"Weekly Report — W34",
        "content":"# Weekly Report\\n...","change_summary":"Added incident retro",
        "share":true}'
+
+Accepted POST /v1/artifacts request fields (strict; unknown fields return 400 validation_failed): \`slug\`, \`type\`, \`title\`, \`content\`, \`template\`, \`slots\`, \`metadata\`, \`change_summary\`, \`share\`, \`password\`.
+Do not send response-only fields such as \`id\`, \`version_num\`, \`share.url\`, \`created_at\`, \`updated_at\`, or \`expires_at\`.
 
 - type: "markdown" or "html". Max content: 2 MB.
 - slug is optional — derived from the title; two documents that must stay
@@ -667,6 +673,8 @@ Same as re-POSTing, useful for partial changes (title only, etc.):
 curl -X PUT .../v1/artifacts/weekly-report -H "Authorization: Bearer aa_bot_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"content":"# Updated...","change_summary":"Fixed numbers"}'
+Accepted PUT /v1/artifacts/:id_or_slug request fields (strict; unknown fields return 400 validation_failed): \`title\`, \`content\`, \`type\`, \`slug\`, \`metadata\`, \`change_summary\`.
+PUT does not accept \`template\`, \`slots\`, \`share\`, \`password\`, or response-only \`expires_at\`.
 Every content change = a new version. History:
 GET .../weekly-report/versions           POST .../versions/3/restore
 All versions of a shared artifact are publicly viewable via the version picker.

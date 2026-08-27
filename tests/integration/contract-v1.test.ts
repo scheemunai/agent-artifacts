@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { promoteTemplateSchema, publishArtifactSchema } from '../../src/lib/schemas/index.js';
+import {
+  promoteTemplateSchema,
+  publishArtifactSchema,
+  updateArtifactSchema,
+} from '../../src/lib/schemas/index.js';
 import { createApiTestContext, json } from './api-test-utils.js';
 
 const documentedPublishFields = [
@@ -42,6 +46,39 @@ describe('V1 contract endpoint', () => {
       const llms = await ctx.app.request('/llms.txt');
       expect(llms.status).toBe(200);
       expect(await llms.text()).toBe(text);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('keeps documented artifact request fields aligned with the real Zod schemas', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/contract');
+      expect(response.status).toBe(200);
+      const contract = await response.text();
+
+      expect(contract).toContain('expires_at is never accepted in');
+      expect(contract).toContain('response-only `expires_at`');
+      expect(
+        publishArtifactSchema.safeParse({
+          title: 'Weekly Report',
+          type: 'markdown',
+          content: '# Weekly Report',
+          expires_at: null,
+        }).success
+      ).toBe(false);
+      expect(
+        updateArtifactSchema.safeParse({ title: 'Weekly Report', expires_at: null }).success
+      ).toBe(false);
+
+      expect(
+        documentedRequestFields(contract, 'Accepted POST /v1/artifacts request fields')
+      ).toEqual(Object.keys(publishArtifactSchema.shape).sort());
+      expect(
+        documentedRequestFields(contract, 'Accepted PUT /v1/artifacts/:id_or_slug request fields')
+      ).toEqual(Object.keys(updateArtifactSchema.shape).sort());
     } finally {
       await ctx.cleanup();
     }
@@ -190,6 +227,19 @@ function openApiEndpoints(paths: Record<string, unknown>): string[] {
     }
   }
   return endpoints.sort();
+}
+
+function documentedRequestFields(contract: string, label: string): string[] {
+  const line = contract
+    .split('\n')
+    .find((item) => item.startsWith(`${label} `) || item.startsWith(`${label}:`));
+  expect(line, `missing contract request field list for ${label}`).toBeTruthy();
+  const fields = Array.from(line?.matchAll(/`([^`]+)`/g) ?? [], (match) => match[1]).filter(
+    (field): field is string => field !== undefined
+  );
+  fields.sort();
+  expect(fields, `empty contract request field list for ${label}`).not.toEqual([]);
+  return fields;
 }
 
 function normalizeOpenApiPath(path: string): string {
