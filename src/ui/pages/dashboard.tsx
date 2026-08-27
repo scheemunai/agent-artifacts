@@ -967,10 +967,13 @@ function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
               method="post"
               action={`/dashboard/api/artifacts/${artifact.id}/share/password`}
             >
+              {/* One ternary used to feed this label AND the button below it, so a label sat 44px
+                  above a button reading the same words. A field is named for what it holds; only
+                  the action changes with the state. */}
               <Input
                 id="share_password"
                 name="password"
-                label={share.passwordProtected ? 'Change password' : 'Set password'}
+                label="New password"
                 type="password"
                 autocomplete="new-password"
               />
@@ -1065,16 +1068,26 @@ function VersionHistory({
                   <Button
                     size="sm"
                     variant="secondary"
-                    href={`/dashboard/artifacts/${artifact.id}?left=${version.versionNum}&right=${artifact.versionNum}`}
+                    href={`/dashboard/artifacts/${artifact.id}?left=${version.versionNum}&right=${artifact.versionNum}#version-diff`}
                   >
                     Diff
                   </Button>
-                  <form method="post" action={`/dashboard/api/artifacts/${artifact.id}/restore`}>
-                    <input type="hidden" name="version" value={String(version.versionNum)} />
-                    <Button size="sm" variant="secondary" type="submit">
-                      Restore
-                    </Button>
-                  </form>
+                  {/* Restore rewrites what every reader of the current version sees, and it was
+                      one click while revoking a link demanded a typed slug — the ladder ran the
+                      wrong way round. The typed value is the version number rather than ceremony:
+                      restoring is reversible, restoring the WRONG version is the mistake, so the
+                      reader confirms the one parameter that makes this dangerous. */}
+                  <ConfirmDestructive
+                    id={`restore-version-${version.versionNum}`}
+                    triggerLabel="Restore"
+                    title={`Restore v${version.versionNum}?`}
+                    description={`The current version becomes a copy of v${version.versionNum}. Anyone opening this artifact sees that content instead.`}
+                    consequence="History is kept, so this can be undone by restoring again — but every share link shows the restored content immediately."
+                    confirmValue={`v${version.versionNum}`}
+                    confirmLabel={`Restore v${version.versionNum}`}
+                    action={`/dashboard/api/artifacts/${artifact.id}/restore`}
+                    fields={{ version: String(version.versionNum) }}
+                  />
                 </>
               )}
             </ButtonRow>,

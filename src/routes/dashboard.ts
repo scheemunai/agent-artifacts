@@ -685,6 +685,12 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     }
     const form = await parseForm(routeContext);
     const artifactPath = `/dashboard/artifacts/${routeContext.req.param('id')}`;
+    // The dialog's disabled button is a courtesy; the server is where the confirmation counts.
+    // What is confirmed here is WHICH version, because restoring the wrong one is the mistake
+    // this second step exists to catch.
+    if (stringField(form, 'confirm') !== `v${stringField(form, 'version')}`) {
+      return routeContext.redirect(`${artifactPath}?notice=restore_confirm_mismatch`, 303);
+    }
     return answerWithRedirect(
       routeContext,
       services.logger,
@@ -1196,6 +1202,11 @@ function noticeFromQuery(value: string | undefined): DashboardNotice | undefined
       return {
         tone: 'danger',
         message: 'That revoke did not go through — the link is still live.',
+      };
+    case 'restore_confirm_mismatch':
+      return {
+        tone: 'danger',
+        message: 'The version you typed did not match, so nothing was restored.',
       };
     case 'artifact_restore_failed':
       return {
