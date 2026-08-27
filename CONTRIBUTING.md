@@ -97,6 +97,24 @@ pnpm exec vitest run tests/integration/viewer
 pnpm run build             # CSS/assets + TypeScript build
 ```
 
+PostgreSQL dialect checks use a disposable local database. Pick a short id (for example, your initials and the date), then run:
+
+```bash
+docker run --name aa-pg-<id> \
+  -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -e POSTGRES_USER=aa_test \
+  -e POSTGRES_DB=aa_test \
+  -p 127.0.0.1:55432:5432 \
+  -d postgres:16
+AA_TEST_DATABASE_URL=postgresql://aa_test@127.0.0.1:55432/aa_test pnpm run test:postgres
+```
+
+Clean up when finished:
+
+```bash
+docker rm -f aa-pg-<id>
+```
+
 ## Database changes
 
 Schema is intentionally duplicated by dialect:
