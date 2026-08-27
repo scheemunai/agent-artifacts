@@ -4,11 +4,11 @@
 }
 
 .aa-viewer {
-  min-height: calc(100vh - 4rem);
+  min-height: 0;
 }
 
 .aa-viewer-document {
-  min-height: calc(100vh - 4rem);
+  min-height: 0;
 }
 
 .aa-viewer-chrome {
@@ -104,9 +104,11 @@
 .aa-viewer-frame {
   display: block;
   width: 100%;
-  min-height: calc(100vh - 8rem);
+  min-height: 18rem;
+  height: clamp(18rem, 48vh, 34rem);
   border: 0;
   background: var(--color-aa-bg);
+  transition: height 160ms ease;
 }
 
 .aa-viewer-gate,
@@ -188,7 +190,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aa-viewer-updated-pill {
+  .aa-viewer-updated-pill,
+  .aa-viewer-frame {
     transition: none;
   }
 }

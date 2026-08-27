@@ -853,6 +853,7 @@
   }
 
   .aa-copy {
+    min-width: 0;
     overflow: hidden;
     border: 1px solid var(--color-aa-line);
     border-radius: var(--radius-aa-lg);
@@ -863,6 +864,7 @@
     display: flex;
     min-height: var(--spacing-aa-touch);
     align-items: center;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: var(--spacing-aa-3);
     border-bottom: 1px solid var(--color-aa-line);
@@ -876,21 +878,79 @@
   }
 
   .aa-copy pre {
-    max-height: 18rem;
+    max-height: min(32rem, 62vh);
     margin: 0;
     overflow: auto;
+    overscroll-behavior: contain;
     padding: var(--spacing-aa-4);
     color: var(--color-aa-ink);
     background: var(--color-aa-surface);
     font-family: var(--font-mono);
     font-size: 0.84375rem;
     line-height: 1.6;
+    overflow-wrap: anywhere;
+    scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
     white-space: pre-wrap;
   }
 
+  .aa-copy pre::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .aa-copy pre::-webkit-scrollbar-track {
+    background: var(--color-aa-surface);
+  }
+
+  .aa-copy pre::-webkit-scrollbar-thumb {
+    border: 2px solid var(--color-aa-surface);
+    border-radius: var(--radius-aa-full);
+    background: var(--color-aa-line-strong);
+  }
+
+  .aa-copy pre code {
+    display: block;
+    min-width: 0;
+  }
+
+  .aa-copy__hint {
+    margin: 0;
+    border-top: 1px solid var(--color-aa-line);
+    padding: var(--spacing-aa-2) var(--spacing-aa-4);
+    color: var(--color-aa-muted);
+    background: var(--color-aa-surface-raised);
+    font-size: var(--text-aa-xs);
+  }
+
+  .aa-copy__hint::before {
+    content: "↕";
+    margin-right: var(--spacing-aa-2);
+    color: var(--color-aa-accent);
+    font-weight: 700;
+  }
+
   .aa-copy__status {
+    min-height: 1.25rem;
     color: var(--color-aa-success);
     font-size: var(--text-aa-sm);
+  }
+
+  .aa-home-shell {
+    width: min(100%, 64rem);
+  }
+
+  .aa-home-hero {
+    max-width: 60rem;
+  }
+
+  .aa-home-title {
+    max-width: min(100%, 19em);
+  }
+
+  .aa-home-body {
+    width: min(100%, 46rem);
   }
 
   .aa-tabs {

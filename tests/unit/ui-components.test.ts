@@ -31,6 +31,20 @@ describe('ui component primitives', () => {
     expect(disabled).toContain('disabled');
   });
 
+  it('passes explicit labels and tooltips through to icon-only buttons', () => {
+    const html = renderToString(
+      Button({
+        children: '↻',
+        variant: 'ghost',
+        ariaLabel: 'Refresh artifact',
+        title: 'Refresh artifact',
+      })
+    );
+
+    expect(html).toContain('aria-label="Refresh artifact"');
+    expect(html).toContain('title="Refresh artifact"');
+  });
+
   it('wires form labels, hints, errors, and invalid state accessibly', () => {
     const html = renderToString(
       Input({
@@ -69,6 +83,8 @@ describe('ui component primitives', () => {
     );
 
     expect(copy).toContain('data-aa-copy="copy-me"');
+    expect(copy).toContain('aria-describedby="copy-me-hint"');
+    expect(copy).toContain('Scroll inside the block to view everything');
     expect(nav).toContain('data-aa-drawer="true"');
     expect(`${copy}${nav}`).not.toMatch(/on(click|submit|keydown)=/i);
   });
@@ -90,6 +106,14 @@ describe('ui css contract', () => {
     expect(css).toContain('grid-template-columns: minmax(0, 80vw) 1fr');
     expect(css).toContain('scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface)');
   });
+
+  it('makes copy blocks scrollable with a visible affordance', () => {
+    expect(css).toContain('.aa-copy pre');
+    expect(css).toContain('max-height: min(32rem, 62vh)');
+    expect(css).toContain('overflow-wrap: anywhere');
+    expect(css).toContain('scrollbar-gutter: stable');
+    expect(css).toContain('.aa-copy__hint::before');
+  });
 });
 
 describe('style guide page', () => {
@@ -106,6 +130,7 @@ describe('style guide page', () => {
       'Toast',
       'Empty state',
       'Copy block',
+      'Scrollable install prompt',
       'Tabs and pagination',
       'Avatar, mark, spinner, skeleton',
       'Markdown artifact theme',

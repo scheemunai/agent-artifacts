@@ -228,6 +228,7 @@ function ViewerChrome({
         <Button
           variant="ghost"
           ariaLabel="Refresh artifact"
+          title="Refresh artifact"
           dataAttrs={{ 'data-aa-refresh': 'true' }}
         >
           ↻
@@ -243,6 +244,7 @@ function InitialContent({ content }: { content: ViewerContentResult }) {
       <iframe
         class="aa-viewer-frame"
         data-aa-frame="true"
+        data-aa-frame-height="default"
         sandbox="allow-scripts"
         src={content.frameUrl}
         title={content.title}

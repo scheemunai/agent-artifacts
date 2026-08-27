@@ -177,6 +177,7 @@ function bindToasts() {
     close.className = 'aa-btn aa-btn--ghost aa-btn--sm';
     close.type = 'button';
     close.setAttribute('aria-label', 'Dismiss toast');
+    close.setAttribute('title', 'Dismiss toast');
     close.textContent = '×';
     close.addEventListener('click', () => toast.remove());
 

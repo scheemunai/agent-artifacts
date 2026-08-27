@@ -30,6 +30,7 @@ interface ButtonProps {
   class?: string | undefined;
   id?: string | undefined;
   ariaLabel?: string | undefined;
+  title?: string | undefined;
   dataAttrs?: Record<string, string>;
 }
 
@@ -45,6 +46,7 @@ export function Button({
   class: className,
   id,
   ariaLabel,
+  title,
   dataAttrs = {},
 }: ButtonProps) {
   const isDisabled = disabled || loading || state === 'disabled';
@@ -64,6 +66,7 @@ export function Button({
         href={isDisabled ? undefined : href}
         aria-disabled={isDisabled ? 'true' : undefined}
         aria-label={ariaLabel}
+        title={title}
         tabindex={isDisabled ? -1 : undefined}
         {...stateData(loading ? 'loading' : state)}
         {...dataAttrs}
@@ -81,6 +84,7 @@ export function Button({
       disabled={isDisabled}
       aria-busy={loading ? 'true' : undefined}
       aria-label={ariaLabel}
+      title={title}
       {...stateData(loading ? 'loading' : state)}
       {...dataAttrs}
     >
@@ -415,7 +419,12 @@ export function Toast({ tone = 'neutral', children }: ToastProps) {
   return (
     <div class={cx('aa-toast', tone !== 'neutral' && `aa-toast--${tone}`)} role="status">
       <span>{children}</span>
-      <button class="aa-btn aa-btn--ghost aa-btn--sm" type="button" aria-label="Dismiss toast">
+      <button
+        class="aa-btn aa-btn--ghost aa-btn--sm"
+        type="button"
+        aria-label="Dismiss toast"
+        title="Dismiss toast"
+      >
         ×
       </button>
     </div>
@@ -461,10 +470,15 @@ interface CopyBlockProps {
 }
 
 export function CopyBlock({ id, label, value }: CopyBlockProps) {
+  const hintId = `${id}-hint`;
+  const labelId = `${id}-label`;
+
   return (
-    <section class="aa-copy">
+    <section class="aa-copy" aria-labelledby={labelId}>
       <header class="aa-copy__header">
-        <span class="aa-copy__label">{label}</span>
+        <span class="aa-copy__label" id={labelId}>
+          {label}
+        </span>
         <span class="aa-specimen-row">
           <span class="aa-copy__status" id={`${id}-status`} aria-live="polite" />
           <Button
@@ -479,9 +493,12 @@ export function CopyBlock({ id, label, value }: CopyBlockProps) {
           </Button>
         </span>
       </header>
-      <pre id={id} tabindex={0}>
+      <pre id={id} tabindex={0} aria-describedby={hintId}>
         <code>{value}</code>
       </pre>
+      <p class="aa-copy__hint" id={hintId}>
+        Scroll inside the block to view everything. Copy includes the full text.
+      </p>
     </section>
   );
 }

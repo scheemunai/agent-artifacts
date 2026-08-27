@@ -20,6 +20,8 @@ const viewLatestLink = document.querySelector('[data-aa-view-latest]');
 const updatedPill = document.querySelector('[data-aa-updated-pill]');
 
 const POLL_INTERVAL_MS = 30_000;
+const FRAME_MIN_HEIGHT = 288;
+const FRAME_MAX_HEIGHT = 2400;
 let contentHash = boot.initialContent?.content_hash || null;
 let inFlight = false;
 let stopped = false;
@@ -39,6 +41,7 @@ if (root) {
   installRefreshButton();
   installVersionPicker();
   installLiveRevalidation();
+  installFrameHeightBridge();
 }
 
 function installPasswordGate() {
@@ -251,10 +254,13 @@ function renderArtifactContent(payload) {
       frame = document.createElement('iframe');
       frame.className = 'aa-viewer-frame';
       frame.setAttribute('data-aa-frame', 'true');
+      frame.setAttribute('data-aa-frame-height', 'default');
       frame.setAttribute('sandbox', 'allow-scripts');
       frame.setAttribute('title', payload.title || 'Artifact HTML frame');
       contentNode.append(frame);
     }
+    frame.style.height = '';
+    frame.setAttribute('data-aa-frame-height', 'default');
     frame.setAttribute('sandbox', 'allow-scripts');
     frame.setAttribute('src', payload.frame_url || 'about:blank');
     frame.setAttribute('title', payload.title || 'Artifact HTML frame');
@@ -262,6 +268,34 @@ function renderArtifactContent(payload) {
   }
 
   contentNode.innerHTML = payload.html || '';
+}
+
+function installFrameHeightBridge() {
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || typeof data !== 'object' || data.type !== 'aa:frame-height') {
+      return;
+    }
+
+    const frame = Array.from(document.querySelectorAll('[data-aa-frame]')).find(
+      (candidate) => candidate.contentWindow === event.source
+    );
+    if (!(frame instanceof HTMLIFrameElement)) {
+      return;
+    }
+
+    const requestedHeight = Number(data.height);
+    if (!Number.isFinite(requestedHeight) || requestedHeight <= 0) {
+      return;
+    }
+
+    const height = Math.min(
+      Math.max(Math.ceil(requestedHeight), FRAME_MIN_HEIGHT),
+      FRAME_MAX_HEIGHT
+    );
+    frame.style.height = `${height}px`;
+    frame.setAttribute('data-aa-frame-height', 'measured');
+  });
 }
 
 function renderVersionControls(payload) {
@@ -328,6 +362,8 @@ function setRefreshBusy(isBusy) {
   }
   refreshButton.disabled = isBusy;
   refreshButton.textContent = isBusy ? 'Refreshing…' : '↻';
+  refreshButton.setAttribute('aria-label', isBusy ? 'Refreshing artifact' : 'Refresh artifact');
+  refreshButton.setAttribute('title', isBusy ? 'Refreshing artifact' : 'Refresh artifact');
 }
 
 function showUpdatedPill() {

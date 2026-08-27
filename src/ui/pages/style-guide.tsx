@@ -116,6 +116,23 @@ const componentExample = `<Button variant="primary">Publish artifact</Button>
 <Input id="title" label="Title" hint="Shown in the viewer chrome." />
 <Badge tone="success">Shared</Badge>`;
 
+const longCopyBlockExample = `${installPromptExample}
+
+Example publish request:
+curl -X POST https://agentartifact.ai/v1/artifacts \\
+  -H "Authorization: Bearer [KEY]" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "slug": "weekly-ops",
+    "type": "markdown",
+    "title": "Weekly Ops",
+    "content": "# Weekly Ops\\n\\nThe agent finished the work.",
+    "share": true
+  }'
+
+The visible block scrolls when space is tight. The Copy button copies this entire value, including
+lines below the fold, so one-time keys and install prompts remain recoverable without regeneration.`;
+
 const markdownImage =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lOrpYwAAAABJRU5ErkJggg==';
 
@@ -296,6 +313,11 @@ function buttonSection() {
                   {state === 'loading' ? 'Saving…' : state}
                 </StateButton>
               ))}
+              {variant === 'ghost' ? (
+                <Button variant="ghost" ariaLabel="Refresh artifact" title="Refresh artifact">
+                  ↻
+                </Button>
+              ) : null}
             </div>
           </div>
         ))}
@@ -496,11 +518,18 @@ function feedbackSection() {
         />
       </Card>
       <Card title="Copy block" description="For API keys, curl commands, and install prompts.">
-        <CopyBlock
-          id="copy-block-demo"
-          label="API key"
-          value="aa_bot_••••••••••••••••••••••••••••x7Qk"
-        />
+        <div class="aa-stack">
+          <CopyBlock
+            id="copy-block-demo"
+            label="API key"
+            value="aa_bot_••••••••••••••••••••••••••••x7Qk"
+          />
+          <CopyBlock
+            id="copy-block-long-demo"
+            label="Scrollable install prompt"
+            value={longCopyBlockExample}
+          />
+        </div>
       </Card>
     </div>
   );

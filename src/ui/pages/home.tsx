@@ -48,54 +48,56 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
       </header>
 
       <main class="aa-main">
-        <div class="aa-shell aa-shell--narrow aa-stack">
-          <section class="aa-section" aria-labelledby="home-title">
+        <div class="aa-shell aa-home-shell aa-stack">
+          <section class="aa-section aa-home-hero" aria-labelledby="home-title">
             <p class="aa-page-kicker">◆ Agent Artifacts</p>
-            <h1 class="aa-page-title" id="home-title">
+            <h1 class="aa-page-title aa-home-title" id="home-title">
               {HOME_HERO}
             </h1>
             <p class="aa-page-lede">{HOME_SUBLINE}</p>
           </section>
 
-          <section
-            class="aa-empty"
-            aria-label="Demo video placeholder"
-            style="aspect-ratio: 16 / 10; width: 100%; min-height: 14rem;"
-          >
-            <div class="aa-empty__icon" aria-hidden="true">
-              ◆
-            </div>
-            <h2 class="aa-empty__title">Demo GIF/video placeholder</h2>
-            <p class="aa-empty__description">
-              A 16:10 product demo will sit here. No autoplay sound.
+          <div class="aa-home-body aa-stack">
+            <section
+              class="aa-empty"
+              aria-label="Demo video placeholder"
+              style="aspect-ratio: 16 / 10; width: 100%; min-height: 14rem;"
+            >
+              <div class="aa-empty__icon" aria-hidden="true">
+                ◆
+              </div>
+              <h2 class="aa-empty__title">Demo GIF/video placeholder</h2>
+              <p class="aa-empty__description">
+                A 16:10 product demo will sit here. No autoplay sound.
+              </p>
+            </section>
+
+            <section class="aa-section" aria-labelledby="home-install">
+              <div class="aa-section-header">
+                <h2 class="aa-section-title" id="home-install">
+                  Give your agent an Artifacts account
+                </h2>
+                <p class="aa-section-note">Sign up to get your key.</p>
+              </div>
+              <CopyBlock id="home-install-prompt" label="Install prompt" value={installPrompt} />
+            </section>
+
+            <Card>
+              <div class="aa-specimen-row">
+                <Button variant="secondary" href={GITHUB_URL}>
+                  ★ Star on GitHub
+                </Button>
+                <Button variant="primary" href="/login?mode=magic">
+                  Sign up free →
+                </Button>
+              </div>
+            </Card>
+
+            <p class="aa-section-note">
+              Free: 1 bot, 25 artifacts. Pro ($9/mo) — unlimited bots, no footer, custom subdomain —
+              coming soon.
             </p>
-          </section>
-
-          <section class="aa-section" aria-labelledby="home-install">
-            <div class="aa-section-header">
-              <h2 class="aa-section-title" id="home-install">
-                Give your agent an Artifacts account
-              </h2>
-              <p class="aa-section-note">Sign up to get your key.</p>
-            </div>
-            <CopyBlock id="home-install-prompt" label="Install prompt" value={installPrompt} />
-          </section>
-
-          <Card>
-            <div class="aa-specimen-row">
-              <Button variant="secondary" href={GITHUB_URL}>
-                ★ Star on GitHub
-              </Button>
-              <Button variant="primary" href="/login?mode=magic">
-                Sign up free →
-              </Button>
-            </div>
-          </Card>
-
-          <p class="aa-section-note">
-            Free: 1 bot, 25 artifacts. Pro ($9/mo) — unlimited bots, no footer, custom subdomain —
-            coming soon.
-          </p>
+          </div>
         </div>
       </main>
 
