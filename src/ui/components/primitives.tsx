@@ -249,6 +249,13 @@ export function Input({
   );
 }
 
+/**
+ * Everything `Input` takes except its `type`, including `autocomplete` — which is inherited here
+ * because a textarea has a browser vocabulary too (`street-address` is the obvious one), not
+ * because the `Omit` was easier to write than the list. Whatever this interface declares has to
+ * reach the element: a prop that type-checks and does nothing is the same lie as a specimen
+ * painting a state the product cannot produce.
+ */
 interface TextareaProps extends Omit<InputProps, 'type'> {
   rows?: number;
 }
@@ -264,6 +271,7 @@ export function Textarea({
   disabled,
   state,
   name,
+  autocomplete,
   rows = 5,
 }: TextareaProps) {
   return (
@@ -274,6 +282,7 @@ export function Textarea({
         name={name ?? id}
         rows={rows}
         placeholder={placeholder}
+        autocomplete={autocomplete}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
@@ -306,6 +315,7 @@ export function Select({
   disabled,
   state,
   name,
+  autocomplete,
 }: SelectProps) {
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
@@ -313,6 +323,7 @@ export function Select({
         class="aa-control"
         id={id}
         name={name ?? id}
+        autocomplete={autocomplete}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
