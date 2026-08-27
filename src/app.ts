@@ -8,6 +8,7 @@ import type { DatabaseHandle } from './db/client.js';
 import type { CloudModule } from './extension/cloud-module.js';
 import { AppError, errorEnvelope, internalErrorEnvelope } from './lib/errors.js';
 import { appPath } from './lib/runtime-paths.js';
+import { isHashedAssetPath } from './ui/assets.js';
 import type { Logger } from './logger.js';
 import { registerHumanRoutes } from './routes/dashboard.js';
 import { healthRoute } from './routes/health.js';
@@ -96,6 +97,18 @@ export function createApp({
 
   // Route mounting order is deliberate: sandbox host guard before app/API routes.
   registerRobotsAndSandboxGuard(app, config);
+  // A content-hashed filename is a promise that these bytes never change at this URL, so it can be
+  // cached forever; the build re-mints the name whenever the source moves. Only files with that
+  // shape qualify. `/assets/` also holds checked-in files that keep their names across edits —
+  // `og-fallback.png` is regenerated with every OG repaint, `build-missing.css` is a diagnostic —
+  // and a year of immutable caching on those would strand the old copy in every CDN and browser.
+  app.use('/assets/*', async (context, next) => {
+    await next();
+    if (isHashedAssetPath(context.req.path) && [200, 304].includes(context.res.status)) {
+      context.header('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  });
+
   // Absolute, resolved from the installation: a relative root made every /assets/* request answer
   // 404 whenever the process was started from anywhere but the app directory.
   app.get('/assets/*', serveStatic({ root: appPath('public') }));

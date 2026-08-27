@@ -50,7 +50,7 @@ describe('the constraint the second axis introduces', () => {
     const bounded = parseStylesheet(appCss).filter(
       (rule) =>
         rule.selector.includes('.aa-table-scroll') &&
-        /(^|;|\s)max-height\s*:/.test(rule.declarations)
+        /(^|;|\s)max-height\s*:/.test(rule.block)
     );
 
     expect(

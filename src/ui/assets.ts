@@ -22,6 +22,26 @@ export type AssetKey = 'app.css' | 'ui-foundation.js' | 'viewer.js' | 'dashboard
 /** Mirrors the static root `src/app.ts` serves `/assets/*` from. Both resolve from the install. */
 const servedPublicRoot = (): string => appPath('public');
 
+/**
+ * The shape `scripts/build-assets.mjs` gives every generated file: `<name>-<12 hex>.<js|css>`.
+ * Defined here, next to the resolver that reads those names, so the caching rule in `src/app.ts`
+ * and the build guard cannot drift apart from it.
+ */
+export const HASHED_ASSET_PATTERN = /^\/assets\/[a-z-]+-[a-f0-9]{12}\.(?:js|css)$/;
+
+/**
+ * True only for a request path whose filename is a content hash.
+ *
+ * That is the whole precondition for caching something forever: the URL changes when the bytes do.
+ * `/assets/` also holds files that are checked in and keep their names across edits —
+ * `og-fallback.png` is regenerated whenever the card is repainted, `build-missing.css` is a
+ * diagnostic that has to be re-fetchable, and the web font is unhashed — so the rule is a
+ * whitelist by shape, never "everything under /assets".
+ */
+export function isHashedAssetPath(path: string): boolean {
+  return HASHED_ASSET_PATTERN.test(path);
+}
+
 export interface AssetResolverOptions {
   /** Directories that may hold `manifest.json`, in priority order. */
   assetRoots: readonly string[];
