@@ -272,7 +272,12 @@
       display: flex;
     }
 
-    .aa-mobile-trigger {
+    /* Specificity, not source order. The trigger is a `.aa-btn`, and `.aa-btn { display:
+       inline-flex }` is emitted later in this layer; a bare `.aa-mobile-trigger` hide is an equal
+       (0,1,0) tie that the later rule wins, so the Menu button rendered next to the full desktop
+       nav on every page at 1440. Qualifying the selector puts the hide at (0,2,0) and ends the
+       dependence on where in this file the two rules happen to sit. */
+    .aa-btn.aa-mobile-trigger {
       display: none;
     }
   }
@@ -886,8 +891,30 @@
     border: 1px dashed var(--color-aa-line-strong);
     border-radius: var(--radius-aa-lg);
     padding: var(--spacing-aa-10) var(--spacing-aa-6);
-    text-align: center;
     background: var(--color-aa-surface);
+  }
+
+  /* Centring belongs to the prose, not to the whole state. As a rule on `.aa-empty` it inherited
+     all the way into the action slot, so a first-run install prompt rendered as centre-aligned
+     monospace — preformatted text with its alignment destroyed, line by line. */
+  .aa-empty__title,
+  .aa-empty__description {
+    text-align: center;
+  }
+
+  .aa-empty__action {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-self: stretch;
+    justify-content: center;
+    gap: var(--spacing-aa-3);
+    text-align: start;
+  }
+
+  .aa-empty__action > * {
+    min-width: 0;
   }
 
   .aa-empty__icon {
@@ -992,6 +1019,13 @@
     min-height: 1.25rem;
     color: var(--color-aa-success);
     font-size: var(--text-aa-sm);
+  }
+
+  /* A copy block is content, not an action: inside an empty state's action slot it takes the whole
+     row rather than shrink-wrapping to max-content. Declared after `.aa-copy` so specificity and
+     source order agree. */
+  .aa-empty__action > .aa-copy {
+    flex: 1 1 100%;
   }
 
   .aa-home-shell {

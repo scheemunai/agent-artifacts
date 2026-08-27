@@ -142,7 +142,21 @@
 .aa-viewer-gate-card p,
 .aa-viewer-terminal-card p {
   margin: 0;
+}
+
+/* Tone is scoped away from `.aa-error` on purpose. As a plain descendant selector this rule is
+   (0,2,0) and outranks `.aa-error` (0,1,0) at any source order, so the single most
+   security-relevant public error in the product — "Incorrect password." — rendered in the same
+   muted grey as helper text. */
+.aa-viewer-gate-card p:not(.aa-error),
+.aa-viewer-terminal-card p:not(.aa-error) {
   color: var(--color-aa-muted);
+}
+
+/* Reserve the line so revealing the error cannot push the submit button down under the thumb
+   that is already reaching for it. */
+.aa-viewer-password-error {
+  min-height: 1.25rem;
 }
 
 .aa-viewer-terminal-actions {

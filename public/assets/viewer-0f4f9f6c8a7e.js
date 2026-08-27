@@ -352,11 +352,18 @@ function hideGate() {
 }
 
 function setPasswordError(message) {
-  if (!passwordError) {
-    return;
+  // The line stays in flow with a reserved height so the submit button never shifts; only the
+  // text and the field's invalid state change.
+  if (passwordError) {
+    passwordError.textContent = message;
   }
-  passwordError.textContent = message;
-  passwordError.hidden = message.length === 0;
+  if (passwordInput) {
+    if (message.length > 0) {
+      passwordInput.setAttribute('aria-invalid', 'true');
+    } else {
+      passwordInput.removeAttribute('aria-invalid');
+    }
+  }
 }
 
 function setPasswordBusy(isBusy) {

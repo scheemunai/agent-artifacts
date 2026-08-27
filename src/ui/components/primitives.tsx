@@ -459,7 +459,7 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
         {title}
       </h3>
       <p class="aa-empty__description">{description}</p>
-      {action ? <div>{action}</div> : null}
+      {action ? <div class="aa-empty__action">{action}</div> : null}
     </section>
   );
 }

@@ -168,7 +168,14 @@ function PasswordGate({ visible }: { visible: boolean }) {
             autocomplete="current-password"
             required
           />
-          <p class="aa-error" id="aa-password-error" data-aa-password-error="true" hidden></p>
+          {/* Always in flow with a reserved line height: revealing the message must not move the
+              submit button. Empty content keeps it silent for assistive tech until it has copy. */}
+          <p
+            class="aa-error aa-viewer-password-error"
+            id="aa-password-error"
+            data-aa-password-error="true"
+            role="alert"
+          ></p>
           <Button variant="primary" type="submit" dataAttrs={{ 'data-aa-password-submit': 'true' }}>
             View artifact
           </Button>
