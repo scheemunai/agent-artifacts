@@ -413,7 +413,7 @@ function showTerminal(message) {
   }
   if (contentNode) {
     const currentUrl = escapeHtml(window.location.href);
-    contentNode.innerHTML = `<section class="aa-viewer-terminal"><section class="aa-viewer-terminal-card"><span class="aa-mark" aria-hidden="true">◆</span><h1>${escapeHtml(message)}</h1><div class="aa-specimen-row aa-viewer-terminal-actions"><a class="aa-btn aa-btn--secondary" href="${currentUrl}"><span>Try again</span></a><a class="aa-btn aa-btn--ghost" href="/"><span>Go home</span></a></div></section></section>`;
+    contentNode.innerHTML = `<section class="aa-viewer-terminal"><section class="aa-viewer-terminal-card"><span class="aa-mark" aria-hidden="true">◆</span><h1>${escapeHtml(message)}</h1><div class="aa-button-row aa-button-row--center aa-viewer-terminal-actions"><a class="aa-btn aa-btn--secondary" href="${currentUrl}"><span>Try again</span></a><a class="aa-btn aa-btn--ghost" href="/"><span>Go home</span></a></div></section></section>`;
   }
 }
 

@@ -1,4 +1,4 @@
-import { Button, ProductMark } from '../components/primitives.js';
+import { Button, ButtonRow, ProductMark } from '../components/primitives.js';
 import { abuseHref, ViewerDocument, ViewerFooter } from './viewer.js';
 
 interface ShareTerminalPageProps {
@@ -30,14 +30,14 @@ export function ShareTerminalPage({
           <ProductMark />
           <h1 id="terminal-title">{pageTitle}</h1>
           <p>{message}</p>
-          <div class="aa-specimen-row aa-viewer-terminal-actions">
+          <ButtonRow align="center" class="aa-viewer-terminal-actions">
             <Button variant="secondary" href={shareUrl}>
               Try again
             </Button>
             <Button variant="ghost" href="/">
               Go home
             </Button>
-          </div>
+          </ButtonRow>
         </section>
       </main>
       <ViewerFooter

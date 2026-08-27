@@ -176,7 +176,12 @@ function PasswordGate({ visible }: { visible: boolean }) {
             data-aa-password-error="true"
             role="alert"
           ></p>
-          <Button variant="primary" type="submit" dataAttrs={{ 'data-aa-password-submit': 'true' }}>
+          <Button
+            variant="primary"
+            type="submit"
+            fullWidth
+            dataAttrs={{ 'data-aa-password-submit': 'true' }}
+          >
             View artifact
           </Button>
         </form>

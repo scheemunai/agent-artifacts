@@ -14,6 +14,7 @@ import {
   Badge,
   type BadgeTone,
   Button,
+  ButtonRow,
   type ButtonVariant,
   Card,
   type ComponentState,
@@ -103,6 +104,29 @@ const typeTokens: TokenSpec[] = [
   { name: '--text-aa-lg', intent: 'Page ledes and emphasized supporting copy.' },
   { name: '--text-aa-2xl', intent: 'Section titles.' },
   { name: '--text-aa-hero', intent: 'Homepage-sized hero statements.' },
+];
+
+const widthTokens: TokenSpec[] = [
+  {
+    name: '--width-aa-shell',
+    intent: 'The app shell: dashboard, style guide, every signed-in page.',
+  },
+  { name: '--width-aa-shell-marketing', intent: 'The marketing shell on the home page.' },
+  {
+    name: '--width-aa-panel',
+    intent: 'Feature panels: the hero artifact card and the terms card.',
+  },
+  { name: '--width-aa-shell-narrow', intent: 'Auth, setup, and other single-column pages.' },
+  {
+    name: '--width-aa-measure',
+    intent: 'Code and callout measures: the API block, the origin note.',
+  },
+  { name: '--width-aa-text', intent: 'Plain reading measure for stacked body copy.' },
+  { name: '--width-aa-dialog', intent: 'Modal dialogs, capped against the viewport.' },
+  { name: '--width-aa-card', intent: 'Placeholder and auth cards inside a narrow shell.' },
+  { name: '--width-aa-drawer', intent: 'Mobile drawer panel; the scrim owns every other pixel.' },
+  { name: '--width-aa-toast', intent: 'Toast region, capped against the viewport.' },
+  { name: '--width-aa-prose', intent: 'The artifact reading column: 72ch, type-relative.' },
 ];
 
 const spaceTokens: TokenSpec[] = [
@@ -227,6 +251,7 @@ export function StyleGuidePage() {
           >
             <TokenGroup title="Color" tokens={colorTokens} />
             <TokenGroup title="Type" tokens={typeTokens} />
+            <TokenGroup title="Width" tokens={widthTokens} />
             <TokenGroup title="Space, radius, shadow, focus" tokens={spaceTokens} />
           </StyleGuideSection>
 
@@ -243,6 +268,7 @@ export function StyleGuidePage() {
               <code>minmax(0, 1fr)</code> track on phone widths so they cannot widen the page.
             </div>
             {buttonSection()}
+            {widthSection()}
             {fieldSection()}
             {badgeSection()}
             {cardTableSection()}
@@ -504,6 +530,71 @@ function StateButton({
     >
       {children}
     </Button>
+  );
+}
+
+function widthSection() {
+  return (
+    <Card
+      title="Width and action rows"
+      description="Width is a property of the component, never of the parent it happens to land in. Action rows are one primitive, at every viewport."
+    >
+      <div class="aa-usage">
+        A <code>Button</code> is intrinsically sized. Pass <code>fullWidth</code> where the design
+        calls for a full-bleed action — never rely on a grid parent to stretch it. Group actions in{' '}
+        <code>ButtonRow</code>, which wraps at 375 and keeps the 44px touch target on every line.
+        Container widths come from the <code>--width-aa-*</code> scale above; a raw rem literal in a
+        container width is a bug.
+      </div>
+      <div class="aa-section">
+        <Badge>intrinsic width, four alignments</Badge>
+        <ButtonRow>
+          <Button variant="primary" dataAttrs={specimenToastData('ButtonRow start specimen.')}>
+            Publish artifact
+          </Button>
+          <Button variant="secondary" dataAttrs={specimenToastData('ButtonRow start specimen.')}>
+            Save draft
+          </Button>
+          <Button variant="ghost" dataAttrs={specimenToastData('ButtonRow start specimen.')}>
+            Cancel
+          </Button>
+        </ButtonRow>
+        <ButtonRow align="center">
+          <Button variant="secondary" dataAttrs={specimenToastData('ButtonRow center specimen.')}>
+            Centred
+          </Button>
+          <Button variant="ghost" dataAttrs={specimenToastData('ButtonRow center specimen.')}>
+            Go home
+          </Button>
+        </ButtonRow>
+        <ButtonRow align="end">
+          <Button variant="ghost" dataAttrs={specimenToastData('ButtonRow end specimen.')}>
+            Cancel
+          </Button>
+          <Button variant="primary" dataAttrs={specimenToastData('ButtonRow end specimen.')}>
+            Confirm
+          </Button>
+        </ButtonRow>
+        <ButtonRow align="between">
+          <Button variant="ghost" dataAttrs={specimenToastData('ButtonRow between specimen.')}>
+            Back
+          </Button>
+          <Button variant="primary" dataAttrs={specimenToastData('ButtonRow between specimen.')}>
+            Next
+          </Button>
+        </ButtonRow>
+      </div>
+      <div class="aa-section">
+        <Badge>fullWidth</Badge>
+        <Button
+          variant="primary"
+          fullWidth
+          dataAttrs={specimenToastData('Full-width button specimen.')}
+        >
+          View artifact
+        </Button>
+      </div>
+    </Card>
   );
 }
 

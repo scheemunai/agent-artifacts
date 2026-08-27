@@ -160,7 +160,6 @@
 }
 
 .aa-viewer-terminal-actions {
-  justify-content: center;
   margin-top: var(--spacing-aa-2);
 }
 
@@ -169,10 +168,6 @@
   width: 100%;
   gap: var(--spacing-aa-3);
   text-align: left;
-}
-
-.aa-viewer-password-form .aa-btn {
-  width: 100%;
 }
 
 .aa-viewer-footer {

@@ -26,6 +26,11 @@ interface ButtonProps {
   type?: 'button' | 'submit' | 'reset' | undefined;
   disabled?: boolean | undefined;
   loading?: boolean | undefined;
+  /**
+   * Width is a decision the button makes, not one it inherits from whichever parent it lands in.
+   * Default is intrinsic width; set this where the design calls for a full-bleed action.
+   */
+  fullWidth?: boolean | undefined;
   href?: string | undefined;
   class?: string | undefined;
   id?: string | undefined;
@@ -42,6 +47,7 @@ export function Button({
   type = 'button',
   disabled = false,
   loading = false,
+  fullWidth = false,
   href,
   class: className,
   id,
@@ -50,7 +56,13 @@ export function Button({
   dataAttrs = {},
 }: ButtonProps) {
   const isDisabled = disabled || loading || state === 'disabled';
-  const classes = cx('aa-btn', `aa-btn--${variant}`, size !== 'md' && `aa-btn--${size}`, className);
+  const classes = cx(
+    'aa-btn',
+    `aa-btn--${variant}`,
+    size !== 'md' && `aa-btn--${size}`,
+    fullWidth && 'aa-btn--full',
+    className
+  );
   const content = (
     <>
       {loading ? <Spinner label="Loading" size="sm" /> : null}
@@ -90,6 +102,27 @@ export function Button({
     >
       {content}
     </button>
+  );
+}
+
+export type ButtonRowAlign = 'start' | 'center' | 'end' | 'between';
+
+interface ButtonRowProps {
+  children: Child;
+  align?: ButtonRowAlign | undefined;
+  class?: string | undefined;
+}
+
+/**
+ * The product's one action row. Every screen needs "some buttons, side by side, wrapping on a
+ * phone"; before this they hand-rolled it with `aa-specimen-row`, a class named after the style
+ * guide, at 25 production call sites.
+ */
+export function ButtonRow({ children, align = 'start', class: className }: ButtonRowProps) {
+  return (
+    <div class={cx('aa-button-row', align !== 'start' && `aa-button-row--${align}`, className)}>
+      {children}
+    </div>
   );
 }
 
@@ -480,7 +513,7 @@ export function CopyBlock({ id, label, value }: CopyBlockProps) {
         <span class="aa-copy__label" id={labelId}>
           {label}
         </span>
-        <span class="aa-specimen-row">
+        <ButtonRow>
           <span class="aa-copy__status" id={`${id}-status`} aria-live="polite" />
           <Button
             variant="secondary"
@@ -492,7 +525,7 @@ export function CopyBlock({ id, label, value }: CopyBlockProps) {
           >
             Copy
           </Button>
-        </span>
+        </ButtonRow>
       </header>
       <pre id={id} tabindex={0} aria-describedby={hintId}>
         <code>{value}</code>
@@ -697,7 +730,7 @@ export function NavShell({ items, children }: NavShellProps) {
           tabindex={-1}
           data-aa-drawer-panel="true"
         >
-          <header class="aa-drawer__header aa-specimen-row">
+          <header class="aa-drawer__header">
             <a class="aa-brand" href="/">
               <ProductMark />
               <span>Agent Artifacts</span>

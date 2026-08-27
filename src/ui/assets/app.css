@@ -76,6 +76,21 @@
   --text-aa-hero: 2.5rem;
   --text-aa-hero--line-height: 2.85rem;
 
+  /* Width tokens: one named container scale. Before these, seven container widths shipped as raw
+     rem literals under seven class names, so no two sections could be coordinated without finding
+     and editing every literal. Every container width in this sheet resolves to a step here. */
+  --width-aa-shell: 72rem;
+  --width-aa-shell-marketing: 66.5rem;
+  --width-aa-panel: 48.75rem;
+  --width-aa-shell-narrow: 46rem;
+  --width-aa-measure: 42.5rem;
+  --width-aa-text: 40rem;
+  --width-aa-dialog: 36rem;
+  --width-aa-card: 30rem;
+  --width-aa-drawer: 24rem;
+  --width-aa-toast: 24rem;
+  --width-aa-prose: 72ch;
+
   /* Spacing tokens: generous whitespace with a touch-safe interactive floor. */
   --spacing-aa-1: 0.25rem;
   --spacing-aa-2: 0.5rem;
@@ -187,13 +202,13 @@
   }
 
   .aa-shell {
-    width: min(100%, 72rem);
+    width: min(100%, var(--width-aa-shell));
     margin-inline: auto;
     padding-inline: var(--spacing-aa-6);
   }
 
   .aa-shell--narrow {
-    width: min(100%, 46rem);
+    width: min(100%, var(--width-aa-shell-narrow));
   }
 
   .aa-app-header {
@@ -380,17 +395,43 @@
     }
   }
 
+  /* One action row for the whole product. `.aa-specimen-row` is the deprecated alias: it is a
+     style-guide name that leaked into 25 production call sites, so the two share one declaration
+     block and can never drift while the remaining pages migrate. */
+  .aa-button-row,
   .aa-specimen-row {
     display: flex;
     min-width: 0;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-start;
     gap: var(--spacing-aa-3);
+  }
+
+  .aa-button-row > * {
+    min-width: 0;
+  }
+
+  .aa-button-row--center {
+    justify-content: center;
+  }
+
+  .aa-button-row--end {
+    justify-content: flex-end;
+  }
+
+  .aa-button-row--between {
+    justify-content: space-between;
   }
 
   .aa-btn {
     display: inline-flex;
     width: auto;
+    /* Width is a property of the button, never of whichever parent it lands in. Without this a
+       Button that happened to be a direct child of an `.aa-stack` grid stretched to the full
+       container, so one panel shipped a 432px "Change password" next to a 131px "Remove password"
+       and the bots page a 1062px "New bot". Opt into full width with `<Button fullWidth />`. */
+    justify-self: start;
     min-height: var(--spacing-aa-touch);
     align-items: center;
     justify-content: center;
@@ -491,6 +532,11 @@
     min-height: 3rem;
     padding-inline: var(--spacing-aa-5);
     font-size: var(--text-aa-base);
+  }
+
+  .aa-btn--full {
+    width: 100%;
+    justify-self: stretch;
   }
 
   .sr-only {
@@ -789,7 +835,7 @@
        containing block the whole viewport so the auto margins have something to distribute. */
     inset: 0;
     margin: auto;
-    width: min(calc(100vw - 2rem), 36rem);
+    width: min(calc(100vw - 2rem), var(--width-aa-dialog));
     max-height: min(42rem, calc(100dvh - 2rem));
     border: 1px solid var(--color-aa-line);
     border-radius: var(--radius-aa-xl);
@@ -847,7 +893,7 @@
     bottom: var(--spacing-aa-4);
     z-index: 80;
     display: grid;
-    width: min(calc(100vw - 2rem), 24rem);
+    width: min(calc(100vw - 2rem), var(--width-aa-toast));
     gap: var(--spacing-aa-3);
   }
 
@@ -1029,7 +1075,7 @@
   }
 
   .aa-home-shell {
-    width: min(100%, 66.5rem);
+    width: min(100%, var(--width-aa-shell-marketing));
   }
 
   .aa-home-actions {
@@ -1038,7 +1084,7 @@
   }
 
   .aa-marketing-shell {
-    width: min(100%, 66.5rem);
+    width: min(100%, var(--width-aa-shell-marketing));
   }
 
   .aa-marketing-main {
@@ -1115,7 +1161,7 @@
 
   .aa-marketing-artifact {
     position: relative;
-    width: min(100%, 48.75rem);
+    width: min(100%, var(--width-aa-panel));
     overflow: hidden;
     border-radius: var(--radius-aa-lg);
     background: var(--color-aa-surface-raised);
@@ -1296,7 +1342,7 @@
 
   .aa-marketing-api-wrap {
     display: grid;
-    width: min(100%, 42.5rem);
+    width: min(100%, var(--width-aa-measure));
     gap: var(--spacing-aa-5);
     justify-items: center;
   }
@@ -1396,7 +1442,7 @@
 
   .aa-marketing-features {
     display: grid;
-    width: min(100%, 40rem);
+    width: min(100%, var(--width-aa-text));
     gap: 1.05rem;
   }
 
@@ -1433,7 +1479,7 @@
 
   .aa-marketing-origin {
     display: grid;
-    width: min(100%, 42.5rem);
+    width: min(100%, var(--width-aa-measure));
     justify-items: center;
     border-radius: var(--radius-aa-lg);
     padding: clamp(1.9rem, 5vw, 2.7rem) clamp(1.6rem, 5vw, 2.8rem);
@@ -1468,7 +1514,7 @@
 
   .aa-marketing-terms {
     display: grid;
-    width: min(100%, 48.75rem);
+    width: min(100%, var(--width-aa-panel));
     justify-items: center;
     border-radius: var(--radius-aa-lg);
     padding: clamp(2.1rem, 5vw, 3rem) clamp(1.6rem, 5vw, 3rem);
@@ -1713,7 +1759,7 @@
     /* The first track must never be wider than the panel it holds. `minmax(0, 80vw)` handed the
        panel column 1152px at 1440 while `.aa-drawer__panel` paints only 24rem, leaving 768px of
        undimmed, still-clickable page inside something claiming `aria-modal="true"`. */
-    grid-template-columns: min(80vw, 24rem) 1fr;
+    grid-template-columns: min(80vw, var(--width-aa-drawer)) 1fr;
     background: transparent;
   }
 
@@ -1723,7 +1769,7 @@
 
   .aa-drawer__panel {
     display: grid;
-    max-width: 24rem;
+    max-width: var(--width-aa-drawer);
     height: 100dvh;
     min-height: 0;
     grid-template-rows: auto minmax(0, 1fr) auto;
@@ -1752,6 +1798,14 @@
     padding: var(--spacing-aa-4);
   }
 
+  .aa-drawer__header {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-aa-3);
+  }
+
   .aa-drawer__body {
     display: grid;
     align-content: start;
@@ -1778,7 +1832,7 @@
   }
 
   .aa-placeholder-card {
-    width: min(100%, 30rem);
+    width: min(100%, var(--width-aa-card));
     text-align: left;
   }
 
@@ -1881,7 +1935,7 @@
   }
 
   .aa-md {
-    width: min(100%, 72ch);
+    width: min(100%, var(--width-aa-prose));
     margin: var(--spacing-aa-16) auto 0;
     padding-inline: var(--spacing-aa-6);
     color: var(--color-aa-ink);
