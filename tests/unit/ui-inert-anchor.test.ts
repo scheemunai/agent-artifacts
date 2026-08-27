@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { sanitizeMarkdownHtml } from '../../src/lib/sanitize.js';
-import { parseStylesheet } from '../support/css-cascade.js';
+import { type ElementSpec, parseStylesheet, winningDeclaration } from '../support/css-cascade.js';
 
 /**
  * A-41: a dead control must not wear a live costume.
@@ -20,6 +20,11 @@ import { parseStylesheet } from '../support/css-cascade.js';
 
 const viewerCss = readFileSync(
   fileURLToPath(new URL('../../src/ui/assets/viewer.css', import.meta.url)),
+  'utf8'
+);
+/** Read-only: this suite asserts a relationship with another lane's file, it never writes it. */
+const appCss = readFileSync(
+  fileURLToPath(new URL('../../src/ui/assets/app.css', import.meta.url)),
   'utf8'
 );
 
@@ -61,5 +66,64 @@ describe('an anchor the sanitizer disarmed', () => {
       .every((rule) => rule.selector.includes('.aa-viewer'));
 
     expect(scoped, 'the rule must not reach beyond the viewer surface').toBe(true);
+  });
+});
+
+/**
+ * The cross-lane contract, asserted as a relationship rather than as an existence.
+ *
+ * The rule above only helps if it still *wins* over `.aa-md a`, and that selector lives in app.css —
+ * another lane's file, actively being reshaped. "My rule exists" is not the claim that matters;
+ * "my rule beats theirs for a disarmed anchor, and loses to theirs for a live one" is. So this
+ * resolves the real cascade across both stylesheets in their real load order and reads the winner.
+ *
+ * If a restructure in app.css breaks the relationship, this fails at that lane's own commit
+ * boundary. That is the intent: a contract test failing in the file that broke it is a
+ * renegotiation, not an accusation — the alternative is discovering it in a screenshot two rounds
+ * later, which is how this defect got here in the first place.
+ *
+ * It reads app.css and never writes it.
+ */
+describe('the viewer/app.css anchor contract', () => {
+  const appRules = parseStylesheet(appCss);
+  const rules = [...appRules, ...parseStylesheet(viewerCss, appRules.length)];
+
+  // section.aa-viewer-content > div.aa-prose-page > .aa-md > a — the document's real shape, and the
+  // load order the viewer document emits: app.css first, viewer.css second.
+  const inViewerProse = (anchor: ElementSpec): ElementSpec[] => [
+    { tag: 'section', classes: ['aa-viewer-content'] },
+    { tag: 'div', classes: ['aa-prose-page'] },
+    { tag: 'div', classes: ['aa-md'] },
+    anchor,
+  ];
+
+  const DISARMED: ElementSpec = { tag: 'a' };
+  const LIVE: ElementSpec = { tag: 'a', attributes: { href: 'https://example.test' } };
+
+  it('gives a disarmed anchor the viewer rule, not the link colour', () => {
+    const winner = winningDeclaration(rules, inViewerProse(DISARMED), 'color', 1440);
+
+    expect(winner, 'nothing styles a disarmed anchor at all').toBeDefined();
+    expect(
+      winner?.rule.selector,
+      'app.css now outranks the viewer rule — a stripped link wears the live colour again'
+    ).toContain('a:not([href])');
+    expect(winner?.value).not.toContain('--color-aa-accent');
+  });
+
+  it('leaves a working link alone', () => {
+    const winner = winningDeclaration(rules, inViewerProse(LIVE), 'color', 1440);
+
+    // The other half of the contract, and the one a careless fix breaks: real links must keep
+    // reading as links.
+    expect(winner?.value, 'the viewer rule has bled onto live links').toContain(
+      '--color-aa-accent'
+    );
+  });
+
+  it('does not underline what it just made inert', () => {
+    const winner = winningDeclaration(rules, inViewerProse(DISARMED), 'text-decoration', 1440);
+
+    expect(winner?.value).toContain('none');
   });
 });
