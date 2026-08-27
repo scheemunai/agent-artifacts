@@ -261,17 +261,24 @@ export function StyleGuidePage() {
               >
                 Interactivity hydrates through data attributes from a self-hosted hashed module.
               </Card>
-              <Card
-                title="Where CSS lives"
-                description="One stylesheet, and a rule for what is allowed into it."
-              >
-                <code>app.css</code> holds what a component owns and this page documents. Writing
-                CSS for a single page means a component is missing: build the component, register it
-                here, and its CSS follows. The one exception is a page's own layout scaffolding,
-                named <code>.aa-&lt;page&gt;-*</code> — which must graduate to a component the
-                moment a second page wants it.
-              </Card>
             </div>
+            {/* A-29. This card carries five times the copy of the three above it, and in a
+                stretch-aligned grid that made ITS height the row's height: four 496px cards, three
+                of them holding 260px of nothing under their last line. It is also a different kind
+                of thing — the three above are one-line principles, this is a rule with its
+                conditions — so it reads better at full width than as the outlier that decides how
+                tall its neighbours are. Moving it out fixes the void at its cause instead of
+                un-stretching a grid that every other page relies on to align its cards. */}
+            <Card
+              title="Where CSS lives"
+              description="One stylesheet, and a rule for what is allowed into it."
+            >
+              <code>app.css</code> holds what a component owns and this page documents. Writing CSS
+              for a single page means a component is missing: build the component, register it here,
+              and its CSS follows. The one exception is a page's own layout scaffolding, named{' '}
+              <code>.aa-&lt;page&gt;-*</code> — which must graduate to a component the moment a
+              second page wants it.
+            </Card>
           </StyleGuideSection>
 
           <StyleGuideSection
@@ -1217,9 +1224,16 @@ function feedbackSection() {
       </Card>
       <Card title="Copy block" description="For API keys, curl commands, and install prompts.">
         <div class="aa-stack">
+          {/* N-4. `variant="credential"` is not decoration here — it is the whole claim. A key is
+              one unbroken string, so the credential block refuses to wrap and scrolls sideways
+              instead, with the measured hint saying so. Without the prop this specimen wrapped a
+              masked token across three lines at 1440: the guide demonstrating the exact mode
+              production was changed to avoid, on the one component whose headline case is "do not
+              wrap this". */}
           <CopyBlock
             id="copy-block-demo"
             label="API key"
+            variant="credential"
             value="aa_bot_••••••••••••••••••••••••••••x7Qk"
           />
           <CopyBlock
@@ -1394,9 +1408,14 @@ function dialogExamples() {
         }
       >
         <div class="aa-grid">
+          {/* N-5. The field said "optional" twice — once in the label and once in the tag the
+              `optional` prop renders. Two statements of one fact read as two different facts, and
+              the tag is the one that belongs to the system: it is positioned, styled and placed
+              identically on every optional field, so a reader learns it once. The label goes back
+              to naming the thing. */}
           <Input
             id="modal-password"
-            label="Optional password"
+            label="Password"
             type="password"
             optional
             autocomplete="new-password"

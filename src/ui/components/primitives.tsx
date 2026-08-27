@@ -1245,13 +1245,32 @@ export function NavShell({ items, children, account }: NavShellProps) {
               <ProductMark />
               <span>Agent Artifacts</span>
             </a>
+            {/* A-45. The drawer closed with the word "Close" while every other dismissable surface
+                in the product closes with an ✕ — the notice dismiss is the same glyph, the same
+                stroke, the same 44px target. A drawer header is exactly where the icon convention
+                is strongest and where the word costs the most, because it competes with the brand
+                lockup for the one line above the navigation. The accessible name is unchanged, so
+                this is the visible affordance moving to the pattern, not a rename. */}
             <Button
               variant="ghost"
               size="sm"
+              iconOnly
               ariaLabel="Close navigation"
+              title="Close navigation"
               dataAttrs={{ 'data-aa-drawer-close': drawerId }}
             >
-              Close
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M6 6 18 18" />
+                <path d="M18 6 6 18" />
+              </svg>
             </Button>
           </header>
           <nav class="aa-drawer__body" aria-label="Mobile main">
