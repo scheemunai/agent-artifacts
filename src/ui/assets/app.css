@@ -477,6 +477,20 @@
     opacity: 0.55;
   }
 
+  /* Loading is not disabled. `Button` sets `disabled` while a submit is in flight so it cannot fire
+     twice — correct — but that meant a working button rendered identically to a dead one, with its
+     label at roughly 2.3:1. It is also the state a person stares at while waiting, which makes it
+     the worst one to render unreadable. The spinner already says "busy"; the colour must not say
+     "broken", so the dim is lifted and the control keeps full contrast.
+
+     Interaction is unchanged: `pointer-events: none` above still applies. This rule outranks the
+     disabled rule on specificity rather than tying it and depending on source order — the trap that
+     has now caught .aa-mobile-trigger and .aa-btn--compact-hide in this same file. */
+  .aa-btn:disabled[aria-busy="true"],
+  .aa-btn[aria-busy="true"][data-aa-state="loading"] {
+    opacity: 1;
+  }
+
   .aa-btn--primary {
     color: var(--color-aa-accent-ink);
     background: var(--color-aa-accent);
