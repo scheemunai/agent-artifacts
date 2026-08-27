@@ -216,6 +216,14 @@ export function StyleGuidePage() {
           { label: 'Setup', href: '/setup' },
           { label: 'Login', href: '/login' },
         ]}
+        account={
+          <ButtonRow>
+            <span class="aa-hint">ops-bot@example.com</span>
+            <Button variant="secondary" size="sm" {...specimenToastData()}>
+              Log out
+            </Button>
+          </ButtonRow>
+        }
       >
         <p class="aa-hint">
           Drawer is full-height, internally scrollable, and closes on outside tap.
@@ -300,6 +308,7 @@ export function StyleGuidePage() {
             {listRowSection()}
             {dangerCardSection()}
             {feedbackSection()}
+            {appShellSection()}
             {navigationSection()}
             {loadingSection()}
           </StyleGuideSection>
@@ -1221,6 +1230,39 @@ function feedbackSection() {
         </div>
       </Card>
     </div>
+  );
+}
+
+function appShellSection() {
+  return (
+    <Card
+      title="App shell · account slot"
+      description="Identity, passed once and shown wherever the viewport has room for it."
+    >
+      <ButtonRow>
+        <span class="aa-hint">ops-bot@example.com</span>
+        <Button variant="secondary" size="sm" {...specimenToastData()}>
+          Log out
+        </Button>
+      </ButtonRow>
+      <p class="aa-hint">
+        The live specimen is this page's own header. Narrow the window past 760px and the block
+        moves into the drawer instead of shrinking — the header row is the one a phone can least
+        spare, and a second block there competes with the page title.
+      </p>
+      <p class="aa-hint">
+        <code>NavShell</code> mounts <code>account</code> in both places from one prop, and exactly
+        one copy is ever live: <code>.aa-app-nav__account</code> is <code>display: none</code> below
+        760px, and above it the drawer cannot be opened because its only trigger is hidden. That
+        invariant is the component's to keep, not the caller's — mounting the block into both slots
+        by hand is what once put two live copies on a 375px screen with the drawer open.
+      </p>
+      <p class="aa-hint">
+        <code>children</code> is unchanged and still renders in the drawer footer only. One
+        consequence of the double mount: the account content really is in the document twice, so
+        anything carrying an <code>id</code> belongs in <code>children</code> instead.
+      </p>
+    </Card>
   );
 }
 

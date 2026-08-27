@@ -1155,9 +1155,26 @@ interface NavItem {
 interface NavShellProps {
   items: NavItem[];
   children?: Child | undefined;
+  /**
+   * Who you are signed in as, and what you can do about it. Rendered in the header on desktop and
+   * in the drawer footer on a phone — from ONE prop, mounted by this component in both places.
+   *
+   * The duplication is deliberate and it is the safe direction. Identity has to appear somewhere at
+   * every width, but the header row is the one a phone can least spare: a second block there
+   * competes with the page title. So `.aa-app-nav__account` is `display: none` below 760px and the
+   * drawer carries it instead — and above 760px the drawer cannot be opened at all, because its
+   * only trigger is hidden. Exactly one copy is live at any width, and this component guarantees
+   * that rather than asking two callers to agree about it. 122c3c5 fixed the version where both
+   * were live at 375 with the drawer open; the invariant now lives where it cannot be re-broken by
+   * mounting the thing twice by hand.
+   *
+   * One consequence to know: the content really is in the DOM twice, so anything with an `id`
+   * belongs in `children` or nowhere. `tests/unit/ui-duplicate-ids.test.ts` will say so loudly.
+   */
+  account?: Child | undefined;
 }
 
-export function NavShell({ items, children }: NavShellProps) {
+export function NavShell({ items, children, account }: NavShellProps) {
   const drawerId = 'aa-mobile-drawer';
 
   return (
@@ -1179,6 +1196,10 @@ export function NavShell({ items, children }: NavShellProps) {
               </a>
             ))}
           </nav>
+          {/* After the nav and before the menu button, so the tab order reads brand, sections,
+              identity — and so the trigger stays last on a phone, where it is the only one of the
+              three that is visible. */}
+          {account ? <div class="aa-app-nav__account">{account}</div> : null}
           <Button
             variant="ghost"
             class="aa-mobile-trigger"
@@ -1227,8 +1248,15 @@ export function NavShell({ items, children }: NavShellProps) {
             ))}
           </nav>
           {/* Only rendered when something was given: an empty footer is a 1px rule and a gap
-              under the last nav link, which reads as a section that failed to load. */}
-          {children ? <footer class="aa-drawer__footer">{children}</footer> : null}
+              under the last nav link, which reads as a section that failed to load.
+              The account block leads, because on a phone this footer is the only place identity
+              appears and it should not be found underneath whatever else the page put here. */}
+          {account || children ? (
+            <footer class="aa-drawer__footer">
+              {account}
+              {children}
+            </footer>
+          ) : null}
         </aside>
         <button
           class="aa-drawer__scrim"

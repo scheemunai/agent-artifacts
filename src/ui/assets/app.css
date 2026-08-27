@@ -318,11 +318,38 @@
       display: flex;
     }
 
+    /* The slot holds its line, and that is a foundation guarantee rather than a nicety: the app
+       header's height is a token, and `html { scroll-padding-top }` is derived from it, so every
+       in-page anchor offset in the product is computed from this row being one row. An
+       84-character service-account address wrapped inside the slot and took the header from 64px
+       to 102px — which does not look broken anywhere, it just silently mis-aims every anchor jump.
+       So nothing in here wraps and text that does not fit elides. The caller supplies content, but
+       it does not get to move the header. */
     .aa-app-nav__account {
       display: flex;
       min-width: 0;
       align-items: center;
       gap: var(--spacing-aa-3);
+      white-space: nowrap;
+    }
+
+    /* Applies to a flex child such as `.aa-button-row`, and is inert on anything else. The row it
+       would otherwise wrap is the row this whole rule exists to protect.
+
+       The class is doubled for specificity, not source order — the same lesson as
+       `.aa-btn.aa-mobile-trigger` a few rules down, and I walked into it here before reading my own
+       file. `.aa-button-row { flex-wrap: wrap }` is emitted later in this layer, so a bare
+       `.aa-app-nav__account > *` is an equal (0,1,0) tie that the later rule wins: the account row
+       went on wrapping and the header went on growing. (0,2,0) ends the argument without naming
+       `.aa-button-row`, so content that is some other flex container is held to the same line. */
+    .aa-app-nav__account.aa-app-nav__account > * {
+      min-width: 0;
+      flex-wrap: nowrap;
+    }
+
+    .aa-app-nav__account :where(span, a, p) {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Specificity, not source order. The trigger is a `.aa-btn`, and `.aa-btn { display:
@@ -2145,7 +2172,12 @@
   }
 
   .aa-drawer__header,
+  /* A stack, because the footer can now hold two things: the account block the header stands down
+     for below 760px, and whatever the page passed as children. Two blocks butted together with no
+     gap read as one confused block. */
   .aa-drawer__footer {
+    display: grid;
+    gap: var(--spacing-aa-3);
     padding: var(--spacing-aa-4);
   }
 
