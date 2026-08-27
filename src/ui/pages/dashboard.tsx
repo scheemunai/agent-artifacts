@@ -154,6 +154,17 @@ export function DashboardHomePage({
         {artifacts.length > 0 || filtersApplied(filters) ? (
           <ArtifactFilters bots={bots} filters={filters} />
         ) : null}
+        {artifacts.length > 0 && filtersApplied(filters) ? (
+          <ButtonRow>
+            <span class="aa-hint">Filtered by</span>
+            {filters.q ? <Badge tone="neutral">q: {filters.q}</Badge> : null}
+            {filters.botId ? <Badge tone="neutral">bot</Badge> : null}
+            {filters.type ? <Badge tone="neutral">type: {filters.type}</Badge> : null}
+            <Button size="sm" variant="secondary" href="/dashboard">
+              Clear filters
+            </Button>
+          </ButtonRow>
+        ) : null}
         {artifacts.length === 0 ? (
           filtersApplied(filters) ? (
             <EmptyState
@@ -1351,7 +1362,7 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
             <Badge tone={template.builtIn ? 'info' : 'accent'}>
               {template.builtIn ? 'starter' : 'yours'}
             </Badge>
-            <Badge tone="neutral">{template.slug}</Badge>
+            <code>{template.slug}</code>
             <Badge tone="neutral">{template.type === 'markdown' ? 'md' : 'html'}</Badge>
           </ButtonRow>
           {template.description ? <p class="aa-section-note">{template.description}</p> : null}
