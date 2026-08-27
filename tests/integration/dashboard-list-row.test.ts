@@ -94,6 +94,31 @@ describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the published row', () 
   });
 });
 
+describe("the pattern's own constraint, held where it is consumed", () => {
+  it('gives every row exactly one target, because the overlay covers the others', async () => {
+    const ctx = await makeContext();
+    const { cookie } = await seed(ctx, ['Alpha report', 'Beta report']);
+
+    const html = await (
+      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+    ).text();
+
+    // The foundation's constraint, stated by its author: the stretched-link overlay paints above
+    // ordinary row content, so a second control in a row is unclickable unless it is positioned
+    // above the overlay — and a row that needs several targets wants a different pattern, not a
+    // workaround. Asserting it here rather than trusting a reading of today's markup: the next
+    // person to add a Delete button to this row should be told by a test, not by a bug report.
+    const rows = html.split('<div class="aa-list-row">').slice(1);
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      const body = row.split('</div>')[0] ?? row;
+      const controls = body.match(/<(?:a|button|input|select|textarea)\b/g) ?? [];
+      expect(controls).toHaveLength(1);
+      expect(body).toContain('class="aa-list-row__link"');
+    }
+  });
+});
+
 describe('B-D3 · the danger zone looks like one', () => {
   it('gives the delete-account card the danger tone the primitive now publishes', async () => {
     const ctx = await makeContext();

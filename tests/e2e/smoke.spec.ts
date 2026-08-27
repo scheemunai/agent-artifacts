@@ -276,8 +276,9 @@ test('authenticated dashboard list to detail preserves history and share control
 
   await expect(page.getByRole('heading', { name: "Your agent's published work" })).toBeVisible();
   await expect(page.getByRole('link', { name: seed.dashboardArtifactTitle })).toBeVisible();
-  // The list is the published aligned-row pattern now, not a stack of cards: `.aa-list` owns the
-  // columns and each `.aa-list-row` borrows them, so badges and meta line up down the whole list.
+  // The list is the published aligned-row pattern now, not a stack of cards. Its columns align
+  // down the list above 480px and collapse below it — title on its own line, badge and meta
+  // stacked — so this scope is deliberately about the row, not about the alignment.
   const dashboardRow = page.locator('.aa-list-row').filter({
     has: page.getByRole('link', { name: seed.dashboardArtifactTitle }),
   });

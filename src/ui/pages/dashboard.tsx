@@ -171,8 +171,12 @@ export function DashboardHomePage({
           )
         ) : (
           <div class="aa-stack">
-            {/* `.aa-list` owns the columns; each row borrows them with subgrid, so badges and meta
-                line up down the whole list instead of every row sizing itself. */}
+            {/* `.aa-list` owns the columns and each row borrows them with subgrid, so badges and
+                meta line up down the list — above 480px. Below it the pattern collapses on
+                purpose: the title takes its own line and badge and meta stack beneath, because
+                three tracks in 375px would push the meta off the row. Worth stating in both
+                halves, since "the columns align" is true of the specimen at every width and true
+                of this list only at some of them. */}
             <div class="aa-list">
               {artifacts.map((artifact) => (
                 <ArtifactRow artifact={artifact} />
