@@ -149,7 +149,15 @@ const spaceTokens: TokenSpec[] = [
   { name: '--shadow-aa-lg', intent: 'Dialogs and mobile drawers.' },
   { name: '--shadow-aa-card', intent: 'Fresh Air card shadow.' },
   { name: '--shadow-aa-card-lift', intent: 'Fresh Air hover lift.' },
-  { name: '--shadow-aa-focus', intent: 'Visible, consistent focus language.' },
+  {
+    name: '--color-aa-focus',
+    intent:
+      'The focus ring colour. Defaults to the accent; a toned surface sets it locally so the ring belongs to what it lands on.',
+  },
+  {
+    name: '--shadow-aa-focus',
+    intent: 'The focus halo, derived from --color-aa-focus so ring and glow always agree.',
+  },
 ];
 
 const installPromptExample = `You now have an Agent Artifacts account — a place to publish your work

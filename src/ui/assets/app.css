@@ -124,7 +124,12 @@
   --shadow-aa-card-lift: 0 1px 2px rgb(47 58 64 / 0.05), 0 18px 44px -18px rgb(47 58 64 / 0.22);
 
   /* Focus token: one visible ring language across every component. */
-  --shadow-aa-focus: 0 0 0 3px rgb(194 72 42 / 0.18);
+  /* The focus ring's colour, as a variable a surface can retone. A success notice wearing an
+     accent-red ring (V2-N10) was not a wrong value — it was a ring that knew nothing about
+     what it landed on. The halo derives from the same variable so a retoned ring cannot end
+     up green with a red glow. */
+  --color-aa-focus: var(--color-aa-accent);
+  --shadow-aa-focus: 0 0 0 3px color-mix(in srgb, var(--color-aa-focus) 18%, transparent);
 }
 
 @layer base {
@@ -180,9 +185,20 @@
 
   :focus-visible,
   [data-aa-state="focus"] {
-    outline: 2px solid var(--color-aa-accent);
+    outline: 2px solid var(--color-aa-focus);
     outline-offset: 2px;
     box-shadow: var(--shadow-aa-focus);
+  }
+
+  /* A container focused *for* the user rather than *by* them. `tabindex="-1"` is unreachable by
+     Tab, so anything matching this was moved into focus by script — the drawer panel, a dialog, a
+     notice announced on load. Ringing it produced V2-N9: the drawer panel sits flush to the
+     viewport edge, so its outline showed only as an orphaned accent line with no visible cause.
+     Keyboard users still get a ring on every control they actually navigate to. */
+  [tabindex="-1"]:focus,
+  [tabindex="-1"]:focus-visible {
+    outline: none;
+    box-shadow: none;
   }
 
   ::selection {
@@ -1140,6 +1156,7 @@
   }
 
   .aa-notice--info {
+    --color-aa-focus: var(--color-aa-info);
     border-color: var(--color-aa-info-line);
     background: var(--color-aa-info-soft);
   }
@@ -1149,6 +1166,7 @@
   }
 
   .aa-notice--success {
+    --color-aa-focus: var(--color-aa-success);
     border-color: var(--color-aa-success-line);
     background: var(--color-aa-success-soft);
   }
@@ -1158,6 +1176,7 @@
   }
 
   .aa-notice--warn {
+    --color-aa-focus: var(--color-aa-warn);
     border-color: var(--color-aa-warn-line);
     background: var(--color-aa-warn-soft);
   }
@@ -1167,6 +1186,7 @@
   }
 
   .aa-notice--danger {
+    --color-aa-focus: var(--color-aa-danger);
     border-color: var(--color-aa-danger-line);
     background: var(--color-aa-danger-soft);
   }
