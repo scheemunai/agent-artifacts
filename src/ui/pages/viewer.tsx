@@ -1,7 +1,7 @@
 import type { Child } from 'hono/jsx';
 import type { ViewerContentResult, ViewerPageModel } from '../../services/viewer.js';
 import { stylesheetHref } from '../assets.js';
-import { UI_FOUNDATION_SCRIPT_SRC } from '../components/layout.js';
+import { DOCTYPE, UI_FOUNDATION_SCRIPT_SRC } from '../components/layout.js';
 import { Button, ProductMark } from '../components/primitives.js';
 
 export const VIEWER_SCRIPT_SRC = '/assets/viewer-0f4f9f6c8a7e.js';
@@ -106,38 +106,41 @@ export function ViewerDocument({
   const ogImage = imageUrl ?? new URL('/assets/og-fallback.png', canonicalUrl).toString();
 
   return (
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content={description} />
-        <meta property="og:title" content={title.replace(/ · Agent Artifacts$/, '')} />
-        <meta property="og:description" content={description} />
-        <meta property="og:type" content="article" />
-        <meta property="og:site_name" content="Agent Artifacts" />
-        <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:image" content={ogImage} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={title.replace(/ · Agent Artifacts$/, '')} />
-        <meta name="twitter:description" content={description} />
-        <link rel="canonical" href={canonicalUrl} />
-        <link rel="stylesheet" href={stylesheetHref()} />
-        <link rel="stylesheet" href={VIEWER_STYLESHEET_HREF} />
-        <title>{pageTitle}</title>
-      </head>
-      <body class="aa-page aa-public-page">
-        {children}
-        {bootJson ? (
-          <script
-            id="aa-boot"
-            type="application/json"
-            dangerouslySetInnerHTML={{ __html: bootJson }}
-          />
-        ) : null}
-        <script type="module" src={UI_FOUNDATION_SCRIPT_SRC}></script>
-        {includeViewerScript ? <script type="module" src={VIEWER_SCRIPT_SRC}></script> : null}
-      </body>
-    </html>
+    <>
+      {DOCTYPE}
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="description" content={description} />
+          <meta property="og:title" content={title.replace(/ · Agent Artifacts$/, '')} />
+          <meta property="og:description" content={description} />
+          <meta property="og:type" content="article" />
+          <meta property="og:site_name" content="Agent Artifacts" />
+          <meta property="og:url" content={canonicalUrl} />
+          <meta property="og:image" content={ogImage} />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={title.replace(/ · Agent Artifacts$/, '')} />
+          <meta name="twitter:description" content={description} />
+          <link rel="canonical" href={canonicalUrl} />
+          <link rel="stylesheet" href={stylesheetHref()} />
+          <link rel="stylesheet" href={VIEWER_STYLESHEET_HREF} />
+          <title>{pageTitle}</title>
+        </head>
+        <body class="aa-page aa-public-page">
+          {children}
+          {bootJson ? (
+            <script
+              id="aa-boot"
+              type="application/json"
+              dangerouslySetInnerHTML={{ __html: bootJson }}
+            />
+          ) : null}
+          <script type="module" src={UI_FOUNDATION_SCRIPT_SRC}></script>
+          {includeViewerScript ? <script type="module" src={VIEWER_SCRIPT_SRC}></script> : null}
+        </body>
+      </html>
+    </>
   );
 }
 
