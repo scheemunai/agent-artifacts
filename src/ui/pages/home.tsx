@@ -1,4 +1,10 @@
-import { formatUpdatedLabel, type LiveArtifactMeta } from '../../services/live-artifact-meta.js';
+import {
+  formatUpdatedLabel,
+  HERO_ARTIFACT_PATH,
+  heroArtifactUrl,
+  type LiveArtifactMeta,
+  publicArtifactUrl,
+} from '../../services/live-artifact-meta.js';
 import { Layout } from '../components/layout.js';
 import {
   MarketingApiBlock,
@@ -31,7 +37,7 @@ export const HOME_DEMO_ARTIFACTS = [
     title: 'Agent Skill',
     description: 'A real artifact that explains how agents publish here.',
     slugLabel: 'this-is-artifact',
-    path: '/a/KbLJ0zvyiGadXLHUs2E5Rb',
+    path: HERO_ARTIFACT_PATH,
   },
 ] as const;
 
@@ -81,16 +87,11 @@ export interface HomePageProps {
   now?: number | undefined;
 }
 
-export function buildHomeDemoArtifactUrl(baseUrl: string, artifactPath: string) {
-  const url = new URL(baseUrl);
-  url.hostname = url.hostname.replace('-cloud.', '.');
-  return `${url.origin}${artifactPath}`;
-}
-
-/** Public URL of the artifact the hero card is built from. */
-export function heroArtifactUrl(baseUrl: string): string {
-  return buildHomeDemoArtifactUrl(baseUrl, HOME_AGENT_SKILL_ARTIFACT.path);
-}
+/**
+ * Re-exported so the page keeps a stable surface for its own tests. The derivation itself lives in
+ * `services/live-artifact-meta.ts`, because boot code needs it and boot must not import a page.
+ */
+export { heroArtifactUrl, publicArtifactUrl as buildHomeDemoArtifactUrl };
 
 export function HomePage({
   baseUrl,

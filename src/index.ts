@@ -5,9 +5,8 @@ import { initializeDatabase } from './db/client.js';
 import { runMigrations } from './db/migrations.js';
 import { loadCloudModule } from './extension/loader.js';
 import { createLogger } from './logger.js';
-import { startLiveArtifactMetaRefresh } from './services/live-artifact-meta.js';
+import { heroArtifactUrl, startLiveArtifactMetaRefresh } from './services/live-artifact-meta.js';
 import { startBackgroundScheduler } from './services/scheduler.js';
-import { heroArtifactUrl } from './ui/pages/home.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();

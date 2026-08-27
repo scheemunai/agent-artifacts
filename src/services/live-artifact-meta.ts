@@ -12,6 +12,13 @@ import type { Logger } from '../logger.js';
  * and omits the meta entirely when there is none.
  */
 
+/**
+ * The share this hero is built from. It lives here rather than on the page because boot code
+ * (`src/index.ts`) has to know which artifact to poll before any page renders, and boot should
+ * depend on a service, never on a UI module.
+ */
+export const HERO_ARTIFACT_PATH = '/a/KbLJ0zvyiGadXLHUs2E5Rb';
+
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 /** A snapshot older than this is dropped rather than shown: a stale label can lie. */
 const SNAPSHOT_MAX_AGE_MS = 45 * 60 * 1000;
@@ -54,6 +61,25 @@ interface CacheSlot {
 
 let cache: CacheSlot | null = null;
 let inFlight: Promise<LiveArtifactMeta | null> | null = null;
+
+/**
+ * Public URL of an artifact served by the paired public instance.
+ *
+ * The cloud host and the public host are the same name with a `-cloud` suffix, so the artifact a
+ * cloud page links to lives one hostname over. This is deployment topology expressed as a string
+ * substitution and it deserves a config value instead; it is kept in one place here so there is a
+ * single site to change when it gets one.
+ */
+export function publicArtifactUrl(baseUrl: string, artifactPath: string): string {
+  const url = new URL(baseUrl);
+  url.hostname = url.hostname.replace('-cloud.', '.');
+  return `${url.origin}${artifactPath}`;
+}
+
+/** Public URL of the artifact the marketing hero card is built from. */
+export function heroArtifactUrl(baseUrl: string): string {
+  return publicArtifactUrl(baseUrl, HERO_ARTIFACT_PATH);
+}
 
 /** The public poll surface for an artifact page URL. `poll=1` never counts a view. */
 export function liveArtifactMetaUrl(artifactUrl: string): string {

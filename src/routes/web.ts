@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { AppConfig } from '../config.js';
-import { getLiveArtifactMeta } from '../services/live-artifact-meta.js';
+import { getLiveArtifactMeta, heroArtifactUrl } from '../services/live-artifact-meta.js';
 import { SESSION_COOKIE_NAME, unsignedSessionToken } from '../services/sessions.js';
 import { selfHostedEntryPath } from '../services/setup-state.js';
-import { HomePage, heroArtifactUrl } from '../ui/pages/home.js';
+import { HomePage } from '../ui/pages/home.js';
 import { LoginPlaceholderPage, SetupPlaceholderPage } from '../ui/pages/placeholder.js';
 import { StyleGuidePage } from '../ui/pages/style-guide.js';
 

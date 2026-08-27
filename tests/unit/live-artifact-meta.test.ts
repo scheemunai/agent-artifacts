@@ -1,8 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   formatUpdatedLabel,
   getLiveArtifactMeta,
+  HERO_ARTIFACT_PATH,
+  heroArtifactUrl,
   liveArtifactMetaUrl,
+  publicArtifactUrl,
   refreshLiveArtifactMeta,
   resetLiveArtifactMeta,
 } from '../../src/services/live-artifact-meta.js';
@@ -127,5 +131,31 @@ describe('formatUpdatedLabel', () => {
 
   it('tolerates a small clock skew rather than blanking the strip', () => {
     expect(formatUpdatedLabel(1_000, 0)).toBe('updated just now');
+  });
+});
+
+describe('hero artifact identity lives in the service, not the page', () => {
+  it('derives the public artifact url from a cloud base url', () => {
+    expect(publicArtifactUrl('https://preview-cloud.example.test', '/a/demo')).toBe(
+      'https://preview.example.test/a/demo'
+    );
+    expect(heroArtifactUrl('https://preview-cloud.example.test')).toBe(
+      `https://preview.example.test${HERO_ARTIFACT_PATH}`
+    );
+  });
+
+  it('is a no-op on a host with no -cloud segment', () => {
+    expect(heroArtifactUrl('https://agentartifact.ai')).toBe(
+      `https://agentartifact.ai${HERO_ARTIFACT_PATH}`
+    );
+  });
+
+  it('keeps boot code free of UI imports', () => {
+    // src/index.ts is the process entry point. It needs the hero artifact's URL to start the
+    // refresher, and it used to reach into a marketing page to get it. Boot depends on services.
+    const entry = readFileSync(new URL('../../src/index.ts', import.meta.url), 'utf8');
+
+    expect(entry).not.toMatch(/from '\.\/ui\//);
+    expect(entry).toContain("from './services/live-artifact-meta.js'");
   });
 });
