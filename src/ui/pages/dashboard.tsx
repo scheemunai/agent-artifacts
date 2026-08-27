@@ -10,6 +10,7 @@ import {
   EmptyState,
   Input,
   NavShell,
+  Notice,
   Select,
   Table,
   Textarea,
@@ -269,14 +270,25 @@ export function DashboardArtifactPage({
   );
 }
 
+/** Which flow produced the key on screen. The two are not interchangeable: one is additive, the
+ * other invalidated a key that may still be in an agent's config. */
+export type BotKeyOrigin = 'created' | 'regenerated';
+
 export interface DashboardBotsPageProps {
   account: DashboardAccountView;
   bots: DashboardBotView[];
   baseUrl: string;
   extensionNavItems?: DashboardNavItem[] | undefined;
-  shownKey?: { apiKey: string; botName: string } | undefined;
+  shownKey?: { apiKey: string; botName: string; origin: BotKeyOrigin } | undefined;
   notice?: DashboardNotice | undefined;
-  error?: string | undefined;
+  /** A failure of the create form. `field` marks the one the reader has to fix. */
+  createError?: { message: string; field?: 'name' } | undefined;
+  /**
+   * A failure of one bot's own control, keyed by that bot. Every bots-page error used to be
+   * funnelled into the New bot card, so a failed regenerate on the fourth row reported itself as a
+   * problem with creating a bot.
+   */
+  botError?: { botId: string; message: string } | undefined;
 }
 
 export function DashboardBotsPage({
@@ -286,7 +298,8 @@ export function DashboardBotsPage({
   extensionNavItems,
   shownKey,
   notice,
-  error,
+  createError,
+  botError,
 }: DashboardBotsPageProps) {
   return (
     <DashboardChrome
@@ -305,27 +318,49 @@ export function DashboardBotsPage({
               Each bot has a scoped API key, a byline, and immediate regenerate/revoke controls.
             </p>
           </header>
-          <Card title="New bot" description="The key appears once after creation.">
-            <form class="aa-stack" method="post" action="/dashboard/api/bots">
-              {error ? <p class="aa-error">{error}</p> : null}
-              <Input id="name" name="name" label="Bot name" placeholder="R2" />
-              <Input
-                id="byline"
-                name="byline"
-                label="Byline"
-                placeholder="Andrej's Chief of Staff"
-                optional
-              />
-              <Button variant="primary" type="submit">
-                New bot
-              </Button>
-            </form>
-          </Card>
         </section>
 
+        {/* A value that can never be shown again outranks the form that produced it. */}
         {shownKey ? (
-          <BotKeyCard baseUrl={baseUrl} apiKey={shownKey.apiKey} botName={shownKey.botName} />
+          <BotKeyCard
+            baseUrl={baseUrl}
+            apiKey={shownKey.apiKey}
+            botName={shownKey.botName}
+            origin={shownKey.origin}
+          />
         ) : null}
+
+        <Card
+          title="New bot"
+          description="The key appears once after creation."
+          notice={
+            createError && !createError.field ? (
+              <Notice tone="danger" title="That bot was not created">
+                {createError.message}
+              </Notice>
+            ) : undefined
+          }
+        >
+          <form class="aa-stack" method="post" action="/dashboard/api/bots">
+            <Input
+              id="name"
+              name="name"
+              label="Bot name"
+              placeholder="R2"
+              error={createError?.field === 'name' ? createError.message : undefined}
+            />
+            <Input
+              id="byline"
+              name="byline"
+              label="Byline"
+              placeholder="Andrej's Chief of Staff"
+              optional
+            />
+            <Button variant="primary" type="submit">
+              New bot
+            </Button>
+          </form>
+        </Card>
 
         {bots.length === 0 ? (
           <EmptyState
@@ -345,7 +380,10 @@ export function DashboardBotsPage({
               </span>,
               <code>aa_bot_…{bot.apiKeyLast4}</code>,
               <span>{bot.lastUsedAt ? formatRelativeTime(bot.lastUsedAt) : 'never'}</span>,
-              <BotActions bot={bot} />,
+              <BotActions
+                bot={bot}
+                error={botError?.botId === bot.id ? botError.message : undefined}
+              />,
             ])}
           />
         )}
@@ -644,7 +682,11 @@ function DashboardChrome({
               </Button>
             </form>
           </div>
-          {notice ? <Badge tone={notice.tone}>{notice.message}</Badge> : null}
+          {notice ? (
+            <Notice tone={notice.tone} placement="page" dismissible>
+              {notice.message}
+            </Notice>
+          ) : null}
           {children}
         </div>
       </main>
@@ -980,19 +1022,45 @@ function PromotePanel({
   );
 }
 
+/**
+ * The one-time key, with the outcome that produced it attached to it.
+ *
+ * Both flows used to render a card titled "New key" that never named its bot, so the screen after
+ * creating a bot and the screen after invalidating a live one were indistinguishable — and the only
+ * signal that the old key had just stopped working was a success-green pill ~780px above. The title
+ * names the bot, and the notice sits in the card's own notice slot, between its header and the key.
+ */
 function BotKeyCard({
   baseUrl,
   apiKey,
   botName,
+  origin,
 }: {
   baseUrl: string;
   apiKey: string;
   botName: string;
+  origin: BotKeyOrigin;
 }) {
+  const regenerated = origin === 'regenerated';
+
   return (
-    <Card title="New key" description="This API key is shown only once.">
+    <Card
+      title={`${regenerated ? 'Regenerated' : 'New'} key for ${botName}`}
+      description="This API key is shown only once. Copy it before you leave this page."
+      notice={
+        regenerated ? (
+          <Notice tone="warn" title={`The previous key for ${botName} stopped working`}>
+            Anything still authenticating with it is rejected from now on. Give your agent the key
+            below before it next runs.
+          </Notice>
+        ) : (
+          <Notice tone="success" title={`${botName} is registered`}>
+            Copy the key below now — it is never shown again.
+          </Notice>
+        )
+      }
+    >
       <div class="aa-stack">
-        <Badge tone="warn">Shown only once</Badge>
         <CopyBlock id="bot-api-key" label="API key" value={apiKey} />
         <CopyBlock
           id="bot-install-prompt"
@@ -1009,7 +1077,7 @@ function BotKeyCard({
  * controls are not rendered disabled: a disabled button is still a control the reader has to
  * reason about, and there is no state in which these two would come back for this bot.
  */
-function BotActions({ bot }: { bot: DashboardBotView }) {
+function BotActions({ bot, error }: { bot: DashboardBotView; error?: string | undefined }) {
   if (bot.revokedAt) {
     return (
       <p class="aa-hint">
@@ -1018,8 +1086,16 @@ function BotActions({ bot }: { bot: DashboardBotView }) {
     );
   }
 
+  // The failure and the control that produced it share one row: `ButtonRow` wraps at 12px, which
+  // keeps the cell the height of its controls. `aa-stack` here would put the page-section rhythm
+  // (32px) back inside a table cell, which is what made these rows ~310px tall to begin with.
   return (
     <ButtonRow>
+      {error ? (
+        <Notice tone="danger" title={`${bot.name} was not changed`}>
+          {error}
+        </Notice>
+      ) : null}
       <ConfirmDestructive
         id={`regenerate-bot-${bot.id}`}
         triggerLabel="Regenerate key"

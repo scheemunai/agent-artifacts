@@ -36,6 +36,7 @@ import { promoteArtifactToTemplate } from '../services/templates.js';
 import {
   DashboardArtifactPage,
   DashboardBotsPage,
+  type DashboardBotsPageProps,
   DashboardHomePage,
   type DashboardNavItem,
   type DashboardNotice,
@@ -332,25 +333,36 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     }
     const revealParam = scalarQuery(routeContext.req.query('reveal'));
     const reveal = consumeKeyReveal(keyReveals, session.account.id, revealParam);
-    const revealNotice: DashboardNotice | undefined = reveal
-      ? { tone: 'success', message: 'Copy this key now. It is shown only once.' }
-      : revealParam
-        ? {
-            tone: 'warn',
-            message: 'That key was shown once and is now hidden. Regenerate it if you lost it.',
-          }
-        : undefined;
+    const noticeParam = routeContext.req.query('notice');
+    const shownKey = reveal
+      ? {
+          apiKey: reveal.apiKey,
+          botName: reveal.botName,
+          origin:
+            noticeParam === 'bot_key_regenerated' ? ('regenerated' as const) : ('created' as const),
+        }
+      : undefined;
     return routeContext.html(
       DashboardBotsPage({
         account: accountView(session.account),
         bots: await services.auth.listBots(session.account.id),
         baseUrl: services.config.baseUrl,
         extensionNavItems: dashboardNavItems(services, session.account),
-        shownKey: reveal ? { apiKey: reveal.apiKey, botName: reveal.botName } : undefined,
-        notice:
-          revealParam && !reveal
-            ? revealNotice
-            : (noticeFromQuery(routeContext.req.query('notice')) ?? revealNotice),
+        shownKey,
+        /*
+         * When there is a key on screen, its card carries the outcome that produced it — naming the
+         * bot, and warning in the regenerate case that a live key just stopped working. A page-level
+         * banner would only repeat that sentence several hundred pixels above the thing it is about,
+         * which is the shape this replaced. A spent reveal has nothing to attach to, so it stays.
+         */
+        notice: shownKey
+          ? undefined
+          : revealParam
+            ? {
+                tone: 'warn',
+                message: 'That key was shown once and is now hidden. Regenerate it if you lost it.',
+              }
+            : noticeFromQuery(noticeParam),
       })
     );
   });
@@ -418,10 +430,18 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     const form = await parseForm(routeContext);
     const name = stringField(form, 'name');
     const byline = stringField(form, 'byline');
+    if (!name) {
+      // A field caused it, so the field carries it: `Input error` sets the ring, `aria-invalid`
+      // and `aria-describedby`. It used to render as loose text above the label, with the input
+      // itself in its normal state.
+      return routeContext.html(
+        await renderBotsPage(services, session, {
+          createError: { message: 'Bot name is required', field: 'name' },
+        }),
+        { status: 400 }
+      );
+    }
     try {
-      if (!name) {
-        throw new AuthError(400, 'validation_failed', 'Bot name is required');
-      }
       await enforceQuota(services, accountToCloudAccount(session.account), { type: 'create_bot' });
       const { bot, apiKey } = await services.auth.createBot(
         accountToCloudAccount(session.account),
@@ -439,12 +459,8 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       );
     } catch (error) {
       return routeContext.html(
-        DashboardBotsPage({
-          account: accountView(session.account),
-          bots: await services.auth.listBots(session.account.id),
-          baseUrl: services.config.baseUrl,
-          extensionNavItems: dashboardNavItems(services, session.account),
-          error: authErrorMessage(error),
+        await renderBotsPage(services, session, {
+          createError: { message: authErrorMessage(error) },
         }),
         { status: htmlStatus(error) }
       );
@@ -482,12 +498,8 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       );
     } catch (error) {
       return routeContext.html(
-        DashboardBotsPage({
-          account: accountView(session.account),
-          bots: await services.auth.listBots(session.account.id),
-          baseUrl: services.config.baseUrl,
-          extensionNavItems: dashboardNavItems(services, session.account),
-          error: authErrorMessage(error),
+        await renderBotsPage(services, session, {
+          botError: { botId: routeContext.req.param('id'), message: authErrorMessage(error) },
         }),
         { status: htmlStatus(error) }
       );
@@ -509,12 +521,8 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return routeContext.redirect('/dashboard/bots?notice=bot_revoked', 303);
     } catch (error) {
       return routeContext.html(
-        DashboardBotsPage({
-          account: accountView(session.account),
-          bots: await services.auth.listBots(session.account.id),
-          baseUrl: services.config.baseUrl,
-          extensionNavItems: dashboardNavItems(services, session.account),
-          error: authErrorMessage(error),
+        await renderBotsPage(services, session, {
+          botError: { botId: routeContext.req.param('id'), message: authErrorMessage(error) },
         }),
         { status: htmlStatus(error) }
       );
@@ -755,6 +763,28 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     await services.auth.deleteAccountHard(session.account.id);
     services.sessions.clearSessionCookie(routeContext);
     return routeContext.redirect('/login', 303);
+  });
+}
+
+/**
+ * Re-renders the bots page after a failed mutation, with the failure carried on whatever caused it.
+ *
+ * Every bots-page error used to arrive as one `error` string that the page could only put in the
+ * New bot card, so a mistyped confirmation on the fourth row reported itself as a problem with
+ * creating a bot. The error now travels keyed — to the create form's field, to the create card, or
+ * to one bot id — and the page renders it where that key points.
+ */
+async function renderBotsPage(
+  services: HumanServices,
+  session: AuthenticatedSession,
+  failure: Pick<DashboardBotsPageProps, 'createError' | 'botError'>
+): Promise<string> {
+  return DashboardBotsPage({
+    account: accountView(session.account),
+    bots: await services.auth.listBots(session.account.id),
+    baseUrl: services.config.baseUrl,
+    extensionNavItems: dashboardNavItems(services, session.account),
+    ...failure,
   });
 }
 
