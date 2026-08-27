@@ -46,7 +46,9 @@ describe('central frame policy', () => {
 
       expect(response.status).toBe(200);
       expect(body).toContain('<h1>Dashboard frame policy</h1>');
-      expect(response.headers.get('content-type')).toBe('text/html; charset=UTF-8');
+      // Deliberately approved policy change: the original uppercase charset was accidental;
+      // lowercase utf-8 is canonical and matches the rest of the application.
+      expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
       expect(response.headers.get('content-security-policy')).toBe(DASHBOARD_PREVIEW_CSP);
       expect(response.headers.get('x-content-type-options')).toBe('nosniff');
       expect(response.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');

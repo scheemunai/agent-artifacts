@@ -3,7 +3,7 @@ import type { AppConfig } from '../config.js';
 export const FRAME_CONTENT_TYPE = 'text/html; charset=utf-8';
 export const APP_PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=()';
 
-const DASHBOARD_PREVIEW_CONTENT_TYPE = 'text/html; charset=UTF-8';
+const DASHBOARD_PREVIEW_CONTENT_TYPE = 'text/html; charset=utf-8';
 
 export type FramePolicyVariant = 'public-artifact' | 'dashboard-preview';
 
