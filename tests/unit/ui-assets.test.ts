@@ -3,12 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import {
-  BUILD_MISSING_STYLESHEET_HREF,
-  createStylesheetResolver,
-  stylesheetHref,
-} from '../../src/ui/assets.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { BUILD_MISSING_STYLESHEET_HREF, createStylesheetResolver } from '../../src/ui/assets.js';
 
 const REPO_ROOT = new URL('../../', import.meta.url);
 const repoPath = (relative: string): string => fileURLToPath(new URL(relative, REPO_ROOT));
@@ -133,27 +129,36 @@ describe('stylesheet resolution', () => {
   });
 });
 
-describe('this repository', () => {
-  beforeAll(() => {
-    // `pnpm exec vitest run` is documented as runnable on its own, and CI runs it before
-    // `pnpm run build`. Build the stylesheet if it is missing so the suite is self-sufficient.
-    if (!existsSync(repoPath('public/assets/manifest.json'))) {
-      execFileSync('pnpm', ['run', 'build:css'], {
-        cwd: repoPath('.'),
-        // Never let a stale-dependency check decide to reinstall in the middle of a test run.
-        env: { ...process.env, npm_config_verify_deps_before_run: 'false' },
-        stdio: 'inherit',
-      });
-    }
-  });
+/**
+ * The producer of `manifest.json` is `scripts/hash-css.mjs`; the consumer is the resolver above.
+ * Nothing else asserts that the two agree on the key name and the href shape, and a drift there
+ * would un-style every page while both halves look correct in isolation.
+ *
+ * This runs the real script into a temporary tree. It deliberately does NOT read the repository's
+ * own build output: a test that builds the artefact it is about to assert on cannot fail, and an
+ * assertion that cannot fail is not evidence. Whether *this* checkout happens to be built is
+ * covered where it is a real user-visible claim rather than ambient state — an unbuilt clean
+ * checkout in `tests/integration/fresh-clone-assets.test.ts`, a built one in
+ * `tests/integration/image-layout-runtime.test.ts`.
+ */
+describe('the real build script and the resolver', () => {
+  it('agree on the manifest key and the href shape', () => {
+    const source = join(workspace, 'app.css');
+    writeFileSync(source, '.aa-page{color:#2f3a40}');
+    execFileSync(process.execPath, [repoPath('scripts/hash-css.mjs'), source], {
+      cwd: workspace,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
 
-  it('serves a stylesheet href that exists on disk', () => {
-    const href = stylesheetHref();
+    const href = resolver()();
 
     expect(href).toMatch(/^\/assets\/app-[a-f0-9]{12}\.css$/);
-    expect(existsSync(repoPath(`public${href}`))).toBe(true);
+    expect(existsSync(join(servedRoot, href))).toBe(true);
+    expect(problems).toEqual([]);
   });
+});
 
+describe('this repository', () => {
   it('keeps the fallback stylesheet checked in, so a clone can always serve it', () => {
     const path = `public${BUILD_MISSING_STYLESHEET_HREF}`;
     const tracked = execFileSync('git', ['ls-files', '--', path], {
