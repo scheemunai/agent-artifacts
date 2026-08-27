@@ -44,6 +44,7 @@ import {
   DashboardTemplatesPage,
 } from '../ui/pages/dashboard.js';
 import {
+  type SetupErrorField,
   SetupKeyHiddenPage,
   SetupKeyPage,
   SetupPage,
@@ -86,6 +87,36 @@ interface KeyReveal {
 }
 
 const keyRevealTtlMs = 10 * 60 * 1000;
+
+/**
+ * A setup failure that knows which field caused it.
+ *
+ * `SetupPage` renders an error on its field when it is told which one — rung 2 of the attachment
+ * ladder — and falls back to a card-level notice when it is not. Attribution is the route's to
+ * give: it is the only party that knows which check failed. Extending `AuthError` keeps
+ * `htmlStatus` and `authErrorMessage` working on it unchanged.
+ */
+class SetupFieldError extends AuthError {
+  constructor(
+    readonly field: SetupErrorField,
+    message: string
+  ) {
+    super(400, 'validation_failed', message);
+    this.name = 'SetupFieldError';
+  }
+}
+
+function setupErrorField(error: unknown): SetupErrorField | undefined {
+  if (error instanceof SetupFieldError) {
+    return error.field;
+  }
+  // The one failure the service attributes for us: the token the operator just typed was rejected.
+  // That is precisely the field whose value is now preserved, so the two belong together — a bad
+  // token says so on the box holding it, with what was typed still visible to correct.
+  return error instanceof AuthError && error.code === 'setup_token_required'
+    ? 'setup_token'
+    : undefined;
+}
 
 export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext): void {
   if (!context.db) {
@@ -146,21 +177,22 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return routeContext.redirect('/login', 302);
     }
     const form = await parseForm(routeContext);
+    const setupToken = stringField(form, 'setup_token');
     const email = stringField(form, 'email');
     const botName = stringField(form, 'bot_name');
     const botByline = stringField(form, 'bot_byline');
     try {
       if (stringField(form, 'password').length < 8) {
-        throw new AuthError(400, 'validation_failed', 'Password must be at least 8 characters');
+        throw new SetupFieldError('password', 'Password must be at least 8 characters');
       }
       if (stringField(form, 'password') !== stringField(form, 'password_confirm')) {
-        throw new AuthError(400, 'validation_failed', 'Passwords do not match');
+        throw new SetupFieldError('password_confirm', 'Passwords do not match');
       }
       if (!botName) {
-        throw new AuthError(400, 'validation_failed', 'Bot name is required');
+        throw new SetupFieldError('bot_name', 'Bot name is required');
       }
       const result = await services.auth.completeSetup({
-        setupToken: stringField(form, 'setup_token'),
+        setupToken,
         email,
         password: stringField(form, 'password'),
         botName,
@@ -183,6 +215,11 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         SetupPage({
           baseUrl: services.config.baseUrl,
           error: authErrorMessage(error),
+          errorField: setupErrorField(error),
+          // A one-time value the operator reads out of the server boot log. Clearing it on a
+          // validation slip costs them a trip back to the terminal, which makes it the worst
+          // field on this form to drop — including when it is the field that was wrong.
+          setupToken,
           email,
           botName,
           botByline,
