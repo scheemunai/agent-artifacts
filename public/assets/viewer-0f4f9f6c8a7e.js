@@ -203,7 +203,9 @@ async function fetchContent({ poll, manual = false }) {
 
     if (response.status === 404 || response.status === 410) {
       stopped = true;
-      showTerminal(response.status);
+      // The envelope names the cause, and always has. Reading it is what lets an expired link and a
+      // revoked one say different things mid-read, exactly as they already do on a full page load.
+      showTerminal(await terminalCause(response), response.status);
       return;
     }
 
@@ -448,10 +450,24 @@ function showUpdatedPill() {
  * being stacked under 76-123px of chrome. Replacing the root takes all of that with it.
  *
  * The markup comes from `<template data-aa-terminal-template>`, rendered by the same component the
- * server page uses, so there is exactly one implementation of this screen.
+ * server page uses, so there is exactly one implementation of this screen. The template is chosen by
+ * the cause in the error envelope when there is one, and by the bare status when there is not.
  */
-function showTerminal(status) {
-  const template = document.querySelector(`[data-aa-terminal-template="${status}"]`);
+async function terminalCause(response) {
+  try {
+    const body = await response.json();
+    const code = body && body.error && body.error.code;
+    return typeof code === 'string' ? code : null;
+  } catch {
+    // A body that will not parse is not a reason to show nothing; the status template still applies.
+    return null;
+  }
+}
+
+function showTerminal(cause, status) {
+  const template =
+    (cause && document.querySelector(`[data-aa-terminal-template="${cause}"]`)) ||
+    document.querySelector(`[data-aa-terminal-template="${status}"]`);
   const currentRoot = document.querySelector('[data-aa-viewer-root]');
 
   if (!(template instanceof HTMLTemplateElement) || !currentRoot) {

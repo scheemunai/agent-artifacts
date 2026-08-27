@@ -9,6 +9,7 @@ import {
   ShareTerminalMain,
 } from '../components/share-terminal-main.js';
 import { VersionBanner } from '../components/version-banner.js';
+import { TERMINAL_CAUSE_COPY, type TerminalCause } from '../copy/terminal-copy.js';
 
 export const VIEWER_SCRIPT_SRC = '/assets/viewer-0f4f9f6c8a7e.js';
 export const VIEWER_STYLESHEET_HREF = '/assets/viewer-4fd0df5f2b2a.css';
@@ -147,6 +148,22 @@ function ClientTerminalTemplates({ shareUrl }: { shareUrl: string }) {
             shareUrl={shareUrl}
             status={status}
             headingId={`terminal-title-${status}`}
+          />
+        </template>
+      ))}
+      {/*
+        One template per cause the 410 envelope can name. The status templates above stay as the
+        fallback for a body that cannot be parsed or a code nobody has seen before — the client
+        must still have something to show when the server says something new.
+      */}
+      {(Object.keys(TERMINAL_CAUSE_COPY) as TerminalCause[]).map((cause) => (
+        <template data-aa-terminal-template={cause}>
+          <ShareTerminalMain
+            title={TERMINAL_CAUSE_COPY[cause].title}
+            message={TERMINAL_CAUSE_COPY[cause].message}
+            shareUrl={shareUrl}
+            status={410}
+            headingId={`terminal-title-${cause}`}
           />
         </template>
       ))}

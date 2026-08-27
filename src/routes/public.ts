@@ -26,7 +26,7 @@ import {
   type ViewerContentResult,
   ViewerService,
 } from '../services/viewer.js';
-import { UNKNOWN_CAUSE_RECOURSE } from '../ui/copy/terminal-copy.js';
+import { TERMINAL_CAUSE_COPY } from '../ui/copy/terminal-copy.js';
 import { FrameDocument, FrameTerminalDocument } from '../ui/pages/frame-document.js';
 import { ShareTerminalPage, type ShareTerminalStatus } from '../ui/pages/share-terminal.js';
 import { ViewerPage } from '../ui/pages/viewer.js';
@@ -503,43 +503,24 @@ function terminalCopy(error: ServiceError): {
   status: ShareTerminalStatus;
 } {
   if (error.status === 410 && error.code === 'share_expired') {
-    return {
-      title: 'This link has expired.',
-      message: 'The owner set this share link to expire.',
-      status: 410,
-    };
+    return { ...TERMINAL_CAUSE_COPY.share_expired, status: 410 };
   }
 
   if (error.status === 410 && error.code === 'share_disabled') {
     // A suspended owner. The page must not claim the owner turned sharing off — that is simply
     // untrue — and must not disclose that the account was actioned either: the person holding the
     // link is not entitled to the owner's moderation state. So: what happened, not why.
-    return {
-      title: 'This link is no longer available.',
-      // Composed from the shared line rather than repeating it: this is the sentence the two
-      // status-only surfaces now carry alone, and three copies of it is how the fix missed them.
-      message: `It has been disabled. ${UNKNOWN_CAUSE_RECOURSE}`,
-      status: 410,
-    };
+    return { ...TERMINAL_CAUSE_COPY.share_disabled, status: 410 };
   }
 
   if (error.status === 410 && error.code === 'artifact_expired') {
     // Retention, not revocation. This branch used to be reached by lower-casing the error message
-    // and looking for "artifact has expired" — a cause recovered from prose, which would have gone
-    // silently wrong the first time anyone reworded the throw.
-    return {
-      title: 'This artifact has expired.',
-      message: 'The artifact is no longer available.',
-      status: 410,
-    };
+    // and looking for "artifact has expired" — a cause recovered from prose.
+    return { ...TERMINAL_CAUSE_COPY.artifact_expired, status: 410 };
   }
 
   if (error.status === 410) {
-    return {
-      title: 'This link has been revoked.',
-      message: 'The owner turned off sharing for this artifact.',
-      status: 410,
-    };
+    return { ...TERMINAL_CAUSE_COPY.share_revoked, status: 410 };
   }
 
   if (error.status === 429) {

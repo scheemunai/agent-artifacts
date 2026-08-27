@@ -1,15 +1,23 @@
 import { UNKNOWN_CAUSE_RECOURSE } from '../copy/terminal-copy.js';
 import { Button, ButtonRow, ProductMark, slugId } from './primitives.js';
 
-/** The statuses a mid-view poll can discover. It sees an HTTP status and nothing finer. */
+/**
+ * The statuses a mid-view poll can discover, used when the response body names no cause.
+ *
+ * These are the *fallback* sentences. The 410 envelope carries `error.code`, so the client normally
+ * renders one of the per-cause templates in `TERMINAL_CAUSE_COPY`; this covers a body that will not
+ * parse or a code this build has never heard of.
+ */
 export type ClientTerminalStatus = 404 | 410;
 
 /**
  * Copy for the terminal states the *client* can reach while someone is reading.
  *
- * The server route keeps its richer per-cause copy — expired link, revoked link, expired artifact —
- * because it knows the cause. A poll only ever learns a status code, so these are the status-level
- * sentences, and each one says something its heading does not.
+ * A previous version of this comment claimed a poll "only ever learns a status code". That was
+ * false, and the false comment is why the client shipped one sentence for four different causes:
+ * the 410 envelope has always carried `error.code`. The client now reads it and renders the
+ * matching per-cause template, so these entries are the fallback for an unparseable body or an
+ * unrecognised code — status-level sentences, each saying something its heading does not.
  */
 export const CLIENT_TERMINAL_COPY: Record<
   ClientTerminalStatus,
