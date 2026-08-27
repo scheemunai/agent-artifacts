@@ -93,7 +93,8 @@ export interface FrameTerminalDocumentInput {
   homeUrl: string;
 }
 
-export function escapeHtml(value: string): string {
+/** Module-local: nothing outside this file builds HTML as strings, and nothing should. */
+function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

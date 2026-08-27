@@ -1309,10 +1309,6 @@
     flex: 1 1 100%;
   }
 
-  .aa-home-shell {
-    width: min(100%, var(--width-aa-shell-marketing));
-  }
-
   .aa-home-actions {
     flex-wrap: nowrap;
     gap: var(--spacing-aa-2);

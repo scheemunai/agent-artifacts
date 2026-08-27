@@ -243,6 +243,16 @@ export function StyleGuidePage() {
               >
                 Interactivity hydrates through data attributes from a self-hosted hashed module.
               </Card>
+              <Card
+                title="Where CSS lives"
+                description="One stylesheet, and a rule for what is allowed into it."
+              >
+                <code>app.css</code> holds what a component owns and this page documents. Writing
+                CSS for a single page means a component is missing: build the component, register it
+                here, and its CSS follows. The one exception is a page's own layout scaffolding,
+                named <code>.aa-&lt;page&gt;-*</code> — which must graduate to a component the
+                moment a second page wants it.
+              </Card>
             </div>
           </StyleGuideSection>
 
