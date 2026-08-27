@@ -286,7 +286,7 @@ export function DashboardArtifactPage({
         </div>
 
         <VersionHistory artifact={artifact} versions={versions} />
-        {diff ? <VersionDiff diff={diff} /> : null}
+        {diff ? <VersionDiff diff={diff} artifactId={artifact.id} /> : null}
         <PromotePanel artifact={artifact} errorCode={promoteError ?? null} />
       </div>
     </DashboardChrome>
@@ -1097,21 +1097,43 @@ function VersionHistory({
   );
 }
 
+/**
+ * The diff, somewhere the browser actually goes.
+ *
+ * Both revealed panels in this product were plain hrefs: the page reloaded at scrollY 0 with the
+ * revealed thing ~1250px below the fold, so pressing the control looked like nothing happening.
+ * The fragment moves the viewport; `tabindex={-1}` is what moves the reader's place in the
+ * document along with it, so the next Tab continues from the panel rather than the top.
+ * And what can be opened can be closed: editing the URL was the only exit.
+ */
 function VersionDiff({
   diff,
+  artifactId,
 }: {
   diff: { left: DashboardArtifactVersion; right: DashboardArtifactVersion };
+  artifactId: string;
 }) {
   return (
-    <Card
-      title={`Raw diff: v${diff.left.versionNum} → v${diff.right.versionNum}`}
-      description="Diff-lite shows raw side-by-side text in v1."
-    >
-      <div class="aa-grid aa-grid--2">
-        <CopyBlock id="diff-left" label={`v${diff.left.versionNum}`} value={diff.left.content} />
-        <CopyBlock id="diff-right" label={`v${diff.right.versionNum}`} value={diff.right.content} />
-      </div>
-    </Card>
+    <section id="version-diff" tabindex={-1}>
+      <Card
+        title={`Raw diff: v${diff.left.versionNum} → v${diff.right.versionNum}`}
+        description="Diff-lite shows raw side-by-side text in v1."
+      >
+        <div class="aa-grid aa-grid--2">
+          <CopyBlock id="diff-left" label={`v${diff.left.versionNum}`} value={diff.left.content} />
+          <CopyBlock
+            id="diff-right"
+            label={`v${diff.right.versionNum}`}
+            value={diff.right.content}
+          />
+        </div>
+        <ButtonRow>
+          <Button variant="secondary" href={`/dashboard/artifacts/${artifactId}`}>
+            Close diff
+          </Button>
+        </ButtonRow>
+      </Card>
+    </section>
   );
 }
 
@@ -1302,38 +1324,45 @@ function BotActions({ bot, error }: { bot: DashboardBotView; error?: string | un
 
 function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview }) {
   return (
-    <Card
-      title={`Template preview: ${template.name}`}
-      description="Review the raw markdown template before using it from the API."
-    >
-      <div class="aa-stack">
-        <ButtonRow>
-          <Badge tone={template.builtIn ? 'info' : 'accent'}>
-            {template.builtIn ? 'starter' : 'yours'}
-          </Badge>
-          <Badge tone="neutral">{template.slug}</Badge>
-          <Badge tone="neutral">{template.type === 'markdown' ? 'md' : 'html'}</Badge>
-        </ButtonRow>
-        {template.description ? <p class="aa-section-note">{template.description}</p> : null}
-        <p class="aa-hint">
-          Slots:{' '}
-          {template.slots.length > 0
-            ? template.slots.map((slot) => <Badge tone="neutral">{`{{${slot}}}`}</Badge>)
-            : 'none'}
-        </p>
-        {template.htmlPreview ? (
-          <div
-            data-aa-dashboard-template-preview="markdown"
-            dangerouslySetInnerHTML={{ __html: template.htmlPreview }}
+    <section id="template-preview" tabindex={-1}>
+      <Card
+        title={`Template preview: ${template.name}`}
+        description="Review the raw markdown template before using it from the API."
+      >
+        <div class="aa-stack">
+          <ButtonRow>
+            <Badge tone={template.builtIn ? 'info' : 'accent'}>
+              {template.builtIn ? 'starter' : 'yours'}
+            </Badge>
+            <Badge tone="neutral">{template.slug}</Badge>
+            <Badge tone="neutral">{template.type === 'markdown' ? 'md' : 'html'}</Badge>
+          </ButtonRow>
+          {template.description ? <p class="aa-section-note">{template.description}</p> : null}
+          <p class="aa-hint">
+            Slots:{' '}
+            {template.slots.length > 0
+              ? template.slots.map((slot) => <Badge tone="neutral">{`{{${slot}}}`}</Badge>)
+              : 'none'}
+          </p>
+          {template.htmlPreview ? (
+            <div
+              data-aa-dashboard-template-preview="markdown"
+              dangerouslySetInnerHTML={{ __html: template.htmlPreview }}
+            />
+          ) : null}
+          <CopyBlock
+            id={`template-preview-${template.id}`}
+            label="Template source"
+            value={template.content}
           />
-        ) : null}
-        <CopyBlock
-          id={`template-preview-${template.id}`}
-          label="Template source"
-          value={template.content}
-        />
-      </div>
-    </Card>
+          <ButtonRow>
+            <Button variant="secondary" href="/dashboard/templates">
+              Close preview
+            </Button>
+          </ButtonRow>
+        </div>
+      </Card>
+    </section>
   );
 }
 
@@ -1394,7 +1423,7 @@ function TemplateTable({
           <Button
             size="sm"
             variant="secondary"
-            href={`/dashboard/templates?preview=${template.id}`}
+            href={`/dashboard/templates?preview=${template.id}#template-preview`}
           >
             Preview
           </Button>,
