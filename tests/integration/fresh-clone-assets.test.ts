@@ -133,12 +133,12 @@ describe('a fresh checkout', () => {
   );
 
   /**
-   * In-process, because a real wrong-directory boot dies earlier than the first render: the
-   * drizzle migrations folder (`src/db/migrations.ts`) and the starter-template manifest
-   * (`src/services/templates.ts`) are resolved from `process.cwd()` too. Those are reported
-   * separately as the same defect class; this asserts the asset layer's own behaviour.
+   * The working directory is no longer part of the contract: assets resolve and are served from the
+   * installation. This used to fail twice over — the href was right but `/assets/*` answered 404,
+   * and the resolver could only warn about it. `tests/integration/image-layout-runtime.test.ts`
+   * makes the same statement about a real process in the released layout.
    */
-  it('names the problem when the app is served from the wrong working directory', async () => {
+  it('serves its stylesheet no matter which working directory it was started from', async () => {
     const elsewhere = mkdtempSync(join(tmpdir(), 'aa-wrong-cwd-'));
     const originalCwd = process.cwd();
     const stderr: string[] = [];
@@ -168,16 +168,16 @@ describe('a fresh checkout', () => {
       const response = await app.request(`https://example.test${PAGE}`);
       expect(response.status).toBe(200);
 
-      // The href is still right — it comes from the module's own location, not the working
-      // directory. What is broken is static file serving, and the log says exactly that instead
-      // of leaving a 404 stylesheet to be discovered by looking at the page.
-      expect(stylesheetHrefFrom(await response.text())).toMatch(
-        /^\/assets\/app-[a-f0-9]{12}\.css$/
+      const href = stylesheetHrefFrom(await response.text());
+      expect(href).toMatch(/^\/assets\/app-[a-f0-9]{12}\.css$/);
+
+      const stylesheet = await app.request(`https://example.test${href}`);
+      expect(stylesheet.status, 'the static root must not depend on the working directory').toBe(
+        200
       );
 
-      const reported = stderr.join('');
-      expect(reported).toContain('STYLESHEET WILL 404');
-      expect(reported).toContain('start the app from the directory that contains public/');
+      // Nothing to warn about any more: the href is right and it is servable.
+      expect(stderr.join('')).not.toContain('STYLESHEET');
     } finally {
       write.mockRestore();
       process.chdir(originalCwd);

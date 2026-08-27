@@ -6,8 +6,8 @@ render time or at page load. Licensing is recorded in `THIRD-PARTY-NOTICES.md`.
 | File | Used by | Notes |
 | --- | --- | --- |
 | `source-sans-3-latin-var.woff2` | Browser `@font-face` in `src/ui/assets/app.css` | Latin subset, variable `wght` 200-900. Copied to `public/assets/fonts/` by `scripts/copy-font-assets.mjs`. |
-| `source-sans-3-latin-regular.ttf` | Open Graph renderer (`src/lib/og.ts`) | Static `wght` 400 instance of the woff2 above. |
-| `source-sans-3-latin-semibold.ttf` | Open Graph renderer (`src/lib/og.ts`) | Static `wght` 600 instance of the woff2 above. |
+| `source-sans-3-latin-regular.ttf` | Open Graph renderer (`src/lib/og.ts`) | Static `wght` 400 instance of the woff2 above. Copied to `dist/ui/assets/fonts/` by `scripts/copy-font-assets.mjs`, because the Docker image ships `dist/` and never `src/`. |
+| `source-sans-3-latin-semibold.ttf` | Open Graph renderer (`src/lib/og.ts`) | Static `wght` 600 instance of the woff2 above. Ships into `dist/` the same way. |
 | `source-sans-3-OFL.md` | Licence text | SIL OFL 1.1 for all Source Sans 3 files. |
 
 Source Sans 3 is the only bundled family. The retired Inter files (`inter-latin-*.ttf`, `OFL.txt`)

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve, sep } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 import { nanoid } from 'nanoid';
 import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { decodeSortCursor, encodeSortCursor } from '../lib/cursor.js';
 import { AppError } from '../lib/errors.js';
 import { ARTIFACT_ID_PATTERN, type ArtifactType, slugSchema } from '../lib/schemas/artifacts.js';
 import { promoteTemplateSchema, templateSlotSchema } from '../lib/schemas/templates.js';
+import { resolveShippedPath } from '../lib/runtime-paths.js';
 import type { Logger } from '../logger.js';
 
 export interface TemplateSlot {
@@ -95,9 +96,15 @@ const starterManifestSchema = z
   });
 type ManifestEntry = z.infer<typeof manifestEntrySchema>;
 
-export function loadStarterTemplates(rootDir = process.cwd()): StarterTemplate[] {
-  const templatesDir = resolve(rootDir, 'templates');
-  const manifestPath = resolve(templatesDir, 'manifest.ts');
+/**
+ * @param rootDir Directory containing `templates/`. Omit it in production: the manifest is then
+ * resolved from the installation rather than from the working directory, so seeding survives a
+ * process started anywhere (it used to throw ENOENT on `<cwd>/templates/manifest.ts`).
+ */
+export function loadStarterTemplates(rootDir?: string): StarterTemplate[] {
+  const manifestPath =
+    rootDir === undefined ? resolveStarterManifestPath() : resolve(rootDir, 'templates', 'manifest.ts');
+  const templatesDir = dirname(manifestPath);
   const manifest = readManifest(manifestPath);
 
   return manifest.map((entry) => {
@@ -340,6 +347,14 @@ export function formatTemplate(row: TemplateRow, includeContent: boolean): Recor
     created_at: toIso(row.created_at),
     updated_at: toIso(row.updated_at),
   };
+}
+
+export function resolveStarterManifestPath(): string {
+  return resolveShippedPath({
+    what: 'starter template manifest',
+    relative: 'templates/manifest.ts',
+    fix: 'the installation must ship templates/ next to dist/ (the Docker image copies it); from a source checkout, start the app from the repository root',
+  });
 }
 
 function readManifest(manifestPath: string): ManifestEntry[] {

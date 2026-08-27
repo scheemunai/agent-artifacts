@@ -7,6 +7,7 @@ import type { AppConfig } from './config.js';
 import type { DatabaseHandle } from './db/client.js';
 import type { CloudModule } from './extension/cloud-module.js';
 import { AppError, errorEnvelope, internalErrorEnvelope } from './lib/errors.js';
+import { appPath } from './lib/runtime-paths.js';
 import type { Logger } from './logger.js';
 import { registerHumanRoutes } from './routes/dashboard.js';
 import { healthRoute } from './routes/health.js';
@@ -95,7 +96,9 @@ export function createApp({
 
   // Route mounting order is deliberate: sandbox host guard before app/API routes.
   registerRobotsAndSandboxGuard(app, config);
-  app.get('/assets/*', serveStatic({ root: './public' }));
+  // Absolute, resolved from the installation: a relative root made every /assets/* request answer
+  // 404 whenever the process was started from anywhere but the app directory.
+  app.get('/assets/*', serveStatic({ root: appPath('public') }));
   app.route('/healthz', healthRoute);
   const routesContext = {
     config,

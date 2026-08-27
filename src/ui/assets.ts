@@ -1,6 +1,6 @@
 import { existsSync, type FSWatcher, readFileSync, watch } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { appPath, shippedPathCandidates } from '../lib/runtime-paths.js';
 
 /**
  * Served when the CSS build has not run. Unlike a hashed `app-<hash>.css` href, this file is
@@ -12,15 +12,8 @@ export const BUILD_MISSING_STYLESHEET_HREF = '/assets/build-missing.css';
 const MANIFEST_FILENAME = 'manifest.json';
 const STYLESHEET_KEY = 'app.css';
 
-/**
- * Resolved from this module's own URL, never from `process.cwd()`: the app must render the same
- * stylesheet href whether it is started from the repository root, from `/`, or by a supervisor
- * with its own working directory. Same relative depth from `src/ui/` and from `dist/ui/`.
- */
-const ASSET_DIR_FROM_MODULE = new URL('../../public/assets/', import.meta.url);
-
-/** Mirrors `serveStatic({ root: './public' })` in `src/app.ts`, which is working-directory relative. */
-const servedPublicRoot = (): string => join(process.cwd(), 'public');
+/** Mirrors the static root `src/app.ts` serves `/assets/*` from. Both resolve from the install. */
+const servedPublicRoot = (): string => appPath('public');
 
 export interface StylesheetResolverOptions {
   /** Directories that may hold `manifest.json`, in priority order. */
@@ -106,7 +99,7 @@ export function createStylesheetResolver(options: StylesheetResolverOptions): ()
  * process (until a rebuild rewrites it) instead of on every render.
  */
 export const stylesheetHref: () => string = createStylesheetResolver({
-  assetRoots: [fileURLToPath(ASSET_DIR_FROM_MODULE), join(process.cwd(), 'public', 'assets')],
+  assetRoots: shippedPathCandidates('public/assets'),
   servedRoot: servedPublicRoot,
   report: (message) => {
     process.stderr.write(`${message}\n`);

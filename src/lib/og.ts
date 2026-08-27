@@ -1,9 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
 import { Resvg } from '@resvg/resvg-js';
 import satori, { type FontWeight, init as initSatori } from 'satori/standalone';
 import { LruCache, type LruCacheStats } from './render-cache.js';
+import { resolveShippedPath } from './runtime-paths.js';
 
 export const OG_IMAGE_WIDTH = 1200;
 export const OG_IMAGE_HEIGHT = 630;
@@ -29,7 +29,6 @@ export const OG_WORDMARK = 'Agent Artifacts';
 
 const ACCENT_BAR_HEIGHT = 10;
 const TITLE_FONT_WEIGHT = 650 as unknown as FontWeight;
-const FONT_DIR_FROM_MODULE = new URL('../ui/assets/fonts/', import.meta.url);
 const requireFromHere = createRequire(import.meta.url);
 const REGULAR_FONT_FILENAME = 'source-sans-3-latin-regular.ttf';
 const SEMIBOLD_FONT_FILENAME = 'source-sans-3-latin-semibold.ttf';
@@ -362,19 +361,17 @@ function loadOgFonts(): { regular: Buffer; semibold: Buffer } {
   return fontBuffers;
 }
 
+/**
+ * satori and resvg read these as files, so they must exist on disk wherever the app runs. The
+ * compiled copy under `dist/` is the one that matters in the Docker image, which ships `dist/` and
+ * `public/` but never `src/` — `scripts/copy-font-assets.mjs` puts them there during the build.
+ */
 function resolveFontPath(filename: string): string {
-  const candidates = [
-    fileURLToPath(new URL(filename, FONT_DIR_FROM_MODULE)),
-    `${process.cwd()}/src/ui/assets/fonts/${filename}`,
-    `${process.cwd()}/dist/ui/assets/fonts/${filename}`,
-  ];
-
-  const match = candidates.find((candidate) => existsSync(candidate));
-  if (!match) {
-    throw new Error(`Missing bundled OG font: ${filename}`);
-  }
-
-  return match;
+  return resolveShippedPath({
+    what: `bundled OG font ${filename}`,
+    relative: [`dist/ui/assets/fonts/${filename}`, `src/ui/assets/fonts/${filename}`],
+    fix: 'run `pnpm run build` — scripts/copy-font-assets.mjs ships the OG fonts into dist/ui/assets/fonts',
+  });
 }
 
 function formatByline(input: OgImageInput): string {
