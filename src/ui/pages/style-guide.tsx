@@ -24,6 +24,7 @@ import {
   EmptyState,
   Input,
   NavShell,
+  Notice,
   Pagination,
   ProductMark,
   Select,
@@ -271,6 +272,7 @@ export function StyleGuidePage() {
             {widthSection()}
             {fieldSection()}
             {badgeSection()}
+            {noticeSection()}
             {cardTableSection()}
             {feedbackSection()}
             {navigationSection()}
@@ -723,6 +725,42 @@ function cardTableSection() {
         />
       </Card>
     </div>
+  );
+}
+
+function noticeSection() {
+  return (
+    <Card
+      title="Notice"
+      description="Page-level feedback about something that just happened. Four tones, one mark each, optional dismissal, and no layout movement."
+    >
+      <div class="aa-usage">
+        Use a <code>Notice</code> for the outcome of an action the page just performed. Use a{' '}
+        <code>Badge</code> for the state of an object (the viewer's "Updated" pill is the correct
+        badge). Use a <code>Toast</code> only for asynchronous events the user did not just trigger.
+        A notice is rendered with the page, so it is present in the first paint and moves nothing;{' '}
+        <code>warn</code> and <code>danger</code> announce as <code>alert</code>, <code>info</code>{' '}
+        and <code>success</code> as <code>status</code>.
+      </div>
+      <div class="aa-stack">
+        <Notice tone="success" title="Artifact deleted." dismissible>
+          The share link stopped working immediately.
+        </Notice>
+        <Notice tone="info" title="Filters applied.">
+          Showing 4 of 20 artifacts. Clear the filters to see everything again.
+        </Notice>
+        <Notice tone="warn" title="Key regenerated. Old key is invalid now." dismissible>
+          Update the agent that was using the previous key before its next run.
+        </Notice>
+        <Notice tone="danger" title="Typed confirmation did not match.">
+          Nothing was deleted. Type the slug exactly as shown to confirm.
+        </Notice>
+        <Notice tone="info" title="Message only — no title needed." />
+        <Notice tone="danger">
+          A notice can carry a message with no title when the sentence is the whole story.
+        </Notice>
+      </div>
+    </Card>
   );
 }
 

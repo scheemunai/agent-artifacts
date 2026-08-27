@@ -305,6 +305,125 @@ export function Badge({ children, tone = 'neutral', size = 'sm' }: BadgeProps) {
   );
 }
 
+export type NoticeTone = 'info' | 'success' | 'warn' | 'danger';
+
+interface NoticeProps {
+  tone?: NoticeTone;
+  title?: string | undefined;
+  children?: Child;
+  /** Renders a 44px dismiss control wired to `ui-foundation`. */
+  dismissible?: boolean | undefined;
+  id?: string | undefined;
+  /** Optional follow-up action, e.g. "Undo" or "Back to artifacts". */
+  action?: Child;
+}
+
+/**
+ * Page-level feedback about something that just happened: "Artifact deleted.", "Key regenerated.
+ * Old key is invalid now.", "That page no longer exists."
+ *
+ * Not a `Badge` — a badge is an inline status marker attached to the object whose state it
+ * describes (the viewer's "Updated ✓" pill is the correct use). Not a `Toast` either — a toast is
+ * transient and floats over the page. A `Notice` is server-rendered in normal flow at the top of
+ * the region it reports on, so it is present in the first paint and shifts nothing; dismissal is
+ * the user's decision, never a timer's.
+ */
+export function Notice({
+  tone = 'info',
+  title,
+  children,
+  dismissible = false,
+  id,
+  action,
+}: NoticeProps) {
+  const interrupts = tone === 'warn' || tone === 'danger';
+
+  return (
+    <div
+      class={cx('aa-notice', `aa-notice--${tone}`)}
+      id={id}
+      role={interrupts ? 'alert' : 'status'}
+      data-aa-notice={tone}
+    >
+      <span class="aa-notice__icon" aria-hidden="true">
+        <NoticeIcon tone={tone} />
+      </span>
+      <div class="aa-notice__body">
+        {title ? <p class="aa-notice__title">{title}</p> : null}
+        {children ? <p class="aa-notice__message">{children}</p> : null}
+        {action ? <ButtonRow class="aa-notice__actions">{action}</ButtonRow> : null}
+      </div>
+      {dismissible ? (
+        <button
+          class="aa-notice__dismiss"
+          type="button"
+          aria-label="Dismiss notice"
+          title="Dismiss notice"
+          data-aa-notice-dismiss="true"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M6 6 18 18" />
+            <path d="M18 6 6 18" />
+          </svg>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/** One stroke weight, one optical size, one mark per meaning. */
+function NoticeIcon({ tone }: { tone: NoticeTone }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      role="presentation"
+    >
+      {tone === 'success' ? (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="m8.25 12.4 2.6 2.6 4.9-5.4" />
+        </>
+      ) : null}
+      {tone === 'info' ? (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11.25v5" />
+          <path d="M12 7.75h.01" />
+        </>
+      ) : null}
+      {tone === 'warn' ? (
+        <>
+          <path d="M12 4.25 21 19.75H3z" />
+          <path d="M12 10v4" />
+          <path d="M12 17h.01" />
+        </>
+      ) : null}
+      {tone === 'danger' ? (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="m9.2 9.2 5.6 5.6" />
+          <path d="m14.8 9.2-5.6 5.6" />
+        </>
+      ) : null}
+    </svg>
+  );
+}
+
 interface CardProps {
   title?: string;
   description?: string | undefined;

@@ -204,6 +204,19 @@ function bindToasts() {
   });
 }
 
+function bindNotices() {
+  // A Notice is server-rendered in normal flow, so dismissal is the only client behaviour it has:
+  // remove the element the user asked to be rid of, and nothing else on the page moves sideways.
+  document.addEventListener('click', (event) => {
+    const trigger =
+      event.target instanceof Element ? event.target.closest('[data-aa-notice-dismiss]') : null;
+    if (!(trigger instanceof HTMLElement)) {
+      return;
+    }
+    trigger.closest('.aa-notice')?.remove();
+  });
+}
+
 function selectTab(tab) {
   const root = tab.closest('[data-aa-tabs]');
   if (!root) {
@@ -315,5 +328,6 @@ function bindDrawer() {
 bindCopyBlocks();
 bindDialogs();
 bindToasts();
+bindNotices();
 bindTabs();
 bindDrawer();

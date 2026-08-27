@@ -930,6 +930,113 @@
     background: var(--color-aa-info-soft);
   }
 
+  /* Page-level feedback. In normal flow and honest about the space it occupies: it is rendered
+     with the page rather than injected afterwards, so it never moves content that was already on
+     screen, and it never animates a layout property. */
+  .aa-notice {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--spacing-aa-3);
+    align-items: start;
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-lg);
+    padding: var(--spacing-aa-4);
+    color: var(--color-aa-ink);
+    background: var(--color-aa-surface-raised);
+  }
+
+  .aa-notice__icon {
+    display: inline-grid;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.15rem;
+    place-items: center;
+  }
+
+  .aa-notice__icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .aa-notice__body {
+    display: grid;
+    min-width: 0;
+    gap: var(--spacing-aa-2);
+  }
+
+  .aa-notice__title {
+    margin: 0;
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-base);
+    font-weight: 650;
+  }
+
+  .aa-notice__message {
+    margin: 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+  }
+
+  .aa-notice__dismiss {
+    display: inline-grid;
+    width: var(--spacing-aa-touch);
+    height: var(--spacing-aa-touch);
+    place-items: center;
+    border: 0;
+    border-radius: var(--radius-aa-sm);
+    padding: 0;
+    color: var(--color-aa-muted);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .aa-notice__dismiss svg {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .aa-notice__dismiss:hover {
+    color: var(--color-aa-ink);
+  }
+
+  .aa-notice--info {
+    border-color: var(--color-aa-info-line);
+    background: var(--color-aa-info-soft);
+  }
+
+  .aa-notice--info .aa-notice__icon {
+    color: var(--color-aa-info);
+  }
+
+  .aa-notice--success {
+    border-color: var(--color-aa-success-line);
+    background: var(--color-aa-success-soft);
+  }
+
+  .aa-notice--success .aa-notice__icon {
+    color: var(--color-aa-success);
+  }
+
+  .aa-notice--warn {
+    border-color: var(--color-aa-warn-line);
+    background: var(--color-aa-warn-soft);
+  }
+
+  .aa-notice--warn .aa-notice__icon {
+    color: var(--color-aa-warn);
+  }
+
+  .aa-notice--danger {
+    border-color: var(--color-aa-danger-line);
+    background: var(--color-aa-danger-soft);
+  }
+
+  .aa-notice--danger .aa-notice__icon {
+    color: var(--color-aa-danger);
+  }
+
   .aa-empty {
     display: grid;
     place-items: center;
