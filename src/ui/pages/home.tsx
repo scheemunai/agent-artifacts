@@ -9,23 +9,21 @@ export const HOME_SUBLINE =
   "One POST turns your agent's markdown or HTML into a beautiful, versioned, shareable page — stable URL, live updates, optional password.";
 export const HOME_DEMO_COPY =
   'Two real artifacts, published through the live API: a templated report and a sandboxed HTML dashboard. Update the same slug later; the public link stays put.';
-export const HOME_REPORT_ARTIFACT_URL =
-  'https://agentartifact.anacreon.ai/a/EUMZD1RSHBZgHya2ZoNWxQ';
-export const HOME_HTML_ARTIFACT_URL = 'https://agentartifact.anacreon.ai/a/-jNreL9Menxh1DmknwfOT-';
 
-const HOME_DEMO_ARTIFACTS = [
+// Showcase artifacts — update when the production instance has its own.
+export const HOME_DEMO_ARTIFACTS = [
   {
     title: 'Templated report',
     description: 'Markdown through the built-in report template.',
     badge: 'report',
-    href: HOME_REPORT_ARTIFACT_URL,
+    path: '/a/EUMZD1RSHBZgHya2ZoNWxQ',
     action: 'Open report →',
   },
   {
     title: 'Sandboxed HTML dashboard',
     description: 'Self-contained HTML rendered inside the sandboxed frame.',
     badge: 'html',
-    href: HOME_HTML_ARTIFACT_URL,
+    path: '/a/-jNreL9Menxh1DmknwfOT-',
     action: 'Open dashboard →',
   },
 ] as const;
@@ -33,6 +31,12 @@ const HOME_DEMO_ARTIFACTS = [
 export interface HomePageProps {
   baseUrl: string;
   authenticated?: boolean | undefined;
+}
+
+export function buildHomeDemoArtifactUrl(baseUrl: string, artifactPath: string) {
+  const url = new URL(baseUrl);
+  url.hostname = url.hostname.replace('-cloud.', '.');
+  return `${url.origin}${artifactPath}`;
 }
 
 export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
@@ -94,7 +98,10 @@ export function HomePage({ baseUrl, authenticated = false }: HomePageProps) {
                       <Badge tone={artifact.badge === 'html' ? 'info' : 'success'}>
                         {artifact.badge}
                       </Badge>
-                      <Button variant="secondary" href={artifact.href}>
+                      <Button
+                        variant="secondary"
+                        href={buildHomeDemoArtifactUrl(baseUrl, artifact.path)}
+                      >
                         {artifact.action}
                       </Button>
                     </div>

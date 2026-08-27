@@ -1,19 +1,20 @@
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import {
+  buildHomeDemoArtifactUrl,
   GITHUB_REPOSITORY,
   GITHUB_URL,
+  HOME_DEMO_ARTIFACTS,
   HOME_DEMO_COPY,
   HOME_HERO,
-  HOME_HTML_ARTIFACT_URL,
-  HOME_REPORT_ARTIFACT_URL,
   HOME_SUBLINE,
   HomePage,
 } from '../../src/ui/pages/home.js';
 
 describe('cloud marketing homepage', () => {
   it('renders the restrained M6 homepage with canonical copy and install prompt', () => {
-    const html = renderToString(HomePage({ baseUrl: 'https://agentartifact.ai' }));
+    const baseUrl = 'https://example.test';
+    const html = renderToString(HomePage({ baseUrl }));
 
     expect(html).toContain(HOME_HERO);
     expect(html).toContain(HOME_SUBLINE.replace("agent's", 'agent&#39;s'));
@@ -21,8 +22,9 @@ describe('cloud marketing homepage', () => {
     expect(html).toContain('See the work');
     expect(html).toContain('Templated report');
     expect(html).toContain('Sandboxed HTML dashboard');
-    expect(html).toContain(`href="${HOME_REPORT_ARTIFACT_URL}"`);
-    expect(html).toContain(`href="${HOME_HTML_ARTIFACT_URL}"`);
+    for (const artifact of HOME_DEMO_ARTIFACTS) {
+      expect(html).toContain(`href="${buildHomeDemoArtifactUrl(baseUrl, artifact.path)}"`);
+    }
     expect(html).toContain('Open report →');
     expect(html).toContain('Open dashboard →');
     expect(html).toContain('Sign up to get your key.');
@@ -39,7 +41,7 @@ describe('cloud marketing homepage', () => {
   });
 
   it('uses only local CSS and module scripts', () => {
-    const html = renderToString(HomePage({ baseUrl: 'https://agentartifact.ai' }));
+    const html = renderToString(HomePage({ baseUrl: 'https://example.test' }));
 
     expect(html).toContain('href="/assets/');
     expect(html).toContain('<script type="module" src="/assets/ui-foundation-');
@@ -48,12 +50,16 @@ describe('cloud marketing homepage', () => {
   });
 
   it('shows Dashboard as the primary action for signed-in visitors', () => {
-    const html = renderToString(
-      HomePage({ baseUrl: 'https://agentartifact.ai', authenticated: true })
-    );
+    const html = renderToString(HomePage({ baseUrl: 'https://example.test', authenticated: true }));
 
     expect(html).toContain('Dashboard →');
     expect(html).not.toContain('>Log in<');
     expect(html).not.toContain('>Sign up<');
+  });
+
+  it('points staging-cloud demo links at the paired public instance without hardcoded hosts', () => {
+    expect(buildHomeDemoArtifactUrl('https://preview-cloud.example.test', '/a/demo')).toBe(
+      'https://preview.example.test/a/demo'
+    );
   });
 });
