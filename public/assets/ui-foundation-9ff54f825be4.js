@@ -217,6 +217,57 @@ function bindNotices() {
   });
 }
 
+/**
+ * Reveals a scroll affordance only when there is genuinely something past the edge.
+ *
+ * A hint that is always on — the shape the CopyBlock ships — is a hint people learn to ignore, so
+ * this one is a measurement: `scrollWidth > clientWidth`, re-taken whenever the box or the content
+ * changes, plus an end-of-scroll flag so the edge fade lifts once the last column is visible.
+ */
+function updateScrollRegion(region) {
+  const overflowing = region.scrollWidth - region.clientWidth > 1;
+  region.setAttribute('data-aa-overflow', overflowing ? 'true' : 'false');
+
+  const atEnd = region.scrollLeft + region.clientWidth >= region.scrollWidth - 1;
+  region.setAttribute('data-aa-scroll-end', overflowing && atEnd ? 'true' : 'false');
+
+  const hintId = region.getAttribute('data-aa-scroll-hint-for');
+  const hint = hintId ? document.getElementById(hintId) : null;
+  if (hint) {
+    hint.hidden = !overflowing;
+  }
+}
+
+function bindScrollRegions() {
+  const regions = Array.from(document.querySelectorAll('[data-aa-scroll-region]'));
+  if (regions.length === 0) {
+    return;
+  }
+
+  for (const region of regions) {
+    updateScrollRegion(region);
+    region.addEventListener('scroll', () => updateScrollRegion(region), { passive: true });
+  }
+
+  // Rotating a phone, opening the drawer or loading a webfont all change the answer.
+  if (typeof ResizeObserver === 'function') {
+    const observer = new ResizeObserver(() => {
+      for (const region of regions) {
+        updateScrollRegion(region);
+      }
+    });
+    for (const region of regions) {
+      observer.observe(region);
+    }
+  } else {
+    window.addEventListener('resize', () => {
+      for (const region of regions) {
+        updateScrollRegion(region);
+      }
+    });
+  }
+}
+
 function selectTab(tab) {
   const root = tab.closest('[data-aa-tabs]');
   if (!root) {
@@ -329,5 +380,6 @@ bindCopyBlocks();
 bindDialogs();
 bindToasts();
 bindNotices();
+bindScrollRegions();
 bindTabs();
 bindDrawer();

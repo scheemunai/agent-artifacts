@@ -711,10 +711,11 @@ function cardTableSection() {
       </Card>
       <Card
         title="Table"
-        description="The wrapper scrolls horizontally without widening the page."
+        description="Scrolls horizontally without widening the page, and says so — but only when there is something past the edge."
         raised
       >
         <Table
+          id="style-guide-artifact-rows"
           caption="Artifact rows"
           columns={['Title', 'Type', 'Share state', 'Updated', 'Views']}
           rows={[
@@ -723,8 +724,73 @@ function cardTableSection() {
             ['Incident Retro', <Badge tone="warn">md</Badge>, 'Password protected', 'Aug 25', '38'],
           ]}
         />
+        <div class="aa-usage">
+          The region is focusable, named from its caption, and carries an inline-end fade plus a
+          hint whenever <code>scrollWidth &gt; clientWidth</code> — measured, never assumed, and
+          re-measured on resize. A table that fits shows neither.
+        </div>
       </Card>
+      {tableColumnPrioritySection()}
     </div>
+  );
+}
+
+function tableColumnPrioritySection() {
+  return (
+    <Card
+      title="Table column priority"
+      description="The documented way to survive 375px when scrolling to a column is the wrong answer."
+    >
+      <div class="aa-usage">
+        Default behaviour is to keep every column and scroll. Where a column is genuinely supporting
+        detail, mark it <code>{"{ label: 'Last used', priority: 'secondary' }"}</code> and pass{' '}
+        <code>columnPriority</code>: below 480px those columns are dropped and the table stops
+        forcing its <code>min-width</code>, so what remains fits the phone instead of hiding behind
+        a scroll the reader has to discover. Never mark an Actions column secondary — a control the
+        reader cannot reach is worse than a cramped one.
+      </div>
+      <Table
+        id="style-guide-priority-rows"
+        caption="Registered bots"
+        columnPriority
+        columns={[
+          'Name',
+          { label: 'Key', priority: 'secondary' },
+          { label: 'Last used', priority: 'secondary' },
+          'Actions',
+        ]}
+        rows={[
+          [
+            'ops-bot',
+            <code>aa_bot_…x7Qk</code>,
+            '2h ago',
+            <ButtonRow>
+              <Button
+                variant="danger"
+                size="sm"
+                dataAttrs={specimenToastData('Row action specimen.')}
+              >
+                Revoke
+              </Button>
+            </ButtonRow>,
+          ],
+          [
+            'retro-bot',
+            <code>aa_bot_…m2Pd</code>,
+            'Yesterday',
+            <ButtonRow>
+              <Button
+                variant="danger"
+                size="sm"
+                dataAttrs={specimenToastData('Row action specimen.')}
+              >
+                Revoke
+              </Button>
+            </ButtonRow>,
+          ],
+        ]}
+      />
+    </Card>
   );
 }
 

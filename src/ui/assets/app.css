@@ -763,6 +763,29 @@
     font-size: var(--text-aa-sm);
   }
 
+  .aa-table-wrap {
+    display: grid;
+    min-width: 0;
+    gap: var(--spacing-aa-2);
+  }
+
+  .aa-table__hint {
+    margin: 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-xs);
+  }
+
+  .aa-table__hint[hidden] {
+    display: none;
+  }
+
+  .aa-table__hint::before {
+    content: "↔";
+    margin-right: var(--spacing-aa-2);
+    color: var(--color-aa-accent);
+    font-weight: 700;
+  }
+
   .aa-table-scroll {
     display: block;
     width: 100%;
@@ -797,11 +820,36 @@
     background: var(--color-aa-line-strong);
   }
 
+  /* The affordance, not the scroll, was the defect: a column clipped mid-glyph at the card's edge
+     with no fade, no resting scrollbar and no hint reads as broken content rather than as "there
+     is more this way". Both the fade and the hint are driven by a measurement in `ui-foundation`,
+     so a table that fits is never masked and never hinted. */
+  .aa-table-scroll[data-aa-overflow="true"] {
+    mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
+  }
+
+  .aa-table-scroll[data-aa-overflow="true"][data-aa-scroll-end="true"] {
+    mask-image: none;
+  }
+
   .aa-table {
     width: 100%;
     min-width: 42rem;
     border-collapse: collapse;
     font-size: var(--text-aa-sm);
+  }
+
+  /* Column priority is opt-in. Below 480px a table that declares it drops its `secondary` columns
+     instead of hiding them behind a scroll the reader has to discover; every other table keeps
+     every column and scrolls. */
+  @media (max-width: 480px) {
+    .aa-table-scroll--priority [data-aa-priority="secondary"] {
+      display: none;
+    }
+
+    .aa-table-scroll--priority .aa-table {
+      min-width: 0;
+    }
   }
 
   .aa-table caption {

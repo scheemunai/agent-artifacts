@@ -447,34 +447,89 @@ export function Card({ title, description, children, footer, raised = false }: C
   );
 }
 
-interface TableProps {
-  caption?: string | undefined;
-  columns: string[];
-  rows: Child[][];
+export interface TableColumn {
+  label: string;
+  /**
+   * `secondary` columns are the first to go when a table has to survive a 375px viewport. They are
+   * only dropped when the table opts into `columnPriority`; everywhere else every column stays and
+   * the region scrolls.
+   */
+  priority?: 'primary' | 'secondary';
 }
 
-export function Table({ caption, columns, rows }: TableProps) {
+interface TableProps {
+  caption?: string | undefined;
+  columns: Array<string | TableColumn>;
+  rows: Child[][];
+  /** Accessible name for the scroll region when the table has no visible caption. */
+  label?: string | undefined;
+  /** Opt into hiding `secondary` columns below 480px instead of scrolling to them. */
+  columnPriority?: boolean | undefined;
+  id?: string | undefined;
+}
+
+/**
+ * A horizontally scrollable table.
+ *
+ * The scrolling was always correct; the silence around it was the defect. A `tabindex=0` container
+ * with no role and no name announced nothing, and there was no fade, no resting scrollbar and no
+ * hint — so a column clipped mid-glyph at the card's edge read as broken content rather than as
+ * "there is more this way". The hint here is revealed from a real measurement, never asserted:
+ * a hint that is always on is a hint people learn to ignore.
+ */
+export function Table({ caption, columns, rows, label, columnPriority = false, id }: TableProps) {
+  const normalized = columns.map((column) =>
+    typeof column === 'string' ? { label: column } : column
+  );
+  const hintId = `${id ?? 'aa-table'}-scroll-hint`;
+  const regionLabel = caption ?? label ?? 'Table';
+
   return (
-    <div class="aa-table-scroll" tabindex={0}>
-      <table class="aa-table">
-        {caption ? <caption>{caption}</caption> : null}
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th scope="col">{column}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
+    <div class="aa-table-wrap">
+      {/* A named `<section>` is a landmark region implicitly, which is what a focusable scroll
+          container needs: before this it was a `tabindex=0` div that announced nothing at all. */}
+      <section
+        class={cx('aa-table-scroll', columnPriority && 'aa-table-scroll--priority')}
+        tabindex={0}
+        aria-label={regionLabel}
+        aria-describedby={hintId}
+        data-aa-scroll-region="true"
+        data-aa-scroll-hint-for={hintId}
+      >
+        <table class="aa-table" id={id}>
+          {caption ? <caption>{caption}</caption> : null}
+          <thead>
             <tr>
-              {row.map((cell) => (
-                <td>{cell}</td>
+              {normalized.map((column) => (
+                <th
+                  scope="col"
+                  data-aa-priority={column.priority === 'secondary' ? 'secondary' : undefined}
+                >
+                  {column.label}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr>
+                {row.map((cell, index) => (
+                  <td
+                    data-aa-priority={
+                      normalized[index]?.priority === 'secondary' ? 'secondary' : undefined
+                    }
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+      <p class="aa-table__hint" id={hintId} data-aa-scroll-hint="true" hidden>
+        Scroll the table sideways to see every column.
+      </p>
     </div>
   );
 }
