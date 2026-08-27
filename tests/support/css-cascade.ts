@@ -12,6 +12,32 @@
  * combinators, `:not()`, `:where()`, and `@media (min-width|max-width: …)`. That is the whole
  * vocabulary `app.css` and the viewer stylesheet use. Anything outside it throws rather than
  * silently returning a wrong answer.
+ *
+ * ── IT RESOLVES THE STYLESHEET, NOT THE DOCUMENT ───────────────────────────────────────────────
+ *
+ * This is the limit that has actually cost us, so it is stated where the tool lives rather than
+ * left to be rediscovered. These helpers answer "which declaration wins for a hypothetical element
+ * at a hypothetical viewport". They cannot see:
+ *
+ *   · runtime state — `hidden`, `data-state="closed"`, anything script toggles;
+ *   · whether an element is in the document at that moment, or in it at all;
+ *   · and therefore anything of the form "how many of X does a reader see right now".
+ *
+ * So a resolved result can BOUND a guarantee — "no more than one copy is ever styled visible" —
+ * and can never CONFIRM one that depends on interaction state. Both are useful; they are not the
+ * same claim, and the gap between them is invisible in a green suite.
+ *
+ * How it cost us, in one case, so the shape is recognisable: the NavShell account slot was
+ * documented as "exactly one live at any width". Both sides of the 760px breakpoint resolved
+ * cleanly and agreed, and two people read that as the whole claim. It was false — at 375 AT REST
+ * the count is ZERO, because the header copy is stood down AND the drawer is closed, and a closed
+ * drawer is not a CSS fact. An end-to-end test opened the drawer and counted, which is cruder than
+ * anything in this file and the only thing that could have found it. The guarantee is now "at most
+ * one live, and exactly one way to reach it".
+ *
+ * RULE OF THUMB: if the claim contains "sees", "at rest", "how many", or names a state a user or a
+ * script puts the page into, this file cannot settle it. Reach for an end-to-end test, and treat a
+ * green result here as the absence of a contradiction rather than as proof.
  */
 
 export interface StyleRule {
