@@ -328,6 +328,8 @@
   .aa-grid {
     display: grid;
     min-width: 0;
+    width: 100%;
+    max-width: 100%;
     gap: var(--spacing-aa-4);
   }
 
@@ -341,6 +343,13 @@
 
   .aa-grid--3 {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  }
+
+  @media (max-width: 480px) {
+    .aa-grid--2,
+    .aa-grid--3 {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .aa-specimen-row {
@@ -1149,8 +1158,10 @@
     border-top: 1px solid var(--color-aa-line);
   }
 
-  .aa-lock-scroll {
+  html.aa-lock-scroll,
+  body.aa-lock-scroll {
     overflow: hidden;
+    overscroll-behavior: none;
   }
 
   .aa-placeholder {

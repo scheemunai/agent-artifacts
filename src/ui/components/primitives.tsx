@@ -424,6 +424,7 @@ export function Toast({ tone = 'neutral', children }: ToastProps) {
         type="button"
         aria-label="Dismiss toast"
         title="Dismiss toast"
+        data-aa-toast-close="true"
       >
         ×
       </button>
@@ -553,6 +554,8 @@ interface PaginationProps {
   pageDescription: string;
   previousDisabled?: boolean | undefined;
   nextDisabled?: boolean | undefined;
+  previousDataAttrs?: Record<string, string> | undefined;
+  nextDataAttrs?: Record<string, string> | undefined;
 }
 
 export function Pagination({
@@ -560,15 +563,22 @@ export function Pagination({
   pageDescription,
   previousDisabled = false,
   nextDisabled = false,
+  previousDataAttrs = {},
+  nextDataAttrs = {},
 }: PaginationProps) {
   return (
     <nav class="aa-pagination" aria-label={label}>
       <span class="aa-pagination__meta">{pageDescription}</span>
       <div class="aa-pagination__actions">
-        <Button size="sm" variant="secondary" disabled={previousDisabled}>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={previousDisabled}
+          dataAttrs={previousDataAttrs}
+        >
           Previous
         </Button>
-        <Button size="sm" variant="secondary" disabled={nextDisabled}>
+        <Button size="sm" variant="secondary" disabled={nextDisabled} dataAttrs={nextDataAttrs}>
           Next
         </Button>
       </div>

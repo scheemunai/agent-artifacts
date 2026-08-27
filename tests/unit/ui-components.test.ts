@@ -7,7 +7,9 @@ import {
   CopyBlock,
   Input,
   NavShell,
+  Pagination,
   Table,
+  Toast,
 } from '../../src/ui/components/primitives.js';
 import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
 
@@ -88,6 +90,22 @@ describe('ui component primitives', () => {
     expect(nav).toContain('data-aa-drawer="true"');
     expect(`${copy}${nav}`).not.toMatch(/on(click|submit|keydown)=/i);
   });
+
+  it('renders dismissible server toasts and specimen pagination feedback hooks', () => {
+    const toast = renderToString(Toast({ tone: 'info', children: 'Public viewer refreshed.' }));
+    const pagination = renderToString(
+      Pagination({
+        label: 'Artifact pages',
+        pageDescription: 'Showing 1–20',
+        previousDataAttrs: { 'data-aa-toast-trigger': 'true' },
+        nextDataAttrs: { 'data-aa-toast-trigger': 'true' },
+      })
+    );
+
+    expect(toast).toContain('data-aa-toast-close="true"');
+    expect(toast).toContain('aria-label="Dismiss toast"');
+    expect(pagination.match(/data-aa-toast-trigger="true"/g) ?? []).toHaveLength(2);
+  });
 });
 
 describe('ui css contract', () => {
@@ -110,8 +128,14 @@ describe('ui css contract', () => {
     expect(css).toMatch(/\.aa-stack\s*{[\s\S]*?min-width: 0;/);
     expect(css).toMatch(/\.aa-stack > \*\s*{[\s\S]*?min-width: 0;/);
     expect(css).toMatch(/\.aa-grid\s*{[\s\S]*?min-width: 0;/);
+    expect(css).toMatch(/\.aa-grid\s*{[\s\S]*?width: 100%;[\s\S]*?max-width: 100%;/);
     expect(css).toMatch(/\.aa-grid > \*\s*{[\s\S]*?min-width: 0;/);
+    expect(css).toMatch(
+      /@media \(max-width: 480px\)[\s\S]*?\.aa-grid--2,[\s\S]*?\.aa-grid--3\s*{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/
+    );
     expect(css).toContain('grid-template-columns: minmax(0, 80vw) 1fr');
+    expect(css).toMatch(/html\.aa-lock-scroll,[\s\S]*?body\.aa-lock-scroll\s*{/);
+    expect(css).toContain('overscroll-behavior: none');
     expect(css).toContain('scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface)');
   });
 
@@ -164,10 +188,28 @@ describe('style guide page', () => {
 
     expect(html).toContain('Agent Artifacts Style Guide');
     expect(html.match(/<h1\b/g) ?? []).toHaveLength(1);
+    expect(html).toContain('Specimen controls announce a toast when clicked');
+    expect(html).toContain('Skeleton is specimen-only, not for production use.');
     expect(html).toContain('class="aa-md"');
     expect(html).toContain('raw markdown tables scroll inside themselves at 375px');
     expect(html).toContain('<script type="module" src="/assets/ui-foundation-');
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)[\s\S]*?>[\s\S]*?<\/script>/i);
     expect(html).not.toMatch(/https?:\/\/(cdn|unpkg|jsdelivr|fonts\.googleapis)/i);
+  });
+
+  it('wires style-guide specimen controls to visible feedback and toast dismissal', () => {
+    const html = renderToString(StyleGuidePage());
+    const foundationScript = readFileSync('public/assets/ui-foundation-9ff54f825be4.js', 'utf8');
+
+    expect(html).toContain('data-aa-toast-message="default button specimen."');
+    expect(html).toContain(
+      'data-aa-toast-message="Card action specimen. Production cards wire a real action."'
+    );
+    expect(html).toContain('data-aa-toast-close="true"');
+    expect(foundationScript).toMatch(
+      /closest\([\s\S]*data-aa-toast-close[\s\S]*aria-label="Dismiss toast"[\s\S]*\)/
+    );
+    expect(foundationScript).toContain("document.body.classList.add('aa-lock-scroll')");
+    expect(foundationScript).toContain("document.body.classList.remove('aa-lock-scroll')");
   });
 });

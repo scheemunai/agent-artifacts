@@ -139,6 +139,14 @@ lines below the fold, so one-time keys and install prompts remain recoverable wi
 const markdownImage =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lOrpYwAAAABJRU5ErkJggg==';
 
+function specimenToastData(message = 'Specimen only — no product action was sent.') {
+  return {
+    'data-aa-toast-trigger': 'true',
+    'data-aa-toast-tone': 'info',
+    'data-aa-toast-message': message,
+  };
+}
+
 export function StyleGuidePage() {
   return (
     <Layout
@@ -207,6 +215,11 @@ export function StyleGuidePage() {
             title="Component primitives"
             note="States are rendered with real disabled, aria, labels, focusable controls, and demo state attributes for hover/focus/active."
           >
+            <div class="aa-usage">
+              Specimen controls announce a toast when clicked; production screens must wire real
+              actions or render disabled controls. Responsive grids collapse to a single{' '}
+              <code>minmax(0, 1fr)</code> track on phone widths so they cannot widen the page.
+            </div>
             {buttonSection()}
             {fieldSection()}
             {badgeSection()}
@@ -317,7 +330,14 @@ function buttonSection() {
                 </StateButton>
               ))}
               {variant === 'ghost' ? (
-                <Button variant="ghost" ariaLabel="Refresh artifact" title="Refresh artifact">
+                <Button
+                  variant="ghost"
+                  ariaLabel="Refresh artifact"
+                  title="Refresh artifact"
+                  dataAttrs={specimenToastData(
+                    'Refresh specimen only. Public viewers wire this to polling.'
+                  )}
+                >
                   ↻
                 </Button>
               ) : null}
@@ -346,8 +366,20 @@ function StateButton({
     );
   }
 
+  if (state === 'disabled') {
+    return (
+      <Button variant={variant} state={state} disabled>
+        {children}
+      </Button>
+    );
+  }
+
   return (
-    <Button variant={variant} state={state} disabled={state === 'disabled'}>
+    <Button
+      variant={variant}
+      state={state}
+      dataAttrs={specimenToastData(`${String(children)} button specimen.`)}
+    >
       {children}
     </Button>
   );
@@ -439,10 +471,22 @@ function cardTableSection() {
         description="Default, raised, empty, and error states are content patterns on the same primitive."
         footer={
           <div class="aa-specimen-row">
-            <Button variant="primary" size="sm">
+            <Button
+              variant="primary"
+              size="sm"
+              dataAttrs={specimenToastData(
+                'Card action specimen. Production cards wire a real action.'
+              )}
+            >
               Continue
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              dataAttrs={specimenToastData(
+                'Card cancel specimen. Production cards close or reset state.'
+              )}
+            >
               Cancel
             </Button>
           </div>
@@ -517,7 +561,16 @@ function feedbackSection() {
         <EmptyState
           title="No artifacts yet — your bot creates them."
           description="Paste the install prompt into your agent and it will publish here."
-          action={<Button variant="primary">Register a bot</Button>}
+          action={
+            <Button
+              variant="primary"
+              dataAttrs={specimenToastData(
+                'Empty-state action specimen. Production links to bot registration.'
+              )}
+            >
+              Register a bot
+            </Button>
+          }
         />
       </Card>
       <Card title="Copy block" description="For API keys, curl commands, and install prompts.">
@@ -568,7 +621,14 @@ function navigationSection() {
           },
         ]}
       />
-      <Pagination label="Artifact pages" pageDescription="Showing 1–20 of many artifacts" />
+      <Pagination
+        label="Artifact pages"
+        pageDescription="Showing 1–20 of many artifacts"
+        previousDataAttrs={specimenToastData(
+          'Previous page specimen. Production paging changes results.'
+        )}
+        nextDataAttrs={specimenToastData('Next page specimen. Production paging changes results.')}
+      />
       <Pagination
         label="Template pages"
         pageDescription="No next page"
@@ -583,7 +643,7 @@ function loadingSection() {
   return (
     <Card
       title="Avatar, mark, spinner, skeleton"
-      description="Small utility primitives for identity and loading."
+      description="Identity primitives plus sanctioned inline loading patterns."
     >
       <div class="aa-specimen-row">
         <ProductMark />
@@ -594,6 +654,10 @@ function loadingSection() {
         <Button variant="primary" loading>
           Publishing…
         </Button>
+      </div>
+      <div class="aa-usage">
+        <strong>Skeleton is specimen-only, not for production use.</strong> PRD §9 loading states
+        use inline text, disabled button labels, and the spinner where status needs a visual marker.
       </div>
       <div class="aa-grid">
         <Skeleton variant="line" />

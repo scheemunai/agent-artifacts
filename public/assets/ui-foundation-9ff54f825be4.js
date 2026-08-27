@@ -7,8 +7,14 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-const lockScroll = () => document.documentElement.classList.add('aa-lock-scroll');
-const unlockScroll = () => document.documentElement.classList.remove('aa-lock-scroll');
+const lockScroll = () => {
+  document.documentElement.classList.add('aa-lock-scroll');
+  document.body.classList.add('aa-lock-scroll');
+};
+const unlockScroll = () => {
+  document.documentElement.classList.remove('aa-lock-scroll');
+  document.body.classList.remove('aa-lock-scroll');
+};
 
 function focusableWithin(root) {
   return Array.from(root.querySelectorAll(FOCUSABLE_SELECTOR)).filter((element) => {
@@ -156,6 +162,17 @@ function toastRole(tone) {
 
 function bindToasts() {
   document.addEventListener('click', (event) => {
+    const closeTrigger =
+      event.target instanceof Element
+        ? event.target.closest(
+            '[data-aa-toast-close], .aa-toast button[aria-label="Dismiss toast"]'
+          )
+        : null;
+    if (closeTrigger instanceof HTMLElement) {
+      closeTrigger.closest('.aa-toast')?.remove();
+      return;
+    }
+
     const trigger =
       event.target instanceof Element ? event.target.closest('[data-aa-toast-trigger]') : null;
     if (!(trigger instanceof HTMLElement)) {
@@ -178,8 +195,8 @@ function bindToasts() {
     close.type = 'button';
     close.setAttribute('aria-label', 'Dismiss toast');
     close.setAttribute('title', 'Dismiss toast');
+    close.setAttribute('data-aa-toast-close', 'true');
     close.textContent = '×';
-    close.addEventListener('click', () => toast.remove());
 
     toast.append(text, close);
     region.append(toast);
