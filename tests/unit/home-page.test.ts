@@ -1,7 +1,7 @@
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
+import { heroArtifactUrl, publicArtifactUrl } from '../../src/services/live-artifact-meta.js';
 import {
-  buildHomeDemoArtifactUrl,
   HOME_AGENT_SKILL_ARTIFACT,
   HOME_AGENT_SKILL_COPY,
   HOME_CTA_REASSURANCE,
@@ -9,7 +9,6 @@ import {
   HOME_HERO,
   HOME_SUBLINE,
   HomePage,
-  heroArtifactUrl,
 } from '../../src/ui/pages/home.js';
 
 const NOW = Date.parse('2026-08-27T18:00:00.000Z');
@@ -36,7 +35,7 @@ describe('cloud marketing homepage', () => {
     expect(html).toContain('MIT licensed and self-hostable, end to end.');
 
     for (const artifact of HOME_DEMO_ARTIFACTS) {
-      expect(html).toContain(`href="${buildHomeDemoArtifactUrl(baseUrl, artifact.path)}"`);
+      expect(html).toContain(`href="${publicArtifactUrl(baseUrl, artifact.path)}"`);
     }
     expect(html).toContain(HOME_AGENT_SKILL_ARTIFACT.path);
     expect(html).toContain(heroArtifactUrl(baseUrl));
@@ -64,13 +63,13 @@ describe('cloud marketing homepage', () => {
     expect(html).not.toContain('>Get your key<');
   });
 
-  it('points staging-cloud demo links at the paired public instance without hardcoded hosts', () => {
-    expect(buildHomeDemoArtifactUrl('https://preview-cloud.example.test', '/a/demo')).toBe(
-      'https://preview.example.test/a/demo'
-    );
-    expect(heroArtifactUrl('https://preview-cloud.example.test')).toBe(
-      `https://preview.example.test${HOME_AGENT_SKILL_ARTIFACT.path}`
-    );
+  it('renders the demo link through the service derivation, not a hard-coded host', () => {
+    // The derivation itself is owned by tests/unit/live-artifact-meta.test.ts. What belongs here is
+    // that the *page* routes its link through it rather than composing a URL of its own.
+    const html = renderToString(HomePage({ baseUrl: 'https://preview-cloud.example.test' }));
+
+    expect(html).toContain(heroArtifactUrl('https://preview-cloud.example.test'));
+    expect(html).not.toContain('preview-cloud.example.test/a/');
   });
 
   describe('unpublished repository posture', () => {

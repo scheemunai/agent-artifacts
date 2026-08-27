@@ -3,7 +3,6 @@ import {
   HERO_ARTIFACT_PATH,
   heroArtifactUrl,
   type LiveArtifactMeta,
-  publicArtifactUrl,
 } from '../../services/live-artifact-meta.js';
 import { Layout } from '../components/layout.js';
 import {
@@ -86,12 +85,6 @@ export interface HomePageProps {
   liveArtifact?: LiveArtifactMeta | null | undefined;
   now?: number | undefined;
 }
-
-/**
- * Re-exported so the page keeps a stable surface for its own tests. The derivation itself lives in
- * `services/live-artifact-meta.ts`, because boot code needs it and boot must not import a page.
- */
-export { heroArtifactUrl, publicArtifactUrl as buildHomeDemoArtifactUrl };
 
 export function HomePage({
   baseUrl,

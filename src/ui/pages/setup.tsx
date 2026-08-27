@@ -12,12 +12,7 @@ import {
 import { buildArtifactCurl, buildInstallPrompt, buildRedactedInstallPrompt } from './dashboard.js';
 
 /** Fields a setup failure can be attributed to, so the message can ride the field that caused it. */
-export type SetupErrorField =
-  | 'setup_token'
-  | 'email'
-  | 'password'
-  | 'password_confirm'
-  | 'bot_name';
+export type SetupErrorField = 'setup_token' | 'password' | 'password_confirm' | 'bot_name';
 
 export interface SetupPageProps {
   baseUrl: string;
@@ -95,7 +90,6 @@ export function SetupPage({
                   type="email"
                   value={email}
                   placeholder="you@example.com"
-                  error={fieldError('email')}
                 />
                 <Input
                   id="password"
