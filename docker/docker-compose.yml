@@ -1,3 +1,5 @@
+# Convenience wrapper for running Compose from the docker/ directory.
+# The repository root docker-compose.yml is canonical.
 services:
   app:
     image: ghcr.io/zeropointrepo/agent-artifacts:latest
@@ -12,12 +14,22 @@ services:
       BASE_URL: ${BASE_URL:-http://localhost:3000}
       AA_SQLITE_PATH: /data/agent-artifacts.db
       DATABASE_URL: ${DATABASE_URL:-}
+      AA_HIDE_FOOTER: ${AA_HIDE_FOOTER:-false}
+      AA_RATE_LIMIT_RPM: ${AA_RATE_LIMIT_RPM:-60}
+      AA_RATE_LIMIT_WRITES_PER_MIN: ${AA_RATE_LIMIT_WRITES_PER_MIN:-10}
+      AA_TRUST_PROXY: ${AA_TRUST_PROXY:-0}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     env_file:
-      - path: .env
+      - path: ../.env
         required: false
     volumes:
       - aa_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     restart: unless-stopped
 
   postgres:
@@ -29,6 +41,11 @@ services:
       POSTGRES_PASSWORD: agent_artifacts
     volumes:
       - aa_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent_artifacts -d agent_artifacts"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   aa_data:

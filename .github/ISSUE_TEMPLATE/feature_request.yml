@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest a product, API, template, or documentation improvement.
+title: "feat: "
+labels: ["enhancement", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please keep the open-core boundary in mind: billing, plan enforcement, custom subdomains, and hosted-only analytics belong to the private cloud package, not OSS core.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or contributor problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Agent API
+        - Public viewer
+        - Dashboard/auth
+        - Templates
+        - Self-hosting/deploy
+        - Documentation
+        - Security/privacy
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I am interested in opening a PR for this.
+          required: false

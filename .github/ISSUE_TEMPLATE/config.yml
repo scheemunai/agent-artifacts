@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/ZeroPointRepo/agent-artifacts/security/advisories/new
+    about: Please report vulnerabilities privately. Do not open a public issue for security reports.
+  - name: API contract
+    url: https://github.com/ZeroPointRepo/agent-artifacts/blob/main/docs/api.md
+    about: Read where the live API contract and OpenAPI document are served.

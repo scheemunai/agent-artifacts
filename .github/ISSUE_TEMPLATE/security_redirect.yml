@@ -1,0 +1,29 @@
+name: Security redirect
+description: Do not file vulnerabilities publicly; this template points you to private disclosure.
+title: "security: use private disclosure"
+labels: ["security", "needs maintainer"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stop if this is a vulnerability.** Do not describe it in a public issue.
+
+        Use GitHub Security Advisories instead:
+        https://github.com/ZeroPointRepo/agent-artifacts/security/advisories/new
+
+        Or email the project's configured `AA_SECURITY_EMAIL` contact (default: security@agentartifact.ai).
+
+        This public template is only for non-sensitive security hardening questions.
+  - type: checkboxes
+    id: not_vuln
+    attributes:
+      label: Confirmation
+      options:
+        - label: This is not a vulnerability report and does not include exploit details, secrets, private data, or live tokens.
+          required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Non-sensitive security question
+    validations:
+      required: true

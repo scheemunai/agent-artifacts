@@ -1,0 +1,70 @@
+name: Bug report
+description: Report reproducible behavior that should be fixed.
+title: "bug: "
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Do not include API keys, passwords, session cookies, `.env` files, or private artifact content.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag, Docker image tag, or commit SHA.
+      placeholder: v0.1.0 or abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment mode
+      options:
+        - Self-hosted Docker Compose
+        - Railway
+        - Render
+        - Fly.io
+        - Coolify
+        - Hosted cloud
+        - Local development
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      options:
+        - SQLite
+        - Postgres
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Include curl commands or minimal artifact content when useful. Redact secrets.
+      placeholder: |
+        1. Start with ...
+        2. Request ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      render: text

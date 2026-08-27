@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: agent-artifacts
+    runtime: docker
+    plan: starter
+    numInstances: 1
+    dockerfilePath: ./docker/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    disk:
+      name: agent-artifacts-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DEPLOYMENT
+        value: self-hosted
+      - key: PORT
+        value: "3000"
+      - key: BASE_URL
+        value: https://agent-artifacts.onrender.com
+      - key: AA_SQLITE_PATH
+        value: /data/agent-artifacts.db
+      - key: AA_HIDE_FOOTER
+        value: "false"
+      - key: AA_RATE_LIMIT_RPM
+        value: "60"
+      - key: AA_RATE_LIMIT_WRITES_PER_MIN
+        value: "10"
+      - key: AA_TRUST_PROXY
+        value: "1"
+      - key: LOG_LEVEL
+        value: info
