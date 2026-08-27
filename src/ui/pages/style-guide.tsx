@@ -1251,11 +1251,20 @@ function appShellSection() {
         spare, and a second block there competes with the page title.
       </p>
       <p class="aa-hint">
-        <code>NavShell</code> mounts <code>account</code> in both places from one prop, and exactly
-        one copy is ever live: <code>.aa-app-nav__account</code> is <code>display: none</code> below
-        760px, and above it the drawer cannot be opened because its only trigger is hidden. That
-        invariant is the component's to keep, not the caller's — mounting the block into both slots
-        by hand is what once put two live copies on a 375px screen with the drawer open.
+        <code>NavShell</code> mounts <code>account</code> in both places from one prop, and the
+        guarantee is <strong>at most one live, and exactly one way to reach it</strong>. Above 760px
+        that is the header copy. Below it, at rest, the live count is <em>zero</em> — the header has
+        stood down and the drawer is closed, so identity is deliberately behind the Menu button —
+        and opening the drawer makes it one. <code>.aa-app-nav__account</code> is{' '}
+        <code>display: none</code> below 760px, and above it the drawer cannot be opened at all
+        because its only trigger is hidden.
+      </p>
+      <p class="aa-hint">
+        The weaker claim is the true one, and it is worth saying why the stronger one was wrong
+        here: "exactly one live at any width" reads better and would have this page describing a
+        component nobody ships. That invariant is still the component's to keep rather than the
+        caller's — mounting the block into both slots by hand is what once put two live copies on a
+        375px screen with the drawer open.
       </p>
       <p class="aa-hint">
         <code>children</code> is unchanged and still renders in the drawer footer only. One

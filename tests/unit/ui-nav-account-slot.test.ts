@@ -14,8 +14,16 @@ import { type ElementSpec, parseStylesheet, winningDeclaration } from '../suppor
  * dashboard that mounted the block in two places itself, so at 375px with the drawer open BOTH
  * were live. The fix is not "remember to mount it once" — it is that the component owns both
  * mounts and the invariant, and callers pass one prop. These tests hold that bargain from both
- * ends: the markup really does render twice, and the stylesheet really does leave exactly one of
- * them visible at each width.
+ * ends: the markup really does render twice, and the stylesheet really does stand one of them
+ * down at each width.
+ *
+ * The invariant is AT MOST ONE LIVE, AND EXACTLY ONE WAY TO REACH IT — not "exactly one live at
+ * any width", which is how this was first written and is false. Below 760px at rest the live count
+ * is ZERO: the header copy has stood down and the drawer is closed, so identity sits behind the
+ * Menu button on purpose. The consumer's end-to-end test found that by opening the drawer at 375
+ * and counting, which a stylesheet resolver cannot do — these assertions can only prove which copy
+ * the CSS stands down, never how many a reader can see at rest. Stated so the next person does not
+ * read a stronger guarantee out of this file than it checks.
  */
 const rules = parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8'));
 
@@ -54,7 +62,7 @@ describe('NavShell account slot', () => {
     expect(html.split(ACCOUNT)).toHaveLength(3);
   });
 
-  it('leaves exactly one of the two copies live at each width', () => {
+  it('stands one copy down at each width, leaving at most one reachable', () => {
     // The header copy stands down below the nav breakpoint...
     expect(winningDeclaration(rules, headerAccount, 'display', 375)?.value).toBe('none');
     expect(winningDeclaration(rules, headerAccount, 'display', 1440)?.value).toBe('flex');

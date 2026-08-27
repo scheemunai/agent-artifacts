@@ -1170,14 +1170,21 @@ interface NavShellProps {
    * Who you are signed in as, and what you can do about it. Rendered in the header on desktop and
    * in the drawer footer on a phone — from ONE prop, mounted by this component in both places.
    *
-   * The duplication is deliberate and it is the safe direction. Identity has to appear somewhere at
+   * The duplication is deliberate and it is the safe direction. Identity has to be reachable at
    * every width, but the header row is the one a phone can least spare: a second block there
    * competes with the page title. So `.aa-app-nav__account` is `display: none` below 760px and the
    * drawer carries it instead — and above 760px the drawer cannot be opened at all, because its
-   * only trigger is hidden. Exactly one copy is live at any width, and this component guarantees
-   * that rather than asking two callers to agree about it. 122c3c5 fixed the version where both
-   * were live at 375 with the drawer open; the invariant now lives where it cannot be re-broken by
-   * mounting the thing twice by hand.
+   * only trigger is hidden.
+   *
+   * The guarantee is AT MOST ONE LIVE, AND EXACTLY ONE WAY TO REACH IT. Not "exactly one live at
+   * any width", which is what this said first and is false: below 760px AT REST the live count is
+   * zero — the header has stood down and the drawer is closed, so identity is deliberately behind
+   * the Menu button — and it becomes one when the drawer opens. The weaker claim is the true one,
+   * and the stronger phrasing described a component nobody ships.
+   *
+   * Either way it is this component's guarantee rather than something two callers have to agree
+   * about. 122c3c5 fixed the version where both copies were live at 375 with the drawer open; the
+   * invariant now lives where it cannot be re-broken by mounting the thing twice by hand.
    *
    * One consequence to know: the content really is in the DOM twice, so anything with an `id`
    * belongs in `children` or nowhere. `tests/unit/ui-duplicate-ids.test.ts` will say so loudly.
