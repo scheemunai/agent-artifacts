@@ -47,6 +47,7 @@ import {
   restoreArtifactVersion,
   updateArtifact,
 } from '../../services/v1.js';
+import { skillResponse } from '../skill.js';
 
 export interface V1RoutesContext {
   config: AppConfig;
@@ -79,6 +80,11 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
 
   app.get('/llms.txt', unauthRateLimit, (context) => contractResponse(context, ctx.config));
   app.all('/llms.txt', (context) => {
+    context.header('Allow', 'GET');
+    throw new AppError(405, 'method_not_allowed', 'Method not allowed');
+  });
+  app.get('/skill.md', unauthRateLimit, (context) => skillResponse(context, ctx.config));
+  app.all('/skill.md', (context) => {
     context.header('Allow', 'GET');
     throw new AppError(405, 'method_not_allowed', 'Method not allowed');
   });
@@ -564,6 +570,7 @@ Auth:     every request needs this header:
 
 All bodies are JSON (snake_case). Timestamps are ISO-8601 UTC.
 This markdown is available at GET /v1/contract and GET /llms.txt.
+Agent publishing skill: GET /skill.md
 Machine-readable spec: /v1/openapi.json
 
 Documented endpoints:

@@ -606,7 +606,12 @@ export function Avatar({ name, size = 'md' }: AvatarProps) {
 export function ProductMark() {
   return (
     <span class="aa-mark" aria-hidden="true">
-      ◆
+      <svg viewBox="0 0 32 32" focusable="false" aria-hidden="true" role="presentation">
+        <g transform="rotate(45 16 16)">
+          <path fill="currentColor" d="M6 6 H16 L26 16 V26 H6 Z" />
+          <path fill="#FFFFFF" d="M16 6 L26 16 H16 Z" />
+        </g>
+      </svg>
     </span>
   );
 }

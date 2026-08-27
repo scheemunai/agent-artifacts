@@ -12,7 +12,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "pnpm run build:css && tsc -p tsconfig.build.json",
-    "build:css": "mkdir -p .scratch && tailwindcss -i ./src/ui/assets/app.css -o ./.scratch/app.css --minify && node scripts/hash-css.mjs ./.scratch/app.css",
+    "build:css": "mkdir -p .scratch && tailwindcss -i ./src/ui/assets/app.css -o ./.scratch/app.css --minify && node scripts/hash-css.mjs ./.scratch/app.css && node scripts/copy-font-assets.mjs",
     "typecheck": "tsc --noEmit",
     "check": "biome ci . && pnpm run typecheck",
     "test": "vitest run",

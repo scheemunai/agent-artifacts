@@ -115,11 +115,17 @@ describe('ui css contract', () => {
     expect(css).toContain('@theme');
     expect(css).toContain('--color-aa-accent:');
     expect(css).toContain('--spacing-aa-touch:');
+    expect(css).toContain('font-family: "Source Sans 3"');
+    expect(css).toContain('source-sans-3-latin-var.woff2');
+    expect(css).toContain('--color-aa-dark-card:');
+    expect(css).toContain('--shadow-aa-card:');
     expect(stripTheme(css)).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
   });
 
   it('has mobile-safe table and drawer rules', () => {
     expect(css).toContain('.aa-table-scroll');
+    expect(css).toContain('.aa-marketing-artifact');
+    expect(css).toContain('.aa-marketing-grid');
     expect(css).toContain('overflow-x: auto');
     expect(css).toMatch(/\.aa-section\s*{[\s\S]*?min-width: 0;/);
     expect(css).toMatch(
@@ -170,6 +176,7 @@ describe('style guide page', () => {
 
     for (const text of [
       'Design tokens',
+      'Fresh Air marketing components',
       'Button',
       'Inputs',
       'Badge',
@@ -187,6 +194,9 @@ describe('style guide page', () => {
     }
 
     expect(html).toContain('Agent Artifacts Style Guide');
+    expect(html).toContain('this-is-artifact');
+    expect(html).toContain('style-guide-marketing-api');
+    expect(html).toContain('/skill.md');
     expect(html.match(/<h1\b/g) ?? []).toHaveLength(1);
     expect(html).toContain('Specimen controls announce a toast when clicked');
     expect(html).toContain('Skeleton is specimen-only, not for production use.');

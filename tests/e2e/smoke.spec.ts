@@ -54,19 +54,41 @@ test.afterEach(async ({ page }, testInfo) => {
   await assertBrowserIsClean(page, testInfo);
 });
 
-test('cloud homepage renders core structure without mobile overflow', async ({ page }) => {
+test('cloud homepage renders Fresh Air structure without mobile overflow', async ({ page }) => {
   await page.goto(CLOUD_BASE_URL);
 
+  await expect(page.getByRole('heading', { name: 'Artifacts for Agents' })).toBeVisible();
   await expect(
-    page.getByRole('heading', {
-      name: 'Your agent does the work. Artifacts is where it shows the work.',
-    })
+    page.getByText('Shareable Artifacts your agent can use to show its work.')
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Sign up', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: '★ Star on GitHub' })).toBeVisible();
-  await expect(page.locator('section[aria-labelledby="home-install-prompt-label"]')).toContainText(
-    'Authenticate every request'
+  await expect(page.getByText('this-is-artifact')).toBeVisible();
+  await expect(page.getByText('updated 6 h ago')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agent Skill' })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Open the live Agent Skill artifact' })
+  ).toHaveAttribute('href', /\/a\//);
+  await expect(page.getByRole('link', { name: '/skill.md' }).first()).toHaveAttribute(
+    'href',
+    '/skill.md'
   );
+  await expect(page.getByRole('heading', { name: 'What people use it for' })).toBeVisible();
+  await expect(page.getByText('A status tracker')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Send a link, not a file.' })).toBeVisible();
+  await expect(page.locator('#home-api-code')).toContainText('POST agentartifact.ai/v1/artifacts');
+  await expect(
+    page.getByText("That's the whole API. Your agent already knows how to use it.")
+  ).toBeVisible();
+  await expect(page.getByText('Versioning: the agent edits the document')).toBeVisible();
+  await expect(
+    page.getByText('Grok Bot, Claude Code, Codex, Hermes Agents, Openclaw')
+  ).toBeVisible();
+  await expect(page.getByText('Why this exists').first()).toBeVisible();
+  await expect(page.getByText('Free artifacts live for seven days, then fade.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Agent Skill', exact: true })).toHaveAttribute(
+    'href',
+    '/skill.md'
+  );
+  await expect(page.locator('h1')).toHaveCount(1);
   await expectNoHorizontalOverflow(page);
 });
 
@@ -75,6 +97,11 @@ test('/style-guide exercises primitives without mobile overflow', async ({ page 
 
   await expect(page.getByRole('heading', { name: 'Agent Artifacts Style Guide' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Design tokens' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fresh Air marketing components' })).toBeVisible();
+  await expect(page.getByText('this-is-artifact')).toBeVisible();
+  await expect(page.locator('#style-guide-marketing-api')).toContainText(
+    'POST agentartifact.ai/v1/artifacts'
+  );
   await expect(page.getByRole('heading', { name: 'Component primitives' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Markdown artifact theme' })).toBeVisible();
 

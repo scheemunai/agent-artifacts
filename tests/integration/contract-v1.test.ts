@@ -42,10 +42,27 @@ describe('V1 contract endpoint', () => {
       expect(text).toContain(`Base URL: ${ctx.config.baseUrl}/v1`);
       expect(text).toContain('POST the same slug again = UPDATE');
       expect(text).toContain('the public URL is exactly at response.share.url');
+      expect(text).toContain('Agent publishing skill: GET /skill.md');
 
       const llms = await ctx.app.request('/llms.txt');
       expect(llms.status).toBe(200);
       expect(await llms.text()).toBe(text);
+
+      const skill = await ctx.app.request('/skill.md');
+      expect(skill.status).toBe(200);
+      expect(skill.headers.get('Content-Type')).toBe('text/markdown; charset=utf-8');
+      expect(skill.headers.get('Cache-Control')).toBe('public, max-age=3600');
+      const skillText = await skill.text();
+      expect(skillText).toContain('# Agent Artifacts Skill');
+      expect(skillText).toContain(`Base URL: ${ctx.config.baseUrl}/v1`);
+      expect(skillText).toContain('Authorization: Bearer aa_bot_YOUR_KEY');
+      expect(skillText).toContain('POST /v1/artifacts creates an artifact');
+      expect(skillText).toContain('Use the same slug again. This is an upsert.');
+      expect(skillText).toContain('The content limit is 2 MB per artifact.');
+      expect(skillText).toContain(`${ctx.config.baseUrl}/a/<share_id>`);
+      expect(skillText).toContain('GET /v1/artifacts lists artifacts.');
+      expect(skillText).toContain('POST /v1/templates creates an account template');
+      expect(skillText).not.toMatch(/search/i);
     } finally {
       await ctx.cleanup();
     }

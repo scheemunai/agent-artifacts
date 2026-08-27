@@ -56,11 +56,30 @@ describe('deployment mode behavior', () => {
     const html = await response.text();
 
     expect(response.status).toBe(200);
-    expect(html).toContain('Your agent does the work. Artifacts is where it shows the work.');
-    expect(html).toContain('stable URL, live updates, optional password');
-    expect(html).toContain('Your API key: [KEY]');
-    expect(html).toContain('Sign up to get your key.');
+    expect(html).toContain('Artifacts for Agents');
+    expect(html).toContain('Shareable Artifacts your agent can use to show its work.');
+    expect(html).toContain('this-is-artifact');
+    expect(html).toContain('href="/skill.md"');
+    expect(html).toContain('What people use it for');
     expect(html).toContain('https://github.com/ZeroPointRepo/agent-artifacts');
+  });
+
+  it('serves /skill.md in both deployment modes', async () => {
+    const selfHosted = await createModeContext({ env: { DEPLOYMENT: 'self-hosted' } });
+    const cloud = await createModeContext({ env: { DEPLOYMENT: 'cloud' } });
+
+    for (const ctx of [selfHosted, cloud]) {
+      const response = await ctx.app.request(`${ctx.config.baseUrl}/skill.md`);
+      const text = await response.text();
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('text/markdown; charset=utf-8');
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600');
+      expect(text).toContain(`# Agent Artifacts Skill`);
+      expect(text).toContain(`Base URL: ${ctx.config.baseUrl}/v1`);
+      expect(text).toContain('Authorization: Bearer aa_bot_YOUR_KEY');
+      expect(text).not.toMatch(/search/i);
+    }
   });
 
   it('fails cloud boot without a real or dev mail transport and accepts AA_MAIL_TRANSPORT=log', () => {

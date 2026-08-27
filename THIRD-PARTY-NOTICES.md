@@ -30,6 +30,20 @@ Copyright notice from `OFL.txt`:
 
 The Inter font files are licensed under the SIL Open Font License, Version 1.1. The full OFL text is included at `src/ui/assets/fonts/OFL.txt` and should stay adjacent to redistributed font files.
 
+## Bundled Source Sans 3 font subset
+
+Agent Artifacts bundles a latin subset of Source Sans 3 in:
+
+- `src/ui/assets/fonts/source-sans-3-latin-var.woff2`
+- `public/assets/fonts/source-sans-3-latin-var.woff2`
+- `src/ui/assets/fonts/source-sans-3-OFL.md`
+
+Copyright notice from `source-sans-3-OFL.md`:
+
+> Copyright 2010-2024 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+
+The Source Sans 3 font file is licensed under the SIL Open Font License, Version 1.1. The full OFL text is included at `src/ui/assets/fonts/source-sans-3-OFL.md`.
+
 ## Generated Tailwind CSS
 
 `public/assets/app-*.css` is generated from first-party source CSS at `src/ui/assets/app.css` by `pnpm run build:css` / `scripts/hash-css.mjs`. The generated file includes Tailwind CSS's banner:

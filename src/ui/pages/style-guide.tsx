@@ -1,6 +1,14 @@
 import type { Child } from 'hono/jsx';
 import { Layout } from '../components/layout.js';
 import {
+  MarketingApiBlock,
+  MarketingArtifactEmbed,
+  MarketingExampleCard,
+  MarketingFeatureLine,
+  MarketingOriginNote,
+  MarketingWorksWith,
+} from '../components/marketing.js';
+import {
   Avatar,
   Badge,
   type BadgeTone,
@@ -33,10 +41,10 @@ interface TokenSpec {
 }
 
 const colorTokens: TokenSpec[] = [
-  { name: '--color-aa-bg', intent: 'The document canvas. Use once per page.', swatch: 'bg' },
+  { name: '--color-aa-bg', intent: 'Fresh Air ground. Use once per page.', swatch: 'bg' },
   {
     name: '--color-aa-surface',
-    intent: 'Subtle panels, code blocks, table heads.',
+    intent: 'Hairline surfaces and quiet table heads.',
     swatch: 'surface',
   },
   {
@@ -46,10 +54,14 @@ const colorTokens: TokenSpec[] = [
   },
   {
     name: '--color-aa-surface-tint',
-    intent: 'The only tinted surface: markdown callouts and accent notes.',
+    intent: 'The single coral tint for origin notes and callouts.',
     swatch: 'surface-tint',
   },
-  { name: '--color-aa-ink', intent: 'Primary text. Default for readable content.', swatch: 'ink' },
+  {
+    name: '--color-aa-ink',
+    intent: 'Slate primary text. Default for readable content.',
+    swatch: 'ink',
+  },
   { name: '--color-aa-muted', intent: 'Secondary text and quiet navigation.', swatch: 'muted' },
   {
     name: '--color-aa-subtle',
@@ -59,7 +71,7 @@ const colorTokens: TokenSpec[] = [
   { name: '--color-aa-line', intent: 'Hairline borders and separators.', swatch: 'line' },
   {
     name: '--color-aa-accent',
-    intent: 'The single accent. Links, primary buttons, focus rings, updated state.',
+    intent: 'The single coral accent. Use sparingly for primary action and state.',
     swatch: 'accent',
   },
   {
@@ -74,10 +86,15 @@ const colorTokens: TokenSpec[] = [
     swatch: 'danger',
   },
   { name: '--color-aa-info', intent: 'Neutral system information.', swatch: 'info' },
+  {
+    name: '--color-aa-dark-card',
+    intent: 'The only dark surface: API examples and code moments.',
+    swatch: 'dark-card',
+  },
 ];
 
 const typeTokens: TokenSpec[] = [
-  { name: '--font-sans', intent: 'Inter first, system fallback. Used for all product UI.' },
+  { name: '--font-sans', intent: 'Source Sans 3 first, system fallback. Used for product UI.' },
   { name: '--font-mono', intent: 'Keys, code, curl examples, and compact technical data.' },
   { name: '--text-aa-xs', intent: 'Badges, captions, and compact metadata.' },
   { name: '--text-aa-sm', intent: 'Buttons, hints, inputs, table cells, navigation.' },
@@ -101,6 +118,8 @@ const spaceTokens: TokenSpec[] = [
   { name: '--shadow-aa-sm', intent: 'One-pixel lift for cards and controls.' },
   { name: '--shadow-aa-md', intent: 'Toasts and raised cards.' },
   { name: '--shadow-aa-lg', intent: 'Dialogs and mobile drawers.' },
+  { name: '--shadow-aa-card', intent: 'Fresh Air card shadow.' },
+  { name: '--shadow-aa-card-lift', intent: 'Fresh Air hover lift.' },
   { name: '--shadow-aa-focus', intent: 'Visible, consistent focus language.' },
 ];
 
@@ -171,24 +190,24 @@ export function StyleGuidePage() {
             <p class="aa-page-kicker">UI Foundation</p>
             <h1 class="aa-page-title">Agent Artifacts Style Guide</h1>
             <p class="aa-page-lede">
-              This page is the design contract for Agent Artifacts: every token, primitive, state,
-              and the public markdown content theme in one place.
+              This page is the design contract for Agent Artifacts: every token, primitive,
+              marketing pattern, state, and the public markdown content theme in one place.
             </p>
           </header>
 
           <StyleGuideSection
             id="principles"
             title="Principles"
-            note="Minimal light UI, generous whitespace, one accent, semantic HTML, and zero inline scripts."
+            note="Fresh Air surfaces, generous whitespace, one scarce accent, semantic HTML, and zero inline scripts."
           >
             <div class="aa-grid aa-grid--3">
               <Card
                 title="Typographic first"
-                description="Inter, readable line-height, narrow content columns."
+                description="Source Sans 3, readable line-height, narrow content columns."
               >
                 Pages should feel like carefully published documents, not dashboards by default.
               </Card>
-              <Card title="One accent" description="Indigo marks primary action and state only.">
+              <Card title="One accent" description="Coral marks primary action and state only.">
                 Status colors are semantic; decoration is removed unless it clarifies hierarchy.
               </Card>
               <Card
@@ -203,12 +222,14 @@ export function StyleGuidePage() {
           <StyleGuideSection
             id="tokens"
             title="Design tokens"
-            note="Tokens live in the Tailwind v4 @theme layer. Component CSS references variables only."
+            note="Tokens live in the Tailwind v4 @theme layer. Fresh Air components reference variables only."
           >
             <TokenGroup title="Color" tokens={colorTokens} />
             <TokenGroup title="Type" tokens={typeTokens} />
             <TokenGroup title="Space, radius, shadow, focus" tokens={spaceTokens} />
           </StyleGuideSection>
+
+          {marketingComponentsSection()}
 
           <StyleGuideSection
             id="components"
@@ -303,6 +324,87 @@ function TokenGroup({ title, tokens }: { title: string; tokens: TokenSpec[] }) {
         ))}
       </div>
     </Card>
+  );
+}
+
+function marketingComponentsSection() {
+  return (
+    <StyleGuideSection
+      id="marketing-components"
+      title="Fresh Air marketing components"
+      note="Home page components are registered here first: artifact embed, example card, API block, feature line, works-with line, origin note, and terms copy."
+    >
+      <div class="aa-stack">
+        <MarketingArtifactEmbed
+          href="/style-guide#marketing-components"
+          agentLabel="demo-showcase-agent"
+          slugLabel="this-is-artifact"
+          version="v1"
+          updatedLabel="updated 6 h ago"
+          title="Agent Skill"
+          headingLevel={3}
+          ariaLabel="Specimen artifact card"
+        >
+          <p>
+            An agent reads one skill file to learn the base URL, auth header, and publish examples.
+          </p>
+          <p>
+            The canonical skill lives at <a href="/skill.md">/skill.md</a>.
+          </p>
+        </MarketingArtifactEmbed>
+
+        <div class="aa-marketing-grid">
+          <MarketingExampleCard number="01">
+            <strong>A status tracker</strong> your agent keeps current. You open the same link every
+            morning.
+          </MarketingExampleCard>
+          <MarketingExampleCard number="02">
+            <strong>Proposals and meeting recaps</strong> that go to clients as clean pages, not
+            attachments.
+          </MarketingExampleCard>
+        </div>
+
+        <div class="aa-marketing-api-wrap">
+          <MarketingApiBlock id="style-guide-marketing-api" label="The whole API">
+            POST agentartifact.ai/v1/artifacts{`\n`}
+            {'{ '}
+            <span class="aa-marketing-api__key">"title"</span>:{' '}
+            <span class="aa-marketing-api__string">"Weekly Ops Report"</span>,{' '}
+            <span class="aa-marketing-api__key">"content"</span>:{' '}
+            <span class="aa-marketing-api__string">"# Monday..."</span>
+            {' }'}
+            {`\n`}
+            <span class="aa-marketing-api__url">
+              returns https://agentartifact.ai/a/x7Kd2mQpLbfE3nWvY8tRZA
+            </span>
+          </MarketingApiBlock>
+          <p class="aa-marketing-api__caption">
+            That's the whole API. Your agent already knows how to use it.
+          </p>
+        </div>
+
+        <div class="aa-marketing-features">
+          <MarketingFeatureLine>
+            <strong>Versioning:</strong> the agent edits the document, every change is kept, the
+            link stays the same.
+          </MarketingFeatureLine>
+          <MarketingFeatureLine>
+            <strong>Sharing:</strong> every artifact is a link. Public, private, or password
+            protected.
+          </MarketingFeatureLine>
+        </div>
+
+        <MarketingWorksWith>
+          <strong>Grok Bot, Claude Code, Codex, Hermes Agents, Openclaw,</strong> and any agent that
+          can make an HTTP request.
+        </MarketingWorksWith>
+
+        <MarketingOriginNote
+          quote="I asked my bot for something simple: a visual list of newsletters I should probably unsubscribe from, so I could make quick decisions. It did the work, then handed me an HTML file to download. I didn't want a file. I wanted a link I could open, look through, and reply to, with the bot fixing what I flagged. That link is what we built."
+          byline="Why this exists"
+        />
+      </div>
+    </StyleGuideSection>
   );
 }
 
