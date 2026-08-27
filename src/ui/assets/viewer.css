@@ -105,7 +105,12 @@
    the thing it describes. Collapses to nothing while both states are hidden. */
 .aa-viewer-status {
   min-width: 0;
-  padding-inline: var(--spacing-aa-6);
+  /* Same column as the chrome above it and the document below it. Not filed as a defect, but it is
+     the same drift: a status about this artifact reading 400px left of the artifact. */
+  padding-inline: max(
+    var(--spacing-aa-6),
+    calc((100% - var(--width-aa-prose)) / 2 + var(--spacing-aa-6))
+  );
 }
 
 .aa-viewer-status:has([data-aa-viewer-status]:not([hidden])) {
@@ -230,7 +235,16 @@
   .aa-viewer-chrome {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    padding-inline: var(--spacing-aa-8);
+    /* The bar stays full-bleed — its border and blur are what make it read as chrome — but its
+       contents ride the document's own column. The title appears twice on this page, in the chrome
+       and as the document's heading, and at 1440 they sat 424px apart: two grids for one page.
+       Derived from `--width-aa-prose` and the same `--spacing-aa-6` edge inset `.aa-prose-page`
+       uses, so the two cannot drift apart; `max()` keeps the phone's margins once the viewport is
+       narrower than the column. */
+    padding-inline: max(
+      var(--spacing-aa-8),
+      calc((100% - var(--width-aa-prose)) / 2 + var(--spacing-aa-6))
+    );
   }
 
   .aa-viewer-actions {
