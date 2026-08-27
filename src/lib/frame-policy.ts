@@ -5,7 +5,15 @@ export const APP_PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(),
 
 const DASHBOARD_PREVIEW_CONTENT_TYPE = 'text/html; charset=utf-8';
 
-export type FramePolicyVariant = 'public-artifact' | 'dashboard-preview';
+/**
+ * Every frame variant, as data. The type is derived from this array rather than declared beside it,
+ * so there is one place to add a variant and no way to add one that a test walking this list would
+ * miss. A hand-written union plus a hand-written test array is two lists that agree until they
+ * don't — which is what "a third variant cannot forget" claimed while iterating a literal.
+ */
+export const FRAME_POLICY_VARIANTS = ['public-artifact', 'dashboard-preview'] as const;
+
+export type FramePolicyVariant = (typeof FRAME_POLICY_VARIANTS)[number];
 
 export interface FrameHeadersInput {
   config: AppConfig;
@@ -13,18 +21,39 @@ export interface FrameHeadersInput {
   passwordProtected?: boolean;
 }
 
+/**
+ * Exhaustive by construction. These were a ternary and an `if` with a fallthrough — and they fell
+ * through *opposite ways*: an unrecognised variant took the dashboard CSP here and the public
+ * artifact headers below, so a third variant would have been served a mismatched pair rather than
+ * failing. Now adding a member to `FRAME_POLICY_VARIANTS` breaks the build until both are handled,
+ * which is a stronger guarantee than any test: it cannot be merged red.
+ */
 export function frameCsp(config: AppConfig, variant: FramePolicyVariant): string {
-  return variant === 'public-artifact'
-    ? publicArtifactFrameCsp(config)
-    : dashboardPreviewFrameCsp();
+  switch (variant) {
+    case 'public-artifact':
+      return publicArtifactFrameCsp(config);
+    case 'dashboard-preview':
+      return dashboardPreviewFrameCsp();
+    default:
+      return assertNeverVariant(variant);
+  }
 }
 
 export function frameHeaders(input: FrameHeadersInput): Record<string, string> {
-  if (input.variant === 'dashboard-preview') {
-    return dashboardPreviewFrameHeaders(input.config);
+  switch (input.variant) {
+    case 'public-artifact':
+      return publicArtifactFrameHeaders(input);
+    case 'dashboard-preview':
+      return dashboardPreviewFrameHeaders(input.config);
+    default:
+      return assertNeverVariant(input.variant);
   }
+}
 
-  return publicArtifactFrameHeaders(input);
+function assertNeverVariant(variant: never): never {
+  // Unreachable while the switches above are exhaustive; kept as a runtime backstop because the
+  // variant can arrive from a caller that was not type-checked against this module.
+  throw new Error(`unhandled frame policy variant: ${String(variant)}`);
 }
 
 export function publicArtifactFrameHeaders(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
-import { type FramePolicyVariant, frameCsp } from '../../src/lib/frame-policy.js';
+import { FRAME_POLICY_VARIANTS, frameCsp } from '../../src/lib/frame-policy.js';
 import { ArtifactService } from '../../src/services/artifacts.js';
 import { AuthService, accountToCloudAccount } from '../../src/services/auth.js';
 import { createAuthTestContext, login } from './auth-test-utils.js';
@@ -26,11 +26,17 @@ describe('central frame policy', () => {
     // The defect this guards was an omission, not a wrong value: the dashboard-preview variant
     // simply had no `frame-ancestors` at all, making it the only frame response in the codebase
     // that any site could embed. An omission is invisible to a test that checks what is present,
-    // so this one checks the whole set — a third variant cannot forget.
-    const variants: FramePolicyVariant[] = ['public-artifact', 'dashboard-preview'];
+    // so this one checks the whole set.
+    //
+    // It walks the exported variant list rather than a literal written here. The first version of
+    // this test claimed "a third variant cannot forget" while iterating two hand-typed strings —
+    // a second list that agrees with the type until someone adds a variant to only one of them,
+    // which is the same list-vs-walk shape retired from the style-guide guard the same evening.
     const config = { baseUrl: 'https://agentartifact.example.test' } as never;
 
-    for (const variant of variants) {
+    expect(FRAME_POLICY_VARIANTS.length).toBeGreaterThan(1);
+
+    for (const variant of FRAME_POLICY_VARIANTS) {
       const directives = frameCsp(config, variant).split('; ');
 
       expect(
