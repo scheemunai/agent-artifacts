@@ -126,10 +126,14 @@ describe('B-G7 / B-G8 · bot errors render where they happened', () => {
       headers: postHeaders(ctx, cookie),
       body: formBody({ confirm: 'wrong name' }).body,
     });
-    expect(failed.status).toBe(400);
-    const html = await failed.text();
+    // Post/Redirect/Get: the failure now travels as a code on the URL and is rebuilt on the page,
+    // so the assertion follows the redirect the browser would follow (V2-N4).
+    expect(failed.status).toBe(303);
+    const landing = failed.headers.get('location') ?? '';
+    expect(landing).toContain(`bot=${botId}`);
+    const html = await (await ctx.app.request(landing, { headers: { Cookie: cookie } })).text();
 
-    const message = 'Type the bot name to confirm';
+    const message = 'did not match the bot name';
     expect(html).toContain(message);
     // The whole defect: this message used to render inside the New bot card at the top of the
     // page, describing a control several hundred pixels below it. So the assertion is spatial —
@@ -152,8 +156,9 @@ describe('B-G7 / B-G8 · bot errors render where they happened', () => {
       headers: postHeaders(ctx, cookie),
       body: formBody({ name: '' }).body,
     });
-    expect(failed.status).toBe(400);
-    const html = await failed.text();
+    expect(failed.status).toBe(303);
+    const landing = failed.headers.get('location') ?? '';
+    const html = await (await ctx.app.request(landing, { headers: { Cookie: cookie } })).text();
 
     expect(html).toContain('id="name-error"');
     expect(html).toMatch(/<input[^>]*id="name"[^>]*aria-invalid="true"/);

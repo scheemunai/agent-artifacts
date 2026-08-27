@@ -89,6 +89,90 @@ interface KeyReveal {
 const keyRevealTtlMs = 10 * 60 * 1000;
 
 /**
+ * Server-owned copy for a bots-page failure, addressed through the URL by a stable code.
+ *
+ * The message travels as a code rather than as text for the same reason `noticeFromQuery` does:
+ * a message read out of the query string is a message anyone can put on this page by sending
+ * someone a link, and "your account is suspended, call this number" renders just as well as
+ * anything the product would say. Codes are a closed vocabulary; text is not.
+ */
+const BOT_FAILURE_COPY = {
+  confirmation_mismatch: 'That did not match the bot name, so nothing was changed.',
+  name_required: 'Bot name is required',
+  quota_exceeded: 'This account has reached its bot limit.',
+  unavailable: 'That did not go through, and nothing was changed. Try again.',
+} as const;
+
+type BotFailureCode = keyof typeof BOT_FAILURE_COPY;
+
+function botFailureCode(error: unknown): BotFailureCode {
+  if (error instanceof AuthError) {
+    if (error.code === 'confirmation_mismatch') {
+      return 'confirmation_mismatch';
+    }
+    if (error.code === 'quota_exceeded') {
+      return 'quota_exceeded';
+    }
+  }
+  return 'unavailable';
+}
+
+function botFailureMessage(code: string): string {
+  return BOT_FAILURE_COPY[code as BotFailureCode] ?? BOT_FAILURE_COPY.unavailable;
+}
+
+/**
+ * Rebuilds the keyed failure on the far side of the redirect, so it still lands on its subject.
+ *
+ * This is what makes Post/Redirect/Get affordable here: the error had an address before — the
+ * create form's field, or one bot's row — and the address is what survives the trip, not the
+ * sentence. `bot` names the row; `create_error` and `bot_error` name what went wrong.
+ */
+function botFailureProps(
+  routeContext: Context
+): Pick<DashboardBotsPageProps, 'createError' | 'botError'> {
+  const createCode = scalarQuery(routeContext.req.query('create_error'));
+  const botCode = scalarQuery(routeContext.req.query('bot_error'));
+  const botId = scalarQuery(routeContext.req.query('bot'));
+
+  return {
+    ...(createCode
+      ? {
+          createError: {
+            message: botFailureMessage(createCode),
+            ...(createCode === 'name_required' ? { field: 'name' as const } : {}),
+          },
+        }
+      : {}),
+    ...(botCode && botId ? { botError: { botId, message: botFailureMessage(botCode) } } : {}),
+  };
+}
+
+/**
+ * Every answer to a mutation is somewhere to go — including the answers that failed.
+ *
+ * A mutation that responds with a document leaves the browser standing on the POST URL, so the
+ * reader's next reflex (refresh, or back-then-forward) re-submits it. The success path already
+ * understood this; the failure path did not, and the failure path is the dangerous half: a
+ * destructive action with a correct typed confirmation, whose write failed for a transient
+ * reason, is one refresh away from completing something the reader just watched not happen.
+ */
+async function answerWithRedirect(
+  routeContext: Context,
+  logger: Logger,
+  outcome: { ok: string; failed: string },
+  work: () => Promise<void>
+): Promise<Response> {
+  try {
+    await work();
+  } catch (error) {
+    logger.error({ err: error, path: routeContext.req.path }, 'dashboard.mutation_failed');
+    return routeContext.redirect(outcome.failed, 303);
+  }
+  return routeContext.redirect(outcome.ok, 303);
+}
+
+/**
  * A setup failure that knows which field caused it.
  *
  * `SetupPage` renders an error on its field when it is told which one — rung 2 of the attachment
@@ -386,6 +470,8 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         baseUrl: services.config.baseUrl,
         extensionNavItems: dashboardNavItems(services, session.account),
         shownKey,
+        // The failure survived the redirect as a code; the copy is the server's.
+        ...botFailureProps(routeContext),
         /*
          * When there is a key on screen, its card carries the outcome that produced it — naming the
          * bot, and warning in the regenerate case that a live key just stopped working. A page-level
@@ -468,15 +554,10 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     const name = stringField(form, 'name');
     const byline = stringField(form, 'byline');
     if (!name) {
-      // A field caused it, so the field carries it: `Input error` sets the ring, `aria-invalid`
-      // and `aria-describedby`. It used to render as loose text above the label, with the input
-      // itself in its normal state.
-      return routeContext.html(
-        await renderBotsPage(services, session, {
-          createError: { message: 'Bot name is required', field: 'name' },
-        }),
-        { status: 400 }
-      );
+      // A field caused it, so the field carries it — but by way of the page, not in place. The
+      // code survives the redirect and `Input error` puts the ring, `aria-invalid` and
+      // `aria-describedby` back on the field when the page renders.
+      return routeContext.redirect('/dashboard/bots?create_error=name_required', 303);
     }
     try {
       await enforceQuota(services, accountToCloudAccount(session.account), { type: 'create_bot' });
@@ -495,12 +576,8 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         303
       );
     } catch (error) {
-      return routeContext.html(
-        await renderBotsPage(services, session, {
-          createError: { message: authErrorMessage(error) },
-        }),
-        { status: htmlStatus(error) }
-      );
+      services.logger.error({ err: error }, 'dashboard.bot_create_failed');
+      return routeContext.redirect(`/dashboard/bots?create_error=${botFailureCode(error)}`, 303);
     }
   });
 
@@ -534,11 +611,10 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         303
       );
     } catch (error) {
-      return routeContext.html(
-        await renderBotsPage(services, session, {
-          botError: { botId: routeContext.req.param('id'), message: authErrorMessage(error) },
-        }),
-        { status: htmlStatus(error) }
+      services.logger.error({ err: error }, 'dashboard.bot_mutation_failed');
+      return routeContext.redirect(
+        `/dashboard/bots?bot_error=${botFailureCode(error)}&bot=${encodeURIComponent(routeContext.req.param('id'))}`,
+        303
       );
     }
   });
@@ -557,11 +633,10 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       );
       return routeContext.redirect('/dashboard/bots?notice=bot_revoked', 303);
     } catch (error) {
-      return routeContext.html(
-        await renderBotsPage(services, session, {
-          botError: { botId: routeContext.req.param('id'), message: authErrorMessage(error) },
-        }),
-        { status: htmlStatus(error) }
+      services.logger.error({ err: error }, 'dashboard.bot_mutation_failed');
+      return routeContext.redirect(
+        `/dashboard/bots?bot_error=${botFailureCode(error)}&bot=${encodeURIComponent(routeContext.req.param('id'))}`,
+        303
       );
     }
   });
@@ -572,15 +647,22 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       return session;
     }
     const form = await parseForm(routeContext);
-    await services.artifacts.restoreVersion({
-      account: accountToCloudAccount(session.account),
-      artifactId: routeContext.req.param('id'),
-      versionNum: Number(stringField(form, 'version')),
-      changeSummary: `restored by ${session.account.email}`,
-    });
-    return routeContext.redirect(
-      `/dashboard/artifacts/${routeContext.req.param('id')}?notice=artifact_restored`,
-      303
+    const artifactPath = `/dashboard/artifacts/${routeContext.req.param('id')}`;
+    return answerWithRedirect(
+      routeContext,
+      services.logger,
+      {
+        ok: `${artifactPath}?notice=artifact_restored`,
+        failed: `${artifactPath}?notice=artifact_restore_failed`,
+      },
+      async () => {
+        await services.artifacts.restoreVersion({
+          account: accountToCloudAccount(session.account),
+          artifactId: routeContext.req.param('id'),
+          versionNum: Number(stringField(form, 'version')),
+          changeSummary: `restored by ${session.account.email}`,
+        });
+      }
     );
   });
 
@@ -595,17 +677,31 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       retentionDays: null,
     });
     const form = await parseForm(routeContext);
-    if (!artifact || stringField(form, 'confirm') !== artifact.title) {
+    // Gone already is not a mismatch, and sending the reader to the detail page of something that
+    // no longer exists would answer one dead end with another.
+    if (!artifact) {
+      return routeContext.redirect('/dashboard?notice=artifact_missing', 303);
+    }
+    if (stringField(form, 'confirm') !== artifact.title) {
       return routeContext.redirect(
-        `/dashboard/artifacts/${routeContext.req.param('id')}?notice=confirmation_mismatch`,
+        `/dashboard/artifacts/${routeContext.req.param('id')}?notice=delete_confirm_mismatch`,
         303
       );
     }
-    await services.artifacts.softDeleteArtifact({
-      account: accountToCloudAccount(session.account),
-      artifactId: routeContext.req.param('id'),
-    });
-    return routeContext.redirect('/dashboard?notice=artifact_deleted', 303);
+    return answerWithRedirect(
+      routeContext,
+      services.logger,
+      {
+        ok: '/dashboard?notice=artifact_deleted',
+        failed: `/dashboard/artifacts/${routeContext.req.param('id')}?notice=artifact_delete_failed`,
+      },
+      async () => {
+        await services.artifacts.softDeleteArtifact({
+          account: accountToCloudAccount(session.account),
+          artifactId: routeContext.req.param('id'),
+        });
+      }
+    );
   });
 
   app.post('/dashboard/api/artifacts/:id/share', async (routeContext) => {
@@ -669,16 +765,23 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       artifactId: routeContext.req.param('id'),
       retentionDays: null,
     });
-    if (!artifact || stringField(form, 'confirm') !== artifact.slug) {
-      return routeContext.redirect(
-        `/dashboard/artifacts/${routeContext.req.param('id')}?notice=confirmation_mismatch`,
-        303
-      );
+    const sharePath = `/dashboard/artifacts/${routeContext.req.param('id')}`;
+    if (!artifact) {
+      return routeContext.redirect('/dashboard?notice=artifact_missing', 303);
     }
-    await revokeDashboardShare(services, session, routeContext.req.param('id'));
-    return routeContext.redirect(
-      `/dashboard/artifacts/${routeContext.req.param('id')}?notice=share_revoked`,
-      303
+    if (stringField(form, 'confirm') !== artifact.slug) {
+      return routeContext.redirect(`${sharePath}?notice=share_revoke_confirm_mismatch`, 303);
+    }
+    return answerWithRedirect(
+      routeContext,
+      services.logger,
+      {
+        ok: `${sharePath}?notice=share_revoked`,
+        failed: `${sharePath}?notice=share_revoke_failed`,
+      },
+      async () => {
+        await revokeDashboardShare(services, session, routeContext.req.param('id'));
+      }
     );
   });
 
@@ -792,36 +895,17 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     }
     const form = await parseForm(routeContext);
     if (normalizeEmail(stringField(form, 'confirm')) !== session.account.email) {
-      return routeContext.redirect(
-        '/dashboard/settings?error=Type%20the%20account%20email%20to%20confirm',
-        303
-      );
+      return routeContext.redirect('/dashboard/settings?notice=account_confirm_mismatch', 303);
     }
-    await services.auth.deleteAccountHard(session.account.id);
-    services.sessions.clearSessionCookie(routeContext);
-    return routeContext.redirect('/login', 303);
-  });
-}
-
-/**
- * Re-renders the bots page after a failed mutation, with the failure carried on whatever caused it.
- *
- * Every bots-page error used to arrive as one `error` string that the page could only put in the
- * New bot card, so a mistyped confirmation on the fourth row reported itself as a problem with
- * creating a bot. The error now travels keyed — to the create form's field, to the create card, or
- * to one bot id — and the page renders it where that key points.
- */
-async function renderBotsPage(
-  services: HumanServices,
-  session: AuthenticatedSession,
-  failure: Pick<DashboardBotsPageProps, 'createError' | 'botError'>
-): Promise<string> {
-  return DashboardBotsPage({
-    account: accountView(session.account),
-    bots: await services.auth.listBots(session.account.id),
-    baseUrl: services.config.baseUrl,
-    extensionNavItems: dashboardNavItems(services, session.account),
-    ...failure,
+    return answerWithRedirect(
+      routeContext,
+      services.logger,
+      { ok: '/login', failed: '/dashboard/settings?notice=account_delete_failed' },
+      async () => {
+        await services.auth.deleteAccountHard(session.account.id);
+        services.sessions.clearSessionCookie(routeContext);
+      }
+    );
   });
 }
 
@@ -1042,8 +1126,53 @@ function noticeFromQuery(value: string | undefined): DashboardNotice | undefined
       return { tone: 'success', message: 'Template promoted.' };
     case 'password_required':
       return { tone: 'danger', message: 'Enter a password first.' };
-    case 'confirmation_mismatch':
-      return { tone: 'danger', message: 'Typed confirmation did not match.' };
+
+    /*
+     * B-G6. One string served every confirmation in the product — "Typed confirmation did not
+     * match." — so on a page carrying three of them the reader could not tell which one had
+     * failed, and none of them said what was still true afterwards. Each site now names its own
+     * subject and its own consequence, which is the part that answers "so what happened?".
+     */
+    case 'delete_confirm_mismatch':
+      return {
+        tone: 'danger',
+        message: 'The title you typed did not match, so the artifact was not deleted.',
+      };
+    case 'share_revoke_confirm_mismatch':
+      return {
+        tone: 'danger',
+        message: 'The slug you typed did not match, so the share link is still live.',
+      };
+    case 'account_confirm_mismatch':
+      return {
+        tone: 'danger',
+        message: 'The email you typed did not match, so the account was not deleted.',
+      };
+
+    /*
+     * The transient half. These say what did not happen rather than what went wrong, because the
+     * reader cannot act on the cause and the only thing they need to know is whether the thing
+     * they asked for took effect.
+     */
+    case 'artifact_delete_failed':
+      return {
+        tone: 'danger',
+        message: 'That delete did not go through — the artifact is still here.',
+      };
+    case 'share_revoke_failed':
+      return {
+        tone: 'danger',
+        message: 'That revoke did not go through — the link is still live.',
+      };
+    case 'artifact_restore_failed':
+      return {
+        tone: 'danger',
+        message: 'That restore did not go through — the current version is unchanged.',
+      };
+    case 'account_delete_failed':
+      return { tone: 'danger', message: 'That did not go through — the account was not deleted.' };
+    case 'artifact_missing':
+      return { tone: 'warn', message: 'That artifact is no longer here.' };
     default:
       return undefined;
   }

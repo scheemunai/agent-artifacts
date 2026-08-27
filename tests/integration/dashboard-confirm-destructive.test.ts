@@ -147,7 +147,9 @@ describe('B-D1 · the server still owns the confirmation it renders', () => {
       body: formBody({ confirm: 'not the title' }).body,
     });
     expect(mismatch.status).toBe(303);
-    expect(mismatch.headers.get('location')).toContain('notice=confirmation_mismatch');
+    // Each confirmation site names itself now (B-G6); one shared string could not say which of
+    // the three on a page had failed.
+    expect(mismatch.headers.get('location')).toContain('notice=delete_confirm_mismatch');
 
     const deleted = await ctx.app.request(`/dashboard/api/artifacts/${artifactId}/delete`, {
       method: 'POST',
@@ -167,7 +169,11 @@ describe('B-D1 · the server still owns the confirmation it renders', () => {
       headers: postHeaders(ctx, cookie),
       body: formBody({ confirm: 'Bravo' }).body,
     });
-    expect(wrong.status).toBe(400);
+    // A rejected confirmation answers with somewhere to go, not with a document on the POST URL
+    // that a refresh would re-submit (V2-N4). The server rejecting it is what is under test here,
+    // and it still does.
+    expect(wrong.status).toBe(303);
+    expect(wrong.headers.get('location')).toContain('/dashboard/bots?bot_error=');
 
     const regenerated = await ctx.app.request(`/dashboard/api/bots/${botIds.Alpha}/regenerate`, {
       method: 'POST',
@@ -195,7 +201,7 @@ describe('B-D1 · the server still owns the confirmation it renders', () => {
       body: formBody({ confirm: 'someone@else.test' }).body,
     });
     expect(wrong.status).toBe(303);
-    expect(wrong.headers.get('location')).toContain('error=');
+    expect(wrong.headers.get('location')).toContain('notice=account_confirm_mismatch');
 
     const deleted = await ctx.app.request('/dashboard/api/settings/delete', {
       method: 'POST',
