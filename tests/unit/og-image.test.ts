@@ -17,6 +17,17 @@ import {
   OG_PALETTE,
   stripUnsupportedOgGlyphs,
 } from '../../src/lib/og.js';
+import { themeVariables } from '../support/css-cascade.js';
+
+/** Which app.css design token each OG palette entry mirrors. */
+const OG_TOKEN_FOR: Record<keyof typeof OG_PALETTE, string> = {
+  air: '--color-aa-bg',
+  ink: '--color-aa-ink',
+  muted: '--color-aa-muted',
+  line: '--color-aa-line',
+  accent: '--color-aa-accent',
+  accentInk: '--color-aa-accent-ink',
+};
 
 interface PngDimensions {
   width: number;
@@ -137,13 +148,32 @@ describe('OG card brand', () => {
   });
 
   it('keeps the OG palette in step with the app.css design tokens', () => {
-    const tokens = readFileSync(repoPath('src/ui/assets/app.css'), 'utf8').toLowerCase();
+    // Each OG colour is checked against the *named* token it mirrors, not against the file as a
+    // whole. Substring containment asked only "does this hex appear somewhere in app.css", which is
+    // a weaker question than it looks: `#ffffff` appears twice today, as --color-aa-surface-raised
+    // and --color-aa-accent-ink, so a drift in accent-ink was already masked by the other. The
+    // guard passed for a reason unrelated to the thing it was guarding.
+    const css = readFileSync(repoPath('src/ui/assets/app.css'), 'utf8');
+    const tokens = themeVariables(css);
 
-    for (const hex of Object.values(OG_PALETTE)) {
-      expect(tokens).toContain(hex);
+    // The mapping is a correspondence between two vocabularies, so it has to be written down — but
+    // it must not be allowed to go stale: a palette entry added without a token named here fails
+    // this line rather than being silently skipped by the loop below.
+    expect(Object.keys(OG_TOKEN_FOR).sort(), 'OG_PALETTE and the token map disagree').toEqual(
+      Object.keys(OG_PALETTE).sort()
+    );
+
+    for (const [key, hex] of Object.entries(OG_PALETTE)) {
+      const token = OG_TOKEN_FOR[key as keyof typeof OG_PALETTE];
+      expect(tokens.get(token), `${token} is not defined in app.css @theme`).toBeDefined();
+      expect(tokens.get(token)?.toLowerCase(), `OG ${key} drifted from ${token}`).toBe(
+        hex.toLowerCase()
+      );
     }
+
+    const lowerCss = css.toLowerCase();
     for (const hex of RETIRED_HEXES) {
-      expect(tokens).not.toContain(hex);
+      expect(lowerCss).not.toContain(hex);
     }
   });
 

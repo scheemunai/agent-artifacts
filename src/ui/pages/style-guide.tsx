@@ -436,7 +436,10 @@ function marketingComponentsSection() {
           agentLabel="demo-showcase-agent"
           slugLabel="this-is-artifact"
           version="v3"
-          updatedLabel="updated 6 h ago"
+          // A shape, not a value. "updated 6 h ago" was the hard-coded string W5 removed from the
+          // home page for being a lie, and a design contract that keeps showing it teaches the
+          // pattern that produced it — the next person copies the specimen, not the fix.
+          updatedLabel="updated {relative time}"
           title="Agent Skill"
           headingLevel={3}
           ariaLabel="Specimen artifact card"
@@ -786,7 +789,7 @@ function cardTableSection() {
           caption="Artifact rows"
           columns={['Title', 'Type', 'Share state', 'Updated', 'Views']}
           rows={[
-            ['Weekly Ops Report', <Badge tone="accent">md</Badge>, 'Shared', '2h ago', '142'],
+            ['Weekly Ops Report', <Badge tone="accent">md</Badge>, 'Shared', '{relative}', '142'],
             ['Launch Notes', <Badge tone="info">html</Badge>, 'Private', 'Yesterday', '0'],
             ['Incident Retro', <Badge tone="warn">md</Badge>, 'Password protected', 'Aug 25', '38'],
           ]}
@@ -830,7 +833,7 @@ function tableColumnPrioritySection() {
           [
             'ops-bot',
             <code>aa_bot_…x7Qk</code>,
-            '2h ago',
+            '{relative}',
             <ButtonRow>
               <Button
                 variant="danger"

@@ -53,14 +53,32 @@ function exportedComponents(source: string): string[] {
 }
 
 describe('style guide registry', () => {
-  it('registers every exported primitive', () => {
+  it('registers every exported primitive as a rendered element, not a mention', () => {
+    // This accepted `Name(` or `<Name` anywhere in the file, comments included — so a primitive
+    // named only in the prose explaining why it exists counted as registered. The guide's whole
+    // claim is that it *shows* the components, so the match now requires JSX element syntax in
+    // code with comments stripped.
+    //
+    // Honest limit, stated rather than implied: this proves the guide renders the element, not
+    // that the specimen exercises it meaningfully. A rendered marker per primitive would need a
+    // per-specimen wrapper the guide does not currently have.
+    const code = styleGuideSource.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
     const components = exportedComponents(primitivesSource);
     expect(components.length).toBeGreaterThan(15);
 
     for (const name of components) {
-      const used = new RegExp(`(?:<${name}[\\s/>]|\\b${name}\\()`).test(styleGuideSource);
-      expect(used, `${name} is exported but never registered in the style guide`).toBe(true);
+      const rendered = new RegExp(`<${name}[\\s/>]`).test(code);
+      expect(rendered, `${name} is exported but never rendered in the style guide`).toBe(true);
     }
+  });
+
+  it('shows specimen data as a shape, never as a plausible fact', () => {
+    // D5-4: the marketing specimen hard-coded "updated 6 h ago" — the exact string W5 deleted from
+    // the home page for asserting a freshness nobody had computed. In the design contract it is
+    // worse than on home: it is the version other people copy.
+    expect(html, 'the guide states a relative time as if it were real').not.toMatch(
+      /\b\d+\s*(?:h|hrs?|hours?|m|mins?|minutes?|d|days?)\s+ago\b/i
+    );
   });
 
   it('describes the surfaces that are whole documents rather than primitives', () => {
