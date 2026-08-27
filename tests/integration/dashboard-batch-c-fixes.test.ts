@@ -157,9 +157,9 @@ describe('Batch C accepted dashboard fixes', () => {
       }).body,
     });
     expect(passwordChange.status).toBe(303);
-    expect(passwordChange.headers.get('location')).toContain(
-      'Password%20changes%20are%20unavailable'
-    );
+    // The refusal is a code now, not a sentence in the URL — the page owns the copy so the query
+    // string cannot be used to print arbitrary text on a signed-in page.
+    expect(passwordChange.headers.get('location')).toContain('notice=password_cloud_unavailable');
 
     const headers = originHeaders(ctx, cookie);
     headers.set('Content-Type', 'application/x-www-form-urlencoded');

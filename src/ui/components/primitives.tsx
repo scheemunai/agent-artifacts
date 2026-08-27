@@ -208,6 +208,12 @@ interface InputProps {
   disabled?: boolean | undefined;
   state?: ComponentState | undefined;
   name?: string | undefined;
+  /**
+   * The browser's own vocabulary for what this field holds. Without it a password manager cannot
+   * tell a current password from a new one, so it offers to fill all three boxes of a change-password
+   * form with the same value — and offers to save the wrong one afterwards.
+   */
+  autocomplete?: string | undefined;
 }
 
 export function Input({
@@ -222,6 +228,7 @@ export function Input({
   disabled,
   state,
   name,
+  autocomplete,
 }: InputProps) {
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
@@ -232,6 +239,7 @@ export function Input({
         type={type}
         value={value}
         placeholder={placeholder}
+        autocomplete={autocomplete}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
@@ -991,6 +999,16 @@ interface PaginationProps {
   nextDisabled?: boolean | undefined;
   previousDataAttrs?: Record<string, string> | undefined;
   nextDataAttrs?: Record<string, string> | undefined;
+  /**
+   * Where each step goes, when paging is navigation rather than script.
+   *
+   * The dashboard pages a server-rendered list through cursor URLs, so its steps are links: they
+   * open in a new tab, they can be copied, and they work before any JavaScript does. Without these
+   * the component could only ever be driven by a client that was not written, which is most of why
+   * it sat defined-and-unused while the list hand-rolled a Button and a Badge instead.
+   */
+  previousHref?: string | undefined;
+  nextHref?: string | undefined;
 }
 
 export function Pagination({
@@ -1000,6 +1018,8 @@ export function Pagination({
   nextDisabled = false,
   previousDataAttrs = {},
   nextDataAttrs = {},
+  previousHref,
+  nextHref,
 }: PaginationProps) {
   return (
     <nav class="aa-pagination" aria-label={label}>
@@ -1009,11 +1029,18 @@ export function Pagination({
           size="sm"
           variant="secondary"
           disabled={previousDisabled}
+          href={previousHref}
           dataAttrs={previousDataAttrs}
         >
           Previous
         </Button>
-        <Button size="sm" variant="secondary" disabled={nextDisabled} dataAttrs={nextDataAttrs}>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={nextDisabled}
+          href={nextHref}
+          dataAttrs={nextDataAttrs}
+        >
           Next
         </Button>
       </div>

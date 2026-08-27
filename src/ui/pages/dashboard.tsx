@@ -11,6 +11,7 @@ import {
   Input,
   NavShell,
   Notice,
+  Pagination,
   Select,
   Table,
   Textarea,
@@ -173,18 +174,23 @@ export function DashboardHomePage({
             {artifacts.map((artifact) => (
               <ArtifactRow artifact={artifact} />
             ))}
-            <ButtonRow>
-              {filters.nextCursor ? (
-                <Button
-                  variant="secondary"
-                  href={dashboardListHref({ ...filters, cursor: filters.nextCursor })}
-                >
-                  Load more
-                </Button>
-              ) : (
-                <Badge tone="neutral">End of list</Badge>
-              )}
-            </ButtonRow>
+            {/* One slot, one component. It used to be a Button for one account and a neutral
+                Badge for another, which made "there is more" and "that was all" different kinds
+                of object rather than two states of the same one. */}
+            <Pagination
+              label="Artifact list pages"
+              pageDescription={
+                filters.nextCursor
+                  ? `${formatCount(artifacts.length)} shown so far`
+                  : `${formatCount(artifacts.length)} artifacts · end of list`
+              }
+              previousDisabled={!filters.cursor}
+              nextDisabled={!filters.nextCursor}
+              previousHref="/dashboard"
+              {...(filters.nextCursor
+                ? { nextHref: dashboardListHref({ ...filters, cursor: filters.nextCursor }) }
+                : {})}
+            />
           </div>
         )}
       </section>
@@ -390,26 +396,30 @@ export function DashboardBotsPage({
           </form>
         </Card>
 
+        {/* Key and Last used used to be their own columns, demoted below 480px — which put the one
+            datum an operator checks before revoking from a phone behind nothing at all: no
+            disclosure, no detail view, no way back to it. Folding them into the Bot cell means the
+            table has two columns at every width, so there is nothing to drop. */}
         {bots.length === 0 ? null : (
           <Table
             id="dashboard-bots"
             caption="Registered bots"
-            columnPriority
-            columns={[
-              'Bot',
-              { label: 'Key', priority: 'secondary' },
-              { label: 'Last used', priority: 'secondary' },
-              'Actions',
-            ]}
+            columns={['Bot', 'Actions']}
             rows={bots.map((bot) => [
-              <span>
-                <strong>{bot.name}</strong>
-                <br />
+              <div>
+                <ButtonRow>
+                  <strong>{bot.name}</strong>
+                  {bot.revokedAt ? <Badge tone="danger">revoked</Badge> : null}
+                </ButtonRow>
                 <span class="aa-hint">{bot.byline ?? 'No byline'}</span>
-                {bot.revokedAt ? <Badge tone="danger">revoked</Badge> : null}
-              </span>,
-              <code>aa_bot_…{bot.apiKeyLast4}</code>,
-              <span>{bot.lastUsedAt ? formatRelativeTime(bot.lastUsedAt) : 'never'}</span>,
+                <br />
+                <span class="aa-hint">
+                  <code>aa_bot_…{bot.apiKeyLast4}</code> ·{' '}
+                  {bot.lastUsedAt
+                    ? `last used ${formatRelativeTime(bot.lastUsedAt)}`
+                    : 'never used'}
+                </span>
+              </div>,
               <BotActions
                 bot={bot}
                 error={botError?.botId === bot.id ? botError.message : undefined}
@@ -528,13 +538,10 @@ export function DashboardSettingsPage({
             }
           >
             <form class="aa-stack" method="post" action="/dashboard/api/settings/email">
-              <Input
-                id="new_email"
-                name="new_email"
-                label="New email"
-                type="email"
-                value={account.email}
-              />
+              {/* Prefilled with the current address, this could be submitted unchanged — and the
+                  current address was never actually displayed anywhere. */}
+              <p class="aa-hint">Currently {account.email}</p>
+              <Input id="new_email" name="new_email" label="New email" type="email" value="" />
               {isCloud ? (
                 <p class="aa-hint">
                   We will email a one-time confirmation link before changing the address.
@@ -545,6 +552,7 @@ export function DashboardSettingsPage({
                   name="current_password"
                   label="Current password"
                   type="password"
+                  autocomplete="current-password"
                 />
               )}
               <Button variant="primary" type="submit">
@@ -576,13 +584,21 @@ export function DashboardSettingsPage({
                   name="current_password"
                   label="Current password"
                   type="password"
+                  autocomplete="current-password"
                 />
-                <Input id="new_password" name="new_password" label="New password" type="password" />
+                <Input
+                  id="new_password"
+                  name="new_password"
+                  label="New password"
+                  type="password"
+                  autocomplete="new-password"
+                />
                 <Input
                   id="confirm_password"
                   name="confirm_password"
                   label="Confirm new password"
                   type="password"
+                  autocomplete="new-password"
                 />
                 <Button variant="primary" type="submit">
                   Change password
@@ -593,7 +609,7 @@ export function DashboardSettingsPage({
         </div>
         <Card
           title="Delete account"
-          description="Hard-deletes everything you own. Existing public share URLs return 404, not 410."
+          description="Removes everything you own. Shared links stop working immediately and read as missing."
         >
           <ConfirmDestructive
             id="delete-account"
@@ -862,19 +878,22 @@ function ArtifactRow({ artifact }: { artifact: DashboardArtifactListItem }) {
         </ButtonRow>
         <p class="aa-section-note">
           by {artifact.botName ?? 'unknown bot'} · <code>{artifact.slug}</code> · updated{' '}
-          {formatRelativeTime(artifact.updatedAt)} · {artifact.lifetimeViews} views
+          {formatRelativeTime(artifact.updatedAt)} · {formatCount(artifact.lifetimeViews)} views
         </p>
       </div>
     </Card>
   );
 }
 
+/**
+ * A type is not a state.
+ *
+ * `md` shipped as success green and `html` as info blue, which reads as a judgement on the
+ * artifact and, worse, spent both tones so neither was available for anything that is actually a
+ * state. Type is a neutral tag; success, warn, danger and info belong to what happened.
+ */
 function ArtifactTypeBadge({ type }: { type: ArtifactType }) {
-  return (
-    <Badge tone={type === 'markdown' ? 'success' : 'info'}>
-      {type === 'markdown' ? 'md' : 'html'}
-    </Badge>
-  );
+  return <Badge tone="neutral">{type === 'markdown' ? 'md' : 'html'}</Badge>;
 }
 
 /**
@@ -1256,9 +1275,7 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
             {template.builtIn ? 'starter' : 'yours'}
           </Badge>
           <Badge tone="neutral">{template.slug}</Badge>
-          <Badge tone={template.type === 'markdown' ? 'success' : 'info'}>
-            {template.type === 'markdown' ? 'markdown' : 'html'}
-          </Badge>
+          <Badge tone="neutral">{template.type === 'markdown' ? 'md' : 'html'}</Badge>
         </ButtonRow>
         {template.description ? <p class="aa-section-note">{template.description}</p> : null}
         <p class="aa-hint">
@@ -1377,9 +1394,16 @@ function formatByline(artifact: Pick<DashboardArtifactListItem, 'botName' | 'bot
   if (!artifact.botName) {
     return 'by unknown bot';
   }
+  // The interpunct separates unrelated meta fields elsewhere in this line, so using it here too
+  // made one bot read as two. Parentheses subordinate the byline to the name it describes.
   return artifact.botByline
-    ? `by ${artifact.botName} · ${artifact.botByline}`
+    ? `by ${artifact.botName} (${artifact.botByline})`
     : `by ${artifact.botName}`;
+}
+
+/** Counts are read, not parsed: a grouped 50,000 is a number, 50000 is a digit string. */
+function formatCount(value: number): string {
+  return value.toLocaleString('en-US');
 }
 
 function formatRelativeTime(timestamp: number): string {

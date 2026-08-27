@@ -62,7 +62,7 @@ async function seedAll(ctx: AuthTestContext): Promise<{ cookie: string; artifact
 }
 
 describe('B-T1 · tables drop their least-important columns instead of hiding controls', () => {
-  it('the bots registry keeps Bot and Actions at 375 and demotes the rest', async () => {
+  it('the bots registry needs no priority at all, because it drops nothing', async () => {
     const ctx = await makeContext();
     const { cookie } = await seedAll(ctx);
 
@@ -70,13 +70,18 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
       await ctx.app.request('/dashboard/bots', { headers: { Cookie: cookie } })
     ).text();
 
-    expect(html).toContain('aa-table-scroll--priority');
+    // This table used to demote Key and Last used below 480px. That satisfied "Actions stays
+    // reachable" and still lost the reader the datum they check before revoking, with no way back
+    // to it (V2-N5). Two columns is the better trade: nothing to demote, nothing off-screen.
+    // What the folded cell contains is asserted in dashboard-craft-r3.
     expect(headerPriorities(html, 'dashboard-bots')).toEqual([
       ['Bot', 'primary'],
-      ['Key', 'secondary'],
-      ['Last used', 'secondary'],
       ['Actions', 'primary'],
     ]);
+    // `columnPriority` is not opted into at all here, so no cell can be marked away.
+    expect(html.split('<table class="aa-table" id="dashboard-bots">')[1] ?? '').not.toContain(
+      'data-aa-priority="secondary"'
+    );
   });
 
   it('version history keeps Version and Actions', async () => {
@@ -87,6 +92,7 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
       await ctx.app.request(`/dashboard/artifacts/${artifactId}`, { headers: { Cookie: cookie } })
     ).text();
 
+    expect(html).toContain('aa-table-scroll--priority');
     expect(headerPriorities(html, 'artifact-versions')).toEqual([
       ['Version', 'primary'],
       ['Summary', 'secondary'],
