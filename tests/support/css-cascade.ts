@@ -335,11 +335,20 @@ function selectorParts(selector: string): string[] {
 
 /** Does `selector` match the last element of `path`? Descendant and child combinators only. */
 export function matches(selector: string, path: ElementSpec[]): boolean {
-  if (/[+~]/.test(selector.replace(/\[[^\]]*\]/g, ''))) {
-    throw new Error(`sibling combinators are not supported: ${selector}`);
-  }
   const parts = selectorParts(selector);
   if (parts.length === 0) {
+    return false;
+  }
+
+  // An `ElementSpec` path models ancestry, not siblings. A sibling-combinator rule whose subject
+  // could not match this element is simply skipped; one that could match is an explicit error,
+  // because silently ignoring it would hand back a confidently wrong answer.
+  if (/[+~]/.test(selector.replace(/\[[^\]]*\]/g, ''))) {
+    const subject = parts[parts.length - 1] as string;
+    const last = path[path.length - 1];
+    if (last && matchesCompound(subject, last)) {
+      throw new Error(`sibling combinator could match this element: ${selector}`);
+    }
     return false;
   }
 

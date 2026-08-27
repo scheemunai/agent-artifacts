@@ -273,7 +273,11 @@ function InitialContent({ content }: { content: ViewerContentResult }) {
     );
   }
 
-  return <div dangerouslySetInnerHTML={{ __html: content.html ?? '' }} />;
+  // `aa-prose-page` supplies the reading column. It lives on the wrapper rather than on `.aa-md`
+  // itself so the identical rendered markdown can also sit inside a dashboard card without
+  // dragging a 64px top margin and a second inset in with it. `viewer-*.js` builds the same
+  // wrapper, so the server DOM and the polled DOM are one shape.
+  return <div class="aa-prose-page" dangerouslySetInnerHTML={{ __html: content.html ?? '' }} />;
 }
 
 export function ViewerFooter({

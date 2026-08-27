@@ -2089,15 +2089,43 @@
     font-size: var(--text-aa-sm);
   }
 
+  /* Prose scope only. `renderMarkdown()` stamps this class onto every piece of rendered markdown
+     in the product, including previews that live inside an already-padded card, so it must carry
+     type and nothing else. Page geometry — the reading column, its margins and its insets — is
+     `.aa-prose-page`, applied only where prose is read on its own. */
   .aa-md {
-    width: min(100%, var(--width-aa-prose));
-    margin: var(--spacing-aa-16) auto 0;
-    padding-inline: var(--spacing-aa-6);
     color: var(--color-aa-ink);
     font-family: var(--font-sans);
     font-size: 1.0625rem;
     line-height: 1.65;
     overflow-wrap: break-word;
+  }
+
+  /* Whatever leads the prose leads it flush. `.aa-md h2` carries a 2em top margin for rhythm
+     between sections, and the dashboard renders previews at headingOffset 1 — so without this
+     every preview card opened with 2em of nothing. */
+  .aa-md > :first-child {
+    margin-top: 0;
+  }
+
+  /* The reading column: prose read as a document rather than embedded in one. */
+  .aa-prose-page {
+    width: min(100%, var(--width-aa-prose));
+    margin-inline: auto;
+    padding: var(--spacing-aa-10) var(--spacing-aa-6) var(--spacing-aa-12);
+  }
+
+  /* A framed document has no intrinsic size, so without this an owner's HTML preview fell back to
+     the UA's 300x150 replaced-element default in the corner of a full-width card. */
+  .aa-preview-frame,
+  .aa-card__body > iframe {
+    display: block;
+    width: 100%;
+    min-height: 18rem;
+    height: clamp(18rem, 48vh, 34rem);
+    border: 0;
+    border-radius: var(--radius-aa-md);
+    background: var(--color-aa-surface);
   }
 
   .aa-md :where(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, pre, table, figure) {
@@ -2318,7 +2346,7 @@
 
   @media (max-width: 480px) {
     .aa-shell,
-    .aa-md {
+    .aa-prose-page {
       padding-inline: var(--spacing-aa-4);
     }
 

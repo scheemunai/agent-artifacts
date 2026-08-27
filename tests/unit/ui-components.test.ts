@@ -153,8 +153,10 @@ describe('ui css contract', () => {
     expect(css).toMatch(/\.aa-md pre code\s*{[\s\S]*?width: max-content;/);
     expect(css).toMatch(/\.aa-md table\s*{[\s\S]*?display: block;[\s\S]*?overflow-x: auto;/);
     expect(css).toContain('.aa-md .aa-md-table-scroll table');
+    // Mobile inset belongs to the reading column, not to the prose scope: `.aa-md` is embedded in
+    // already-padded cards. See `tests/unit/ui-prose-scope.test.ts` for the resolved proof.
     expect(css).toMatch(
-      /@media \(max-width: 480px\)[\s\S]*?\.aa-md[\s\S]*?padding-inline: var\(--spacing-aa-4\)/
+      /@media \(max-width: 480px\)[\s\S]*?\.aa-prose-page\s*\{\s*padding-inline: var\(--spacing-aa-4\)/
     );
   });
 

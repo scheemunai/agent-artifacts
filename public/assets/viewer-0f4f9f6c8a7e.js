@@ -278,7 +278,16 @@ function renderArtifactContent(payload) {
     return;
   }
 
-  contentNode.innerHTML = payload.html || '';
+  // Same wrapper the server renders: `.aa-md` is prose scope only, and `.aa-prose-page` is the
+  // reading column. Building it here keeps the polled DOM identical to the delivered DOM.
+  let prose = contentNode.querySelector('.aa-prose-page');
+  if (!prose) {
+    contentNode.textContent = '';
+    prose = document.createElement('div');
+    prose.className = 'aa-prose-page';
+    contentNode.append(prose);
+  }
+  prose.innerHTML = payload.html || '';
 }
 
 function installFrameHeightBridge() {
