@@ -4,7 +4,11 @@ import type { AppConfig } from '../config.js';
 import type { DatabaseHandle } from '../db/client.js';
 import type { CloudModule } from '../extension/cloud-module.js';
 import { createDefaultCloudModule } from '../extension/default-module.js';
-import { FRAME_CONTENT_TYPE, frameHeaders } from '../lib/frame-policy.js';
+import {
+  FRAME_CONTENT_TYPE,
+  frameHeaders,
+  publicArtifactFrameHeaders,
+} from '../lib/frame-policy.js';
 import { isSandboxHostRequest } from '../lib/host-guard.js';
 import { generateCachedOgImage } from '../lib/og.js';
 import {
@@ -22,6 +26,7 @@ import {
   type ViewerContentResult,
   ViewerService,
 } from '../services/viewer.js';
+import { FrameDocument, FrameTerminalDocument } from '../ui/pages/frame-document.js';
 import { ShareTerminalPage } from '../ui/pages/share-terminal.js';
 import { ViewerPage } from '../ui/pages/viewer.js';
 
@@ -214,19 +219,24 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
   });
 
   app.on(['GET', 'HEAD'], '/a/:share_id/frame', async (context) => {
-    const redirectUrl = frameRedirectUrl(context as unknown as PublicContext, ctx.config);
+    const frameContext = context as unknown as PublicContext;
+    const redirectUrl = frameRedirectUrl(frameContext, ctx.config);
     if (redirectUrl) {
       return context.redirect(redirectUrl, 301);
     }
 
     if (!viewer) {
-      return context.text('Not found', 404);
+      return frameTerminal(
+        frameContext,
+        ctx.config,
+        new ServiceError(404, 'not_found', 'Not found')
+      );
     }
 
-    return handleBinary(context as unknown as PublicContext, async () => {
+    try {
       const url = new URL(context.req.url);
       const versionNum = parseVersionParam(url);
-      const token = shareToken(context as unknown as PublicContext) ?? url.searchParams.get('t');
+      const token = shareToken(frameContext) ?? url.searchParams.get('t');
       const content = await viewer.getContent(context.req.param('share_id'), {
         ...(versionNum ? { versionNum } : {}),
         viewerToken: token,
@@ -236,8 +246,12 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         throw new ServiceError(404, 'not_found', 'Not found');
       }
 
+      // `content.content` is passed through untouched — FrameDocument only supplies the document
+      // shell an agent fragment cannot supply for itself (doctype, charset, viewport, a baseline
+      // that any agent style overrides), and returns a whole document unchanged. Header policy is
+      // exactly what it was.
       return context.body(
-        content.content,
+        FrameDocument({ content: content.content, title: content.title }),
         200,
         frameHeaders({
           config: ctx.config,
@@ -245,7 +259,9 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
           passwordProtected: content.passwordProtected,
         })
       );
-    });
+    } catch (error) {
+      return frameTerminal(frameContext, ctx.config, error);
+    }
   });
 
   app.on(['GET', 'HEAD'], '/a/:share_id', async (context) => {
@@ -349,6 +365,39 @@ async function handleBinary(
     }
     return context.text(serviceError.message, serviceError.status);
   }
+}
+
+/**
+ * The sandbox origin's terminal state. It cannot load the app stylesheet cross-origin and it must
+ * stay under the same sandbox CSP as an artifact, so the response is a self-contained document
+ * served with the artifact frame's own header set — never the bare `Not found` text that used to
+ * render as two monospace words at the top-left of a white page.
+ */
+function frameTerminal(
+  context: PublicContext,
+  config: AppConfig,
+  error: unknown
+): Response | Promise<Response> {
+  const serviceError = serviceErrorFromUnknown(error);
+  const status = frameTerminalStatus(serviceError.status);
+
+  return context.body(
+    FrameTerminalDocument({ status, homeUrl: new URL('/', config.baseUrl).toString() }),
+    status,
+    // `passwordProtected: true` selects `Cache-Control: no-store`: a terminal answer must never be
+    // cached in front of an artifact that may come back.
+    publicArtifactFrameHeaders({ config, passwordProtected: true })
+  );
+}
+
+function frameTerminalStatus(status: number): 401 | 404 | 410 {
+  if (status === 401) {
+    return 401;
+  }
+  if (status === 410) {
+    return 410;
+  }
+  return 404;
 }
 
 function serviceErrorFromUnknown(error: unknown): ServiceError {
