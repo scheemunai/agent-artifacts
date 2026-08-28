@@ -1781,10 +1781,28 @@
 
   .aa-marketing-hero-card__meta {
     justify-content: flex-start;
+    /* The card body is centered; the meta bar is not — override the inherited centering so the
+       agent name and chips read left, on desktop and on the phone where the agent used to grow and
+       center itself. */
+    text-align: left;
+  }
+
+  /* Keep the left group tight (dot · example-artifact · v1); the artifact embed lets the agent grow
+     to push a trailing timestamp right, but the hero card carries its own right-hand cluster. */
+  .aa-marketing-hero-card__meta .aa-marketing-artifact__agent {
+    flex: 0 0 auto;
+  }
+
+  /* published + the visibility control, pushed to the right edge as one group so the timestamp sits
+     beside the control instead of floating mid-bar. */
+  .aa-marketing-hero-card__meta-end {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-aa-3);
+    margin-left: auto;
   }
 
   .aa-marketing-visibility {
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
   }
@@ -1855,13 +1873,6 @@
     font-size: var(--text-aa-sm);
     font-weight: 500;
     line-height: 1;
-  }
-
-  /* "published 3h ago" is desktop-only; the phone meta bar already carries the agent, the version
-     chip and the visibility control, and a fourth field wraps it to a third line. Hidden ≤720px
-     in the responsive block below. */
-  .aa-marketing-hero-card__published {
-    margin-left: 0;
   }
 
   .aa-marketing-section {
@@ -2529,15 +2540,18 @@
     .aa-marketing-grid {
       grid-template-columns: minmax(0, 1fr);
     }
-
-    .aa-marketing-hero-card__published {
-      display: none;
-    }
   }
 
   @media (max-width: 560px) {
     .aa-app-nav {
       align-items: flex-start;
+    }
+
+    /* On phones the hero card's meta bar keeps only the agent name and version chip. The right-hand
+       cluster (published timestamp + visibility control) stands down: the visibility dropdown needs
+       room the bar does not have here, and the bar reads cleaner left-aligned without it. */
+    .aa-marketing-hero-card__meta-end {
+      display: none;
     }
 
     /* The marketing header carries only a wordmark and one or two compact actions, so it centers

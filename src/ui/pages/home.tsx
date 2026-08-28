@@ -213,24 +213,28 @@ export function HomePage({ baseUrl, authenticated = false, githubUrl }: HomePage
                 <span class="aa-marketing-artifact__dot" aria-hidden="true"></span>
                 <span class="aa-marketing-artifact__agent">example-artifact</span>
                 <span class="aa-marketing-chip">v1</span>
-                <span class="aa-marketing-artifact__updated aa-marketing-hero-card__published">
-                  published 3h ago
-                </span>
-                <span class="aa-marketing-visibility">
-                  <label class="sr-only" for="home-visibility">
-                    Artifact visibility
-                  </label>
-                  <select
-                    id="home-visibility"
-                    class="aa-marketing-visibility__select"
-                    aria-label="Artifact visibility"
-                  >
-                    <option value="public" selected>
-                      Public
-                    </option>
-                    <option value="private">Private</option>
-                    <option value="password">Password protected</option>
-                  </select>
+                {/* published + visibility form the right-hand cluster; the whole group stands down
+                    on phones (the visibility control needs room the meta bar does not have there). */}
+                <span class="aa-marketing-hero-card__meta-end">
+                  <span class="aa-marketing-artifact__updated aa-marketing-hero-card__published">
+                    published 3h ago
+                  </span>
+                  <span class="aa-marketing-visibility">
+                    <label class="sr-only" for="home-visibility">
+                      Artifact visibility
+                    </label>
+                    <select
+                      id="home-visibility"
+                      class="aa-marketing-visibility__select"
+                      aria-label="Artifact visibility"
+                    >
+                      <option value="public" selected>
+                        Public
+                      </option>
+                      <option value="private">Private</option>
+                      <option value="password">Password protected</option>
+                    </select>
+                  </span>
                 </span>
               </header>
 
