@@ -4,6 +4,7 @@ import { readClientSource } from '../support/client-assets.js';
 import {
   declarationValue,
   type ElementSpec,
+  nextOrder,
   parseStylesheet,
   winningDeclaration,
 } from '../support/css-cascade.js';
@@ -24,10 +25,7 @@ const viewerPage = readFileSync('src/ui/pages/viewer.tsx', 'utf8');
 const viewerScript = readClientSource('viewer.js');
 
 const appRules = parseStylesheet(appCssSource);
-const documentRules = [
-  ...appRules,
-  ...parseStylesheet(viewerCssSource, (appRules.at(-1)?.order ?? 0) + 1),
-];
+const documentRules = [...appRules, ...parseStylesheet(viewerCssSource, nextOrder(appRules))];
 
 /** Rendered markdown inside a dashboard preview card. */
 const embeddedProse: ElementSpec[] = [

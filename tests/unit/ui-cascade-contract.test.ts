@@ -8,6 +8,7 @@ import {
   type ElementSpec,
   inheritedValue,
   maxLength,
+  nextOrder,
   parseStylesheet,
   resolveVars,
   specificity,
@@ -32,10 +33,7 @@ const variables = themeVariables(appCssSource);
 
 const appRules = parseStylesheet(appCssSource);
 /** The viewer document links app.css first, then the viewer sheet, so order continues. */
-const documentRules = [
-  ...appRules,
-  ...parseStylesheet(viewerCssSource, (appRules.at(-1)?.order ?? 0) + 1),
-];
+const documentRules = [...appRules, ...parseStylesheet(viewerCssSource, nextOrder(appRules))];
 
 function escapeSelector(selector: string): string {
   return selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

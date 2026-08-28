@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { sanitizeMarkdownHtml } from '../../src/lib/sanitize.js';
 import {
   type ElementSpec,
+  nextOrder,
   parseStylesheet,
   specificity,
   winningDeclaration,
@@ -111,17 +112,22 @@ describe('the viewer/app.css anchor contract', () => {
   /**
    * Stacks the two sheets in the order the viewer document emits them: app.css, then viewer.css.
    *
-   * The offset is `last order + 1`, NOT `appRules.length`, and the difference is not cosmetic.
-   * Rule orders are not dense — app.css parses to 445 rules whose highest order is 814 — so seeding
-   * the viewer sheet at the app sheet's *count* left 201 late app.css rules holding orders at or
-   * above every viewer rule, i.e. modelled as loading AFTER the sheet that actually loads last.
-   * The contract below still returned the right answers, which is the dangerous part: it was green
-   * for a reason that did not correspond to the browser, and the protection it advertises was void
-   * for exactly the half of app.css where the late rules live.
+   * The offset comes from `nextOrder`, never from `appRules.length`, and the difference is not
+   * cosmetic. Rule orders are NOT DENSE — the parser's counter advances per selector and per block,
+   * so a rule COUNT lands back inside the first sheet. Seeding the viewer sheet at the app sheet's
+   * count left the late half of app.css holding orders at or above every viewer rule: modelled as
+   * loading AFTER the sheet that actually loads last.
+   *
+   * The contract below still returned the right answers while that was true, which is the dangerous
+   * part rather than the reassuring one — it was green for a reason that did not correspond to the
+   * browser, and the protection it advertises was void for exactly the half of app.css where the
+   * late rules live. `nextOrder` takes the MAXIMUM rather than the last element, so it does not
+   * quietly depend on the parser emitting rules in ascending order the way a hand-written
+   * `at(-1).order` did.
    */
   const stackedSheets = (appSource: string) => {
     const appRules = parseStylesheet(appSource);
-    return [...appRules, ...parseStylesheet(viewerCss, (appRules.at(-1)?.order ?? 0) + 1)];
+    return [...appRules, ...parseStylesheet(viewerCss, nextOrder(appRules))];
   };
 
   const rules = stackedSheets(appCss);
