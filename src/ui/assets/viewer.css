@@ -46,7 +46,16 @@
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--color-aa-ink);
-  font-size: clamp(1.45rem, 5vw, var(--text-aa-3xl));
+  /* V12-N1: the minimum was a raw 1.45rem — 23.2px, between `--text-aa-xl` (20px) and
+     `--text-aa-2xl` (24px), on the ramp's steps but not of them. It is not an edge case: the minimum
+     is what BINDS below 480px, so 23.2px was the size every phone reader actually got, and the one
+     size on this element chosen by nobody.
+     `2xl` is the nearest step and it costs 0.8px at the small end. It also lands the term's turn-on
+     edge on 480 — a width the sheet already breaks at — instead of 464, which was an artefact of the
+     raw value and of nothing else.
+     The `5vw` term is genuinely fluid and stays: measured, it binds from 480 to 600 (24px→30px), so
+     this is a real clamp rather than two static sizes in fluid spelling. */
+  font-size: clamp(var(--text-aa-2xl), 5vw, var(--text-aa-3xl));
   font-weight: 650;
   letter-spacing: -0.025em;
   line-height: 1.15;
