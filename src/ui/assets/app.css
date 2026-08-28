@@ -2038,19 +2038,39 @@
     text-transform: uppercase;
   }
 
+  /* A-36's second half, and the reason the first half did not finish the job: alignment was a
+     property of each PARAGRAPH, so the card could hold — and did hold, for a round — one line set
+     left and its sibling set centre. It is now a property of the CARD. One declaration, one answer,
+     nothing left to half-apply.
+
+     `__price` was left centred on the argument that it is "a short display line, which is the case
+     centring is for". Measured, that premise is false at every width, not just the one that was
+     reported: 129 characters set six centred lines at 375, five at 480, and four at 1440. There is
+     no viewport where this is a display line. Centring is for a line the eye takes in at once, and
+     four ragged lines is prose with the left edge taken away from the reader.
+
+     The card is ONE COLUMN, `--width-aa-measure` — the same reading column `.aa-marketing-origin`,
+     `.aa-marketing-features` and `.aa-marketing-api-wrap` already use. So this is not a new number:
+     from 1024 up, the origin quote, the API block, the price and the MIT line share a single left
+     edge down the page (measured: all four at 380px at 1440, all four at 172px at 1024). Below that
+     the card's own padding insets it, which is what a raised card should do.
+
+     The two `max-width`s are gone rather than matched. They could not be matched: `ch` is
+     font-relative, so the same 46ch is 684px on the price and 468px on the MIT line — which is how
+     two paragraphs meant to align ended up 38px apart. A shared measure belongs to the container. */
   .aa-marketing-terms {
     display: grid;
+    grid-template-columns: min(100%, var(--width-aa-measure));
     width: min(100%, var(--width-aa-panel));
-    justify-items: center;
+    justify-content: center;
     border-radius: var(--radius-aa-lg);
     padding: clamp(2.1rem, 5vw, 3rem) clamp(1.6rem, 5vw, 3rem);
     background: var(--color-aa-surface-raised);
     box-shadow: var(--shadow-aa-card);
-    text-align: center;
+    text-align: left;
   }
 
   .aa-marketing-terms__price {
-    max-width: 34ch;
     margin: 0 0 var(--spacing-aa-4);
     color: var(--color-aa-ink);
     font-size: clamp(1.28rem, 3vw, 1.48rem);
@@ -2059,15 +2079,11 @@
     line-height: 1.45;
   }
 
-  /* A-36, same rule. `__price` above stays centred: it is a short display line, which is the case
-     centring is for. This one is 46ch of running prose. */
   .aa-marketing-terms__oss {
-    max-width: 46ch;
     margin: 0;
     color: var(--color-aa-muted);
     font-size: 1rem;
     line-height: 1.62;
-    text-align: left;
   }
 
   .aa-marketing-cta {

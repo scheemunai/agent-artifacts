@@ -249,12 +249,24 @@ describe('A-52 · credential blocks do not break tokens or lie about scrolling',
 describe('A-31 · the marketing page runs on three measures, not four', () => {
   const css = readFileSync(new URL('../../src/ui/assets/app.css', import.meta.url), 'utf8');
 
-  const marketingRule = (selector: string) => {
+  const marketingBlock = (selector: string) => {
     const start = css.indexOf(`  .${selector} {`);
     expect(start, `${selector} rule not found`).toBeGreaterThan(-1);
-    const block = css.slice(start, css.indexOf('}', start));
-    return /var\((--width-aa-[a-z-]+)\)/.exec(block)?.[1];
+    return css.slice(start, css.indexOf('}', start));
   };
+
+  /**
+   * The token a section sizes ITSELF with.
+   *
+   * Read from the `width` declaration rather than "the first width token anywhere in the block",
+   * which is what this was and which stopped being true the moment a section used two: the terms
+   * card is a panel that lays a reading column inside itself, so the block legitimately names both.
+   * The old proxy reported the column's token as the card's own and called a correct composition a
+   * violation. Same shape as the rest of this round — the assertion was right while the data was
+   * simple, and read the wrong thing the moment it was not.
+   */
+  const marketingRule = (selector: string) =>
+    /(?:^|\s)width:[^;]*var\((--width-aa-[a-z-]+)\)/.exec(marketingBlock(selector))?.[1];
 
   it('maps every marketing section to one of exactly three width tokens', () => {
     const measures = new Set(
@@ -284,6 +296,21 @@ describe('A-31 · the marketing page runs on three measures, not four', () => {
     ]) {
       expect(marketingRule(reading)).toBe('--width-aa-measure');
     }
+  });
+
+  it('lays the terms card’s prose on the same reading column as the rest of the page', () => {
+    // A-36's second half. The card is a panel — asserted above — and the text inside it is not: it
+    // sits on `--width-aa-measure`, the column `.aa-marketing-origin`, `.aa-marketing-features` and
+    // `.aa-marketing-api-wrap` already use. That is what puts the origin quote, the API block, the
+    // price and the MIT line on one left edge from 1024 up, instead of the card inventing its own
+    // width and landing 38px off its neighbours.
+    //
+    // Composition, not a fourth measure: the section names two of the three tokens, one for the
+    // card and one for the column inside it, which is why the helper above reads `width` rather
+    // than the first token it finds.
+    expect(marketingBlock('aa-marketing-terms')).toMatch(
+      /grid-template-columns:\s*min\(100%,\s*var\(--width-aa-measure\)\)/
+    );
   });
 
   it('defines no width token the product does not use', () => {
