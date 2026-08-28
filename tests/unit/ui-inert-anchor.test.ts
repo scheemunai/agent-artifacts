@@ -2,7 +2,12 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { sanitizeMarkdownHtml } from '../../src/lib/sanitize.js';
-import { type ElementSpec, parseStylesheet, winningDeclaration } from '../support/css-cascade.js';
+import {
+  type ElementSpec,
+  parseStylesheet,
+  specificity,
+  winningDeclaration,
+} from '../support/css-cascade.js';
 
 /**
  * A-41: a dead control must not wear a live costume.
@@ -82,11 +87,44 @@ describe('an anchor the sanitizer disarmed', () => {
  * renegotiation, not an accusation — the alternative is discovering it in a screenshot two rounds
  * later, which is how this defect got here in the first place.
  *
+ * ── WHAT THE RELATIONSHIP ACTUALLY RESTS ON ────────────────────────────────────────────────────
+ *
+ * It holds on SPECIFICITY, not on source order:
+ *
+ *     .aa-viewer-content .aa-md a:not([href])   (0,3,1)
+ *     .aa-md a                                  (0,1,1)
+ *
+ * `:not()` contributes nothing itself, but ITS ARGUMENT COUNTS — `[href]` scores in the class
+ * column, which is the term most often dropped in a hand count and is worth two of the three
+ * columns of margin here.
+ *
+ * So reordering app.css cannot disturb this, and neither can a rule that merely ties: at (0,3,1)
+ * the win goes to viewer.css, which loads second. It breaks only if a NEW rule reaches viewer prose
+ * anchors while STRICTLY EXCEEDING (0,3,1) — a much narrower and more visible thing to do by
+ * accident than a restructure. If this suite reds at another lane's boundary, the first question is
+ * therefore not "did app.css get reordered" (order cannot do it) but "did a new rule start reaching
+ * viewer prose".
+ *
  * It reads app.css and never writes it.
  */
 describe('the viewer/app.css anchor contract', () => {
-  const appRules = parseStylesheet(appCss);
-  const rules = [...appRules, ...parseStylesheet(viewerCss, appRules.length)];
+  /**
+   * Stacks the two sheets in the order the viewer document emits them: app.css, then viewer.css.
+   *
+   * The offset is `last order + 1`, NOT `appRules.length`, and the difference is not cosmetic.
+   * Rule orders are not dense — app.css parses to 445 rules whose highest order is 814 — so seeding
+   * the viewer sheet at the app sheet's *count* left 201 late app.css rules holding orders at or
+   * above every viewer rule, i.e. modelled as loading AFTER the sheet that actually loads last.
+   * The contract below still returned the right answers, which is the dangerous part: it was green
+   * for a reason that did not correspond to the browser, and the protection it advertises was void
+   * for exactly the half of app.css where the late rules live.
+   */
+  const stackedSheets = (appSource: string) => {
+    const appRules = parseStylesheet(appSource);
+    return [...appRules, ...parseStylesheet(viewerCss, (appRules.at(-1)?.order ?? 0) + 1)];
+  };
+
+  const rules = stackedSheets(appCss);
 
   // section.aa-viewer-content > div.aa-prose-page > .aa-md > a — the document's real shape, and the
   // load order the viewer document emits: app.css first, viewer.css second.
@@ -125,5 +163,36 @@ describe('the viewer/app.css anchor contract', () => {
     const winner = winningDeclaration(rules, inViewerProse(DISARMED), 'text-decoration', 1440);
 
     expect(winner?.value).toContain('none');
+  });
+
+  /**
+   * The contract holds on SPECIFICITY, not on source order — and this proves the order half is
+   * modelled correctly anyway, because the moment it is not, the specificity claim is being read
+   * out of a stack the browser would not recognise.
+   *
+   * The intruder ties the viewer rule exactly, so specificity cannot decide it and order is the
+   * only tie-break left. A browser gives it to viewer.css, which loads second. This test is the one
+   * that catches an offset that silently reverses the two sheets — the assertions above cannot,
+   * because they are decided before the tie-break is ever reached.
+   */
+  it('resolves the two sheets in their real load order', () => {
+    const intruder = '.aa-viewer-content .aa-prose-page .aa-md a';
+    const viewerRule = '.aa-viewer-content .aa-md a:not([href])';
+
+    // The premise: a genuine tie. If this ever stops being equal the test below proves nothing,
+    // so it is asserted rather than assumed.
+    expect(specificity(intruder)).toEqual(specificity(viewerRule));
+
+    const winner = winningDeclaration(
+      stackedSheets(`${appCss}\n${intruder} { color: var(--color-aa-accent); }\n`),
+      inViewerProse(DISARMED),
+      'color',
+      1440
+    );
+
+    expect(
+      winner?.rule.selector,
+      'an app.css rule is winning a tie it should lose — the sheets are stacked in the wrong order'
+    ).toContain('a:not([href])');
   });
 });
