@@ -96,6 +96,28 @@ export function parseStylesheet(css: string, startOrder = 0): StyleRule[] {
   return rules;
 }
 
+/**
+ * The order a second stylesheet should start at, so its rules sit after the first one's.
+ *
+ * Use this instead of arithmetic on the array. `rules.length` is the tempting version and it is
+ * wrong, because ORDERS ARE NOT DENSE: `collectRules` increments once per selector and once more
+ * per rule block, so a sheet of N rules ends well above order N. Seeding the next sheet at
+ * `rules.length` therefore hands it orders the first sheet has already used, and the two interleave
+ * — which does not throw, does not look wrong, and quietly decides source-order ties the wrong way.
+ * A tie is exactly when order matters, so the failure only appears in the case the offset exists
+ * for.
+ *
+ * `.at(-1).order + 1` happens to be right today and encodes an assumption the caller should not
+ * have to hold: that the array is sorted ascending and non-empty. This takes the maximum, so it
+ * stays correct for a filtered, concatenated or re-sorted set.
+ *
+ *   const appRules = parseStylesheet(appCss);
+ *   const all = [...appRules, ...parseStylesheet(viewerCss, nextOrder(appRules))];
+ */
+export function nextOrder(rules: StyleRule[]): number {
+  return rules.reduce((highest, rule) => Math.max(highest, rule.order), -1) + 1;
+}
+
 function collectRules(
   css: string,
   media: string | null,

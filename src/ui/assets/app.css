@@ -1,4 +1,26 @@
-@import "tailwindcss";
+/* The scan is confined to `src/` — the code that actually ships — rather than left to Tailwind's
+   automatic detection, which walks from this file up to the git root.
+
+   This is not tidiness; it made two builds of one commit differ. `.dockerignore` excludes `tests`,
+   so the image's scan never saw test files while a local build did, and the local output carried 11
+   utilities and a `@property` that the served CSS did not. Round 4's certificate had to disclose
+   that it validated bytes which were not the bytes being served — a strict superset, nothing
+   rendered differently, but a gate cannot certify a build it cannot reproduce.
+
+   The cause is worth stating because it is not what it looks like: NO TEST EVER USED THOSE CLASSES.
+   The scanner extracts candidate class names from any text it reads, and tests discuss CSS
+   constantly — `.sticky` came from the words "position: sticky" in a comment, `.outline`, `.blur`,
+   `.transition`, `.uppercase`, `.inline-flex` and `.flex-wrap` likewise, and `.w-full` came from
+   `expect(badge).not.toContain('w-full')` — an assertion that the class is ABSENT is what caused it
+   to be emitted. A scanner cannot tell discussion from use, so the fix is to stop pointing it at
+   the files whose job is discussion.
+
+   Honest residual: this does not eliminate word-derived utilities, it makes them DETERMINISTIC.
+   `.shrink` survives both builds because the word appears in prose inside `src/` — including a hint
+   in the style guide that explains why a track could not shrink. Same output everywhere is the
+   guarantee being bought here; a scanner that understands English is not on offer. */
+@import "tailwindcss" source(none);
+@source "../../";
 
 @font-face {
   font-family: "Source Sans 3";
