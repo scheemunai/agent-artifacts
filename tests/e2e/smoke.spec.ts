@@ -223,6 +223,51 @@ test('public markdown viewer renders chrome, controls, content, and no overflow'
   await expectNoHorizontalOverflow(page);
 });
 
+/**
+ * V6-N4: how much of a landscape phone the viewer keeps for the artifact.
+ *
+ * The chrome is `position: sticky`, so its height is not merely space at the top — it is space the
+ * reader can never scroll away from. At 667×375 it measured 154px: 41% of the viewport permanently
+ * holding the bar ABOUT the artifact rather than the artifact. The dashboard headers, doing a
+ * comparable job, hold 17%. The threshold below is the validator's pre-registered bar, not a number
+ * picked to fit the fix.
+ *
+ * It lives here rather than in a file of its own because the seed is here, and it runs in ONE
+ * project rather than all seven because it is a single geometric ratio at one device shape — the
+ * project list is a closed set of WIDTH edges and re-measuring this at each of them would assert
+ * the same thing seven times. Per-test viewport control is the wrong tool for "the suite at another
+ * size" and the right one for "this specific geometry".
+ */
+test('the viewer keeps most of a landscape phone for the artifact', async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name !== 'chromium-375',
+    'fixed-geometry assertion; the other projects would re-measure the same viewport'
+  );
+
+  // Two heights, deliberately: 375 is the real landscape phone and the worst case, and 450 is the
+  // exact edge where the fix's `max-height` rule turns on — the pixel a `449` typo would break.
+  // Same reasoning that puts breakpoint edges in the project list, applied on the other axis.
+  for (const landscape of [
+    { width: 667, height: 375 },
+    { width: 667, height: 450 },
+  ]) {
+    await page.setViewportSize(landscape);
+    await page.goto(seed.markdownShareUrl);
+
+    const chrome = page.locator('[data-aa-chrome="true"]');
+    await expect(chrome).toBeVisible();
+    const box = await chrome.boundingBox();
+    expect(box, 'the viewer chrome has no box to measure').not.toBeNull();
+
+    const height = box?.height ?? 0;
+    const share = height / landscape.height;
+    expect(
+      share,
+      `sticky chrome is ${Math.round(height)}px of ${landscape.height}px — ${Math.round(share * 100)}% of a ${landscape.width}×${landscape.height} viewport pinned over the document`
+    ).toBeLessThanOrEqual(0.3);
+  }
+});
+
 test('public HTML viewer renders sandboxed frame content and no overflow', async ({ page }) => {
   await page.goto(seed.htmlShareUrl);
 

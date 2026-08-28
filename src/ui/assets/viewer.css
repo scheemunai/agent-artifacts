@@ -273,6 +273,39 @@
   }
 }
 
+/* V6-N4 — a landscape phone hands the viewer about 375px of height, and a STICKY bar spends it
+   permanently: what the chrome takes is not space at the top, it is space the reader can never
+   scroll away from. Stacked, it measured 180px — 48% of the viewport holding the bar ABOUT the
+   artifact instead of the artifact, against a 30% bar that the dashboard headers meet at 17%.
+
+   The chrome stacks because `grid-template-columns` is one column until 760px, and that rule is
+   keyed on WIDTH — reasonably, since the reason to stack is narrowness. A landscape phone inverts
+   the premise: 667px of width is plentiful and height is the scarce axis. So this borrows the wide
+   layout early, on the axis that is actually short, rather than inventing a third arrangement.
+
+   Unsticking was the alternative and was rejected: the chrome carries Download, the version picker
+   and Refresh, and a reader who scrolls into a long document should not have to scroll back to the
+   top to reach them. Condensing keeps the affordances and returns the space.
+
+   Paired with `min-width` so it cannot catch a narrow-and-short viewport, where two columns would
+   have nowhere to go — 560px is an edge the sheet already breaks on rather than a new number. */
+@media (max-height: 450px) and (min-width: 560px) {
+  .aa-viewer-chrome {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--spacing-aa-3);
+    align-items: center;
+    padding-block: var(--spacing-aa-2);
+  }
+
+  .aa-viewer-title {
+    font-size: var(--text-aa-xl);
+  }
+
+  .aa-viewer-actions {
+    justify-content: flex-end;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aa-viewer-updated-pill,
   .aa-viewer-frame {
