@@ -3275,10 +3275,6 @@
     .aa-dashboard-filter-bar {
       grid-template-columns: minmax(0, 1fr);
     }
-
-    .aa-dashboard-filter-bar__actions .aa-btn {
-      width: 100%;
-    }
   }
 
   /* The list row: one aligned grid for title, badge and meta.

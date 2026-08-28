@@ -1088,7 +1088,6 @@ function VersionHistory({
       <Table
         id="artifact-versions"
         label="Version history"
-        columnPriority
         columns={['Version', { label: 'Summary', priority: 'secondary' }, 'Actions']}
         rows={versions
           .slice()
