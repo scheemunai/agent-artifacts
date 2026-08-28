@@ -1450,6 +1450,12 @@ interface NavShellProps {
   items: NavItem[];
   children?: Child | undefined;
   /**
+   * Optional scope class for pages that need a themed chrome without changing the global app shell.
+   * Dashboard uses this to square its controls while marketing, auth and public viewer chrome keep
+   * the product's rounded defaults.
+   */
+  class?: string | undefined;
+  /**
    * Who you are signed in as, and what you can do about it. Rendered in the header on desktop and
    * in the drawer footer on a phone — from ONE prop, mounted by this component in both places.
    *
@@ -1475,12 +1481,12 @@ interface NavShellProps {
   account?: Child | undefined;
 }
 
-export function NavShell({ items, children, account }: NavShellProps) {
+export function NavShell({ items, children, class: className, account }: NavShellProps) {
   const drawerId = 'aa-mobile-drawer';
 
   return (
     <>
-      <header class="aa-app-header">
+      <header class={cx('aa-app-header', className)}>
         <div class="aa-shell aa-app-nav">
           <a class="aa-brand" href="/">
             <ProductMark />
@@ -1514,7 +1520,13 @@ export function NavShell({ items, children, account }: NavShellProps) {
           </Button>
         </div>
       </header>
-      <div class="aa-drawer" id={drawerId} hidden data-aa-drawer="true" data-state="closed">
+      <div
+        class={cx('aa-drawer', className)}
+        id={drawerId}
+        hidden
+        data-aa-drawer="true"
+        data-state="closed"
+      >
         <aside
           class="aa-drawer__panel"
           aria-label="Mobile navigation"

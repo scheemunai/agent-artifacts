@@ -143,10 +143,6 @@ export function DashboardHomePage({
         <header class="aa-section-header">
           <p class="aa-page-kicker">Artifacts</p>
           <h1 class="aa-section-title">Your agent's published work</h1>
-          <p class="aa-section-note">
-            Search title and slug, filter by bot or type, then open a row to preview, restore, or
-            share it.
-          </p>
         </header>
         {/* A search form over an empty list is dead UI at the exact moment the product has to
             teach. It stays when a filter is what emptied the list, because removing it there
@@ -182,17 +178,11 @@ export function DashboardHomePage({
           )
         ) : (
           <div class="aa-stack">
-            {/* `.aa-list` owns the columns and each row borrows them with subgrid, so badges and
-                meta line up down the list — above 480px. Below it the pattern collapses on
-                purpose: the title takes its own line and badge and meta stack beneath, because
-                three tracks in 375px would push the meta off the row. Worth stating in both
-                halves, since "the columns align" is true of the specimen at every width and true
-                of this list only at some of them. */}
-            <div class="aa-list">
+            <DashboardCardList label="Artifacts">
               {artifacts.map((artifact) => (
-                <ArtifactRow artifact={artifact} />
+                <ArtifactCard artifact={artifact} />
               ))}
-            </div>
+            </DashboardCardList>
             {/* One slot, one component. It used to be a Button for one account and a neutral
                 Badge for another, which made "there is more" and "that was all" different kinds
                 of object rather than two states of the same one. */}
@@ -729,6 +719,7 @@ function DashboardChrome({
           one is live at any width. Passing it once here is the whole point: the version where
           both were live at 375 came from two callers mounting it by hand. */}
       <NavShell
+        class="aa-dashboard"
         account={<AccountMenu email={account.email} />}
         items={[
           { label: 'Artifacts', href: '/dashboard', current: active === 'artifacts' },
@@ -738,7 +729,7 @@ function DashboardChrome({
           ...extensionNavItems.map((item) => ({ ...item, current: false })),
         ]}
       ></NavShell>
-      <main class="aa-main">
+      <main class="aa-main aa-dashboard">
         <div class="aa-shell aa-stack">
           {notice ? (
             <Notice tone={notice.tone} placement="page" dismissible>
@@ -786,35 +777,35 @@ function ArtifactFilters({
   filters: DashboardHomePageProps['filters'];
 }) {
   return (
-    <Card title="Filter artifacts" description="Searches titles and slugs.">
-      <form method="get" action="/dashboard" class="aa-grid aa-grid--3">
-        <Input id="q" name="q" label="Search" value={filters.q} placeholder="title or slug" />
-        <Select
-          id="bot"
-          name="bot"
-          label="Bot"
-          value={filters.botId}
-          options={[
-            { label: 'All bots', value: '' },
-            ...bots.map((bot) => ({ label: bot.name, value: bot.id })),
-          ]}
-        />
-        <Select
-          id="type"
-          name="type"
-          label="Type"
-          value={filters.type}
-          options={[
-            { label: 'All types', value: '' },
-            { label: 'Markdown', value: 'markdown' },
-            { label: 'HTML', value: 'html' },
-          ]}
-        />
-        <Button variant="primary" type="submit">
+    <form method="get" action="/dashboard" class="aa-dashboard-filter-bar">
+      <Input id="q" name="q" label="Search" value={filters.q} placeholder="title or slug" />
+      <Select
+        id="bot"
+        name="bot"
+        label="Bot"
+        value={filters.botId}
+        options={[
+          { label: 'All bots', value: '' },
+          ...bots.map((bot) => ({ label: bot.name, value: bot.id })),
+        ]}
+      />
+      <Select
+        id="type"
+        name="type"
+        label="Type"
+        value={filters.type}
+        options={[
+          { label: 'All types', value: '' },
+          { label: 'Markdown', value: 'markdown' },
+          { label: 'HTML', value: 'html' },
+        ]}
+      />
+      <div class="aa-dashboard-filter-bar__actions">
+        <Button variant="primary" size="sm" type="submit">
           Apply filters
         </Button>
-      </form>
-    </Card>
+      </div>
+    </form>
   );
 }
 
@@ -877,36 +868,109 @@ function ArtifactEmptyState({
   );
 }
 
-/**
- * One artifact, as a row rather than a card.
- *
- * Three things move. The row is the click target instead of the title text alone, via the
- * pattern's stretched link. The title is ink, not accent — a list where every title is coloured
- * has no emphasis left for the one the reader is pointing at. And the slug comes up beside the
- * title: two artifacts can share a title, the slug is what tells them apart, and it used to sit
- * grey at the end of a meta line while the title carried all the weight.
- */
-function ArtifactRow({ artifact }: { artifact: DashboardArtifactListItem }) {
+export interface DashboardCardListProps {
+  children: Child;
+  label?: string | undefined;
+  class?: string | undefined;
+}
+
+export function DashboardCardList({ children, label, class: className }: DashboardCardListProps) {
   return (
-    <div class="aa-list-row">
-      <span class="aa-list-row__title">
-        <a class="aa-list-row__link" href={`/dashboard/artifacts/${artifact.id}`}>
-          {artifact.title}
-        </a>
-        <br />
-        <span class="aa-hint">
+    <ul
+      class={className ? `aa-dashboard-card-list ${className}` : 'aa-dashboard-card-list'}
+      aria-label={label}
+    >
+      {children}
+    </ul>
+  );
+}
+
+export interface DashboardCardProps {
+  title: Child;
+  href?: string | undefined;
+  subline?: Child | undefined;
+  badges?: Child | undefined;
+  meta?: Child | undefined;
+  actions?: Child | undefined;
+  class?: string | undefined;
+}
+
+/**
+ * The dashboard list card: leading identity, trailing status, durable meta and optional actions.
+ *
+ * The component stays content-agnostic on purpose. Artifacts wire it to title/slug/share state
+ * now; Bots and Templates can hand it their own identity, status and action slot without
+ * re-inventing the raised white-card list pattern.
+ */
+export function DashboardCard({
+  title,
+  href,
+  subline,
+  badges,
+  meta,
+  actions,
+  class: className,
+}: DashboardCardProps) {
+  const classes = [
+    'aa-dashboard-card',
+    href && 'aa-dashboard-card--linked',
+    actions && 'aa-dashboard-card--with-actions',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <li class={classes}>
+      <div class="aa-dashboard-card__topline">
+        <div class="aa-dashboard-card__leading">
+          <h3 class="aa-dashboard-card__title">
+            {href ? (
+              <a class="aa-dashboard-card__link" href={href}>
+                {title}
+              </a>
+            ) : (
+              title
+            )}
+          </h3>
+          {subline ? <p class="aa-dashboard-card__subline">{subline}</p> : null}
+        </div>
+        {badges ? <div class="aa-dashboard-card__badges">{badges}</div> : null}
+      </div>
+      {meta || actions ? (
+        <div class="aa-dashboard-card__footer">
+          {meta ? <p class="aa-dashboard-card__meta">{meta}</p> : null}
+          {actions ? <div class="aa-dashboard-card__actions">{actions}</div> : null}
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+function ArtifactCard({ artifact }: { artifact: DashboardArtifactListItem }) {
+  return (
+    <DashboardCard
+      title={artifact.title}
+      href={`/dashboard/artifacts/${artifact.id}`}
+      subline={
+        <>
           <code>{artifact.slug}</code> · {formatByline(artifact)}
-        </span>
-      </span>
-      <ButtonRow>
-        <ArtifactTypeBadge type={artifact.type} />
-        <ShareStateBadge artifact={artifact} />
-        {artifact.expiresAt ? <ExpiresBadge expiresAt={artifact.expiresAt} /> : null}
-      </ButtonRow>
-      <span class="aa-list-row__meta">
-        updated {formatRelativeTime(artifact.updatedAt)} · {countOf(artifact.lifetimeViews, 'view')}
-      </span>
-    </div>
+        </>
+      }
+      badges={
+        <>
+          <ShareStateBadge artifact={artifact} />
+          <ArtifactTypeBadge type={artifact.type} />
+          {artifact.expiresAt ? <ExpiresBadge expiresAt={artifact.expiresAt} /> : null}
+        </>
+      }
+      meta={
+        <>
+          updated {formatRelativeTime(artifact.updatedAt)} ·{' '}
+          {countOf(artifact.lifetimeViews, 'view')}
+        </>
+      }
+    />
   );
 }
 
@@ -932,16 +996,20 @@ function ShareStateBadge({
   artifact: Pick<DashboardArtifactListItem, 'activeShare' | 'previousShareCount'>;
 }) {
   if (artifact.activeShare) {
-    return (
-      <Badge tone="accent">
-        Shared{artifact.activeShare.passwordProtected ? ' · password' : ''}
-      </Badge>
-    );
+    if (artifact.activeShare.passwordProtected) {
+      return (
+        <Badge tone="info">
+          <span aria-hidden="true">🔒</span>
+          Password-protected
+        </Badge>
+      );
+    }
+    return <Badge tone="success">Public</Badge>;
   }
   if (artifact.previousShareCount > 0) {
     return <Badge tone="warn">Link revoked</Badge>;
   }
-  return <Badge tone="neutral">private</Badge>;
+  return <Badge tone="neutral">Private</Badge>;
 }
 
 function ArtifactTypeBadge({ type }: { type: ArtifactType }) {
