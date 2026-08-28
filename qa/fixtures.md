@@ -81,6 +81,20 @@ collide. **`slotted-source-1` HAS BEEN SPENT** proving the path (template `slott
 slots detected, redirect `/dashboard/templates?notice=template_promoted`). **`slotted-source-2` IS
 PRISTINE** — that one is the hunt's.
 
+## 5. `r10-witness` — THE `<pre>` WITNESS (adopted from V3, not rebuilt as a rival)
+**For:** `.aa-md pre`, on BOTH surfaces. V3 self-published this specimen during the r10 pass to close the
+gap my r10 certificate disclosed; it worked, and the provisioner did not know it existed, so a rebuild
+would have silently dropped coverage the next hunt assumed was there. It is adopted rather than
+replaced — two fixtures for one cell is how a register starts lying about what covers what.
+**Holds:** a fenced `js` block (renders `<pre>`), a `{{summary}}` slot (promotable), and AN ACTIVE
+SHARE. All three jobs must survive a rebuild; without the share the viewer surface is unreachable and
+half the `pre` coverage vanishes without a word.
+
+**Verified by REBUILDING it, not by finding it.** The specimen was destroyed (artifact, versions and
+share deleted), the provisioner re-run, and the restored copy checked for what it exists to prove:
+`<pre>` in the viewer's content payload (server-rendered sanitized HTML) and `<pre>` ×2 on the
+dashboard preview. Existing is not the claim; rendering is.
+
 ---
 
 ## ⚠ THE ID FORMAT — read this before adding any fixture row

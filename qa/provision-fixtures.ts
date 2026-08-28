@@ -224,6 +224,75 @@ const slottedFinal = (
 ).c;
 console.log(`slotted sources        : ${slottedFinal} (promote-through-success)`);
 
+/**
+ * The <pre> witness — ADOPTED, not reinvented.
+ *
+ * V3 self-published this specimen during the r10 pass to close the `.aa-md pre` gap my certificate
+ * disclosed. It worked, and it was invisible to this provisioner, so a rebuild would have silently
+ * dropped coverage the next hunt assumed was there — a fixture that ACTS and CANNOT BE REBUILT.
+ * Reproducibility is part of a fixture's definition, so the specimen moves in here rather than being
+ * replaced by a rival of mine: two fixtures for one cell is how a register starts lying about what
+ * covers what.
+ *
+ * It carries three jobs at once and all three must survive a rebuild: a fenced block (so `.aa-md pre`
+ * renders), a `{{summary}}` slot (so it is promotable), and AN ACTIVE SHARE — without the share the
+ * viewer surface is unreachable and half the `pre` coverage disappears without a word.
+ */
+const witnessBody = [
+  '# R10 Witness',
+  '',
+  '{{summary}}',
+  '',
+  'Prose before the fence.',
+  '',
+  '```js',
+  'const x = 1;',
+  'function probe() { return x; }',
+  '```',
+  '',
+  'Prose after.',
+].join('\n');
+
+const witness = db
+  .prepare(
+    "select id from artifacts where account_id=? and slug='r10-witness' and deleted_at is null"
+  )
+  .get(sacId) as { id?: string } | undefined;
+let witnessId = witness?.id;
+if (!witnessId) {
+  witnessId = id('art');
+  const witnessHash = createHash('sha256').update(witnessBody).digest('hex');
+  db.prepare(
+    `insert into artifacts (id,account_id,slug,type,title,content,content_hash,metadata,version_num,created_at,updated_at)
+     values (?,?,?,?,?,?,?,?,?,?,?)`
+  ).run(
+    witnessId,
+    sacId,
+    'r10-witness',
+    'markdown',
+    'R10 Witness',
+    witnessBody,
+    witnessHash,
+    '{}',
+    1,
+    now(),
+    now()
+  );
+  db.prepare(
+    `insert into artifact_versions (artifact_id,version_num,type,title,content,content_hash,change_summary,created_at)
+     values (?,?,?,?,?,?,?,?)`
+  ).run(witnessId, 1, 'markdown', 'R10 Witness', witnessBody, witnessHash, 'seed', now());
+}
+const witnessShare = db
+  .prepare('select id from shares where artifact_id=? and revoked_at is null')
+  .get(witnessId) as { id?: string } | undefined;
+if (!witnessShare?.id) {
+  db.prepare(
+    'insert into shares (id,artifact_id,view_count,unique_viewer_count,created_at) values (?,?,?,?,?)'
+  ).run(randomBytes(16).toString('base64url').slice(0, 22), witnessId, 0, 0, now());
+}
+console.log('pre witness            : artifact + active share (viewer AND dashboard preview)');
+
 const sacArts = (
   db
     .prepare('select count(*) c from artifacts where account_id=? and deleted_at is null')
