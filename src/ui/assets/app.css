@@ -2727,6 +2727,61 @@
     line-height: 1.45;
   }
 
+  /* B-P3, visual half. The owner preview renders the document with `headingOffset: 1`, so its h1
+     becomes an h2, its h2 an h3, and so on — a deliberate invariant (one h1 per page) that PA-1
+     measured into refutation as a structural defect, and it is not one. But the TYPE RAMP did not
+     move with it: the document's top heading arrived wearing `.aa-md h2`'s 24px rule, so the card
+     promising viewer parity opened every document with a horizontal line the reader never sees.
+
+     So the ramp shifts by the same one level the structure did. Fixing only the top heading would
+     leave the document's real h2s — now h3s — reading as h3s, unbordered and a size down, and the
+     parity would still be broken one level in. The offset is a rendering decision; the ramp is the
+     other half of it.
+
+     Scoped on `[data-aa-dashboard-preview]` rather than a new class: that attribute already exists,
+     already means exactly "this is the owner preview", and is already pinned by
+     dashboard-heading-regression and ui-prose-scope — so this needs no markup change and no other
+     lane's file. (0,2,1) against the base rules' (0,1,1), so it wins on specificity, not order. */
+  /* `border-bottom-width`, not the `border-bottom` shorthand. The shorthand also resets the STYLE,
+     which left this heading computing `0px none` while the viewer's h1 computes `0px solid` from
+     the preflight baseline every other element carries. Both render as no border, so it changes
+     nothing a reader sees — but it made the two contexts differ under a computed-style comparison,
+     which is exactly the check a future parity test would run. Overriding only the width that
+     `.aa-md h2` set leaves the pair byte-identical. */
+  [data-aa-dashboard-preview] .aa-md h2 {
+    margin: 2em 0 0.6em;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+    font-size: 1.875rem;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+
+  [data-aa-dashboard-preview] .aa-md h3 {
+    margin: 2em 0 0.6em;
+    padding-bottom: 0.45em;
+    border-bottom: 1px solid var(--color-aa-line);
+    font-size: 1.5rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+
+  [data-aa-dashboard-preview] .aa-md h4 {
+    margin: 2em 0 0.6em;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  [data-aa-dashboard-preview] .aa-md h5 {
+    margin: 2em 0 0.6em;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
   .aa-md p,
   .aa-md ul,
   .aa-md ol,
