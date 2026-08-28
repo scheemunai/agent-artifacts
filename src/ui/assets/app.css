@@ -960,7 +960,14 @@
     max-width: max-content;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
+    /* Was `0.35rem`/5.6px, between the scale's 4px and 8px steps. `--spacing-aa-1` rather than
+       `-2`: a pill's internal gap should read tighter than its edge inset, and the horizontal
+       padding here is `--spacing-aa-2`, so this is half of it rather than equal to it.
+       Measured before choosing, and it is free today: every badge in the product has a single
+       text child, so the gap is inert — 143.7px wide at 0.35rem, at 4px and at 8px alike. It
+       differs only for a two-child badge, which nothing renders yet. The value is being fixed
+       while it costs nothing rather than when something finally depends on it. */
+    gap: var(--spacing-aa-1);
     border: 1px solid var(--color-aa-line);
     border-radius: var(--radius-aa-full);
     padding: 0.16rem 0.5rem;
@@ -973,8 +980,14 @@
     white-space: nowrap;
   }
 
+  /* The horizontal padding was `0.625rem`/10px — inside the scale's range and between two of its
+     steps, which is drift rather than an optical value, and the only one of its kind left in a
+     product surface. `--spacing-aa-3`/12px keeps this variant a step wider than the base badge's
+     `--spacing-aa-2`/8px, which is the distinction the modifier exists to draw. The vertical
+     `0.22rem` stays a literal for the same reason the base badge's does: it is under the scale's
+     4px floor and sets an optical inset against the pill's radius, not a spacing rhythm. */
   .aa-badge--md {
-    padding: 0.22rem 0.625rem;
+    padding: 0.22rem var(--spacing-aa-3);
     font-size: var(--text-aa-sm);
   }
 
@@ -1648,13 +1661,13 @@
   }
 
   .aa-marketing-main {
-    padding-block: clamp(1.25rem, 4vw, 2.75rem) 0;
+    padding-block: clamp(var(--spacing-aa-5), 4vw, var(--spacing-aa-10)) 0;
   }
 
   .aa-marketing-hero {
     display: grid;
     justify-items: center;
-    gap: clamp(1.75rem, 4vw, 2.625rem);
+    gap: clamp(var(--spacing-aa-6), 4vw, var(--spacing-aa-10));
     text-align: center;
   }
 
@@ -1686,7 +1699,15 @@
     display: grid;
     justify-items: center;
     gap: var(--spacing-aa-6);
-    padding-top: clamp(4rem, 9vw, 6.75rem);
+    /* EXCEPTION 1 of 2, stated where it is taken: 6.75rem/108px is ABOVE THE SCALE'S CEILING.
+       `--spacing-aa-16` (4rem/64px) is the largest step the product defines, because the scale is
+       built for UI density — control gaps, card padding, form rhythm. A marketing page's section
+       rhythm is a different job and needs roughly double the top step, and inventing
+       `--spacing-aa-27` to hold one value used twice would put a number in the token block that no
+       component will ever reach for.
+       So the interpolation runs FROM a token and lands on a literal, and the literal is the part
+       the scale cannot express. If a future step covers 108px, this becomes that token. */
+    padding-top: clamp(var(--spacing-aa-16), 9vw, 6.75rem);
   }
 
   .aa-marketing-section-label {
@@ -1726,7 +1747,7 @@
     display: grid;
     width: 100%;
     min-width: 0;
-    gap: 1.125rem;
+    gap: var(--spacing-aa-4);
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1769,8 +1790,8 @@
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.88rem clamp(1rem, 4vw, 1.75rem);
+    gap: var(--spacing-aa-2);
+    padding: var(--spacing-aa-4) clamp(var(--spacing-aa-4), 4vw, var(--spacing-aa-6));
     border-bottom: 1px solid var(--color-aa-line);
     color: var(--color-aa-muted);
     font-size: 0.84rem;
@@ -1811,7 +1832,12 @@
   .aa-marketing-chip {
     flex: 0 0 auto;
     border-radius: var(--radius-aa-full);
-    padding: 0.06rem 0.55rem;
+    /* EXCEPTION 2 of 2: 0.06rem/1px is BELOW THE SCALE'S FLOOR. `--spacing-aa-1` is 0.25rem/4px,
+       and this is a pill whose height is set by its line-box — the padding is an optical hairline
+       that stops the text touching the radius, not a spacing decision. Snapping it to the smallest
+       token would quadruple it and fatten every chip on the page. The horizontal value IS a spacing
+       decision and takes the token; the vertical one is not, and says so. */
+    padding: 0.06rem var(--spacing-aa-2);
     color: var(--color-aa-ink);
     background: var(--color-aa-bg);
     font-size: var(--text-aa-xs);
@@ -1828,7 +1854,9 @@
     display: grid;
     justify-items: center;
     gap: var(--spacing-aa-4);
-    padding: clamp(2rem, 5vw, 3.05rem) clamp(1.35rem, 5vw, 3rem) clamp(1.75rem, 4vw, 2.35rem);
+    padding: clamp(var(--spacing-aa-8), 5vw, var(--spacing-aa-12))
+      clamp(var(--spacing-aa-5), 5vw, var(--spacing-aa-12))
+      clamp(var(--spacing-aa-6), 4vw, var(--spacing-aa-10));
     text-align: center;
   }
 
@@ -1883,7 +1911,7 @@
   .aa-marketing-example {
     min-width: 0;
     border-radius: var(--radius-aa-lg);
-    padding: 1.55rem 1.65rem 1.45rem;
+    padding: var(--spacing-aa-6);
     background: var(--color-aa-surface-raised);
     box-shadow: var(--shadow-aa-card);
     transition:
@@ -1940,7 +1968,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-aa-3);
-    padding: 0.75rem 0.95rem 0.75rem 1.3rem;
+    padding: var(--spacing-aa-3) var(--spacing-aa-4) var(--spacing-aa-3) var(--spacing-aa-5);
     border-bottom: 1px solid var(--color-aa-dark-line);
   }
 
@@ -1987,7 +2015,7 @@
   .aa-marketing-api__code {
     margin: 0;
     overflow-x: auto;
-    padding: 1.3rem 1.4rem;
+    padding: var(--spacing-aa-5) var(--spacing-aa-6);
     color: var(--color-aa-dark-text);
     font-family: var(--font-mono);
     font-size: 0.82rem;
@@ -2030,13 +2058,13 @@
   .aa-marketing-features {
     display: grid;
     width: min(100%, var(--width-aa-measure));
-    gap: 1.05rem;
+    gap: var(--spacing-aa-4);
   }
 
   .aa-marketing-feature {
     display: grid;
     grid-template-columns: 0.75rem 1fr;
-    gap: 0.8rem;
+    gap: var(--spacing-aa-3);
     align-items: baseline;
   }
 
@@ -2069,7 +2097,8 @@
     width: min(100%, var(--width-aa-measure));
     justify-items: center;
     border-radius: var(--radius-aa-lg);
-    padding: clamp(1.9rem, 5vw, 2.7rem) clamp(1.6rem, 5vw, 2.8rem);
+    padding: clamp(var(--spacing-aa-8), 5vw, var(--spacing-aa-10))
+      clamp(var(--spacing-aa-6), 5vw, var(--spacing-aa-12));
     background: var(--color-aa-surface-tint);
     text-align: center;
   }
@@ -2131,7 +2160,8 @@
     width: min(100%, var(--width-aa-panel));
     justify-content: center;
     border-radius: var(--radius-aa-lg);
-    padding: clamp(2.1rem, 5vw, 3rem) clamp(1.6rem, 5vw, 3rem);
+    padding: clamp(var(--spacing-aa-8), 5vw, var(--spacing-aa-12))
+      clamp(var(--spacing-aa-6), 5vw, var(--spacing-aa-12));
     background: var(--color-aa-surface-raised);
     box-shadow: var(--shadow-aa-card);
     text-align: left;
@@ -2169,8 +2199,8 @@
   }
 
   .aa-marketing-footer {
-    margin-top: clamp(4rem, 9vw, 6.75rem);
-    padding: 2.6rem 0 3.3rem;
+    margin-top: clamp(var(--spacing-aa-16), 9vw, 6.75rem);
+    padding: var(--spacing-aa-10) 0 var(--spacing-aa-12);
     text-align: center;
   }
 
@@ -2192,7 +2222,7 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.35rem 0.5rem;
+    gap: var(--spacing-aa-1) var(--spacing-aa-2);
     margin-top: var(--spacing-aa-2);
   }
 
@@ -2269,7 +2299,7 @@
     .aa-marketing-artifact__meta {
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.3rem 0.5rem;
+      gap: var(--spacing-aa-1) var(--spacing-aa-2);
     }
 
     .aa-marketing-artifact__agent {

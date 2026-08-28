@@ -296,6 +296,64 @@ describe('style guide registry', () => {
     ).toBeGreaterThanOrEqual(24);
   });
 
+  it('spends spacing from the scale, not from a literal that happens to look right', () => {
+    // V7-N1. The marketing surfaces carried nineteen container dimensions in raw rem — 1.125rem,
+    // 1.05rem, 0.8rem, a hero clamp topping out at an off-scale 42px — in a stylesheet whose own
+    // doctrine says a raw literal in a container dimension is a bug. Twenty-nine distinct values
+    // across nineteen declarations, with no common divisor: that is not a rhythm, it is nudging.
+    //
+    // Snapped rather than exempted, and the choice was measured rather than argued: every value
+    // moved by 0.8-4.8px and the whole page lost 22px of 3758 (0.6%) with nothing else changing.
+    // A "fluid marketing rhythm" exemption would have been a story about values nobody could
+    // defend individually.
+    //
+    // The walk covers the WHOLE stylesheet, not the surfaces that were reported. That is what
+    // found `.aa-badge--md` at 0.625rem/10px — a product surface, inside the scale's range,
+    // between two of its steps, which the filed row did not mention.
+    //
+    // TWO ARGUED CATEGORIES, and they are categories rather than a list of names: a literal is
+    // allowed only where the scale CANNOT express the value — below its 4px floor (optical insets
+    // against a radius, icon alignment: spacing the eye reads, not rhythm the layout keeps) or
+    // above its 64px ceiling (marketing section rhythm, which needs roughly double the top step).
+    // Anything BETWEEN two steps is drift by definition, because the scale has a step for it.
+    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
+    const steps = Array.from(css.matchAll(/^\s*--spacing-aa-\d+:\s*([\d.]+)rem;/gm), (match) =>
+      Number.parseFloat(String(match[1]))
+    );
+    expect(steps.length, 'the spacing scale did not parse').toBeGreaterThan(5);
+    const floor = Math.min(...steps);
+    const ceiling = Math.max(...steps);
+
+    const CONTAINER =
+      /\b(gap|row-gap|column-gap|padding|padding-block|padding-inline|padding-top|padding-bottom|padding-left|padding-right|margin|margin-top|margin-bottom)\s*:\s*([^;]+);/g;
+    const drift: string[] = [];
+    let checked = 0;
+
+    for (const rule of parseStylesheet(css)) {
+      for (const declaration of rule.block.matchAll(CONTAINER)) {
+        checked += 1;
+        for (const literal of String(declaration[2]).matchAll(/(?<![\w-])(\d*\.?\d+)rem/g)) {
+          const value = Number.parseFloat(String(literal[1]));
+          if (steps.includes(value) || value < floor || value > ceiling) {
+            continue;
+          }
+          drift.push(`${rule.selector} { ${declaration[1]}: … ${value}rem/${value * 16}px … }`);
+        }
+      }
+    }
+
+    expect(
+      checked,
+      'no container dimensions parsed — the walk is measuring nothing'
+    ).toBeGreaterThan(80);
+    expect(
+      [...new Set(drift)],
+      'these sit between two steps of the scale, so the scale has a value for them and this one ' +
+        'was chosen by eye. Take the token. A literal is only defensible where the scale cannot ' +
+        'reach — under its floor or over its ceiling — and both of those are stated at the rule.'
+    ).toEqual([]);
+  });
+
   it('renders no duplicate id anywhere in the design contract', () => {
     // A necessary check, but NOT the one that catches the class — see the note in
     // `tests/unit/ui-duplicate-ids.test.ts`. This guard only sees what the guide happens to render,
