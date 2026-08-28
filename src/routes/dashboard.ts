@@ -570,6 +570,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         baseUrl: services.config.baseUrl,
         extensionNavItems: dashboardNavItems(services, session.account),
         shownKey,
+        newBotOpen: scalarQuery(routeContext.req.query('new_bot')) === '1',
         // The failure survived the redirect as a code; the copy is the server's.
         ...botFailureProps(routeContext),
         /*

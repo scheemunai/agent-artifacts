@@ -3053,6 +3053,27 @@
     list-style: none;
   }
 
+  .aa-dashboard-disclosure {
+    display: grid;
+    min-width: 0;
+    justify-items: start;
+    gap: var(--spacing-aa-3);
+  }
+
+  .aa-dashboard-disclosure__summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .aa-dashboard-disclosure__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .aa-dashboard-disclosure__panel {
+    width: 100%;
+    min-width: 0;
+  }
+
   .aa-dashboard-card {
     position: relative;
     display: grid;
@@ -3088,6 +3109,19 @@
     display: grid;
     min-width: 0;
     gap: var(--spacing-aa-1);
+  }
+
+  .aa-dashboard-card__title-row {
+    display: inline-flex;
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-aa-2);
+  }
+
+  .aa-dashboard-card__title-row strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .aa-dashboard-card__title {
@@ -3142,6 +3176,10 @@
     overflow-wrap: anywhere;
   }
 
+  .aa-dashboard-card__notice {
+    min-width: 0;
+  }
+
   .aa-dashboard-card__badges,
   .aa-dashboard-card__actions {
     display: flex;
@@ -3155,6 +3193,11 @@
   .aa-dashboard-card__actions {
     position: relative;
     z-index: 1;
+    justify-self: end;
+  }
+
+  .aa-dashboard-card__actions > .aa-button-row {
+    justify-content: flex-end;
   }
 
   @media (max-width: 920px) {
@@ -3177,6 +3220,10 @@
     .aa-dashboard-card__badges,
     .aa-dashboard-card__actions {
       justify-content: flex-start;
+    }
+
+    .aa-dashboard-card__actions {
+      justify-self: start;
     }
   }
 

@@ -1000,6 +1000,8 @@ export interface ConfirmDestructiveProps {
   action: string;
   /** Extra fields the action needs, rendered as hidden inputs. */
   fields?: Record<string, string> | undefined;
+  /** Size for the trigger button; dialog actions keep their own confirmation sizing. */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | undefined;
 }
 
 /**
@@ -1025,6 +1027,7 @@ export function ConfirmDestructive({
   confirmLabel,
   action,
   fields = {},
+  size = 'md',
 }: ConfirmDestructiveProps) {
   const dialogId = `${id}-dialog`;
   const formId = `${id}-form`;
@@ -1032,7 +1035,7 @@ export function ConfirmDestructive({
 
   return (
     <>
-      <Button variant="danger" dataAttrs={{ 'data-aa-open-dialog': dialogId }}>
+      <Button variant="danger" size={size} dataAttrs={{ 'data-aa-open-dialog': dialogId }}>
         {triggerLabel}
       </Button>
       <Dialog

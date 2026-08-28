@@ -303,6 +303,8 @@ export interface DashboardBotsPageProps {
   notice?: DashboardNotice | undefined;
   /** A failure of the create form. `field` marks the one the reader has to fix. */
   createError?: { message: string; field?: 'name' } | undefined;
+  /** Server-open the new-bot disclosure after a CTA reloads the page with intent. */
+  newBotOpen?: boolean | undefined;
   /**
    * A failure of one bot's own control, keyed by that bot. Every bots-page error used to be
    * funnelled into the New bot card, so a failed regenerate on the fourth row reported itself as a
@@ -319,6 +321,7 @@ export function DashboardBotsPage({
   shownKey,
   notice,
   createError,
+  newBotOpen = false,
   botError,
 }: DashboardBotsPageProps) {
   return (
@@ -334,10 +337,6 @@ export function DashboardBotsPage({
           <header class="aa-section-header">
             <p class="aa-page-kicker">Bot registry</p>
             <h1 class="aa-section-title">Bots are your agents' identities.</h1>
-            <p class="aa-section-note">
-              Each bot has a scoped API key and a byline; regenerate or revoke it behind a typed
-              confirmation.
-            </p>
           </header>
         </section>
 
@@ -351,85 +350,33 @@ export function DashboardBotsPage({
           />
         ) : null}
 
-        {/* First run leads with the empty state, because the copy it carries is an instruction and
-            an instruction has to come before the thing it is about. Below the form it read
-            "create one" while pointing back up the page at a form already scrolled past — and at
-            1440 it started at y≈724, below the fold. */}
+        <NewBotDisclosure createError={createError} defaultOpen={newBotOpen} />
+
+        {/* The first-run state still teaches before it asks for data, but its CTA now reloads with
+            intent so the disclosure opens server-side instead of hiding a validation path behind
+            client-only state. */}
         {bots.length === 0 ? (
           <EmptyState
             id="bots-empty"
             title="Register your first bot."
             description="A bot is your agent's identity: it gets an API key, shown once, and an install prompt to paste into your agent."
             action={
-              <Button variant="primary" href="#new-bot">
+              <Button variant="primary" href="/dashboard/bots?new_bot=1#new-bot">
                 Register your first bot →
               </Button>
             }
           />
         ) : null}
 
-        <Card
-          title="New bot"
-          description="The key appears once after creation."
-          notice={
-            createError && !createError.field ? (
-              <Notice tone="danger" title="That bot was not created">
-                {createError.message}
-              </Notice>
-            ) : undefined
-          }
-        >
-          <form class="aa-stack" id="new-bot" method="post" action="/dashboard/api/bots">
-            <Input
-              id="name"
-              name="name"
-              label="Bot name"
-              placeholder="Research bot"
-              error={createError?.field === 'name' ? createError.message : undefined}
-            />
-            <Input
-              id="byline"
-              name="byline"
-              label="Byline"
-              placeholder="Research assistant"
-              optional
-            />
-            <Button variant="primary" type="submit">
-              New bot
-            </Button>
-          </form>
-        </Card>
-
-        {/* Key and Last used used to be their own columns, demoted below 480px — which put the one
-            datum an operator checks before revoking from a phone behind nothing at all: no
-            disclosure, no detail view, no way back to it. Folding them into the Bot cell means the
-            table has two columns at every width, so there is nothing to drop. */}
         {bots.length === 0 ? null : (
-          <Table
-            id="dashboard-bots"
-            caption="Registered bots"
-            columns={['Bot', 'Actions']}
-            rows={bots.map((bot) => [
-              <div>
-                <ButtonRow>
-                  <strong>{bot.name}</strong>
-                  {bot.revokedAt ? <Badge tone="danger">revoked</Badge> : null}
-                </ButtonRow>
-                <span class="aa-hint">{bot.byline ?? 'No byline'}</span>
-                <br />
-                <span class="aa-hint">
-                  <code>aa_bot_…{bot.apiKeyLast4}</code> ·{' '}
-                  {bot.lastUsedAt
-                    ? `last used ${formatRelativeTime(bot.lastUsedAt)}`
-                    : 'never used'}
-                </span>
-              </div>,
-              <BotActions
+          <DashboardCardList label="Registered bots">
+            {bots.map((bot) => (
+              <BotCard
                 bot={bot}
                 error={botError?.botId === bot.id ? botError.message : undefined}
-              />,
-            ])}
-          />
+              />
+            ))}
+          </DashboardCardList>
         )}
       </div>
     </DashboardChrome>
@@ -891,6 +838,7 @@ export interface DashboardCardProps {
   subline?: Child | undefined;
   badges?: Child | undefined;
   meta?: Child | undefined;
+  notice?: Child | undefined;
   actions?: Child | undefined;
   class?: string | undefined;
 }
@@ -908,6 +856,7 @@ export function DashboardCard({
   subline,
   badges,
   meta,
+  notice,
   actions,
   class: className,
 }: DashboardCardProps) {
@@ -937,6 +886,7 @@ export function DashboardCard({
         </div>
         {badges ? <div class="aa-dashboard-card__badges">{badges}</div> : null}
       </div>
+      {notice ? <div class="aa-dashboard-card__notice">{notice}</div> : null}
       {meta || actions ? (
         <div class="aa-dashboard-card__footer">
           {meta ? <p class="aa-dashboard-card__meta">{meta}</p> : null}
@@ -1355,6 +1305,57 @@ function PromotePanel({
   );
 }
 
+function NewBotDisclosure({
+  createError,
+  defaultOpen,
+}: {
+  createError?: DashboardBotsPageProps['createError'];
+  defaultOpen: boolean;
+}) {
+  const open = Boolean(createError) || defaultOpen;
+
+  return (
+    <details class="aa-dashboard-disclosure" id="new-bot" open={open ? true : undefined}>
+      <summary class="aa-btn aa-btn--primary aa-dashboard-disclosure__summary">
+        <span>New bot</span>
+      </summary>
+      <div class="aa-dashboard-disclosure__panel">
+        <Card
+          title="New bot"
+          description="The key appears once after creation."
+          notice={
+            createError && !createError.field ? (
+              <Notice tone="danger" title="That bot was not created">
+                {createError.message}
+              </Notice>
+            ) : undefined
+          }
+        >
+          <form class="aa-stack" id="new-bot-form" method="post" action="/dashboard/api/bots">
+            <Input
+              id="name"
+              name="name"
+              label="Bot name"
+              placeholder="Research bot"
+              error={createError?.field === 'name' ? createError.message : undefined}
+            />
+            <Input
+              id="byline"
+              name="byline"
+              label="Byline"
+              placeholder="Research assistant"
+              optional
+            />
+            <Button variant="primary" type="submit">
+              New bot
+            </Button>
+          </form>
+        </Card>
+      </div>
+    </details>
+  );
+}
+
 /**
  * The one-time key, with the outcome that produced it attached to it.
  *
@@ -1405,12 +1406,40 @@ function BotKeyCard({
   );
 }
 
+function BotCard({ bot, error }: { bot: DashboardBotView; error?: string | undefined }) {
+  return (
+    <DashboardCard
+      title={
+        <span class="aa-dashboard-card__title-row">
+          <strong>{bot.name}</strong>
+          {bot.revokedAt ? <Badge tone="danger">revoked</Badge> : null}
+        </span>
+      }
+      subline={bot.byline ?? 'No byline'}
+      meta={
+        <>
+          <code>aa_bot_…{bot.apiKeyLast4}</code> ·{' '}
+          {bot.lastUsedAt ? `last used ${formatRelativeTime(bot.lastUsedAt)}` : 'never used'}
+        </>
+      }
+      notice={
+        error ? (
+          <Notice tone="danger" title={`${bot.name} was not changed`}>
+            {error}
+          </Notice>
+        ) : undefined
+      }
+      actions={<BotActions bot={bot} />}
+    />
+  );
+}
+
 /**
  * A revoked key has nothing left to regenerate or revoke, so the row stops offering either. The
  * controls are not rendered disabled: a disabled button is still a control the reader has to
  * reason about, and there is no state in which these two would come back for this bot.
  */
-function BotActions({ bot, error }: { bot: DashboardBotView; error?: string | undefined }) {
+function BotActions({ bot }: { bot: DashboardBotView }) {
   if (bot.revokedAt) {
     return (
       <p class="aa-hint">
@@ -1419,16 +1448,8 @@ function BotActions({ bot, error }: { bot: DashboardBotView; error?: string | un
     );
   }
 
-  // The failure and the control that produced it share one row: `ButtonRow` wraps at 12px, which
-  // keeps the cell the height of its controls. `aa-stack` here would put the page-section rhythm
-  // (32px) back inside a table cell, which is what made these rows ~310px tall to begin with.
   return (
     <ButtonRow>
-      {error ? (
-        <Notice tone="danger" title={`${bot.name} was not changed`}>
-          {error}
-        </Notice>
-      ) : null}
       <ConfirmDestructive
         id={`regenerate-bot-${bot.id}`}
         triggerLabel="Regenerate key"
@@ -1438,6 +1459,7 @@ function BotActions({ bot, error }: { bot: DashboardBotView; error?: string | un
         confirmValue={bot.name}
         confirmLabel="Regenerate key"
         action={`/dashboard/api/bots/${bot.id}/regenerate`}
+        size="sm"
       />
       <ConfirmDestructive
         id={`revoke-bot-${bot.id}`}
@@ -1448,6 +1470,7 @@ function BotActions({ bot, error }: { bot: DashboardBotView; error?: string | un
         confirmValue={bot.name}
         confirmLabel="Revoke key"
         action={`/dashboard/api/bots/${bot.id}/revoke`}
+        size="sm"
       />
     </ButtonRow>
   );
