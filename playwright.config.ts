@@ -93,15 +93,34 @@ export default defineConfig({
      * it at 375.
      *
      * The breakpoints cut the gap into three sub-bands — 481–560, 561–720, 721–759 — and each needs
-     * its own edge, because one viewport can only ever render one combination. All three are below.
+     * its own edge, because one viewport can only ever render one combination.
      *
-     * ONE KNOWN GAP REMAINS, stated here rather than left for a post-mortem: the 480 edge itself is
-     * not photographed. 375 and 480 apply an IDENTICAL rule set (every `max-width` on), so 375 does
-     * not stand in for it, and a `max-width: 479px` typo would be invisible to every project here —
-     * 375 has the rule on either way, and 560 has it off either way. Only a viewport at exactly 480
-     * separates those. It is a narrower case than the three below, which is why it is written down
-     * instead of assumed away.
+     * ── THIS IS A CLOSED SET, NOT A SAMPLE ─────────────────────────────────────────────────────
+     *
+     * Every `max-width` boundary in the sheet — 480, 560, 720, 759 — is rendered at its inclusive
+     * edge below, plus 375 for the small end and 1440 for the wide side of `min-width: 760px`.
+     * Adding a viewport is therefore not a matter of taste: IF A NEW BREAKPOINT IS ADDED TO A
+     * STYLESHEET, ITS EDGE BELONGS HERE, or this set silently becomes a sample again and the band
+     * reopens somewhere new.
+     *
+     * The edges are the point. A width in the middle of a band cannot tell `max-width: 720px` from
+     * a `721` typo; only the boundary pixel can, which is the whole reason these are not round
+     * numbers. 480 earns its place on exactly that basis and no other: it renders the same rule set
+     * as 375, so it adds no new combination, but a `max-width: 479px` slip is invisible to every
+     * other project here — 375 has the rule on either way, 560 has it off either way.
      */
+    /**
+     * `max-width: 480px` at its inclusive edge. The only project here that adds no new rule
+     * COMBINATION — 375 applies the same set — and it is kept for the one thing 375 cannot do:
+     * fail when that boundary moves by a pixel.
+     */
+    {
+      name: 'chromium-480',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 480, height: 900 },
+      },
+    },
     {
       name: 'chromium-560',
       use: {
