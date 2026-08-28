@@ -430,6 +430,22 @@ function bindDrawer() {
  * The label is rewritten on toggle because it names the ACTION, not the state: revealed, the next
  * act is to hide. `aria-pressed` carries the state, so the two never have to mean the same thing.
  */
+/**
+ * Add or remove one id from an element's `aria-describedby`, leaving whatever else is in there
+ * alone — the field usually already points at a hint or an error, and this must not become the
+ * thing that drops them.
+ */
+function describeWith(element, id, present) {
+  const ids = (element.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+  const without = ids.filter((value) => value !== id);
+  const next = present ? [...without, id] : without;
+  if (next.length) {
+    element.setAttribute('aria-describedby', next.join(' '));
+  } else {
+    element.removeAttribute('aria-describedby');
+  }
+}
+
 function bindPasswordInputs() {
   document.addEventListener('click', (event) => {
     const toggle =
@@ -463,7 +479,9 @@ function bindPasswordInputs() {
     if (!hint || typeof event.getModifierState !== 'function') {
       return;
     }
-    hint.hidden = !event.getModifierState('CapsLock');
+    const on = event.getModifierState('CapsLock');
+    hint.hidden = !on;
+    describeWith(field, hint.id, on);
   };
 
   document.addEventListener('keydown', syncCaps);
@@ -474,8 +492,9 @@ function bindPasswordInputs() {
       event.target instanceof Element ? event.target.closest('[data-aa-password-input]') : null;
     const wrap = field ? field.closest('.aa-field') : null;
     const hint = wrap ? wrap.querySelector('[data-aa-password-caps]') : null;
-    if (hint) {
+    if (hint && field) {
       hint.hidden = true;
+      describeWith(field, hint.id, false);
     }
   });
 }

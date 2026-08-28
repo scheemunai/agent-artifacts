@@ -48,6 +48,9 @@ const PASS_THROUGH: Record<string, { value: unknown; attr: string }> = {
   spellcheck: { value: false, attr: 'spellcheck="false"' },
   autocapitalize: { value: 'none', attr: 'autocapitalize="none"' },
   autocorrect: { value: 'off', attr: 'autocorrect="off"' },
+  // A map rather than a single attribute, but the same promise and the same machinery: spread onto
+  // the control, or the client bundle can never bind to the field.
+  dataAttrs: { value: { 'data-aa-probe': 'yes' }, attr: 'data-aa-probe="yes"' },
 };
 
 const FIELDS = [

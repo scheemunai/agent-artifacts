@@ -157,7 +157,12 @@ export function ButtonRow({ children, align = 'start', class: className }: Butto
 
 interface FieldDescription {
   id: string;
-  label: string;
+  /**
+   * `Child`, not `string`: a label legitimately contains markup — the confirm-to-delete field names
+   * the phrase you must type inside a <code>. Widened when `ConfirmDestructive` stopped hand-rolling
+   * its own field shell; nothing here ever treated it as a string.
+   */
+  label: Child;
   hint?: string | undefined;
   error?: string | undefined;
   optional?: boolean | undefined;
@@ -198,7 +203,7 @@ function describedBy(id: string, hint?: string, error?: string): string | undefi
 
 interface InputProps {
   id: string;
-  label: string;
+  label: Child;
   type?: string | undefined;
   value?: string | undefined;
   placeholder?: string | undefined;
@@ -232,6 +237,13 @@ interface InputProps {
   /** The element's own vocabulary, not a widened string — a typo here fails silently at runtime. */
   autocapitalize?: 'none' | 'off' | 'on' | 'sentences' | 'words' | 'characters' | undefined;
   autocorrect?: 'on' | 'off' | undefined;
+  /**
+   * Arbitrary data attributes, spread onto the control — the same escape hatch `Button` has, and
+   * for the same reason: the client bundle binds behaviour by data attribute, so a field that
+   * cannot carry one cannot participate in any of it. This is what let `ConfirmDestructive` stop
+   * hand-rolling a raw <input> to keep its two.
+   */
+  dataAttrs?: Record<string, string> | undefined;
 }
 
 export function Input({
@@ -251,6 +263,7 @@ export function Input({
   spellcheck,
   autocapitalize,
   autocorrect,
+  dataAttrs = {},
 }: InputProps) {
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
@@ -270,6 +283,7 @@ export function Input({
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
         {...stateData(state)}
+        {...dataAttrs}
       />
     </FieldShell>
   );
@@ -292,10 +306,14 @@ export function Input({
  * `aria-pressed` carries the state for assistive tech, so the visible label is free to be an
  * instruction rather than doing both jobs badly.
  *
- * The caps hint is always in the DOM and always referenced by `aria-describedby`, hidden until it
- * has something to say — the CopyBlock pattern, for the CopyBlock reason: a hidden target is
- * correctly ignored by assistive tech, and a reference that only sometimes resolves is worse than
- * one that always does.
+ * The caps hint is always in the DOM — it must be, or there would be nothing to reveal — but it is
+ * REFERENCED only while it applies, and the client adds and removes the id in the same breath as
+ * `hidden`. That is a deliberate departure from the CopyBlock rule, which always references its
+ * hint: there the hint is the only description a block has and the server cannot know the answer,
+ * so a permanent reference is the honest one. Here the field usually has a hint or an error already,
+ * and the client CAN know, so describing the field as "…and Caps Lock is on" while Caps Lock is off
+ * would be the guide-showing-an-impossible-state failure aimed at the accessibility tree. Both
+ * halves move together in one handler, so they cannot disagree.
  */
 export interface PasswordInputProps extends Omit<InputProps, 'type'> {
   /** Reveal by default. The toggle still governs it; this is the initial position only. */
@@ -318,10 +336,10 @@ export function PasswordInput({
   spellcheck,
   autocapitalize,
   autocorrect,
+  dataAttrs = {},
   revealed = false,
 }: PasswordInputProps) {
   const capsId = `${id}-caps`;
-  const describedByIds = [describedBy(id, hint, error), capsId].filter(Boolean).join(' ');
 
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
@@ -340,9 +358,10 @@ export function PasswordInput({
           autocorrect={autocorrect}
           disabled={disabled || state === 'disabled'}
           aria-invalid={error || state === 'error' ? 'true' : undefined}
-          aria-describedby={describedByIds}
+          aria-describedby={describedBy(id, hint, error)}
           data-aa-password-input="true"
           {...stateData(state)}
+          {...dataAttrs}
         />
         {/* `secondary`, not `ghost`: ghost is transparent with no border, which is precisely the
             bare-glyph-beside-a-field this is required not to be. */}
@@ -409,6 +428,7 @@ export function Textarea({
   spellcheck,
   autocapitalize,
   autocorrect,
+  dataAttrs = {},
   rows = 5,
 }: TextareaProps) {
   return (
@@ -428,6 +448,7 @@ export function Textarea({
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
         {...stateData(state)}
+        {...dataAttrs}
       >
         {value}
       </textarea>
@@ -461,6 +482,7 @@ export function Select({
   spellcheck,
   autocapitalize,
   autocorrect,
+  dataAttrs = {},
 }: SelectProps) {
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
@@ -477,6 +499,7 @@ export function Select({
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
         {...stateData(state)}
+        {...dataAttrs}
       >
         {options.map((option) => (
           <option value={option.value} selected={option.value === value}>
@@ -968,24 +991,34 @@ export function ConfirmDestructive({
             <input type="hidden" name={name} value={value} />
           ))}
           <p class="aa-confirm-form__consequence">{consequence}</p>
-          <div class="aa-field">
-            <div class="aa-label-row">
-              <label class="aa-label" for={inputId}>
+          {/* This field reasoned its way to the hardening treatment first — a string a human must
+              transcribe exactly, where autocorrect is not a convenience but a corruption — and held
+              it as three hard-coded attributes on a hand-rolled input beside a hand-rolled label
+              row. Now the treatment is props on `Input` and this consumes what it pioneered, so
+              there is one field shell in the product rather than one plus this.
+
+              `autocomplete` stays stated per field rather than folded into the generalisation: it
+              answers "what IS this value", and the answers differ — "off" for a phrase that exists
+              only to be retyped, "one-time-code" for a setup token. The other three answer "how
+              should the keyboard behave", which is the same wherever a value must survive
+              transcription intact. */}
+          <Input
+            id={inputId}
+            name="confirm"
+            label={
+              <>
                 Type <code>{confirmValue}</code> to confirm
-              </label>
-            </div>
-            <input
-              class="aa-control"
-              id={inputId}
-              name="confirm"
-              type="text"
-              autocomplete="off"
-              autocapitalize="none"
-              spellcheck={false}
-              data-aa-confirm-match={confirmValue}
-              data-aa-confirm-for={id}
-            />
-          </div>
+              </>
+            }
+            autocomplete="off"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck={false}
+            dataAttrs={{
+              'data-aa-confirm-match': confirmValue,
+              'data-aa-confirm-for': id,
+            }}
+          />
         </form>
       </Dialog>
     </>

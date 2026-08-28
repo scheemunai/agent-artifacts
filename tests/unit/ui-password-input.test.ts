@@ -64,13 +64,31 @@ describe('PasswordInput', () => {
     );
   });
 
-  it('always renders the caps hint and always points at it', () => {
-    // The CopyBlock rule, for the CopyBlock reason: a hidden target is correctly ignored by
-    // assistive tech, and a reference that only sometimes resolves is worse than one that always
-    // does. So the element exists from the first paint and `hidden` carries whether it applies.
+  it('renders the caps hint always and describes the field with it only when it applies', () => {
+    // The element must exist from the first paint or there is nothing to reveal. The REFERENCE is
+    // different: describing a field as "…and Caps Lock is on" while Caps Lock is off is the
+    // impossible-state failure aimed at the accessibility tree, so the client adds and removes the
+    // id in the same handler that toggles `hidden` — the two cannot disagree.
+    //
+    // This is a deliberate departure from the CopyBlock rule, which references its hint
+    // unconditionally: there the hint is a block's only description and the server cannot know,
+    // so a permanent reference is the honest one. Here the field already has a hint or an error
+    // and the client CAN know.
     expect(masked).toMatch(/<p class="aa-password__caps" id="pw-caps"[^>]*hidden/);
-    expect(masked).toContain('aria-describedby="pw-caps"');
     expect(masked).toContain('Caps Lock is on.');
+    // Scoped to the attribute, not the document: the hint element's own `id="pw-caps"` is in the
+    // markup by design, so a bare string search here would only ever be testing itself.
+    const describedBy = /aria-describedby="([^"]*)"/.exec(masked)?.[1];
+    expect(
+      describedBy ?? '',
+      'the server must not describe a field with caps lock it cannot observe'
+    ).not.toContain('pw-caps');
+
+    // And it does not trample the descriptions that were already there.
+    const withHint = renderToString(
+      PasswordInput({ id: 'pw', label: 'Password', hint: 'At least 12 characters.' })
+    );
+    expect(withHint).toContain('aria-describedby="pw-hint"');
   });
 
   it('is driven by the shared client contract rather than its own script', () => {
@@ -83,5 +101,7 @@ describe('PasswordInput', () => {
     // `getModifierState` is the only reading true on arrival rather than inferred from a keystroke,
     // so a field focused with Caps Lock already down says so immediately.
     expect(foundation).toContain("getModifierState('CapsLock')");
+    // The reference moves with the hint, and preserves whatever else the field already pointed at.
+    expect(foundation).toContain('describeWith');
   });
 });
