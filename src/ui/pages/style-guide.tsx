@@ -575,7 +575,7 @@ function buttonSection() {
   return (
     <Card
       title="Button"
-      description="Primary, secondary, ghost, and danger variants with every interaction state. Small buttons keep compact type but retain the 44px touch target."
+      description="Primary, secondary, ghost, and danger variants with every interaction state, plus four sizes. sm keeps compact type at the 44px touch target; xs is a genuinely compact 32px button for dense chrome such as the marketing header, below the touch floor by design."
     >
       <div class="aa-stack">
         {variants.map((variant) => (
@@ -606,6 +606,23 @@ function buttonSection() {
             </ButtonRow>
           </div>
         ))}
+        <div class="aa-section">
+          <Badge tone="neutral">sizes</Badge>
+          <ButtonRow>
+            <Button variant="primary" size="xs">
+              Extra small
+            </Button>
+            <Button variant="primary" size="sm">
+              Small
+            </Button>
+            <Button variant="primary" size="md">
+              Medium
+            </Button>
+            <Button variant="primary" size="lg">
+              Large
+            </Button>
+          </ButtonRow>
+        </div>
       </div>
     </Card>
   );

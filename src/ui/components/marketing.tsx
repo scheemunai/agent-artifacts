@@ -69,7 +69,7 @@ export function MarketingExampleCard({ number, children }: MarketingExampleCardP
   return (
     <article class="aa-marketing-example">
       <span class="aa-marketing-example__number">{number}</span>
-      <p>{children}</p>
+      <div class="aa-marketing-example__text">{children}</div>
     </article>
   );
 }

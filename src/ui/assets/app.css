@@ -754,6 +754,16 @@
     font-size: var(--text-aa-xs);
   }
 
+  /* A genuinely compact button — 2rem tall, not the 44px touch target the other sizes hold. For
+     dense chrome like the marketing header CTA, where a full 44px button reads as oversized next to
+     a wordmark. Below the touch floor by design: reserve it for secondary/marketing affordances,
+     not primary in-app controls. */
+  .aa-btn--xs {
+    min-height: 2rem;
+    padding-inline: var(--spacing-aa-3);
+    font-size: var(--text-aa-xs);
+  }
+
   .aa-btn--lg {
     min-height: 3rem;
     padding-inline: var(--spacing-aa-5);
@@ -1714,6 +1724,123 @@
     line-height: 1.65;
   }
 
+  .aa-marketing-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-aa-3);
+  }
+
+  .aa-marketing-hero__reassure {
+    margin: 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+  }
+
+  /* THE HERO IS AN ARTIFACT. The opening panel is styled as one of the product's own artifact
+     cards — a meta bar on top, content below — so the first thing a visitor sees is the thing the
+     product makes. One-off for now; the style-guide pass decides whether it earns a component. */
+  .aa-marketing-hero-card {
+    width: min(100%, var(--width-aa-panel));
+    overflow: hidden;
+    border-radius: var(--radius-aa-lg);
+    background: var(--color-aa-surface-raised);
+    box-shadow: var(--shadow-aa-card);
+    text-align: center;
+    animation: aa-artifact-settle 520ms cubic-bezier(0.19, 0.62, 0.27, 1) both;
+  }
+
+  /* The card content is centered, but the prompt is code — it stays left so the lines read as
+     something you paste, not prose. Isolated here so the card's `text-align: center` cannot reach
+     into the block's bar label or its `<pre>`. */
+  .aa-marketing-hero-card .aa-marketing-api {
+    text-align: left;
+  }
+
+  .aa-marketing-hero-card__meta {
+    justify-content: flex-start;
+  }
+
+  .aa-marketing-visibility {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .aa-marketing-visibility__select {
+    appearance: none;
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-full);
+    padding: var(--spacing-aa-1) var(--spacing-aa-6) var(--spacing-aa-1) var(--spacing-aa-3);
+    background-color: var(--color-aa-surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b6558' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-aa-3) center;
+    color: var(--color-aa-muted);
+    font-family: inherit;
+    font-size: var(--text-aa-xs);
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .aa-marketing-hero-card__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-aa-4);
+    padding: clamp(var(--spacing-aa-6), 4vw, var(--spacing-aa-10));
+  }
+
+  .aa-marketing-hero-card__title {
+    max-width: 20ch;
+    margin: 0 auto;
+    color: var(--color-aa-ink);
+    font-size: clamp(var(--text-aa-2xl), 4vw, var(--text-aa-hero));
+    font-weight: 600;
+    letter-spacing: -0.018em;
+    line-height: 1.12;
+  }
+
+  .aa-marketing-hero-card__sub {
+    max-width: 46ch;
+    margin: 0 auto;
+    color: var(--color-aa-muted);
+    font-size: clamp(var(--text-aa-md), 2vw, var(--text-aa-lg));
+    line-height: 1.6;
+  }
+
+  .aa-marketing-hero-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-aa-3);
+    margin-top: var(--spacing-aa-1);
+  }
+
+  /* Full width so the prompt block, which the setup label heads, spans the card. */
+  .aa-marketing-hero-card__body .aa-marketing-api {
+    width: 100%;
+  }
+
+  .aa-marketing-setup-label {
+    margin: var(--spacing-aa-2) 0 0;
+    color: var(--color-aa-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-aa-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* "published 3h ago" is desktop-only; the phone meta bar already carries the agent, the version
+     chip and the visibility control, and a fourth field wraps it to a third line. Hidden ≤720px
+     in the responsive block below. */
+  .aa-marketing-hero-card__published {
+    margin-left: 0;
+  }
+
   .aa-marketing-section {
     display: grid;
     justify-items: center;
@@ -1953,11 +2080,39 @@
     letter-spacing: 0.06em;
   }
 
-  .aa-marketing-example p {
+  /* The card stacks a title, a fuller description, and an optional "see the example" link. It
+     replaces the single `<p>` the card used before per-card examples existed; the base text styling
+     that lived on `p` moves here so both the home cards and the style-guide specimen keep it. */
+  .aa-marketing-example__text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-aa-2);
     margin: 0;
     color: var(--color-aa-ink);
     font-size: var(--text-aa-base);
     line-height: 1.62;
+  }
+
+  .aa-marketing-example__title {
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-md);
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  .aa-marketing-example__body {
+    color: var(--color-aa-muted);
+  }
+
+  .aa-marketing-example__link {
+    margin-top: var(--spacing-aa-1);
+    color: var(--color-aa-accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .aa-marketing-example__link:hover {
+    text-decoration: underline;
   }
 
   .aa-marketing-example strong,
@@ -1983,11 +2138,10 @@
 
   .aa-marketing-api__bar {
     display: flex;
-    min-height: var(--spacing-aa-touch);
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-aa-3);
-    padding: var(--spacing-aa-3) var(--spacing-aa-4) var(--spacing-aa-3) var(--spacing-aa-5);
+    padding: var(--spacing-aa-2) var(--spacing-aa-3) var(--spacing-aa-2) var(--spacing-aa-5);
     border-bottom: 1px solid var(--color-aa-dark-line);
   }
 
@@ -2023,6 +2177,15 @@
     color: var(--color-aa-dark-text);
     border-color: var(--color-aa-dark-muted);
     background: transparent;
+  }
+
+  /* Compact copy button: the default `sm` button is a 44px touch target, which made the prompt
+     bar tall and the button oversized next to a one-word label. Scoped through the bar so it beats
+     the single-class button padding without an override war. (Below the 44px target, deliberately:
+     a marketing copy affordance, not a primary control.) */
+  .aa-marketing-api__bar .aa-marketing-api__copy {
+    min-height: 0;
+    padding: var(--spacing-aa-1) var(--spacing-aa-3);
   }
 
   .aa-marketing-api__copy:hover {
@@ -2100,6 +2263,49 @@
     color: var(--color-aa-muted);
     font-size: var(--text-aa-base);
     line-height: 1.62;
+  }
+
+  /* Works-with agents as an icon strip. `__mark` is a monogram tile standing in for each agent's
+     real logo; a uniform set reads better than five mismatched favicons, and it keeps the marketing
+     page free of external requests. Swap the tile for an <img> or inline SVG per agent to use real
+     brand marks. */
+  .aa-marketing-logos {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-aa-4) var(--spacing-aa-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .aa-marketing-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-aa-2);
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-base);
+    font-weight: 600;
+  }
+
+  .aa-marketing-logo__mark {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-aa-md);
+    background: var(--color-aa-accent-soft);
+    color: var(--color-aa-accent);
+    font-size: var(--text-aa-sm);
+    font-weight: 700;
+  }
+
+  .aa-marketing-logo__name {
+    white-space: nowrap;
   }
 
   .aa-marketing-works {
@@ -2300,11 +2506,25 @@
     .aa-marketing-grid {
       grid-template-columns: minmax(0, 1fr);
     }
+
+    .aa-marketing-hero-card__published {
+      display: none;
+    }
   }
 
   @media (max-width: 560px) {
     .aa-app-nav {
       align-items: flex-start;
+    }
+
+    /* The marketing header carries only a wordmark and one or two compact actions, so it centers
+       with even breathing room. The shared `.aa-app-nav` above top-aligns because the AUTHENTICATED
+       account block can be tall; scoping this to the marketing shell keeps that intact while fixing
+       the home header, which was pinned to the top (no space above) with the nav's min-height left
+       as a gap below. */
+    .aa-app-nav.aa-marketing-shell {
+      align-items: center;
+      padding-block: var(--spacing-aa-3);
     }
 
     .aa-home-actions {

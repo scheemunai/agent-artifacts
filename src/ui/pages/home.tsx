@@ -1,5 +1,4 @@
 import {
-  formatUpdatedLabel,
   HERO_ARTIFACT_PATH,
   heroArtifactUrl,
   type LiveArtifactMeta,
@@ -7,7 +6,6 @@ import {
 import { Layout } from '../components/layout.js';
 import {
   MarketingApiBlock,
-  MarketingArtifactEmbed,
   MarketingExampleCard,
   MarketingFeatureLine,
   MarketingFinalCta,
@@ -19,17 +17,26 @@ import {
 } from '../components/marketing.js';
 import { Button, ProductMark } from '../components/primitives.js';
 
-export const HOME_HERO = 'Artifacts for Agents';
-export const HOME_SUBLINE = 'Shareable Artifacts your agent can use to show its work.';
+export const HOME_HERO = 'Let your agent show its work.';
+export const HOME_SUBLINE =
+  'Agents can generate custom UI and create clean, versioned pages with a shareable link.';
 export const HOME_AGENT_SKILL_COPY =
   'An agent reads one skill file to learn how to publish here: base URL, auth header, create, update, share.';
 export const HOME_ORIGIN_QUOTE =
   "I asked my bot for something simple: a visual list of newsletters I should probably unsubscribe from, so I could make quick decisions. It did the work, then handed me an HTML file to download. I didn't want a file. I wanted a link I could open, look through, and reply to, with the bot fixing what I flagged. That link is what we built.";
 
-export const HOME_CTA_LABEL = 'Get your key';
+export const HOME_CTA_LABEL = 'Get started';
+export const HOME_HERO_CTA_LABEL = 'Get started';
 export const HOME_CTA_HREF = '/login?mode=magic';
 export const HOME_CTA_REASSURANCE = 'Hashed URL · free · no card';
 export const HOME_AUTHENTICATED_CTA_LABEL = 'Open your dashboard';
+/**
+ * Canonical repository URL for the hero's "View on GitHub" action. `githubUrl` (set from
+ * `AA_GITHUB_URL`) wins when present; this is the fallback so the button is never absent.
+ * NOTE: until the repository is published this URL answers 404 — publishing it, or setting
+ * AA_GITHUB_URL to the real location, is what makes the link resolve.
+ */
+export const HOME_REPO_URL = 'https://github.com/ZeroPointRepo/agent-artifacts';
 
 export const HOME_DEMO_ARTIFACTS = [
   {
@@ -42,35 +49,98 @@ export const HOME_DEMO_ARTIFACTS = [
 
 export const HOME_AGENT_SKILL_ARTIFACT = HOME_DEMO_ARTIFACTS[0];
 
-const examples = [
+/**
+ * The four things people actually build here. Each carries an `examplePath` — the public
+ * share URL of a real artifact that demonstrates the use case. The "See the example" link
+ * only renders when the path is set, so a card is never shipped pointing at a page that does
+ * not exist (the same discipline the GitHub affordance follows). Seed the artifact, set the
+ * path, and the link appears.
+ */
+export interface HomeExample {
+  number: string;
+  title: string;
+  body: string;
+  exampleLabel: string;
+  examplePath?: string | undefined;
+}
+
+export const HOME_EXAMPLES: readonly HomeExample[] = [
   {
     number: '01',
-    lead: 'A status tracker',
-    rest: 'your agent keeps current. You open the same link every morning.',
+    title: 'A status tracker your agent keeps current.',
+    body: 'Deployments, incidents, on-call — the agent rewrites the same page as things change and you open one link every morning. No dashboard to build, no attachments to chase.',
+    exampleLabel: 'See a live status page',
+    examplePath: undefined,
   },
   {
     number: '02',
-    lead: 'Proposals and meeting recaps',
-    rest: 'that go to clients as clean pages, not attachments.',
+    title: 'Proposals and recaps clients actually open.',
+    body: 'Meeting notes, project proposals, and weekly updates go out as clean pages with a stable link, not a PDF in an inbox. Send once; when the work changes, the same link updates.',
+    exampleLabel: 'See an example proposal',
+    examplePath: undefined,
   },
   {
     number: '03',
-    lead: 'A YouTube daily digest:',
-    rest: 'a custom template your agent fills with fresh data every day.',
+    title: 'A daily digest on a template you define once.',
+    body: 'A YouTube digest, a market brief, a standup summary — you set the layout, the agent fills it with fresh data on a schedule, and the page is current before you wake up.',
+    exampleLabel: 'See a daily digest',
+    examplePath: undefined,
   },
   {
     number: '04',
-    lead: 'Quick decision lists,',
-    rest: 'like "which of these newsletters do I actually read?"',
+    title: 'Quick decision lists you can act on.',
+    body: '"Which of these newsletters do I actually read?" The agent does the analysis and hands back a page you skim, flag, and reply to — and it revises the list from your feedback in place.',
+    exampleLabel: 'See a decision list',
+    examplePath: undefined,
   },
-] as const;
+];
 
-const features = [
-  'Versioning: the agent edits the document, every change is kept, the link stays the same.',
-  'Sharing: every artifact is a link. Public, private, or password protected.',
-  'Templates: define the layout once, the agent fills it with data, daily if you want.',
-  'HTML underneath: every artifact is an HTML page. If your agent can write markdown or HTML, it can publish.',
-] as const;
+/**
+ * Features, split into the bolded lead term and its explanation. The mockup emphasises the
+ * capability word ("Versioning", "Templates") so the list scans as a capability index; passing
+ * the label as its own node lets the page render it in `<strong>` without a second component.
+ */
+export interface HomeFeature {
+  label: string;
+  body: string;
+}
+
+export const HOME_FEATURES: readonly HomeFeature[] = [
+  {
+    label: 'Versioning',
+    body: 'the agent edits the document, every change is kept, and the link stays the same.',
+  },
+  {
+    label: 'Sharing',
+    body: 'every artifact is a link. Public, private, or password protected.',
+  },
+  {
+    label: 'Templates',
+    body: 'define the layout once, the agent fills it with data, daily if you want.',
+  },
+  {
+    label: 'HTML underneath',
+    body: 'every artifact is an HTML page. If your agent can write markdown or HTML, it can publish.',
+  },
+];
+
+/**
+ * Agents the product works with, shown as an icon strip. `mark` is a short monogram used as a
+ * placeholder tile until real brand SVGs are dropped in — a uniform set reads better than five
+ * mismatched logos, and it keeps the marketing page free of external requests.
+ */
+export interface HomeTool {
+  name: string;
+  mark: string;
+}
+
+export const HOME_WORKS_WITH: readonly HomeTool[] = [
+  { name: 'Grok Bot', mark: 'G' },
+  { name: 'Claude Code', mark: 'C' },
+  { name: 'Codex', mark: 'Cx' },
+  { name: 'Hermes Agents', mark: 'H' },
+  { name: 'OpenClaw', mark: 'O' },
+];
 
 export interface HomePageProps {
   baseUrl: string;
@@ -86,18 +156,11 @@ export interface HomePageProps {
   now?: number | undefined;
 }
 
-export function HomePage({
-  baseUrl,
-  authenticated = false,
-  githubUrl,
-  liveArtifact = null,
-  now,
-}: HomePageProps) {
+export function HomePage({ baseUrl, authenticated = false, githubUrl }: HomePageProps) {
   const agentSkillUrl = heroArtifactUrl(baseUrl);
-  const updatedLabel = liveArtifact
-    ? (formatUpdatedLabel(liveArtifact.updatedAt, now ?? Date.now()) ?? undefined)
-    : undefined;
-  const versionLabel = liveArtifact?.versionLabel;
+  // Display host for the copy-paste prompt: the agent reads the same /skill.md the footer links to,
+  // shown without the scheme so the prompt stays readable ("agentartifact.ai/skill.md").
+  const skillPromptUrl = `${baseUrl.replace(/^https?:\/\//, '')}/skill.md`;
 
   return (
     <Layout title="Agent Artifacts" description={HOME_SUBLINE}>
@@ -116,20 +179,20 @@ export function HomePage({
           */}
           <nav class="aa-button-row aa-home-actions" aria-label="Primary">
             {githubUrl ? (
-              <Button variant="ghost" size="sm" href={githubUrl} class="aa-btn--compact-hide">
+              <Button variant="ghost" size="xs" href={githubUrl} class="aa-btn--compact-hide">
                 GitHub
               </Button>
             ) : null}
             {authenticated ? (
-              <Button variant="primary" size="sm" href="/dashboard">
+              <Button variant="primary" size="xs" href="/dashboard">
                 Dashboard
               </Button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" href={HOME_CTA_HREF} class="aa-btn--compact-hide">
+                <Button variant="ghost" size="xs" href={HOME_CTA_HREF} class="aa-btn--compact-hide">
                   Log in
                 </Button>
-                <Button variant="primary" size="sm" href={HOME_CTA_HREF}>
+                <Button variant="primary" size="xs" href={HOME_CTA_HREF}>
                   {HOME_CTA_LABEL}
                 </Button>
               </>
@@ -141,77 +204,100 @@ export function HomePage({
       <main class="aa-main aa-marketing-main">
         <div class="aa-shell aa-marketing-shell">
           <section class="aa-marketing-hero" aria-labelledby="home-title">
-            <div class="aa-marketing-hero__copy">
-              <h1 class="aa-marketing-hero__title" id="home-title">
-                {HOME_HERO}
-              </h1>
-              <p class="aa-marketing-hero__sub">
-                Shareable Artifacts your agent
-                <br aria-hidden="true" /> can use to show its work.
-              </p>
-            </div>
+            {/* The hero is itself an artifact — the product demonstrating its own output. The meta
+                bar names the agent and shows the visibility control every real artifact carries;
+                the body holds the pitch, the actions, and the copy-paste prompt that sets an agent
+                up. Not componentised yet: this is a one-off hero and the style-guide pass is next. */}
+            <article class="aa-marketing-hero-card">
+              <header class="aa-marketing-artifact__meta aa-marketing-hero-card__meta">
+                <span class="aa-marketing-artifact__dot" aria-hidden="true"></span>
+                <span class="aa-marketing-artifact__agent">example-artifact</span>
+                <span class="aa-marketing-chip">v1</span>
+                <span class="aa-marketing-artifact__updated aa-marketing-hero-card__published">
+                  published 3h ago
+                </span>
+                <span class="aa-marketing-visibility">
+                  <label class="sr-only" for="home-visibility">
+                    Artifact visibility
+                  </label>
+                  <select
+                    id="home-visibility"
+                    class="aa-marketing-visibility__select"
+                    aria-label="Artifact visibility"
+                  >
+                    <option value="public" selected>
+                      Public
+                    </option>
+                    <option value="private">Private</option>
+                    <option value="password">Password protected</option>
+                  </select>
+                </span>
+              </header>
 
-            <MarketingArtifactEmbed
-              href={agentSkillUrl}
-              agentLabel="demo-showcase-agent"
-              slugLabel={HOME_AGENT_SKILL_ARTIFACT.slugLabel}
-              version={versionLabel}
-              updatedLabel={updatedLabel}
-              title={HOME_AGENT_SKILL_ARTIFACT.title}
-              headingLevel={2}
-              ariaLabel="Open the live Agent Skill artifact"
-            >
-              <p>{HOME_AGENT_SKILL_COPY}</p>
-              <p>
-                Read <a href="/skill.md">/skill.md</a> for the canonical machine-readable skill.
-              </p>
-            </MarketingArtifactEmbed>
+              <div class="aa-marketing-hero-card__body">
+                <h1 class="aa-marketing-hero-card__title" id="home-title">
+                  {HOME_HERO}
+                </h1>
+                <p class="aa-marketing-hero-card__sub">{HOME_SUBLINE}</p>
+
+                <div class="aa-marketing-hero-card__actions">
+                  <Button variant="primary" href={authenticated ? '/dashboard' : HOME_CTA_HREF}>
+                    {authenticated ? HOME_AUTHENTICATED_CTA_LABEL : HOME_HERO_CTA_LABEL}
+                  </Button>
+                  <Button variant="secondary" href={githubUrl ?? HOME_REPO_URL}>
+                    View on GitHub
+                  </Button>
+                </div>
+
+                <p class="aa-marketing-setup-label">Set up with your agent</p>
+                <MarketingApiBlock id="home-prompt" label="Prompt">
+                  {`Create a skill so you can publish to Agent Artifacts.\n`}
+                  {`Read ${skillPromptUrl} and set it up.`}
+                </MarketingApiBlock>
+              </div>
+            </article>
           </section>
 
           <MarketingSection id="home-examples" label="Examples" title="What people use it for">
             <div class="aa-marketing-grid">
-              {examples.map((example) => (
+              {HOME_EXAMPLES.map((example) => (
                 <MarketingExampleCard number={example.number}>
-                  <strong>{example.lead}</strong> {example.rest}
+                  <strong class="aa-marketing-example__title">{example.title}</strong>
+                  <span class="aa-marketing-example__body">{example.body}</span>
+                  {example.examplePath ? (
+                    <a class="aa-marketing-example__link" href={example.examplePath}>
+                      {example.exampleLabel}
+                      <span aria-hidden="true"> →</span>
+                    </a>
+                  ) : null}
                 </MarketingExampleCard>
               ))}
             </div>
           </MarketingSection>
 
-          <MarketingSection id="home-api" label="How it works" title="Send a link, not a file.">
-            <div class="aa-marketing-api-wrap">
-              <MarketingApiBlock id="home-api-code" label="The whole API">
-                POST agentartifact.ai/v1/artifacts{`\n`}
-                {'{ '}
-                <span class="aa-marketing-api__key">"title"</span>:{' '}
-                <span class="aa-marketing-api__string">"Weekly Ops Report"</span>,{' '}
-                <span class="aa-marketing-api__key">"content"</span>:{' '}
-                <span class="aa-marketing-api__string">"# Monday..."</span>
-                {' }'}
-                {`\n`}
-                <span class="aa-marketing-api__url">
-                  returns https://agentartifact.ai/a/x7Kd2mQpLbfE3nWvY8tRZA
-                </span>
-              </MarketingApiBlock>
-              <p class="aa-marketing-api__caption">
-                That's the whole API. Your agent already knows how to use it.
-              </p>
-            </div>
-          </MarketingSection>
-
           <MarketingSection id="home-features" label="Features">
             <div class="aa-marketing-features">
-              {features.map((feature) => (
-                <MarketingFeatureLine>{feature}</MarketingFeatureLine>
+              {HOME_FEATURES.map((feature) => (
+                <MarketingFeatureLine>
+                  <strong class="aa-marketing-feature__label">{feature.label}:</strong>{' '}
+                  {feature.body}
+                </MarketingFeatureLine>
               ))}
             </div>
           </MarketingSection>
 
           <MarketingSection id="home-works" label="Works with">
-            <MarketingWorksWith>
-              <strong>Grok Bot, Claude Code, Codex, Hermes Agents, Openclaw,</strong> and any agent
-              that can make an HTTP request.
-            </MarketingWorksWith>
+            <ul class="aa-marketing-logos" aria-label="Works with these agents">
+              {HOME_WORKS_WITH.map((tool) => (
+                <li class="aa-marketing-logo">
+                  <span class="aa-marketing-logo__mark" aria-hidden="true">
+                    {tool.mark}
+                  </span>
+                  <span class="aa-marketing-logo__name">{tool.name}</span>
+                </li>
+              ))}
+            </ul>
+            <MarketingWorksWith>and any agent that can make an HTTP request.</MarketingWorksWith>
           </MarketingSection>
 
           <MarketingSection id="home-origin" label="Why this exists">

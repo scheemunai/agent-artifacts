@@ -38,7 +38,7 @@ export function slugId(value: string | undefined, fallback: string): string {
 interface ButtonProps {
   children: Child;
   variant?: ButtonVariant;
-  size?: 'sm' | 'md' | 'lg' | undefined;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | undefined;
   state?: ComponentState | undefined;
   type?: 'button' | 'submit' | 'reset' | undefined;
   disabled?: boolean | undefined;
