@@ -55,7 +55,17 @@ describe('B-B1 · status tones stop being spent on taxonomy', () => {
     // on a type left no tone available for real state.
     expect(html).not.toMatch(/<span class="aa-badge aa-badge--success">\s*md\s*</);
     expect(html).not.toMatch(/<span class="aa-badge aa-badge--info">\s*html\s*</);
-    expect(html).toMatch(/<span class="aa-badge aa-badge--neutral">\s*md\s*</);
+
+    // CONTRACT CHANGED (V6-N1), and this states the intent better than what it replaces. This used
+    // to require the literal `aa-badge--neutral`, which the stylesheet never defined — the type
+    // badge was carrying a class that matched zero rules on every screen in the product. `.aa-badge`
+    // IS the neutral badge, so neutral now emits no modifier at all.
+    //
+    // Asserting the ABSENCE of a tone is the stronger form of "this is not a status": the old line
+    // would have passed just as happily if `aa-badge--neutral` had been given a colour one day,
+    // which is precisely the thing B-B1 exists to prevent.
+    expect(html).toMatch(/<span class="aa-badge">\s*md\s*</);
+    expect(html).not.toMatch(/<span class="aa-badge aa-badge--\w+">\s*md\s*</);
   });
 
   it('uses the same neutral treatment in the template preview panel', async () => {

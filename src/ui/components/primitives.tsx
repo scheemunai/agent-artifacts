@@ -576,9 +576,24 @@ interface BadgeProps {
   size?: BadgeSize;
 }
 
+/**
+ * `neutral` emits no modifier, because there is no `.aa-badge--neutral` to emit — `.aa-badge` IS
+ * the neutral badge, and every modifier only retones it. The class was in the markup of every
+ * badge-bearing screen in the product and matched zero rules: a vocabulary token that existed only
+ * in HTML, which reads to anyone inspecting an element as a style that must be defined somewhere.
+ *
+ * Same form `Toast` and `Notice` already use. Dropping it is a zero-pixel change; the point is that
+ * the markup stops naming something the stylesheet does not have.
+ */
 export function Badge({ children, tone = 'neutral', size = 'sm' }: BadgeProps) {
   return (
-    <span class={cx('aa-badge', `aa-badge--${tone}`, size === 'md' && 'aa-badge--md')}>
+    <span
+      class={cx(
+        'aa-badge',
+        tone !== 'neutral' && `aa-badge--${tone}`,
+        size === 'md' && 'aa-badge--md'
+      )}
+    >
       {children}
     </span>
   );
@@ -1099,8 +1114,20 @@ export function ConfirmDestructive({
   );
 }
 
+/**
+ * Toast's own tones, narrowed to the ones it can actually render.
+ *
+ * It borrowed `BadgeTone`, which includes `accent` — and there is no `.aa-toast--accent`. Nothing
+ * passed it, so nothing broke, but the type was an offer the component could not honour: a caller
+ * following the types to `tone="accent"` would have got an unstyled toast and no error from
+ * anywhere. `NoticeTone` had already solved this by declaring exactly the four it defines; this is
+ * the same move, and it is the reason a shared union between components is worth distrusting —
+ * `neutral` is real here and meaningless on a Notice, `accent` is real on a Badge and absent here.
+ */
+export type ToastTone = 'neutral' | 'success' | 'warn' | 'danger' | 'info';
+
 interface ToastProps {
-  tone?: BadgeTone;
+  tone?: ToastTone;
   children: Child;
 }
 
