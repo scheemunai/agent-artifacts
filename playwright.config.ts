@@ -92,14 +92,46 @@ export default defineConfig({
      * `width <= 560` branch is exercised at its exact edge here rather than only from deep inside
      * it at 375.
      *
-     * ONE PROJECT COVERS ONE SUB-BAND. 561–720 and 721–759 are still unphotographed; see the
-     * report accompanying this change.
+     * The breakpoints cut the gap into three sub-bands — 481–560, 561–720, 721–759 — and each needs
+     * its own edge, because one viewport can only ever render one combination. All three are below.
+     *
+     * ONE KNOWN GAP REMAINS, stated here rather than left for a post-mortem: the 480 edge itself is
+     * not photographed. 375 and 480 apply an IDENTICAL rule set (every `max-width` on), so 375 does
+     * not stand in for it, and a `max-width: 479px` typo would be invisible to every project here —
+     * 375 has the rule on either way, and 560 has it off either way. Only a viewport at exactly 480
+     * separates those. It is a narrower case than the three below, which is why it is written down
+     * instead of assumed away.
      */
     {
       name: 'chromium-560',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 560, height: 900 },
+      },
+    },
+    /**
+     * `max-width: 720px` at its inclusive edge: the 720 and 759 rules ON, 480 and 560 OFF. This is
+     * the only combination in the sheet that no other project produces, and 721 as a typo breaks
+     * exactly here.
+     */
+    {
+      name: 'chromium-720',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 720, height: 900 },
+      },
+    },
+    /**
+     * The last mixed state: `max-width: 759px` ON with 480, 560 and 720 all OFF, one pixel below
+     * where `min-width: 760px` takes over. This edge is the seam between the compact sheet and the
+     * wide one, and 759/760 is the single most likely place for an off-by-one to leave a width with
+     * NEITHER side's rules applied.
+     */
+    {
+      name: 'chromium-759',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 759, height: 900 },
       },
     },
     {
