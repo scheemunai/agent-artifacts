@@ -7,9 +7,12 @@ import {
   declarationValue,
   maxLength,
   parseStylesheet,
+  ROOT_FONT_SIZE,
   resolveVars,
+  splitTopLevel,
   stripComments,
   themeVariables,
+  winningDeclaration,
 } from '../support/css-cascade.js';
 
 /**
@@ -211,6 +214,86 @@ describe('style guide registry', () => {
         `${rule.selector} sets min-width ${declared} and is not a scroll-contained table`
       ).toBe(true);
     }
+  });
+
+  it('sets no font-size below the legibility floor', () => {
+    // V6-N2: `.aa-marketing-api__label` shipped at 0.72rem — 11.52px — on a label that is also
+    // uppercase, letterspaced and muted on a dark card. One value, one screen, and found only
+    // because a validator measured every label on the page.
+    //
+    // A walk rather than a fix to that one rule, for the usual reason: the next sub-12px value will
+    // be somewhere nobody is measuring. 12px is the floor the hunt pre-registered, and
+    // `--text-aa-xs` is exactly 12px — so the scale's own smallest step is the floor, and anything
+    // under it is off the scale as well as under the floor. The two were the same edit here.
+    //
+    // Stated limits, because this resolves values rather than rendering them: `em` and `%` depend
+    // on a parent this cannot know, and `inherit` says nothing, so those are skipped. `clamp()` is
+    // read at its FIRST argument — the smallest it can compute to — because a floor cares about the
+    // worst case, not the comfortable one.
+    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
+    const variables = themeVariables(css);
+    const FLOOR_PX = 12;
+    let checked = 0;
+
+    for (const rule of parseStylesheet(css)) {
+      const declared = declarationValue(rule.block, 'font-size');
+      if (!declared) {
+        continue;
+      }
+
+      const resolved = resolveVars(declared, variables).trim();
+      if (/em\b|%|inherit/.test(resolved.replace(/rem\b/g, ''))) {
+        continue;
+      }
+
+      const smallest = resolved.startsWith('clamp(')
+        ? (splitTopLevel(resolved.slice(6, -1))[0] ?? '').trim()
+        : resolved;
+      const px = /rem$/.test(smallest)
+        ? Number.parseFloat(smallest) * ROOT_FONT_SIZE
+        : /px$/.test(smallest)
+          ? Number.parseFloat(smallest)
+          : Number.NaN;
+      if (Number.isNaN(px)) {
+        continue;
+      }
+
+      checked += 1;
+      expect(
+        px,
+        `${rule.selector} sets font-size ${declared} (${px}px), under the ${FLOOR_PX}px floor`
+      ).toBeGreaterThanOrEqual(FLOOR_PX);
+    }
+
+    // Vacuity guard: if the resolution stops working, every size skips and this passes for free.
+    expect(checked, 'no font-size resolved — the walk is measuring nothing').toBeGreaterThan(40);
+  });
+
+  it('gives a standalone link a target big enough to hit', () => {
+    // V6-N3, and the rule it settles. A CONTROL takes `--spacing-aa-touch` (44px, this product's
+    // own floor). A TEXT LINK takes 24px, WCAG 2.5.8's minimum — not 44, because a row of tertiary
+    // links at 44px each becomes a band of empty space under every page.
+    //
+    // 2.5.8 exempts links inside a sentence, where line-height sets the size. The marketing footer
+    // is not a sentence — it is a row of links separated by glyphs — so the exemption does not
+    // apply and the minimum does. They were 23.80px, missing by a fifth of a pixel, because the
+    // height was pure `line-height` arithmetic with no padding: nothing declared the size, so
+    // nothing protected it.
+    //
+    // Asserted on the declaration rather than by rendering, so it fails when someone removes the
+    // rule. The measured result is in the commit; a resolver cannot see a rendered box.
+    const declared = winningDeclaration(
+      parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8')),
+      [{ tag: 'p', classes: ['aa-marketing-footer__links'] }, { tag: 'a' }],
+      'min-height',
+      1440
+    )?.value;
+
+    expect(declared, 'the footer links declare no minimum target size').toBeDefined();
+    expect(
+      Number.parseFloat(String(declared)) * (String(declared).endsWith('rem') ? ROOT_FONT_SIZE : 1),
+      `standalone footer links are ${declared}, under WCAG 2.5.8's 24px minimum`
+    ).toBeGreaterThanOrEqual(24);
   });
 
   it('renders no duplicate id anywhere in the design contract', () => {

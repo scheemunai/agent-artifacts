@@ -1805,13 +1805,16 @@
     color: var(--color-aa-line-strong);
   }
 
+  /* Ride-along, zero-pixel: this was the literal `0.75rem`, which is exactly what `--text-aa-xs`
+     resolves to. Same size, now spelled as the scale rather than as a number that happens to agree
+     with it — so a change to the scale reaches it, which is the only reason the token exists. */
   .aa-marketing-chip {
     flex: 0 0 auto;
     border-radius: var(--radius-aa-full);
     padding: 0.06rem 0.55rem;
     color: var(--color-aa-ink);
     background: var(--color-aa-bg);
-    font-size: 0.75rem;
+    font-size: var(--text-aa-xs);
     font-weight: 650;
     letter-spacing: 0.04em;
   }
@@ -1941,9 +1944,16 @@
     border-bottom: 1px solid var(--color-aa-dark-line);
   }
 
+  /* V6-N2. This was `0.72rem` — 11.52px, under the 12px legibility floor, and on a label that is
+     also uppercase, letterspaced and muted on a dark card, which is the combination that needs the
+     size most. It is the smallest type in the product and it was the only value below the floor.
+
+     Fixed by taking the token rather than by choosing a bigger number. `--text-aa-xs` IS 12px: it
+     exists so that micro-labels have one size instead of each one picking its own, and 0.72 was
+     off the scale entirely — the defect and the drift were the same edit. */
   .aa-marketing-api__label {
     color: var(--color-aa-dark-muted);
-    font-size: 0.72rem;
+    font-size: var(--text-aa-xs);
     font-weight: 650;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -2184,6 +2194,30 @@
     justify-content: center;
     gap: 0.35rem 0.5rem;
     margin-top: var(--spacing-aa-2);
+  }
+
+  /* V6-N3, and the RULE THIS PRODUCT FOLLOWS, stated once here because it was previously implied
+     and therefore re-flagged every time someone measured it.
+
+     A CONTROL takes `--spacing-aa-touch`, 44px. That is this product's own floor and it is well
+     above any standard — it applies to buttons, form fields, icon triggers, anything whose job is
+     to be pressed.
+
+     A TEXT LINK takes 24px, which is WCAG 2.5.8's minimum. It does not take 44, and that is a
+     decision rather than an oversight: a row of tertiary links given 44px each becomes a 44px band
+     of mostly empty space under every page, which trades a real reading experience for a number
+     that was written for controls. 2.5.8 exempts links inside a sentence, where line-height sets
+     the size — but these are not in a sentence. They are a standalone row separated by glyphs, so
+     the exemption does not cover them and the 24px minimum applies in full.
+
+     They were 23.80px: the height came entirely from `line-height: 1.7` on a 14px font with no
+     padding at all, which lands 0.2px short. Missing by a fifth of a pixel is still missing, and it
+     is the kind of number that only ever gets fixed by someone measuring it — so the size is
+     declared here rather than left as an arithmetic accident of the type scale. */
+  .aa-marketing-footer__links a {
+    display: inline-flex;
+    min-height: 1.5rem;
+    align-items: center;
   }
 
   /* A-33. These are glyphs, and they were wearing a LINE token: `--color-aa-line-strong` is sized
