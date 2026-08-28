@@ -117,8 +117,8 @@ export const HOME_FEATURES: readonly HomeFeature[] = [
     body: 'define the layout once, the agent fills it with data, daily if you want.',
   },
   {
-    label: 'HTML underneath',
-    body: 'every artifact is an HTML page. If your agent can write markdown or HTML, it can publish.',
+    label: 'Markdown or HTML',
+    body: 'publish a Markdown file or a full HTML page — both are first-class artifacts. Markdown renders as a clean document; HTML renders as your own designed page. If your agent can write either, it can publish.',
   },
 ];
 
