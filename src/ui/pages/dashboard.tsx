@@ -1179,16 +1179,40 @@ function promoteFailureMessage(code: string | null): string | null {
       return 'That template slug is already in use. Choose another.';
     case 'needs_a_slot':
       return 'Add at least one {{slot}} placeholder to the artifact first.';
+    case 'invalid_slot_marker':
+      return 'One of the {{slot}} markers in this artifact is malformed. Fix it and try again.';
     case 'markdown_only':
       return 'Only markdown artifacts can be promoted to templates.';
     case 'artifact_missing':
       return 'That artifact is no longer here.';
+    case 'promote_invalid':
+      // The honest generic. It reaches here when the cause was not one this vocabulary knows, and
+      // it says so rather than picking the most likely-sounding neighbour — naming a cause nobody
+      // verified is what produced V10-N2. Vague and true beats specific and wrong.
+      return 'Something in that form did not pass validation, and no template was created.';
     case 'promote_unavailable':
       return 'That promotion did not go through, and no template was created.';
     default:
       return null;
   }
 }
+
+/**
+ * The refusals that belong to a field rather than to the form.
+ *
+ * A slug the schema rejected is an error about the slug box, and the reader is looking at the slug
+ * box — so it goes there, through the same `Input.error` machinery every other field in the product
+ * uses, instead of into a notice above the form that makes the reader hunt for which input it means.
+ * The C1/C9 rule: an error that has an address is delivered to it.
+ */
+const PROMOTE_FIELD_ERRORS: Record<string, { field: 'name' | 'slug'; message: string }> = {
+  slug_invalid: {
+    field: 'slug',
+    message: 'Use lowercase letters, numbers and hyphens — no spaces or punctuation.',
+  },
+  slug_taken: { field: 'slug', message: 'That template slug is already in use. Choose another.' },
+  name_invalid: { field: 'name', message: 'Give the template a name of at least one character.' },
+};
 
 function PromotePanel({
   artifact,
@@ -1197,7 +1221,10 @@ function PromotePanel({
   artifact: DashboardArtifactDetail;
   errorCode: string | null;
 }) {
-  const error = promoteFailureMessage(errorCode);
+  // A field refusal is delivered to its field and NOT repeated in the notice: saying it twice makes
+  // the reader check whether they are two different problems.
+  const fieldError = errorCode ? PROMOTE_FIELD_ERRORS[errorCode] : undefined;
+  const error = fieldError ? null : promoteFailureMessage(errorCode);
   // An HTML artifact used to get the whole panel: a prefilled name, a prefilled slug, an editable
   // description, an error line and a submit at 55% opacity — a form the reader can type into that
   // can never be sent. State the rule once and offer nothing to fill in.
@@ -1231,12 +1258,19 @@ function PromotePanel({
         action={`/dashboard/api/artifacts/${artifact.id}/promote-template`}
       >
         <p class="aa-hint">Detected slots: {slots.length > 0 ? slots.join(' ') : 'none yet'}</p>
-        <Input id="template_name" name="name" label="Template name" value={artifact.title} />
+        <Input
+          id="template_name"
+          name="name"
+          label="Template name"
+          value={artifact.title}
+          {...(fieldError?.field === 'name' ? { error: fieldError.message } : {})}
+        />
         <Input
           id="template_slug"
           name="slug"
           label="Template slug"
           value={`${artifact.slug}-template`}
+          {...(fieldError?.field === 'slug' ? { error: fieldError.message } : {})}
         />
         <Textarea
           id="template_description"

@@ -145,6 +145,29 @@ function settingsFailureCode(error: unknown): string {
   return 'settings_unavailable';
 }
 
+/**
+ * Names the cause the service actually reported, rather than guessing one from its prose.
+ *
+ * This read `/slot/i.test(error.message) ? 'needs_a_slot' : 'markdown_only'`, which made every
+ * unrecognised validation failure claim the artifact was the wrong type. Typing a malformed slug
+ * into a MARKDOWN artifact's promote form answered "Only markdown artifacts can be promoted to
+ * templates." — a sentence that is false about the artifact, silent about the real mistake, and
+ * printed on a panel that only renders for markdown artifacts in the first place. The user's own
+ * error was never named.
+ *
+ * The message regex was wrong twice, not once. "Template contains an invalid slot marker" also
+ * matches /slot/, so a malformed `{{ slot }}` answered "Add at least one {{slot}} placeholder
+ * first" — advice to do the thing the user had already done.
+ *
+ * Every one of these errors already carries `field` and `reason` in its details, so the cause is
+ * available as data and does not need to be inferred from a sentence written for a human. Reading
+ * the structure instead is what makes each branch a fact rather than a guess.
+ *
+ * The fallback is deliberately vague. `promote_invalid` says something failed validation and does
+ * not say what, because an unmatched cause is by definition one this function did not verify — and
+ * a wrong specific reason is worse than an honest general one. That is the whole defect, in the
+ * shape it would come back.
+ */
 function promoteFailureCode(error: unknown): string {
   if (error instanceof AppError) {
     if (error.code === 'slug_conflict') {
@@ -154,7 +177,28 @@ function promoteFailureCode(error: unknown): string {
       return 'artifact_missing';
     }
     if (error.code === 'validation_failed') {
-      return /slot/i.test(error.message) ? 'needs_a_slot' : 'markdown_only';
+      const details = error.details ?? {};
+      const reason = typeof details.reason === 'string' ? details.reason : '';
+      const field = typeof details.field === 'string' ? details.field : '';
+
+      // Reasons the service states outright.
+      if (reason === 'html_not_supported') {
+        return 'markdown_only';
+      }
+      if (reason === 'no_slots') {
+        return 'needs_a_slot';
+      }
+      if (reason === 'invalid_slot_marker') {
+        return 'invalid_slot_marker';
+      }
+      // Schema refusals, which name their field but carry no reason.
+      if (field === 'slug') {
+        return 'slug_invalid';
+      }
+      if (field === 'name') {
+        return 'name_invalid';
+      }
+      return 'promote_invalid';
     }
   }
   return 'promote_unavailable';

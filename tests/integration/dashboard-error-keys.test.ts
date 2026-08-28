@@ -191,6 +191,48 @@ describe('the real failures keep their specific copy', () => {
     expect(html).toContain('cloud');
   });
 
+  it('names the slug as the reason when the slug is what was wrong', async () => {
+    // V10-N2. `promoteFailureCode` classified by regexing the error's MESSAGE — anything without
+    // "slot" in it became `markdown_only` — so typing a malformed slug into a MARKDOWN artifact's
+    // promote form answered "Only markdown artifacts can be promoted to templates."
+    //
+    // Three things wrong with that sentence at once: it is false about the artifact, it never names
+    // the mistake the user actually made, and it appears on a panel that only renders for markdown
+    // artifacts in the first place — so it contradicts the page it is printed on.
+    const ctx = await makeContext();
+    const markdown = await seedArtifact(ctx, 'markdown');
+
+    const refused = await ctx.app.request(
+      `/dashboard/api/artifacts/${markdown.artifactId}/promote-template`,
+      {
+        method: 'POST',
+        headers: postHeaders(ctx, markdown.cookie),
+        body: formBody({ name: 'Y', slug: 'BAD SLUG!!' }).body,
+      }
+    );
+
+    const landing = refused.headers.get('location') ?? '';
+    expect(landing, 'the slug refusal is not carried as its own cause').toContain(
+      'promote_error=slug_invalid'
+    );
+
+    const html = await (
+      await ctx.app.request(landing, { headers: { Cookie: markdown.cookie } })
+    ).text();
+
+    // The real cause, delivered to the field it belongs to rather than to a notice above the form.
+    expect(html).toContain('Use lowercase letters, numbers and hyphens');
+    expect(html).toContain('id="template_slug-error"');
+    expect(html).toMatch(/id="template_slug"[^>]*aria-invalid="true"/);
+
+    // And the false cause is gone. This is the assertion the defect was: a markdown artifact being
+    // told it is not markdown.
+    expect(
+      html,
+      'the form still blames the artifact type for a mistake in the slug field'
+    ).not.toContain('Only markdown artifacts can be promoted to templates.');
+  });
+
   it('keeps each promote refusal distinguishable', async () => {
     const ctx = await makeContext();
     const html = await seedArtifact(ctx, 'html');
