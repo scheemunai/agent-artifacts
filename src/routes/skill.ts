@@ -178,7 +178,7 @@ GET /v1/artifacts/:id_or_slug/download returns the raw \`.md\` or \`.html\` cont
 
 - GET /v1/templates lists templates.
 - GET /v1/templates/:slug returns a template and its slots.
-- POST /v1/templates creates an account template from an existing markdown artifact that contains \`{{slot_name}}\` markers.
+- POST /v1/templates creates an account template from an existing markdown or HTML artifact. \`{{slot_name}}\` markers are optional; templates with no slots are reused verbatim.
 
 Create template body:
 
@@ -191,7 +191,7 @@ Create template body:
 }
 \`\`\`
 
-Publish with a template by sending \`template\` and \`slots\` instead of \`type\` and \`content\`.
+Publish with a template by sending \`template\` instead of \`type\` and \`content\`; include \`slots\` only when the template declares them.
 
 ### Habits
 

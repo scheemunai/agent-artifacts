@@ -11,6 +11,7 @@ import { runMigrations } from '../../src/db/migrations.js';
 import type { Account, CloudModule } from '../../src/extension/cloud-module.js';
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
 import { skillText } from '../../src/routes/skill.js';
+import { HOME_HERO, HOME_REPO_URL, HOME_SUBLINE } from '../../src/ui/pages/home.js';
 import { insertAccount } from '../unit/db-test-utils.js';
 import {
   createTestCloudModule,
@@ -57,15 +58,13 @@ describe('deployment mode behavior', () => {
     const html = await response.text();
 
     expect(response.status).toBe(200);
-    expect(html).toContain('Artifacts for Agents');
-    expect(html).toContain('Shareable Artifacts your agent can use to show its work.');
-    expect(html).toContain('this-is-artifact');
+    expect(html).toContain(HOME_HERO);
+    expect(html).toContain(HOME_SUBLINE);
+    expect(html).toContain('example-artifact');
     expect(html).toContain('href="/skill.md"');
     expect(html).toContain('What people use it for');
-    expect(html).toContain('Hashed URL · free · no card');
-    // The repository is unpublished (docs/decisions.md), so the homepage links nowhere
-    // until AA_GITHUB_URL is set.
-    expect(html).not.toContain('github.com');
+    expect(html).toContain('No card. Publish in a minute.');
+    expect(html).toContain(`href="${HOME_REPO_URL}"`);
   });
 
   it('shows the GitHub affordances once AA_GITHUB_URL is configured', async () => {
@@ -79,7 +78,8 @@ describe('deployment mode behavior', () => {
 
     expect(response.status).toBe(200);
     expect(html).toContain(`href="${githubUrl}"`);
-    expect(html).toContain('Star it on GitHub.');
+    expect(html).toContain('View on GitHub');
+    expect(html).toContain('>GitHub<');
   });
 
   it('serves /skill.md in both deployment modes', async () => {

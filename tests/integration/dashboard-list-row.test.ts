@@ -40,13 +40,13 @@ async function seed(ctx: AuthTestContext, titles: string[]): Promise<{ cookie: s
   return { cookie: await login(ctx, account.email, 'password123') };
 }
 
-/** The markup between `<div class="aa-list">` and the end of the list. */
+/** The markup between the artifact card list and the end of the list. */
 function listMarkup(html: string): string {
-  return html.split('<div class="aa-list">')[1] ?? '';
+  return html.split('<ul class="aa-dashboard-card-list" aria-label="Artifacts">')[1] ?? '';
 }
 
-describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the published row', () => {
-  it('renders one aa-list-row per artifact inside one aa-list', async () => {
+describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the dashboard card list', () => {
+  it('renders one dashboard card per artifact inside one card list', async () => {
     const ctx = await makeContext();
     const { cookie } = await seed(ctx, ['Alpha report', 'Beta report', 'Gamma report']);
 
@@ -54,14 +54,14 @@ describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the published row', () 
       await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
     ).text();
 
-    expect(html).toContain('<div class="aa-list">');
-    expect(html.match(/class="aa-list-row"/g) ?? []).toHaveLength(3);
-    // A stack of cards is what the guide's aligned-row pattern replaces; each row was its own
-    // bordered box with nothing lining up between them.
-    expect(listMarkup(html)).not.toContain('aa-card');
+    expect(html).toContain('<ul class="aa-dashboard-card-list" aria-label="Artifacts">');
+    expect(
+      html.match(/<li class="aa-dashboard-card aa-dashboard-card--linked">/g) ?? []
+    ).toHaveLength(3);
+    expect(listMarkup(html)).not.toContain('aa-list-row');
   });
 
-  it('puts the title in the title cell as the stretched link, so the whole row is the target', async () => {
+  it('puts the title in the card as the stretched link, so the card is the target', async () => {
     const ctx = await makeContext();
     const { cookie } = await seed(ctx, ['Alpha report']);
 
@@ -70,10 +70,9 @@ describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the published row', () 
     ).text();
 
     expect(html).toMatch(
-      /<span class="aa-list-row__title">\s*<a class="aa-list-row__link" href="\/dashboard\/artifacts\/[^"]+">/
+      /<h3 class="aa-dashboard-card__title">\s*<a class="aa-dashboard-card__link" href="\/dashboard\/artifacts\/[^"]+">/
     );
-    // Only the title text was interactive before; the rest of a clickable-looking row was inert.
-    expect(html).toContain('aa-list-row__meta');
+    expect(html).toContain('aa-dashboard-card__meta');
   });
 
   it('promotes the slug out of the meta line, where it was the differentiator nobody could see', async () => {
@@ -89,8 +88,9 @@ describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the published row', () 
     const list = listMarkup(html);
     expect(list).toContain('<code>row-0</code>');
     expect(list).toContain('<code>row-1</code>');
-    const firstRow = list.split('class="aa-list-row"')[1] ?? '';
-    expect(firstRow.indexOf('<code>')).toBeLessThan(firstRow.indexOf('aa-list-row__meta'));
+    const firstCard =
+      list.split('<li class="aa-dashboard-card aa-dashboard-card--linked">')[1] ?? '';
+    expect(firstCard.indexOf('<code>')).toBeLessThan(firstCard.indexOf('aa-dashboard-card__meta'));
   });
 });
 
@@ -108,13 +108,13 @@ describe("the pattern's own constraint, held where it is consumed", () => {
     // above the overlay — and a row that needs several targets wants a different pattern, not a
     // workaround. Asserting it here rather than trusting a reading of today's markup: the next
     // person to add a Delete button to this row should be told by a test, not by a bug report.
-    const rows = html.split('<div class="aa-list-row">').slice(1);
-    expect(rows).toHaveLength(2);
-    for (const row of rows) {
-      const body = row.split('</div>')[0] ?? row;
+    const cards = html.split('<li class="aa-dashboard-card aa-dashboard-card--linked">').slice(1);
+    expect(cards).toHaveLength(2);
+    for (const card of cards) {
+      const body = card.split('</li>')[0] ?? card;
       const controls = body.match(/<(?:a|button|input|select|textarea)\b/g) ?? [];
       expect(controls).toHaveLength(1);
-      expect(body).toContain('class="aa-list-row__link"');
+      expect(body).toContain('class="aa-dashboard-card__link"');
     }
   });
 });

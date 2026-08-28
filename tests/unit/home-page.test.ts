@@ -4,10 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { heroArtifactUrl, publicArtifactUrl } from '../../src/services/live-artifact-meta.js';
 import {
   HOME_AGENT_SKILL_ARTIFACT,
-  HOME_AGENT_SKILL_COPY,
-  HOME_CTA_REASSURANCE,
+  HOME_CTA_LABEL,
   HOME_DEMO_ARTIFACTS,
   HOME_HERO,
+  HOME_HERO_CTA_LABEL,
+  HOME_REPO_URL,
   HOME_SUBLINE,
   HomePage,
 } from '../../src/ui/pages/home.js';
@@ -22,18 +23,22 @@ describe('cloud marketing homepage', () => {
 
     expect(html).toContain(HOME_HERO);
     expect(html).toContain(HOME_SUBLINE);
-    expect(html).toContain(HOME_AGENT_SKILL_COPY);
-    expect(html).toContain('this-is-artifact');
+    expect(html).toContain('Set up with your agent');
+    expect(html).toContain('Create a skill so you can publish to Agent Artifacts.');
+    expect(html).toContain('example-artifact');
     expect(html).toContain('Agent Skill');
     expect(html).toContain('href="/skill.md"');
     expect(html).toContain('What people use it for');
-    expect(html).toContain('Send a link, not a file.');
-    expect(html).toContain('That&#39;s the whole API. Your agent already knows how to use it.');
-    expect(html).toContain('Versioning: the agent edits the document');
-    expect(html).toContain('Grok Bot, Claude Code, Codex, Hermes Agents, Openclaw');
+    expect(html).toContain('A status tracker your agent keeps current.');
+    expect(html).toContain('No dashboard to build, no attachments to chase.');
+    expect(html).toContain('Versioning:');
+    expect(html).toContain('the agent edits the document');
+    expect(html).toContain('Grok Bot');
+    expect(html).toContain('Claude Code');
+    expect(html).toContain('OpenClaw');
     expect(html).toContain('Why this exists');
-    expect(html).toContain('Free artifacts live for seven days, then fade.');
-    expect(html).toContain('MIT licensed and self-hostable, end to end.');
+    expect(html).toContain('Artifacts live 7 days, then fade');
+    expect(html).toContain('MIT licensed and self-hostable, end to end');
 
     for (const artifact of HOME_DEMO_ARTIFACTS) {
       expect(html).toContain(`href="${publicArtifactUrl(baseUrl, artifact.path)}"`);
@@ -73,17 +78,17 @@ describe('cloud marketing homepage', () => {
     expect(html).not.toContain('preview-cloud.example.test/a/');
   });
 
-  describe('unpublished repository posture', () => {
-    it('renders no GitHub affordance and no dead link when no repository url is configured', () => {
+  describe('repository posture', () => {
+    it('uses the canonical fallback repository for hero/self-host affordances by default', () => {
       const html = renderToString(HomePage({ baseUrl: 'https://example.test' }));
 
-      expect(html).not.toContain('github.com');
-      expect(html).not.toContain('ZeroPointRepo');
-      expect(html).not.toContain('>GitHub<');
+      expect(html).toContain(`href="${HOME_REPO_URL}"`);
+      expect(html).toContain('ZeroPointRepo');
+      expect(html).toContain('View on GitHub');
       expect(html).not.toContain('Star it on GitHub.');
-      // The open-source claim itself survives; only the link is withheld.
-      expect(html).toContain('MIT licensed and self-hostable, end to end.');
-      expect(html).not.toMatch(/<a[^>]+href="(?!\/)[^"]*"[^>]*>\s*GitHub/i);
+      // The open-source claim itself survives in the footer and the pricing self-host panel.
+      expect(html).toContain('MIT licensed and self-hostable, end to end');
+      expect(html).not.toContain('>GitHub<');
     });
 
     it('keeps the product surface on the checklist that unblocks it', () => {
@@ -114,29 +119,29 @@ describe('cloud marketing homepage', () => {
       ).toContain('AA_GITHUB_URL');
     });
 
-    it('restores nav, open source, and footer links once the repository url is set', () => {
+    it('uses the configured repository URL everywhere an external repository affordance renders', () => {
       const githubUrl = 'https://github.com/example-owner/agent-artifacts';
       const html = renderToString(HomePage({ baseUrl: 'https://example.test', githubUrl }));
 
       expect(html).toContain(`href="${githubUrl}"`);
-      expect(html).toContain('Star it on GitHub.');
-      expect(html.match(new RegExp(`href="${githubUrl}"`, 'g')) ?? []).toHaveLength(3);
+      expect(html).toContain('View on GitHub');
+      expect(html).toContain('>GitHub<');
+      expect(html).not.toContain('Star it on GitHub.');
+      expect(html.match(new RegExp(`href="${githubUrl}"`, 'g')) ?? []).toHaveLength(4);
     });
   });
 
-  describe('live hero meta strip', () => {
-    it('omits version and updated time entirely when the live state is unknown', () => {
+  describe('hero artifact meta strip', () => {
+    it('renders the product-demonstration meta strip even when live state is unknown', () => {
       const html = renderToString(HomePage({ baseUrl: 'https://example.test' }));
 
-      expect(html).not.toContain('updated 6 h ago');
-      expect(html).not.toMatch(/updated \d+ (min|h|d|mo) ago/);
-      expect(html).not.toContain('aa-marketing-artifact__updated');
-      expect(html).not.toContain('aa-marketing-chip');
-      // The card itself still renders: a missing label never blocks the page.
-      expect(html).toContain('this-is-artifact');
+      expect(html).toContain('aa-marketing-chip">v1');
+      expect(html).toContain('published 3h ago');
+      expect(html).toContain('Artifact visibility');
+      expect(html).toContain('example-artifact');
     });
 
-    it('renders the real version and a relative time from the live artifact', () => {
+    it('keeps fetched live version data off the static marketing mockup', () => {
       const html = renderToString(
         HomePage({
           baseUrl: 'https://example.test',
@@ -145,11 +150,12 @@ describe('cloud marketing homepage', () => {
         })
       );
 
-      expect(html).toContain('updated 6 h ago');
-      expect(html).toContain('v7');
+      expect(html).not.toContain('updated 6 h ago');
+      expect(html).not.toContain('v7');
+      expect(html).toContain('aa-marketing-chip">v1');
     });
 
-    it('omits the time when it cannot be described honestly, keeping the version', () => {
+    it('does not render impossible fetched times into the static mockup', () => {
       const html = renderToString(
         HomePage({
           baseUrl: 'https://example.test',
@@ -158,42 +164,48 @@ describe('cloud marketing homepage', () => {
         })
       );
 
-      expect(html).not.toMatch(/updated .* ago/);
-      expect(html).toContain('v2');
+      expect(html).not.toContain('updated 1 h ago');
+      expect(html).not.toContain('v2');
+      expect(html).toContain('published 3h ago');
     });
   });
 
-  describe('zone 8 closing call to action', () => {
-    it('closes the page with a call to action and the deck reassurance line', () => {
+  describe('pricing conversion actions', () => {
+    it('keeps the closing calls to action in the pricing cards', () => {
       const html = renderToString(HomePage({ baseUrl: 'https://example.test' }));
 
-      expect(html).toContain('aa-marketing-cta');
-      expect(html).toContain(HOME_CTA_REASSURANCE);
+      expect(html).toContain('aa-marketing-pricing');
+      expect(html).toContain('No card. Publish in a minute.');
+      expect(html).toContain('For work that sticks around.');
       expect(html).toContain('href="/login?mode=magic"');
+      expect(html).toContain(`>${HOME_CTA_LABEL}<`);
 
-      const ctaIndex = html.indexOf('aa-marketing-cta');
-      expect(ctaIndex).toBeGreaterThan(html.indexOf('Free artifacts live for seven days'));
-      expect(ctaIndex).toBeLessThan(html.indexOf('aa-marketing-footer'));
+      const pricingIndex = html.indexOf('aa-marketing-pricing');
+      expect(pricingIndex).toBeGreaterThan(html.indexOf('Why this exists'));
+      expect(pricingIndex).toBeLessThan(html.indexOf('aa-marketing-footer'));
     });
 
-    it('sends signed-in visitors to the dashboard and drops the signup reassurance', () => {
+    it('sends signed-in visitors to the dashboard', () => {
       const html = renderToString(
         HomePage({ baseUrl: 'https://example.test', authenticated: true })
       );
 
       expect(html).toContain('Open your dashboard');
-      expect(html).not.toContain(HOME_CTA_REASSURANCE);
+      expect(html).toContain('href="/dashboard"');
+      expect(html).not.toContain('Get started');
     });
 
-    it('does not add a hero call to action while that decision is open', () => {
+    it('opens with a hero call to action and a repository affordance', () => {
       const html = renderToString(HomePage({ baseUrl: 'https://example.test' }));
       const hero = html.slice(
         html.indexOf('aa-marketing-hero'),
         html.indexOf('id="home-examples-title"')
       );
 
-      expect(hero).not.toContain('aa-btn--primary');
-      expect(hero).not.toContain(HOME_CTA_REASSURANCE);
+      expect(hero).toContain('aa-marketing-hero-card__actions');
+      expect(hero).toContain('aa-btn--primary');
+      expect(hero).toContain(`>${HOME_HERO_CTA_LABEL}<`);
+      expect(hero).toContain(`href="${HOME_REPO_URL}"`);
     });
   });
 });

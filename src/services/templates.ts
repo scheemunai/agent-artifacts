@@ -7,7 +7,12 @@ import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } fro
 import { decodeSortCursor, encodeSortCursor } from '../lib/cursor.js';
 import { AppError } from '../lib/errors.js';
 import { resolveShippedPath } from '../lib/runtime-paths.js';
-import { ARTIFACT_ID_PATTERN, type ArtifactType, slugSchema } from '../lib/schemas/artifacts.js';
+import {
+  ARTIFACT_ID_PATTERN,
+  type ArtifactType,
+  artifactTypeSchema,
+  slugSchema,
+} from '../lib/schemas/artifacts.js';
 import { promoteTemplateSchema, templateSlotSchema } from '../lib/schemas/templates.js';
 import type { Logger } from '../logger.js';
 
@@ -21,7 +26,8 @@ export interface StarterTemplate {
   slug: string;
   name: string;
   description: string;
-  type: 'markdown';
+  type: ArtifactType;
+  thumbnail?: string | undefined;
   content: string;
   slots: TemplateSlot[];
 }
@@ -32,6 +38,7 @@ export interface TemplateRow {
   slug: string;
   name: string;
   description: string | null;
+  thumbnail_url: string | null;
   type: ArtifactType;
   content: string;
   slots: string;
@@ -76,21 +83,26 @@ const manifestEntrySchema = z
     slug: slugSchema,
     name: z.string().min(1).max(80),
     description: z.string().max(300),
-    type: z.literal('markdown'),
+    type: artifactTypeSchema,
+    thumbnail: z.string().min(1).optional(),
     content_file: z.string().min(1),
-    slots: z.array(templateSlotSchema).min(1),
+    slots: z.array(templateSlotSchema).default([]),
   })
   .strict();
 const starterManifestSchema = z
   .array(manifestEntrySchema)
-  .length(5)
+  .min(5)
   .superRefine((entries, ctx) => {
-    const slugs = entries.map((entry) => entry.slug).toSorted();
-    const expected = ['briefing', 'changelog', 'dashboard', 'one-pager', 'report'];
-    if (slugs.join(',') !== expected.join(',')) {
+    const seen = new Set<string>();
+    for (const [index, entry] of entries.entries()) {
+      if (!seen.has(entry.slug)) {
+        seen.add(entry.slug);
+        continue;
+      }
       ctx.addIssue({
         code: 'custom',
-        message: `starter slugs must be ${expected.join(', ')}`,
+        path: [index, 'slug'],
+        message: 'starter slugs must be unique',
       });
     }
   });
@@ -116,12 +128,15 @@ export function loadStarterTemplates(rootDir?: string): StarterTemplate[] {
     }
 
     const content = readFileSync(contentPath, 'utf8');
-    assertNoInvalidTemplateResidue(content);
+    if (entry.slots.length > 0) {
+      assertNoInvalidTemplateResidue(content);
+    }
     return {
       slug: entry.slug,
       name: entry.name,
       description: entry.description,
       type: entry.type,
+      ...(entry.thumbnail !== undefined ? { thumbnail: entry.thumbnail } : {}),
       content,
       slots: entry.slots,
     };
@@ -187,16 +202,14 @@ export async function mergeTemplate(input: {
     });
   }
 
-  if (template.type !== 'markdown') {
-    throw new AppError(400, 'validation_failed', 'Only markdown templates are supported in v1', {
-      field: 'template',
-      reason: 'template_type_not_supported',
-    });
+  const slots = parseSlots(template.slots);
+  if (slots.length === 0) {
+    return { template, content: template.content, type: template.type };
   }
 
   const content = mergeTemplateContent({
     content: template.content,
-    slots: parseSlots(template.slots),
+    slots,
     values: input.slots ?? {},
   });
   return { template, content, type: template.type };
@@ -271,20 +284,10 @@ export async function promoteArtifactToTemplate(
   if (!artifact || artifact.deleted_at !== null) {
     throw new AppError(404, 'not_found', 'Artifact not found');
   }
-  if (artifact.type !== 'markdown') {
-    throw new AppError(400, 'validation_failed', 'Only markdown artifacts can be promoted', {
-      field: 'type',
-      reason: 'html_not_supported',
-    });
-  }
 
-  assertNoInvalidTemplateResidue(artifact.content);
   const slotNames = extractSlotNames(artifact.content);
-  if (slotNames.length === 0) {
-    throw new AppError(400, 'validation_failed', 'Add at least one {{slot}} placeholder first', {
-      field: 'content',
-      reason: 'no_slots',
-    });
+  if (slotNames.length > 0) {
+    assertNoInvalidTemplateResidue(artifact.content);
   }
 
   const now = Date.now();
@@ -302,6 +305,8 @@ export async function promoteArtifactToTemplate(
       slug: parsed.data.slug,
       name: parsed.data.name,
       description: parsed.data.description ?? null,
+      thumbnailUrl: null,
+      type: artifact.type,
       content: artifact.content,
       slots,
       createdFromArtifact: artifact.id,
@@ -340,6 +345,7 @@ export function formatTemplate(row: TemplateRow, includeContent: boolean): Recor
     slug: row.slug,
     name: row.name,
     description: row.description,
+    thumbnail_url: row.thumbnail_url,
     type: row.type,
     built_in: row.account_id === null,
     ...(includeContent
@@ -430,13 +436,17 @@ function seedSqliteStarterTemplates(
   const seed = handle.sqlite.transaction(() => {
     const upsert = handle.sqlite.prepare(`
       INSERT INTO templates (
-        id, account_id, slug, name, description, type, content, slots,
+        id, account_id, slug, name, description, thumbnail_url, type, content, slots,
         created_from_artifact, created_at, updated_at
       )
-      VALUES (@id, NULL, @slug, @name, @description, @type, @content, @slots, NULL, @now, @now)
+      VALUES (
+        @id, NULL, @slug, @name, @description, @thumbnailUrl, @type, @content, @slots,
+        NULL, @now, @now
+      )
       ON CONFLICT(slug) WHERE account_id IS NULL DO UPDATE SET
         name = excluded.name,
         description = excluded.description,
+        thumbnail_url = excluded.thumbnail_url,
         type = excluded.type,
         content = excluded.content,
         slots = excluded.slots,
@@ -469,13 +479,14 @@ async function seedPostgresStarterTemplates(
       await client.query(
         `
           INSERT INTO templates (
-            id, account_id, slug, name, description, type, content, slots,
+            id, account_id, slug, name, description, thumbnail_url, type, content, slots,
             created_from_artifact, created_at, updated_at
           )
-          VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, NULL, $8, $8)
+          VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, NULL, $9, $9)
           ON CONFLICT (slug) WHERE account_id IS NULL DO UPDATE SET
             name = excluded.name,
             description = excluded.description,
+            thumbnail_url = excluded.thumbnail_url,
             type = excluded.type,
             content = excluded.content,
             slots = excluded.slots,
@@ -486,6 +497,7 @@ async function seedPostgresStarterTemplates(
           record.slug,
           record.name,
           record.description,
+          record.thumbnailUrl,
           record.type,
           record.content,
           record.slots,
@@ -512,6 +524,7 @@ function templateRecord(template: StarterTemplate, now: number) {
     slug: template.slug,
     name: template.name,
     description: template.description,
+    thumbnailUrl: template.thumbnail ?? null,
     type: template.type,
     content: template.content,
     slots: JSON.stringify(template.slots),
@@ -588,6 +601,8 @@ async function insertAccountTemplate(
     slug: string;
     name: string;
     description: string | null;
+    thumbnailUrl: string | null;
+    type: ArtifactType;
     content: string;
     slots: TemplateSlot[];
     createdFromArtifact: string;
@@ -598,10 +613,10 @@ async function insertAccountTemplate(
     db,
     `
       INSERT INTO templates (
-        id, account_id, slug, name, description, type, content, slots,
+        id, account_id, slug, name, description, thumbnail_url, type, content, slots,
         created_from_artifact, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, 'markdown', ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       input.id,
@@ -609,6 +624,8 @@ async function insertAccountTemplate(
       input.slug,
       input.name,
       input.description,
+      input.thumbnailUrl,
+      input.type,
       input.content,
       JSON.stringify(input.slots),
       input.createdFromArtifact,

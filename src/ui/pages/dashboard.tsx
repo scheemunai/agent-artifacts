@@ -84,6 +84,7 @@ export interface DashboardTemplateView {
   name: string;
   slug: string;
   description: string | null;
+  thumbnailUrl: string | null;
   type: ArtifactType;
   slots: string[];
   builtIn: boolean;

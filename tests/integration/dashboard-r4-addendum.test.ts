@@ -68,8 +68,8 @@ describe('V3-N2 · a byline does not orphan its own closing bracket', () => {
   });
 });
 
-describe('V3-N3 · the bots lede describes the product that shipped', () => {
-  it('stops promising immediacy in the place the product learned not to be immediate', async () => {
+describe('V3-N3 · the bots header matches the unified dashboard template', () => {
+  it('keeps the two-line header and leaves typed-confirmation detail to the cards', async () => {
     const ctx = await makeContext();
     const { cookie } = await seed(ctx, 'QA Stage2 primary bot');
 
@@ -77,8 +77,13 @@ describe('V3-N3 · the bots lede describes the product that shipped', () => {
       await ctx.app.request('/dashboard/bots', { headers: { Cookie: cookie } })
     ).text();
 
-    // The sentence described the r1 always-open-form model and outlived it by two rounds.
+    // Package 2 trimmed the explanatory note out of the page header; the typed-confirmation detail
+    // now belongs with the card actions/dialogs instead of the lede.
+    expect(html).toContain('Bot registry');
+    expect(html).toContain('Bots are your agents&#39; identities.');
     expect(html).not.toContain('immediate regenerate/revoke controls');
-    expect(html).toContain('typed confirmation');
+    expect(html).not.toContain(
+      'Each bot has a scoped API key and a byline; regenerate or revoke it behind a typed confirmation.'
+    );
   });
 });

@@ -55,6 +55,8 @@ const WRAPS_ON_A_PHONE = 60;
 
 /** Centred blocks longer than the threshold, each with the reason it is not running prose. */
 const CENTRED_BY_ARGUMENT: Record<string, string> = {
+  'aa-marketing-hero-card__sub':
+    'the hero card subline is a display deck line paired with one H1 and two actions, not running prose',
   'aa-marketing-works':
     'a list of agent names, not a sentence — 3 lines at 375 and 2 at desktop, each line whole items',
   'aa-marketing-api__caption':

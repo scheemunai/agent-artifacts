@@ -17,6 +17,7 @@ export const templateObjectSchema = z.object({
   slug: slugSchema,
   name: z.string(),
   description: z.string().nullable(),
+  thumbnail_url: z.string().nullable(),
   type: artifactTypeSchema,
   built_in: z.boolean(),
   content: z.string().optional(),

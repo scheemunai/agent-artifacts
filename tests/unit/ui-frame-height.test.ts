@@ -57,15 +57,15 @@ describe('the frame-height handshake', () => {
     expect(Number(floor)).toBeLessThanOrEqual(96);
   });
 
-  it('keeps its CSS floor out of the way once a height has been measured', () => {
+  it('keeps the full-screen CSS floor that short app-style HTML artifacts use', () => {
     const framed = parseStylesheet(viewerCss).filter(
       (rule) => rule.selector.includes('.aa-viewer-frame') && /min-height:/.test(rule.block)
     );
 
     expect(framed.length, 'no min-height rule found for the frame').toBeGreaterThan(0);
     expect(
-      framed.every((rule) => rule.selector.includes('data-aa-frame-height')),
-      'min-height must be scoped to the unmeasured state, or it outranks the measured inline height'
+      framed.some((rule) => rule.block.includes('min-height: calc(100dvh - 7rem)')),
+      'HTML artifact frames should keep the viewport floor while measured heights may grow above it'
     ).toBe(true);
   });
 });

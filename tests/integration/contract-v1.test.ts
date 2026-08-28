@@ -189,8 +189,8 @@ describe('V1 contract endpoint', () => {
       );
       expect(undocumented).toEqual([]);
       expect(contract).toContain('POST /v1/templates');
-      expect(contract).toContain('details.reason="html_not_supported"');
-      expect(contract).toContain('details.reason="no_slots"');
+      expect(contract).toContain('Templates with no slots are copied verbatim.');
+      expect(contract).toContain('markdown or HTML artifact');
     } finally {
       await ctx.cleanup();
     }

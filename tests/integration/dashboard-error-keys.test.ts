@@ -233,12 +233,12 @@ describe('the real failures keep their specific copy', () => {
     ).not.toContain('Only markdown artifacts can be promoted to templates.');
   });
 
-  it('keeps each promote refusal distinguishable', async () => {
+  it('accepts html and slotless promotions instead of carrying old refusal codes', async () => {
     const ctx = await makeContext();
     const html = await seedArtifact(ctx, 'html');
     const markdown = await seedArtifact(ctx, 'markdown');
 
-    const htmlRefused = await ctx.app.request(
+    const htmlPromoted = await ctx.app.request(
       `/dashboard/api/artifacts/${html.artifactId}/promote-template`,
       {
         method: 'POST',
@@ -246,7 +246,7 @@ describe('the real failures keep their specific copy', () => {
         body: formBody({ name: 'X', slug: 'x-template' }).body,
       }
     );
-    const slotless = await ctx.app.request(
+    const slotlessPromoted = await ctx.app.request(
       `/dashboard/api/artifacts/${markdown.artifactId}/promote-template`,
       {
         method: 'POST',
@@ -255,14 +255,21 @@ describe('the real failures keep their specific copy', () => {
       }
     );
 
-    const htmlLanding = htmlRefused.headers.get('location') ?? '';
-    const slotlessLanding = slotless.headers.get('location') ?? '';
-    expect(htmlLanding).not.toContain('%20');
-    expect(htmlLanding).not.toBe(slotlessLanding);
+    expect(htmlPromoted.status).toBe(303);
+    expect(slotlessPromoted.status).toBe(303);
+    expect(htmlPromoted.headers.get('location')).toBe(
+      '/dashboard/templates?notice=template_promoted'
+    );
+    expect(slotlessPromoted.headers.get('location')).toBe(
+      '/dashboard/templates?notice=template_promoted'
+    );
 
-    const slotlessHtml = await (
-      await ctx.app.request(slotlessLanding, { headers: { Cookie: markdown.cookie } })
-    ).text();
-    expect(slotlessHtml).toContain('slot');
+    const rows = ctx.db.sqlite
+      .prepare('SELECT slug, type, slots FROM templates WHERE slug IN (?, ?) ORDER BY slug')
+      .all('x-template', 'y-template') as Array<{ slug: string; type: string; slots: string }>;
+    expect(rows).toEqual([
+      { slug: 'x-template', type: 'html', slots: '[]' },
+      { slug: 'y-template', type: 'markdown', slots: '[]' },
+    ]);
   });
 });

@@ -66,21 +66,21 @@ describe('B-A1 · no filter form for a list that has nothing to filter', () => {
 
     // At 375 this three-control form filled the whole first viewport and pushed the one piece of
     // first-run guidance below the fold — for a list with nothing in it.
-    expect(html).not.toContain('Filter artifacts');
+    expect(html).not.toContain('aa-dashboard-filter-bar');
     expect(html).toContain('No artifacts yet');
   });
 
-  it('keeps the filter card once there is something to filter', async () => {
+  it('keeps the filter bar once there is something to filter', async () => {
     const ctx = await makeContext();
     const cookie = await signIn(ctx, { artifact: true });
 
     const html = await (
       await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
     ).text();
-    expect(html).toContain('Filter artifacts');
+    expect(html).toContain('aa-dashboard-filter-bar');
   });
 
-  it('keeps the filter card when a filter is what emptied the list, and says so', async () => {
+  it('keeps the filter bar when a filter is what emptied the list, and says so', async () => {
     const ctx = await makeContext();
     const cookie = await signIn(ctx, { artifact: true });
 
@@ -89,7 +89,7 @@ describe('B-A1 · no filter form for a list that has nothing to filter', () => {
     ).text();
 
     // Removing the controls here would leave no way back to the full list.
-    expect(html).toContain('Filter artifacts');
+    expect(html).toContain('aa-dashboard-filter-bar');
     expect(html).toContain('No artifacts match those filters.');
     expect(html).not.toContain('No artifacts yet');
   });
@@ -121,14 +121,15 @@ describe('B-A4 · the bots empty state points at what to do next', () => {
       await ctx.app.request('/dashboard/bots', { headers: { Cookie: cookie } })
     ).text();
 
-    // It used to sit ~400px below the New bot form, at y≈724 on a 1440 viewport, telling the
-    // reader to "create one" — pointing back up at a form they had already scrolled past.
-    expect(html.indexOf('aa-empty')).toBeLessThan(
-      html.indexOf('The key appears once after creation.')
-    );
     expect(html).toContain('Register your first bot');
-    expect(html).toContain('href="#new-bot"');
-    expect(html).toContain('id="new-bot"');
+    expect(html).toContain('href="/dashboard/bots?new_bot=1#new-bot"');
+    expect(html).toContain('<details class="aa-dashboard-disclosure" id="new-bot"');
+    expect(html).not.toContain('<details class="aa-dashboard-disclosure" id="new-bot" open');
+
+    const opened = await (
+      await ctx.app.request('/dashboard/bots?new_bot=1', { headers: { Cookie: cookie } })
+    ).text();
+    expect(opened).toContain('<details class="aa-dashboard-disclosure" id="new-bot" open');
   });
 
   it('drops the empty state once a bot exists', async () => {
@@ -139,6 +140,7 @@ describe('B-A4 · the bots empty state points at what to do next', () => {
       await ctx.app.request('/dashboard/bots', { headers: { Cookie: cookie } })
     ).text();
     expect(html).not.toContain('Register your first bot');
-    expect(html).toContain('Registered bots');
+    expect(html).toContain('aa-dashboard-card-list');
+    expect(html).toContain('Empty Bot');
   });
 });

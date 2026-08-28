@@ -148,10 +148,10 @@ describe('M4 dashboard screens and actions', () => {
     );
 
     expect(response.status).toBe(303);
-    expect(response.headers.get('location')).toContain('promote_error=');
-    const detail = await ctx.app.request(response.headers.get('location') ?? '/', {
-      headers: { Cookie: cookie },
-    });
-    expect(await detail.text()).toContain('Only markdown artifacts can be promoted');
+    expect(response.headers.get('location')).toBe('/dashboard/templates?notice=template_promoted');
+    const template = ctx.db.sqlite
+      .prepare('SELECT type, thumbnail_url FROM templates WHERE slug = ?')
+      .get('html-template') as { type: string; thumbnail_url: string | null };
+    expect(template).toEqual({ type: 'html', thumbnail_url: null });
   });
 });

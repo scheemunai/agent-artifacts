@@ -61,6 +61,7 @@ export interface DashboardTemplateViewModel {
   name: string;
   slug: string;
   description: string | null;
+  thumbnailUrl: string | null;
   type: DashboardArtifactType;
   slots: string[];
   builtIn: boolean;
@@ -115,6 +116,7 @@ interface TemplateQueryRow extends QueryResultRow {
   slug: string;
   name: string;
   description: string | null;
+  thumbnail_url: string | null;
   type: DashboardArtifactType;
   content: string;
   slots: string;
@@ -272,6 +274,7 @@ export class DashboardReadModelService {
       name: row.name,
       slug: row.slug,
       description: row.description,
+      thumbnailUrl: row.thumbnail_url,
       type: row.type,
       slots: parseTemplateSlots(row.slots),
       builtIn: row.account_id === null,

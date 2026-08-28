@@ -68,7 +68,7 @@ async function seed(ctx: AuthTestContext): Promise<Seeded> {
 function rowFor(html: string, slug: string): string {
   return (
     html
-      .split('<div class="aa-list-row">')
+      .split('<li class="aa-dashboard-card aa-dashboard-card--linked">')
       .slice(1)
       .find((row) => row.includes(`<code>${slug}</code>`)) ?? ''
   );
@@ -88,9 +88,9 @@ describe('B-B2 · one share state, one rendering, wherever it appears', () => {
 
     // The list said "Shared · password" and the detail header of the SAME artifact said only
     // "Shared" — the discriminator lived 500px further down, in the panel.
-    expect(rowFor(list, 'guarded')).toContain('Shared · password');
+    expect(rowFor(list, 'guarded')).toContain('Password-protected');
     const header = detail.split('<p class="aa-section-note">')[0] ?? '';
-    expect(header).toContain('Shared · password');
+    expect(header).toContain('Password-protected');
   });
 });
 
@@ -106,7 +106,7 @@ describe('B-B4 · a revoked link is not the same thing as never having shared', 
     // Both rendered a neutral "private" pill, so an artifact whose public link was pulled looked
     // exactly like one that had never left the account. previousShareCount already knew.
     expect(rowFor(html, 'revoked-one')).toContain('Link revoked');
-    expect(rowFor(html, 'never-shared')).toContain('private');
+    expect(rowFor(html, 'never-shared')).toContain('Private');
     expect(rowFor(html, 'never-shared')).not.toContain('Link revoked');
   });
 });

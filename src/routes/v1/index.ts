@@ -628,7 +628,7 @@ Do not send response-only fields such as \`id\`, \`version_num\`, \`share.url\`,
 ## 2. Publish with a template — consistent, on-brand output
 
 GET /v1/templates                       → list (each has a slots array)
-GET /v1/templates/report                → details incl. required slots
+GET /v1/templates/report                → details incl. content, type and slots
 
 curl -X POST ${config.baseUrl}/v1/artifacts \\
   -H "Authorization: Bearer aa_bot_YOUR_KEY" -H "Content-Type: application/json" \\
@@ -636,14 +636,15 @@ curl -X POST ${config.baseUrl}/v1/artifacts \\
        "slots":{"title":"Week 34","date":"2026-08-25","summary":"Shipped v2.1 ...",
                 "body":"## Highlights\\n...","next_steps":"- Ship v2.2"},"share":true}'
 
-Send template + slots INSTEAD of type + content (server merges them).
-Missing/unknown slot names come back as a 400 that lists the valid slots.
+Send template + slots INSTEAD of type + content (server uses the template's type).
+For templates with slots, missing/unknown slot names come back as a 400 that
+lists the valid slots. Templates with no slots are copied verbatim.
 
 ## 3. Promote an artifact into a template — POST /templates
 
-Markdown-only. Put {{slot_name}} markers in an existing markdown artifact, then
-promote it into an account template your bots can reuse with template + slots.
-HTML artifacts are rejected in v1.
+Promote an existing markdown or HTML artifact into an account template your bots
+can reuse. Put {{slot_name}} markers in the artifact when you want callers to
+provide values; omit slots when you want the template copied verbatim.
 
 curl -X POST ${config.baseUrl}/v1/templates \\
   -H "Authorization: Bearer aa_bot_YOUR_KEY" -H "Content-Type: application/json" \\
@@ -651,21 +652,18 @@ curl -X POST ${config.baseUrl}/v1/templates \\
        "description":"Optional short description"}'
 
 Request body:
-- artifact_id: existing markdown artifact id in your account.
+- artifact_id: existing artifact id in your account.
 - name: template display name (1..80 chars).
 - slug: lowercase letters/numbers/dashes, unique among your account templates.
 - description: optional short description (max 300 chars).
 
-Response: 201 with id, slug, name, description, type:"markdown",
-built_in:false, content, slots, created_at, updated_at. The slots list is
-derived from {{slot_name}} markers in the artifact content.
+Response: 201 with id, slug, name, description, thumbnail_url, type,
+built_in:false, content, slots, created_at, updated_at. The type matches the
+source artifact. The slots list is derived from {{slot_name}} markers in the
+artifact content, or is empty for verbatim templates.
 
 Errors:
 - 409 slug_conflict when the slug already exists.
-- 400 validation_failed with details.field="type" and
-  details.reason="html_not_supported" for HTML artifacts.
-- 400 validation_failed with details.field="content" and
-  details.reason="no_slots" when no {{slot}} markers are found.
 - 404 not_found when artifact_id is unknown or deleted.
 
 ## 4. Read back — GET
@@ -850,7 +848,7 @@ function openApiDocument(config: AppConfig): Record<string, unknown> {
           responses: { '200': { description: 'Template page' }, ...errorResponses },
         },
         post: {
-          summary: 'Promote a markdown artifact to an account template',
+          summary: 'Promote an artifact to an account template',
           security,
           requestBody: requestBodyRef('PromoteTemplateRequest'),
           responses: { '201': { description: 'Template created' }, ...errorResponses },

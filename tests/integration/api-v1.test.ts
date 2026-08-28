@@ -572,7 +572,12 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
         headers: ctx.authHeaders,
       });
       expect(reportResponse.status).toBe(200);
-      expect(await json(reportResponse)).toMatchObject({ slug: 'report', built_in: true });
+      expect(await json(reportResponse)).toMatchObject({
+        slug: 'report',
+        built_in: true,
+        thumbnail_url: null,
+        type: 'markdown',
+      });
 
       const merged = await ctx.app.request('/v1/artifacts', {
         method: 'POST',

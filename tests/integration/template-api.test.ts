@@ -149,6 +149,8 @@ describe('template API and promote flow', () => {
         slug: 'promoted-weekly',
         name: 'Promoted Weekly',
         description: 'Promoted from an artifact.',
+        thumbnail_url: null,
+        type: 'markdown',
         built_in: false,
         content: '# {{title}}\n\nIntro: {{body}}\n\nAgain: {{body}}',
         slots: [
@@ -161,7 +163,11 @@ describe('template API and promote flow', () => {
       expect(list.status).toBe(200);
       expect((await json(list)).items).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ slug: 'promoted-weekly', built_in: false }),
+          expect.objectContaining({
+            slug: 'promoted-weekly',
+            built_in: false,
+            thumbnail_url: null,
+          }),
         ])
       );
 
@@ -184,10 +190,66 @@ describe('template API and promote flow', () => {
     }
   });
 
-  it('rejects html artifact promotion as validation_failed', async () => {
+  it('promotes a markdown artifact with no slots and reuses it verbatim', async () => {
     const ctx = await createApiTestContext();
 
     try {
+      const content = '# Static template\n\nLiteral braces stay literal: {{ not_a_slot }}';
+      const source = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'slotless-markdown-source',
+          type: 'markdown',
+          title: 'Slotless Markdown Source',
+          content,
+        }),
+      });
+      expect(source.status).toBe(201);
+      const sourceBody = await json(source);
+
+      const promoted = await ctx.app.request('/v1/templates', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          artifact_id: sourceBody.id,
+          slug: 'slotless-markdown-template',
+          name: 'Slotless Markdown Template',
+        }),
+      });
+      expect(promoted.status).toBe(201);
+      expect(await json(promoted)).toMatchObject({
+        slug: 'slotless-markdown-template',
+        thumbnail_url: null,
+        type: 'markdown',
+        built_in: false,
+        content,
+        slots: [],
+      });
+
+      const publish = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'uses-slotless-markdown',
+          title: 'Uses slotless markdown',
+          template: 'slotless-markdown-template',
+          slots: { ignored: 'This value is ignored because the template declares no slots.' },
+        }),
+      });
+      expect(publish.status).toBe(201);
+      expect(await json(publish)).toMatchObject({ type: 'markdown', content });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('promotes an html artifact to a no-slot template and exposes content plus type', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const content =
+        '<article><h1>Reusable example</h1><p data-template="{{ raw_html_marker }}">Keep me.</p></article>';
       const source = await ctx.app.request('/v1/artifacts', {
         method: 'POST',
         headers: { ...ctx.authHeaders, ...jsonContent },
@@ -195,7 +257,7 @@ describe('template API and promote flow', () => {
           slug: 'html-promotion-source',
           type: 'html',
           title: 'HTML Promotion Source',
-          content: '<h1>{{title}}</h1>',
+          content,
         }),
       });
       expect(source.status).toBe(201);
@@ -210,13 +272,39 @@ describe('template API and promote flow', () => {
           name: 'HTML Template',
         }),
       });
-      expect(promoted.status).toBe(400);
+      expect(promoted.status).toBe(201);
       expect(await json(promoted)).toMatchObject({
-        error: {
-          code: 'validation_failed',
-          details: { field: 'type', reason: 'html_not_supported' },
-        },
+        slug: 'html-template',
+        thumbnail_url: null,
+        type: 'html',
+        built_in: false,
+        content,
+        slots: [],
       });
+
+      const detail = await ctx.app.request('/v1/templates/html-template', {
+        headers: ctx.authHeaders,
+      });
+      expect(detail.status).toBe(200);
+      expect(await json(detail)).toMatchObject({
+        slug: 'html-template',
+        thumbnail_url: null,
+        type: 'html',
+        content,
+        slots: [],
+      });
+
+      const publish = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'uses-html-template',
+          title: 'Uses HTML template',
+          template: 'html-template',
+        }),
+      });
+      expect(publish.status).toBe(201);
+      expect(await json(publish)).toMatchObject({ type: 'html', content });
     } finally {
       await ctx.cleanup();
     }

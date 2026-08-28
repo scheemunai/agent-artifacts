@@ -143,6 +143,7 @@ export interface TemplatePreview {
   slug: string;
   name: string;
   description: string | null;
+  thumbnailUrl: string | null;
   type: ArtifactType;
   content: string;
   slots: string[];
@@ -205,6 +206,7 @@ interface TemplatePreviewDbRow {
   slug: string;
   name: string;
   description: string | null;
+  thumbnail_url: string | null;
   type: ArtifactType;
   content: string;
   slots: string;
@@ -571,6 +573,7 @@ export class ArtifactService {
           slug: row.slug,
           name: row.name,
           description: row.description,
+          thumbnailUrl: row.thumbnail_url,
           type: row.type,
           content: row.content,
           slots: parseTemplateSlotNames(row.slots),

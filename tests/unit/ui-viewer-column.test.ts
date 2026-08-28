@@ -38,7 +38,7 @@ function declarations(css: string, selector: string): string[] {
 }
 
 describe('the viewer chrome and the document column', () => {
-  it('are described by the same token, so they cannot drift apart', () => {
+  it('keeps viewer status messages on the prose column and chrome on the shared edge inset', () => {
     const prose = declarations(appCss, '.aa-prose-page').join(' ');
     expect(prose, '.aa-prose-page not found in app.css').not.toBe('');
 
@@ -47,23 +47,27 @@ describe('the viewer chrome and the document column', () => {
     expect(prose).toContain('--width-aa-prose');
     expect(prose).toContain('--spacing-aa-6');
 
+    const status = declarations(viewerCss, '.aa-viewer-status').join(' ');
+    expect(status, '.aa-viewer-status not found in viewer.css').not.toBe('');
+
+    // Status text sits between the chrome and the document, and is derived from the prose column so
+    // it cannot drift away from the artifact it describes.
+    expect(
+      status,
+      'the status strip must inset from --width-aa-prose, or its text floats off the column it titles'
+    ).toContain('--width-aa-prose');
+    expect(status).toContain('--spacing-aa-6');
+
     const chrome = declarations(viewerCss, '.aa-viewer-chrome').join(' ');
     expect(chrome, '.aa-viewer-chrome not found in viewer.css').not.toBe('');
-
-    // The chrome derives its inset from the document's column rather than choosing its own edge
-    // padding: same token, same edge inset, one grid.
-    expect(
-      chrome,
-      'the chrome must inset from --width-aa-prose, or its title floats off the column it titles'
-    ).toContain('--width-aa-prose');
     expect(chrome).toContain('--spacing-aa-6');
   });
 
-  it('keeps a floor so the narrow viewport does not lose its margins', () => {
-    const chrome = declarations(viewerCss, '.aa-viewer-chrome').join(' ');
+  it('keeps a floor so the status strip does not lose its margins', () => {
+    const status = declarations(viewerCss, '.aa-viewer-status').join(' ');
 
     // Below the column's own width the centring term goes negative; the floor is what keeps the
-    // chrome padded on a phone instead of running to the bezel.
-    expect(chrome).toMatch(/max\(/);
+    // status padded on a phone instead of running to the bezel.
+    expect(status).toMatch(/max\(/);
   });
 });

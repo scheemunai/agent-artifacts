@@ -20,8 +20,18 @@ describe('SQLite migrations', () => {
 
     try {
       expect(tableNames(ctx.db)).toEqual(expectedTables);
+      expect(templateColumns(ctx.db)).toContain('thumbnail_url');
     } finally {
       await ctx.cleanup();
     }
   });
 });
+
+function templateColumns(
+  ctx: Awaited<ReturnType<typeof createMigratedSqliteContext>>['db']
+): string[] {
+  return ctx.sqlite
+    .prepare("PRAGMA table_info('templates')")
+    .all()
+    .map((row) => (row as { name: string }).name);
+}

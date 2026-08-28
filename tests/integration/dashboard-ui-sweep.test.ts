@@ -200,7 +200,7 @@ describe('B-B5 / ButtonRow · one mark, one action row', () => {
     for (const path of ['/dashboard', `/dashboard/artifacts/${artifactId}`]) {
       const html = await (await ctx.app.request(path, { headers: { Cookie: cookie } })).text();
       expect(html, path).not.toContain('◆');
-      expect(html, path).toContain('Shared');
+      expect(html, path).toContain('Public');
     }
   });
 

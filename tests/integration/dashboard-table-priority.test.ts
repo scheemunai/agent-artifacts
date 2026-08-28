@@ -62,7 +62,7 @@ async function seedAll(ctx: AuthTestContext): Promise<{ cookie: string; artifact
 }
 
 describe('B-T1 · tables drop their least-important columns instead of hiding controls', () => {
-  it('the bots registry needs no priority at all, because it drops nothing', async () => {
+  it('the bots registry uses cards, so actions are never hidden in a table', async () => {
     const ctx = await makeContext();
     const { cookie } = await seedAll(ctx);
 
@@ -70,21 +70,13 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
       await ctx.app.request('/dashboard/bots', { headers: { Cookie: cookie } })
     ).text();
 
-    // This table used to demote Key and Last used below 480px. That satisfied "Actions stays
-    // reachable" and still lost the reader the datum they check before revoking, with no way back
-    // to it (V2-N5). Two columns is the better trade: nothing to demote, nothing off-screen.
-    // What the folded cell contains is asserted in dashboard-craft-r3.
-    expect(headerPriorities(html, 'dashboard-bots')).toEqual([
-      ['Bot', 'primary'],
-      ['Actions', 'primary'],
-    ]);
-    // `columnPriority` is not opted into at all here, so no cell can be marked away.
-    expect(html.split('<table class="aa-table" id="dashboard-bots">')[1] ?? '').not.toContain(
-      'data-aa-priority="secondary"'
-    );
+    expect(html).not.toContain('id="dashboard-bots"');
+    expect(html).toContain('aa-dashboard-card-list');
+    expect(html).toContain('Regenerate key');
+    expect(html).toContain('Revoke key');
   });
 
-  it('version history keeps Version and Actions', async () => {
+  it('version history keeps every column in a scrollable table', async () => {
     const ctx = await makeContext();
     const { cookie, artifactId } = await seedAll(ctx);
 
@@ -92,7 +84,8 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
       await ctx.app.request(`/dashboard/artifacts/${artifactId}`, { headers: { Cookie: cookie } })
     ).text();
 
-    expect(html).toContain('aa-table-scroll--priority');
+    expect(html).toContain('<table class="aa-table" id="artifact-versions">');
+    expect(html).not.toContain('aa-table-scroll--priority');
     expect(headerPriorities(html, 'artifact-versions')).toEqual([
       ['Version', 'primary'],
       ['Summary', 'secondary'],
@@ -100,7 +93,7 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
     ]);
   });
 
-  it('template tables keep Name and Actions, and each names its own scroll region', async () => {
+  it('template lists use cards instead of table scroll regions', async () => {
     const ctx = await makeContext();
     const { cookie } = await seedAll(ctx);
 
@@ -108,16 +101,11 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
       await ctx.app.request('/dashboard/templates', { headers: { Cookie: cookie } })
     ).text();
 
-    expect(headerPriorities(html, 'templates-starter')).toEqual([
-      ['Name', 'primary'],
-      ['Slug', 'secondary'],
-      ['Slots', 'secondary'],
-      ['Actions', 'primary'],
-    ]);
-    // Two tables on one page: their hints, and the aria-describedby pointing at them, must not
-    // collide on a shared fallback id.
-    expect(html).toContain('id="templates-starter-scroll-hint"');
+    expect(html).not.toContain('id="templates-starter"');
+    expect(html).not.toContain('id="templates-starter-scroll-hint"');
     expect(html).toContain('aria-label="Starter templates"');
+    expect(html).toContain('aa-dashboard-card-list');
+    expect(html).toContain('Preview');
   });
 
   it('never marks an Actions column secondary anywhere in the dashboard', async () => {

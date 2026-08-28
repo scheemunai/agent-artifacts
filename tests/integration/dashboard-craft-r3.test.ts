@@ -129,7 +129,7 @@ describe('B-N4 · the list footer is one component in both of its states', () =>
 });
 
 describe('V2-N5 · the phone keeps the datum an operator checks before revoking', () => {
-  it('carries key tail and last-used in the bot cell, so no column has to be dropped', async () => {
+  it('carries key tail and last-used in the bot card, so no column has to be dropped', async () => {
     const ctx = await makeContext();
     const { cookie } = await seed(ctx);
 
@@ -137,17 +137,11 @@ describe('V2-N5 · the phone keeps the datum an operator checks before revoking'
       await ctx.app.request('/dashboard/bots', { headers: { Cookie: cookie } })
     ).text();
 
-    const table = html.split('<table class="aa-table" id="dashboard-bots">')[1] ?? '';
-    const head = table.split('</thead>')[0] ?? '';
-    const headers = (head.match(/<th\b[^>]*>[^<]*<\/th>/g) ?? []).map((cell) =>
-      cell.replace(/<[^>]*>/g, '')
-    );
-    // Two columns, so nothing needs demoting and nothing goes off-screen at 375.
-    expect(headers).toEqual(['Bot', 'Actions']);
-    expect(head).not.toContain('data-aa-priority="secondary"');
-    // The data that used to be dropped is now in the cell that always survives.
-    expect(table).toContain('aa_bot_…');
-    expect(table).toContain('never used');
+    expect(html).not.toContain('<table class="aa-table" id="dashboard-bots">');
+    const list =
+      html.split('<ul class="aa-dashboard-card-list" aria-label="Registered bots">')[1] ?? '';
+    expect(list).toContain('aa_bot_…');
+    expect(list).toContain('never used');
   });
 });
 
