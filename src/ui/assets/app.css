@@ -3168,23 +3168,177 @@
     justify-content: flex-end;
   }
 
-  .aa-dashboard-template-meta {
+  /* The templates listing, which is a picture grid rather than a list of rows.
+     It rides on `.aa-dashboard-card-list` — same list reset, same square corners under
+     `.aa-dashboard` — and only re-columns it. `min(17.5rem, 100%)` rather than a bare `17.5rem`
+     floor: `auto-fill` with a floor wider than its container overflows it, and a 280px phone is
+     narrower than the floor this wants on a desktop. That is one declaration standing in for the
+     breakpoints a fixed column count would need. */
+  .aa-template-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(17.5rem, 100%), 1fr));
+    gap: var(--spacing-aa-4);
+  }
+
+  .aa-template-card {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    grid-template-rows: auto 1fr;
+    border: 1px solid var(--color-aa-line);
+    background: var(--color-aa-surface-raised);
+    box-shadow: var(--shadow-aa-card);
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .aa-template-card:hover,
+  .aa-template-card[data-aa-state="hover"] {
+    border-color: var(--color-aa-line-strong);
+    box-shadow: var(--shadow-aa-card-lift);
+  }
+
+  /* The cover holds its 16:10 box whether the image has loaded, failed, or never existed, so a
+     grid of covers cannot reflow around a slow network. */
+  .aa-template-card__cover {
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    border-bottom: 1px solid var(--color-aa-line);
+    background: var(--color-aa-surface);
+  }
+
+  .aa-template-card__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  /* The stand-in cover for a template with no thumbnail — every promoted one, today. */
+  .aa-template-card__placeholder {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    align-content: center;
+    justify-items: center;
+    gap: var(--spacing-aa-2);
+    padding: var(--spacing-aa-5);
+    background: linear-gradient(
+      155deg,
+      var(--color-aa-surface-tint) 0%,
+      var(--color-aa-surface) 100%
+    );
+    text-align: center;
+  }
+
+  .aa-template-card__placeholder-name {
+    max-width: 100%;
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-md);
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .aa-template-card__placeholder-type {
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .aa-template-card__body {
+    display: grid;
+    min-width: 0;
+    align-content: start;
+    gap: var(--spacing-aa-2);
+    padding: var(--spacing-aa-4);
+  }
+
+  .aa-template-card__title {
+    min-width: 0;
+    margin: 0;
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-lg);
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .aa-template-card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The whole card opens the preview; the Preview button is the same destination, named out loud
+     for a reader scanning for a control. The button sits above this overlay on its own z-index. */
+  .aa-template-card__link::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+  }
+
+  .aa-template-card:hover .aa-template-card__link,
+  .aa-template-card:focus-within .aa-template-card__link,
+  .aa-template-card[data-aa-state="hover"] .aa-template-card__link {
+    color: var(--color-aa-accent);
+  }
+
+  /* The ring belongs on the card: focus otherwise lands on a zero-size overlay. */
+  .aa-template-card__link:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  .aa-template-card:focus-within,
+  .aa-template-card[data-aa-state="focus"] {
+    outline: 2px solid var(--color-aa-focus);
+    outline-offset: -2px;
+  }
+
+  .aa-template-card__badges {
     display: flex;
     min-width: 0;
-    max-width: 100%;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--spacing-aa-2);
   }
 
-  .aa-dashboard-template-meta__slug,
-  .aa-dashboard-template-meta .aa-badge {
-    max-width: 100%;
+  .aa-template-card__subline {
+    min-width: 0;
+    margin: 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
     overflow-wrap: anywhere;
   }
 
-  .aa-dashboard-template-meta .aa-badge {
-    white-space: normal;
+  .aa-template-card__actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-top: var(--spacing-aa-1);
+    gap: var(--spacing-aa-2);
+  }
+
+  /* The template preview frame. A framed document has no intrinsic size, so without this it falls
+     back to the UA's 300x150 replaced-element default. `.aa-card__body > iframe` cannot do the job
+     here: the preview panel wraps its contents in a stack, so the frame is not a direct child of
+     the card body. This is the "adds the name back in one line, with a consumer in the same
+     commit" case that block's comment describes. */
+  .aa-template-frame {
+    display: block;
+    width: 100%;
+    min-height: 18rem;
+    height: clamp(18rem, 48vh, 34rem);
+    border: 1px solid var(--color-aa-line);
+    background: var(--color-aa-surface-raised);
   }
 
   @media (max-width: 920px) {

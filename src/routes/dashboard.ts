@@ -43,6 +43,7 @@ import {
   DashboardSettingsPage,
   DashboardTemplatesPage,
 } from '../ui/pages/dashboard.js';
+import { FrameDocument } from '../ui/pages/frame-document.js';
 import {
   type SetupErrorField,
   SetupKeyHiddenPage,
@@ -609,6 +610,35 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
       })
+    );
+  });
+
+  /*
+   * The HTML template's own rendering, for the preview panel to frame.
+   *
+   * Same posture as `/dashboard/artifacts/:id/frame`: session-gated, owner-or-built-in only, and
+   * served with the dashboard-preview headers, whose CSP sandboxes the document and forbids it
+   * every request. It wraps through `FrameDocument` — the built-in examples are whole documents
+   * and pass through untouched, while a template promoted from an HTML fragment gets the same
+   * charset, viewport and typographic ground the public frame gives it, instead of rendering as
+   * Times New Roman against the UA's default margin.
+   */
+  app.get('/dashboard/templates/:id/frame', async (routeContext) => {
+    const session = await requirePageSession(routeContext, services);
+    if (session instanceof Response) {
+      return session;
+    }
+    const template = await services.artifacts.getTemplatePreview(
+      session.account.id,
+      routeContext.req.param('id')
+    );
+    if (template?.type !== 'html') {
+      return routeContext.notFound();
+    }
+    return routeContext.body(
+      FrameDocument({ content: template.content, title: template.name }),
+      200,
+      dashboardPreviewFrameHeaders(services.config)
     );
   });
 

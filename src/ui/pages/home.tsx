@@ -114,7 +114,7 @@ export const HOME_FEATURES: readonly HomeFeature[] = [
   },
   {
     label: 'Templates',
-    body: 'define the layout once, the agent fills it with data, daily if you want.',
+    body: 'keep an example page your agent rehashes into new work — same style, fresh content, daily if you want.',
   },
   {
     label: 'Markdown or HTML',

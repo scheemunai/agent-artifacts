@@ -176,9 +176,11 @@ GET /v1/artifacts/:id_or_slug/download returns the raw \`.md\` or \`.html\` cont
 
 ### Templates
 
-- GET /v1/templates lists templates.
-- GET /v1/templates/:slug returns a template and its slots.
-- POST /v1/templates creates an account template from an existing markdown or HTML artifact. \`{{slot_name}}\` markers are optional; templates with no slots are reused verbatim.
+A template is a reusable example artifact — markdown or HTML — you rehash into new work: keep its style and structure, publish fresh content in it.
+
+- GET /v1/templates lists the examples available to you.
+- GET /v1/templates/:slug returns one, with its content and any slots it declares.
+- POST /v1/templates creates an account template from an existing markdown or HTML artifact. \`{{slot_name}}\` markers are optional; a template with no slots is an example you copy and rewrite.
 
 Create template body:
 
@@ -191,7 +193,7 @@ Create template body:
 }
 \`\`\`
 
-Publish with a template by sending \`template\` instead of \`type\` and \`content\`; include \`slots\` only when the template declares them.
+Publish with a template by sending \`template\` instead of \`type\` and \`content\`; include \`slots\` only when the template declares them. When it declares none, fetch it, rewrite its content in your own words, and publish the result as an ordinary artifact.
 
 ### Habits
 

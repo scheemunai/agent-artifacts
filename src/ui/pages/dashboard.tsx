@@ -12,6 +12,7 @@ import {
   NavShell,
   Notice,
   Pagination,
+  ProductMark,
   Select,
   Table,
   Textarea,
@@ -416,8 +417,12 @@ export function DashboardTemplatesPage({
             <p class="aa-page-kicker">Templates</p>
             <h1 class="aa-section-title">Reusable starts for agent output.</h1>
             <p class="aa-section-note">
-              Built-ins are seeded by the app. Promote a markdown artifact with {'{{slots}}'} from
-              its detail page to add your own.
+              Reusable example artifacts your agent rehashes into new work — same style, fresh
+              content.
+            </p>
+            <p class="aa-hint">
+              To add your own, open any artifact — HTML or markdown — and promote it from its detail
+              page.
             </p>
           </header>
         </section>
@@ -433,7 +438,7 @@ export function DashboardTemplatesPage({
           title="Your templates"
           templates={personal}
           emptyTitle="No templates of your own yet."
-          empty="Write {{slots}} into a markdown artifact, then choose Promote on its detail page to reuse it."
+          empty="Any artifact you have published — HTML or markdown — can become one: choose Promote on its detail page, and your agent can rehash it into new work."
           emptyAction={
             <Button variant="primary" href="/dashboard">
               Pick an artifact to promote →
@@ -607,8 +612,10 @@ From now on, whenever you produce something worth showing — a report,
 a plan, a dashboard, a summary — publish it as an artifact (markdown
 or html) instead of pasting a wall of text. Re-publish to the same
 slug when you update it: the link stays the same and versions are
-kept. Use a template from GET /v1/templates when one fits. Share
-links; add a password when the content is sensitive.
+kept. GET ${baseUrl}/v1/templates lists example artifacts you can
+rehash — fetch one that fits, keep its style, and publish your own
+content in it. Share links; add a password when the content is
+sensitive.
 
 Confirm setup by creating your first artifact titled
 "Hello from ${botName}" and sharing its link.`;
@@ -1476,12 +1483,30 @@ function BotActions({ bot }: { bot: DashboardBotView }) {
   );
 }
 
+/**
+ * The preview shows the example, then the source.
+ *
+ * A template is an example artifact an agent rehashes, so the first question a reader has is what
+ * it looks like — and for an HTML template the source answers that only if you can read CSS. The
+ * HTML branch therefore renders the template through the same sandboxed frame the owner preview of
+ * an HTML artifact uses (`/dashboard/templates/:id/frame`, dashboard-preview CSP), and markdown
+ * keeps its server-rendered `htmlPreview`. The source block stays either way: it is what the agent
+ * actually receives from the API.
+ *
+ * Slots are listed only when there are any. "Slots: none" on the three HTML examples that declare
+ * none was a field-form frame on something that is not a form.
+ */
 function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview }) {
+  const isHtml = template.type === 'html';
   return (
     <section id="template-preview" tabindex={-1}>
       <Card
         title={`Template preview: ${template.name}`}
-        description="Review the raw markdown template before using it from the API."
+        description={
+          isHtml
+            ? 'The example as it renders. Owner previews use the same sandboxing posture as public pages.'
+            : 'The example as it renders, and the source your agent receives from the API.'
+        }
       >
         <div class="aa-stack">
           <ButtonRow>
@@ -1492,13 +1517,23 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
             <Badge tone="neutral">{template.type === 'markdown' ? 'md' : 'html'}</Badge>
           </ButtonRow>
           {template.description ? <p class="aa-section-note">{template.description}</p> : null}
-          <p class="aa-hint">
-            Slots:{' '}
-            {template.slots.length > 0
-              ? template.slots.map((slot) => <Badge tone="neutral">{`{{${slot}}}`}</Badge>)
-              : 'none'}
-          </p>
-          {template.htmlPreview ? (
+          {template.slots.length > 0 ? (
+            <p class="aa-hint">
+              Slots your agent can fill:{' '}
+              {template.slots.map((slot) => (
+                <Badge tone="neutral">{`{{${slot}}}`}</Badge>
+              ))}
+            </p>
+          ) : null}
+          {isHtml ? (
+            <iframe
+              class="aa-template-frame"
+              title={`${template.name} example`}
+              sandbox="allow-scripts"
+              src={`/dashboard/templates/${template.id}/frame`}
+            ></iframe>
+          ) : null}
+          {!isHtml && template.htmlPreview ? (
             <div
               data-aa-dashboard-template-preview="markdown"
               dangerouslySetInnerHTML={{ __html: template.htmlPreview }}
@@ -1555,7 +1590,7 @@ function TemplateGroup({
       <h2 class="aa-dashboard-group__title" id={`${id}-heading`}>
         {title}
       </h2>
-      <DashboardCardList label={title}>
+      <DashboardCardList label={title} class="aa-template-grid">
         {templates.map((template) => (
           <TemplateCard template={template} />
         ))}
@@ -1564,38 +1599,76 @@ function TemplateGroup({
   );
 }
 
+/**
+ * A template is shown, not described.
+ *
+ * The row this replaces led with a name, a slug and a strip of `{{slot}}` pills — an index of
+ * fields, which is the wrong claim about the thing. A template here is a finished example artifact
+ * an agent rehashes into new work, so the card leads with the example's own picture and the reader
+ * decides by looking. The slot pills are gone from the listing entirely; the merge fields still
+ * exist for markdown templates and are named in the preview, where they answer a question the
+ * reader has actually asked by then.
+ *
+ * It is a template-specific card rather than `DashboardCard` because the cover image changes the
+ * card's shape, not its trim, and Artifacts and Bots must not inherit that.
+ */
 function TemplateCard({ template }: { template: DashboardTemplateView }) {
+  const href = `/dashboard/templates?preview=${template.id}#template-preview`;
   return (
-    <DashboardCard
-      title={
-        <span class="aa-dashboard-card__title-row">
-          <strong>{template.name}</strong>
+    <li class="aa-template-card">
+      {/* The cover is the card's own link target via the stretched pseudo-element below, so it
+          carries no separate control and the image is decorative: the name beside it is the
+          accessible name of the one link. */}
+      <div class="aa-template-card__cover">
+        {template.thumbnailUrl ? (
+          <img class="aa-template-card__image" src={template.thumbnailUrl} alt="" loading="lazy" />
+        ) : (
+          <TemplateCoverPlaceholder template={template} />
+        )}
+      </div>
+      <div class="aa-template-card__body">
+        <h3 class="aa-template-card__title">
+          <a class="aa-template-card__link" href={href}>
+            {template.name}
+          </a>
+        </h3>
+        <div class="aa-template-card__badges">
           <Badge tone={template.builtIn ? 'info' : 'accent'}>
             {template.builtIn ? 'starter' : 'yours'}
           </Badge>
-        </span>
-      }
-      subline={template.description ?? 'No description'}
-      meta={
-        <span class="aa-dashboard-template-meta">
-          <code class="aa-dashboard-template-meta__slug">{template.slug}</code>
-          {template.slots.length > 0 ? (
-            template.slots.map((slot) => <Badge tone="neutral">{`{{${slot}}}`}</Badge>)
-          ) : (
-            <span>no slots</span>
-          )}
-        </span>
-      }
-      actions={
-        <Button
-          size="sm"
-          variant="secondary"
-          href={`/dashboard/templates?preview=${template.id}#template-preview`}
-        >
-          Preview
-        </Button>
-      }
-    />
+          <Badge tone="neutral">{template.type === 'markdown' ? 'MD' : 'HTML'}</Badge>
+        </div>
+        <p class="aa-template-card__subline">
+          {template.description ?? 'No description yet — open the preview to see the example.'}
+        </p>
+        <div class="aa-template-card__actions">
+          <Button size="sm" variant="secondary" href={href}>
+            Preview
+          </Button>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/**
+ * The cover for a template that has no picture of its own.
+ *
+ * Every built-in ships a rendered thumbnail; a template you promote from your own artifact has
+ * none, and `<img src="">` on a null is a broken-image glyph in the middle of a grid of real ones.
+ * This fills the same 16:10 box with the product mark, the template's name and its type — a tile
+ * that reads as deliberate rather than as a failed load. It is `aria-hidden` because every word in
+ * it is already in the card body beside it.
+ */
+function TemplateCoverPlaceholder({ template }: { template: DashboardTemplateView }) {
+  return (
+    <div class="aa-template-card__placeholder" aria-hidden="true">
+      <ProductMark />
+      <span class="aa-template-card__placeholder-name">{template.name}</span>
+      <span class="aa-template-card__placeholder-type">
+        {template.type === 'markdown' ? 'Markdown' : 'HTML'}
+      </span>
+    </div>
   );
 }
 
