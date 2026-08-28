@@ -131,6 +131,9 @@ describe('style guide registry', () => {
       // invisible: the next author writes the form without it because the contract never showed it.
       'autocomplete="current-password"',
       'autocomplete="new-password"',
+      // Input.required — the platform constraint, registered so a consumer can see it exists
+      // rather than re-deriving a script guard for want of a declarative one.
+      'required',
       // Notice: four tones.
       'aa-notice--info',
       'aa-notice--success',

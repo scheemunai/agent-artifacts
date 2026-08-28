@@ -166,17 +166,29 @@ interface FieldDescription {
   hint?: string | undefined;
   error?: string | undefined;
   optional?: boolean | undefined;
+  required?: boolean | undefined;
   children: Child;
 }
 
-function FieldShell({ id, label, hint, error, optional = false, children }: FieldDescription) {
+function FieldShell({
+  id,
+  label,
+  hint,
+  error,
+  optional = false,
+  required = false,
+  children,
+}: FieldDescription) {
   return (
     <div class="aa-field">
       <div class="aa-label-row">
         <label class="aa-label" for={id}>
           {label}
         </label>
-        {optional ? <span class="aa-optional">Optional</span> : null}
+        {/* `required` and `optional` are opposites, so the tag answers to both. A field cannot be
+            each at once, and a label row that says "Optional" on a required box is the N-5 failure
+            with the two words swapped — one statement of optionality, and only when it is true. */}
+        {optional && !required ? <span class="aa-optional">Optional</span> : null}
       </div>
       {children}
       {hint ? (
@@ -244,6 +256,17 @@ interface InputProps {
    * hand-rolling a raw <input> to keep its two.
    */
   dataAttrs?: Record<string, string> | undefined;
+  /**
+   * The browser's own constraint validation. Declarative on purpose: the platform blocks an empty
+   * submit before any handler runs, which is the difference between a field that cannot be sent
+   * empty and one that is merely checked after it has already cost a request.
+   *
+   * A client-side guard is still right wherever a script owns the submit — it has to be, because a
+   * script can submit without the form ever validating — but that guard should be the second line,
+   * not the only one. Mutually exclusive with `optional`; the label row will not print the Optional
+   * tag on a required field.
+   */
+  required?: boolean | undefined;
 }
 
 export function Input({
@@ -264,9 +287,17 @@ export function Input({
   autocapitalize,
   autocorrect,
   dataAttrs = {},
+  required,
 }: InputProps) {
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      optional={optional}
+      required={required}
+    >
       <input
         class="aa-control"
         id={id}
@@ -279,6 +310,7 @@ export function Input({
         spellcheck={spellcheck}
         autocapitalize={autocapitalize}
         autocorrect={autocorrect}
+        required={required}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
@@ -337,12 +369,20 @@ export function PasswordInput({
   autocapitalize,
   autocorrect,
   dataAttrs = {},
+  required,
   revealed = false,
 }: PasswordInputProps) {
   const capsId = `${id}-caps`;
 
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      optional={optional}
+      required={required}
+    >
       <div class="aa-password" data-aa-password="true">
         <input
           class="aa-control aa-password__input"
@@ -356,6 +396,7 @@ export function PasswordInput({
           spellcheck={spellcheck}
           autocapitalize={autocapitalize}
           autocorrect={autocorrect}
+          required={required}
           disabled={disabled || state === 'disabled'}
           aria-invalid={error || state === 'error' ? 'true' : undefined}
           aria-describedby={describedBy(id, hint, error)}
@@ -429,10 +470,18 @@ export function Textarea({
   autocapitalize,
   autocorrect,
   dataAttrs = {},
+  required,
   rows = 5,
 }: TextareaProps) {
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      optional={optional}
+      required={required}
+    >
       <textarea
         class="aa-control"
         id={id}
@@ -444,6 +493,7 @@ export function Textarea({
         spellcheck={spellcheck}
         autocapitalize={autocapitalize}
         autocorrect={autocorrect}
+        required={required}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
@@ -483,9 +533,17 @@ export function Select({
   autocapitalize,
   autocorrect,
   dataAttrs = {},
+  required,
 }: SelectProps) {
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      optional={optional}
+      required={required}
+    >
       <select
         class="aa-control"
         id={id}
@@ -495,6 +553,7 @@ export function Select({
         spellcheck={spellcheck}
         autocapitalize={autocapitalize}
         autocorrect={autocorrect}
+        required={required}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}

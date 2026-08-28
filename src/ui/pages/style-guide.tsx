@@ -756,6 +756,17 @@ function fieldSection() {
           hint="HTML renders only in the sandboxed frame."
         />
         <Input id="field-focus" label="Focused demo" value="Visible focus ring" state="focus" />
+        {/* `required` is the platform's own constraint validation: it stops an empty submit before
+            any handler runs. A script guard is still right wherever a script owns the submit — it
+            has to be, since a script can submit without the form validating — but it is the second
+            line, not the only one. Mutually exclusive with `optional`: the label row prints the
+            Optional tag only when the field really is. */}
+        <Input
+          id="field-required"
+          label="Slug"
+          required
+          hint="Required — the browser blocks an empty submit before the request is made."
+        />
       </div>
     </Card>
   );

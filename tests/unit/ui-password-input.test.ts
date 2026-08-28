@@ -91,6 +91,25 @@ describe('PasswordInput', () => {
     expect(withHint).toContain('aria-describedby="pw-hint"');
   });
 
+  it('will not print the Optional tag on a required field', () => {
+    // `required` and `optional` are opposites, so the label row answers to both. A required box
+    // captioned "Optional" is N-5 with the two words swapped — one statement of optionality, and
+    // only when it is true. The platform attribute is what actually blocks an empty submit, before
+    // any handler runs; a script guard is the second line, not the only one.
+    const both = renderToString(
+      PasswordInput({ id: 'pw', label: 'Password', optional: true, required: true })
+    );
+    expect(both).toContain('required');
+    expect(both, 'a required field is captioned Optional').not.toContain('aa-optional');
+
+    const optionalOnly = renderToString(
+      PasswordInput({ id: 'pw', label: 'Password', optional: true })
+    );
+    expect(optionalOnly, 'the tag still appears when the field really is optional').toContain(
+      'aa-optional'
+    );
+  });
+
   it('is driven by the shared client contract rather than its own script', () => {
     // Same shape as every other behaviour in the bundle: delegated from the document against data
     // attributes, so a field rendered into a dialog after load needs no re-binding.
