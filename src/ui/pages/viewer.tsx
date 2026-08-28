@@ -291,59 +291,69 @@ function ViewerChrome({
     : '#';
   const latestVersion = content?.latestVersionNum ?? content?.versionNum ?? 1;
 
+  const hasBot = Boolean(content?.bot);
+
   return (
+    // A compact, dark status bar — it reads as the chrome around a published artifact, not as part
+    // of the document. Title + a live dot on the left; details and actions inline on the right on
+    // desktop, and collapsed under a ⋮ menu (a native <details> disclosure, no script) on phones
+    // where they would not all fit on one line.
     <header class="aa-viewer-chrome" data-aa-chrome="true">
-      <div class="aa-viewer-heading">
-        <div class="aa-viewer-title-row">
-          <p class="aa-viewer-title" data-aa-title="true">
-            {content?.title ?? 'Loading…'}
-          </p>
-          <span
-            class="aa-badge aa-badge--accent aa-viewer-updated-pill"
-            data-aa-updated-pill="true"
-            hidden
-          >
-            Updated ✓
-          </span>
-        </div>
-        <p class="aa-viewer-byline" data-aa-byline="true" hidden={content?.bot ? undefined : true}>
-          {content?.bot ? formatByline(content.bot) : ''}
-        </p>
-        <p class="aa-viewer-updated" data-aa-updated-at="true">
-          {content ? `updated ${formatRelativeTime(content.updatedAt)}` : ''}
-        </p>
+      <div class="aa-viewer-chrome__lead">
+        <span class="aa-viewer-chrome__dot" aria-hidden="true"></span>
+        <span class="aa-viewer-title" data-aa-title="true">
+          {content?.title ?? 'Loading…'}
+        </span>
+        <span
+          class="aa-badge aa-badge--accent aa-viewer-updated-pill"
+          data-aa-updated-pill="true"
+          hidden
+        >
+          Updated ✓
+        </span>
       </div>
-      <div class="aa-viewer-actions">
-        <label class="sr-only" for="aa-version-picker">
-          Artifact version
-        </label>
-        <select
-          class="aa-control aa-viewer-version-select"
-          id="aa-version-picker"
-          data-aa-version-picker="true"
-          hidden={latestVersion > 1 ? undefined : true}
-        >
-          {Array.from({ length: latestVersion }, (_, index) => index + 1).map((version) => (
-            <option value={String(version)} selected={(pinnedVersion ?? latestVersion) === version}>
-              v{version}
-            </option>
-          ))}
-        </select>
-        <Button variant="secondary" href={downloadHref} dataAttrs={{ 'data-aa-download': 'true' }}>
-          ⭳ Download
-        </Button>
-        {/* Bordered and square, matching Download beside it. The control was never unlabelled —
-            it has had both an accessible name and a tooltip — but a bare 14px muted glyph with no
-            box next to a bordered button does not read as a control at all. */}
-        <Button
-          variant="secondary"
-          iconOnly
-          ariaLabel="Refresh artifact"
-          title="Refresh artifact"
-          dataAttrs={{ 'data-aa-refresh': 'true' }}
-        >
-          ↻
-        </Button>
+
+      <div class="aa-viewer-chrome__end">
+        <span class="aa-viewer-chrome__meta">
+          <span class="aa-viewer-byline" data-aa-byline="true" hidden={hasBot ? undefined : true}>
+            {content?.bot ? formatByline(content.bot) : ''}
+          </span>
+          <span class="aa-viewer-chrome__sep" aria-hidden="true" hidden={hasBot ? undefined : true}>
+            ·
+          </span>
+          <span class="aa-viewer-updated" data-aa-updated-at="true">
+            {content ? `updated ${formatRelativeTime(content.updatedAt)}` : ''}
+          </span>
+        </span>
+        <div class="aa-viewer-actions">
+          <label class="sr-only" for="aa-version-picker">
+            Artifact version
+          </label>
+          <select
+            class="aa-control aa-viewer-version-select"
+            id="aa-version-picker"
+            data-aa-version-picker="true"
+            hidden={latestVersion > 1 ? undefined : true}
+          >
+            {Array.from({ length: latestVersion }, (_, index) => index + 1).map((version) => (
+              <option value={String(version)} selected={(pinnedVersion ?? latestVersion) === version}>
+                v{version}
+              </option>
+            ))}
+          </select>
+          <Button variant="secondary" href={downloadHref} dataAttrs={{ 'data-aa-download': 'true' }}>
+            ⭳ Download
+          </Button>
+          <Button
+            variant="secondary"
+            iconOnly
+            ariaLabel="Refresh artifact"
+            title="Refresh artifact"
+            dataAttrs={{ 'data-aa-refresh': 'true' }}
+          >
+            ↻
+          </Button>
+        </div>
       </div>
     </header>
   );

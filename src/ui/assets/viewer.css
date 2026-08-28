@@ -15,72 +15,114 @@
   min-height: calc(100vh - 4rem);
 }
 
+/* A compact, dark status bar. It reads as the chrome AROUND a published artifact — a live dot and
+   the title on the left, details and actions on the right — rather than as part of the document. */
 .aa-viewer-chrome {
   position: sticky;
   top: 0;
   z-index: 20;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--spacing-aa-4);
-  align-items: start;
-  border-bottom: 1px solid var(--color-aa-line);
-  padding: var(--spacing-aa-4) var(--spacing-aa-6);
-  background: color-mix(in srgb, var(--color-aa-bg) 96%, transparent);
+  min-height: 3rem;
+  border-bottom: 1px solid var(--color-aa-dark-line);
+  padding: var(--spacing-aa-2) var(--spacing-aa-5);
+  color: var(--color-aa-dark-text);
+  background: color-mix(in srgb, var(--color-aa-dark-card) 92%, transparent);
   backdrop-filter: blur(12px);
 }
 
-.aa-viewer-heading {
-  min-width: 0;
-}
-
-.aa-viewer-title-row {
+.aa-viewer-chrome__lead {
   display: flex;
   min-width: 0;
-  flex-wrap: wrap;
-  gap: var(--spacing-aa-3);
+  flex: 0 1 auto;
   align-items: center;
+  gap: var(--spacing-aa-3);
+}
+
+.aa-viewer-chrome__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border-radius: var(--radius-aa-full);
+  background: var(--color-aa-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-aa-accent) 28%, transparent);
 }
 
 .aa-viewer-title {
   min-width: 0;
   margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--color-aa-ink);
-  /* V12-N1: the minimum was a raw 1.45rem — 23.2px, between `--text-aa-xl` (20px) and
-     `--text-aa-2xl` (24px), on the ramp's steps but not of them. It is not an edge case: the minimum
-     is what BINDS below 480px, so 23.2px was the size every phone reader actually got, and the one
-     size on this element chosen by nobody.
-     `2xl` is the nearest step and it costs 0.8px at the small end. It also lands the term's turn-on
-     edge on 480 — a width the sheet already breaks at — instead of 464, which was an artefact of the
-     raw value and of nothing else.
-     The `5vw` term is genuinely fluid and stays: measured, it binds from 480 to 600 (24px→30px), so
-     this is a real clamp rather than two static sizes in fluid spelling. */
-  font-size: clamp(var(--text-aa-2xl), 5vw, var(--text-aa-3xl));
+  overflow: hidden;
+  color: var(--color-aa-dark-text);
+  font-size: var(--text-aa-md);
   font-weight: 650;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.aa-viewer-chrome__end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--spacing-aa-2);
+}
+
+.aa-viewer-chrome__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-aa-2);
+  white-space: nowrap;
 }
 
 .aa-viewer-byline,
 .aa-viewer-updated {
-  margin: var(--spacing-aa-1) 0 0;
-  color: var(--color-aa-muted);
+  margin: 0;
+  color: var(--color-aa-dark-muted);
   font-size: var(--text-aa-sm);
+}
+
+.aa-viewer-chrome__sep {
+  color: var(--color-aa-dark-line);
 }
 
 .aa-viewer-actions {
   display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
-  gap: var(--spacing-aa-2);
   align-items: center;
+  gap: var(--spacing-aa-2);
+}
+
+/* Buttons and the version select sit on a dark bar, so they take a light-on-dark outline treatment
+   instead of the app's light-surface default. */
+.aa-viewer-chrome .aa-btn,
+.aa-viewer-version-select {
+  min-height: 2rem;
+  color: var(--color-aa-dark-text);
+  border-color: color-mix(in srgb, var(--color-aa-dark-text) 26%, transparent);
+  background: transparent;
+}
+
+.aa-viewer-chrome .aa-btn:hover {
+  color: var(--color-aa-dark-text);
+  border-color: var(--color-aa-dark-text);
+  background: color-mix(in srgb, var(--color-aa-dark-text) 12%, transparent);
 }
 
 .aa-viewer-version-select {
   width: auto;
-  min-width: 5.75rem;
-  min-height: 2.75rem;
+  min-width: 4.5rem;
   padding-right: var(--spacing-aa-8);
+}
+
+/* On phones the bar keeps the title and the actions; the byline · updated meta and the version
+   picker stand down so the essentials fit on one line. */
+@media (max-width: 560px) {
+  .aa-viewer-chrome__meta,
+  .aa-viewer-version-select {
+    display: none;
+  }
 }
 
 .aa-viewer-updated-pill {
@@ -290,10 +332,7 @@
        Derived from `--width-aa-prose` and the same `--spacing-aa-6` edge inset `.aa-prose-page`
        uses, so the two cannot drift apart; `max()` keeps the phone's margins once the viewport is
        narrower than the column. */
-    padding-inline: max(
-      var(--spacing-aa-8),
-      calc((100% - var(--width-aa-prose)) / 2 + var(--spacing-aa-6))
-    );
+    padding-inline: var(--spacing-aa-6);
   }
 
   .aa-viewer-actions {
