@@ -68,13 +68,6 @@ export default defineConfig({
     },
   ],
   projects: [
-    {
-      name: 'chromium-375',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 375, height: 812 },
-      },
-    },
     /**
      * The band nobody photographs.
      *
@@ -97,11 +90,24 @@ export default defineConfig({
      *
      * ── THIS IS A CLOSED SET, NOT A SAMPLE ─────────────────────────────────────────────────────
      *
-     * Every `max-width` boundary in the sheet — 480, 560, 720, 759 — is rendered at its inclusive
-     * edge below, plus 375 for the small end and 1440 for the wide side of `min-width: 760px`.
+     * Every breakpoint in the sheets is rendered at the edge where it TURNS ON:
+     *   · `max-width` 480, 560, 720, 759 — at their inclusive upper edge;
+     *   · `min-width: 760px` — at 760 itself, the narrowest width where the wide rules apply;
+     * plus 375 for the small end and 1440 for the roomy end of the wide region.
+     *
+     * THE MIN-SIDE EDGE WAS THE SET'S OWN BLIND SPOT, and it cost a defect before it was closed: a
+     * 36px horizontal pan lived at 760–1024, and nothing rendered there. r5 closed "the band nobody
+     * photographs" on the max side and left the same shape above the compact boundary — 1440 sits
+     * deep inside the wide region, where there is room to spare, so it cannot see a layout that only
+     * overflows when the wide rules apply with the LEAST room available. That is 760 exactly.
+     *
+     * WHY 760 AND NOT ALSO A MID-BAND SAMPLE: there is no breakpoint between 760 and infinity, so
+     * 760–1439 is a single rule combination, already bracketed at both extremes. A 1024 would add no
+     * combination this file does not already render — it would be a sample, and this set is edges.
+     *
      * Adding a viewport is therefore not a matter of taste: IF A NEW BREAKPOINT IS ADDED TO A
-     * STYLESHEET, ITS EDGE BELONGS HERE, or this set silently becomes a sample again and the band
-     * reopens somewhere new.
+     * STYLESHEET, ITS TURN-ON EDGE BELONGS HERE, or this set silently becomes a sample again and the
+     * band reopens somewhere new.
      *
      * The edges are the point. A width in the middle of a band cannot tell `max-width: 720px` from
      * a `721` typo; only the boundary pixel can, which is the whole reason these are not round
@@ -109,6 +115,13 @@ export default defineConfig({
      * as 375, so it adds no new combination, but a `max-width: 479px` slip is invisible to every
      * other project here — 375 has the rule on either way, 560 has it off either way.
      */
+    {
+      name: 'chromium-375',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 375, height: 812 },
+      },
+    },
     /**
      * `max-width: 480px` at its inclusive edge. The only project here that adds no new rule
      * COMBINATION — 375 applies the same set — and it is kept for the one thing 375 cannot do:
@@ -151,6 +164,18 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 759, height: 900 },
+      },
+    },
+    /**
+     * `min-width: 760px` at the edge where it TURNS ON — the narrowest width that gets the wide
+     * layout, and therefore the least room the wide rules ever have to work with. F2's 36px pan
+     * lived here and 1440 could not see it. A `761` typo also breaks exactly here.
+     */
+    {
+      name: 'chromium-760',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 760, height: 900 },
       },
     },
     {
