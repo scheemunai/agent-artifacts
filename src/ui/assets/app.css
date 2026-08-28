@@ -2364,6 +2364,147 @@
     text-align: center;
   }
 
+  /* Pricing: two plan cards side by side, stacked and centered on phones, with a self-host banner
+     below linking to the source. */
+  .aa-marketing-pricing {
+    display: grid;
+    width: 100%;
+    align-items: stretch;
+    gap: var(--spacing-aa-4);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .aa-marketing-plan {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-aa-5);
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-lg);
+    padding: var(--spacing-aa-6);
+    background: var(--color-aa-surface-raised);
+    text-align: left;
+  }
+
+  .aa-marketing-plan--featured {
+    border-color: var(--color-aa-accent);
+    box-shadow: var(--shadow-aa-card-lift);
+  }
+
+  .aa-marketing-plan__badge {
+    position: absolute;
+    top: calc(-1 * var(--spacing-aa-3));
+    right: var(--spacing-aa-5);
+    border-radius: var(--radius-aa-full);
+    padding: var(--spacing-aa-1) var(--spacing-aa-3);
+    background: var(--color-aa-accent);
+    color: var(--color-aa-accent-ink);
+    font-size: var(--text-aa-xs);
+    font-weight: 650;
+    letter-spacing: 0.02em;
+  }
+
+  .aa-marketing-plan__head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-aa-1);
+  }
+
+  .aa-marketing-plan__name {
+    margin: 0;
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-lg);
+    font-weight: 650;
+  }
+
+  .aa-marketing-plan__price {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-aa-1);
+    margin: 0;
+  }
+
+  .aa-marketing-plan__amount {
+    color: var(--color-aa-ink);
+    font-size: clamp(var(--text-aa-2xl), 5vw, var(--text-aa-hero));
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .aa-marketing-plan__period {
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-md);
+    font-weight: 550;
+  }
+
+  .aa-marketing-plan__note {
+    margin: 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+  }
+
+  .aa-marketing-plan__features {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--spacing-aa-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .aa-marketing-plan__features li {
+    position: relative;
+    padding-left: var(--spacing-aa-6);
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-sm);
+    line-height: 1.5;
+  }
+
+  .aa-marketing-plan__features li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--color-aa-accent);
+    font-weight: 700;
+  }
+
+  .aa-marketing-selfhost {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-aa-4);
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-lg);
+    padding: var(--spacing-aa-5) var(--spacing-aa-6);
+    background: var(--color-aa-surface);
+    text-align: left;
+  }
+
+  .aa-marketing-selfhost__text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-aa-1);
+    max-width: 48ch;
+  }
+
+  .aa-marketing-selfhost__title {
+    margin: 0;
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-md);
+    font-weight: 650;
+  }
+
+  .aa-marketing-selfhost__text p {
+    margin: 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+    line-height: 1.55;
+  }
+
   .aa-marketing-origin {
     display: grid;
     width: min(100%, var(--width-aa-measure));
@@ -2550,8 +2691,21 @@
   }
 
   @media (max-width: 720px) {
-    .aa-marketing-grid {
+    .aa-marketing-grid,
+    .aa-marketing-pricing {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Self-host banner: stack and center on phones so the copy and the button read as one centered
+       block instead of a split row squeezed onto a narrow width. */
+    .aa-marketing-selfhost {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .aa-marketing-selfhost__text {
+      align-items: center;
     }
   }
 

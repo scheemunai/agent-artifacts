@@ -8,11 +8,9 @@ import {
   MarketingApiBlock,
   MarketingExampleCard,
   MarketingFeatureLine,
-  MarketingFinalCta,
   MarketingFooter,
   MarketingOriginNote,
   MarketingSection,
-  MarketingTermsCard,
   MarketingWorksWith,
 } from '../components/marketing.js';
 import { Button, ProductMark } from '../components/primitives.js';
@@ -163,6 +161,8 @@ export function HomePage({ baseUrl, authenticated = false, githubUrl }: HomePage
   // Display host for the copy-paste prompt: the agent reads the same /skill.md the footer links to,
   // shown without the scheme so the prompt stays readable ("agentartifact.ai/skill.md").
   const skillPromptUrl = `${baseUrl.replace(/^https?:\/\//, '')}/skill.md`;
+  const pricingCtaHref = authenticated ? '/dashboard' : HOME_CTA_HREF;
+  const pricingCtaLabel = authenticated ? HOME_AUTHENTICATED_CTA_LABEL : HOME_CTA_LABEL;
 
   return (
     <Layout title="Agent Artifacts" description={HOME_SUBLINE}>
@@ -319,39 +319,62 @@ export function HomePage({ baseUrl, authenticated = false, githubUrl }: HomePage
             <MarketingOriginNote quote={HOME_ORIGIN_QUOTE} />
           </MarketingSection>
 
-          <MarketingSection id="home-terms" label="Pricing and open source">
-            <MarketingTermsCard
-              price="Free artifacts live for seven days, then fade. For $9 a month they live forever, on your own subdomain, with no footer but yours."
-              /* THE COPY DECK'S CLOSING ACTION, AND WHY IT IS NOT ON THE LIVE PAGE.
-                 §7 ends "MIT licensed and self-hostable, end to end. Star it on GitHub." — the
-                 claim and its action. Only the claim renders today, and that is correct rather
-                 than missing: a CTA's target is a factual claim, and this one is not yet true.
-                 `github.com/ZeroPointRepo/agent-artifacts` answers 404 to an unauthenticated GET,
-                 because the repository owner is still an open founder decision (docs/decisions.md,
-                 "Repository publication status"). Shipping the line anyway would put a dead link
-                 at the end of the open-source pitch, which is a worse failure than a quiet one.
-                 So the action is withheld and the claim survives — MIT licensing is true whether
-                 or not anyone can see the source today.
-                 The dependency is not a TODO: it is on the founder checklist in that decision
-                 record, as the one entry that changes a product surface. Set `AA_GITHUB_URL` and
-                 this line, the nav link and the footer link all appear together; both directions
-                 are pinned in home-page.test.ts under "unpublished repository posture". */
-              oss={
-                githubUrl ? (
-                  <>
-                    MIT licensed and self-hostable, end to end.{' '}
-                    <a href={githubUrl}>Star it on GitHub.</a>
-                  </>
-                ) : (
-                  'MIT licensed and self-hostable, end to end.'
-                )
-              }
-            />
-            <MarketingFinalCta
-              href={authenticated ? '/dashboard' : HOME_CTA_HREF}
-              label={authenticated ? HOME_AUTHENTICATED_CTA_LABEL : HOME_CTA_LABEL}
-              note={authenticated ? undefined : HOME_CTA_REASSURANCE}
-            />
+          <MarketingSection id="home-pricing" label="Pricing" title="Start free. Keep what matters.">
+            <div class="aa-marketing-pricing">
+              <article class="aa-marketing-plan">
+                <header class="aa-marketing-plan__head">
+                  <h3 class="aa-marketing-plan__name">Free</h3>
+                  <p class="aa-marketing-plan__price">
+                    <span class="aa-marketing-plan__amount">$0</span>
+                  </p>
+                  <p class="aa-marketing-plan__note">No card. Publish in a minute.</p>
+                </header>
+                <ul class="aa-marketing-plan__features">
+                  <li>Publish straight from your agent</li>
+                  <li>Versioning, templates &amp; sharing</li>
+                  <li>Public, shareable hashed links</li>
+                  <li>Artifacts live 7 days, then fade</li>
+                </ul>
+                <Button variant="secondary" href={pricingCtaHref} fullWidth>
+                  {pricingCtaLabel}
+                </Button>
+              </article>
+
+              <article class="aa-marketing-plan aa-marketing-plan--featured">
+                <span class="aa-marketing-plan__badge">Most popular</span>
+                <header class="aa-marketing-plan__head">
+                  <h3 class="aa-marketing-plan__name">Pro</h3>
+                  <p class="aa-marketing-plan__price">
+                    <span class="aa-marketing-plan__amount">$9</span>
+                    <span class="aa-marketing-plan__period">/mo</span>
+                  </p>
+                  <p class="aa-marketing-plan__note">For work that sticks around.</p>
+                </header>
+                <ul class="aa-marketing-plan__features">
+                  <li>Everything in Free</li>
+                  <li>Artifacts live forever</li>
+                  <li>Your own subdomain</li>
+                  <li>No footer but yours</li>
+                  <li>Password-protected shares</li>
+                </ul>
+                <Button variant="primary" href={pricingCtaHref} fullWidth>
+                  {pricingCtaLabel}
+                </Button>
+              </article>
+            </div>
+
+            <aside class="aa-marketing-selfhost">
+              <div class="aa-marketing-selfhost__text">
+                <h3 class="aa-marketing-selfhost__title">Self-host? No problem.</h3>
+                <p>
+                  Agent Artifacts is MIT licensed and self-hostable, end to end — run the whole
+                  thing on your own infrastructure.
+                </p>
+              </div>
+              <Button variant="secondary" href={githubUrl ?? HOME_REPO_URL}>
+                View on GitHub
+              </Button>
+            </aside>
           </MarketingSection>
         </div>
       </main>
