@@ -102,6 +102,36 @@ describe('NavShell account slot', () => {
     expect(winningDeclaration(rules, headerAccount, 'white-space', 1440)?.value).toBe('nowrap');
   });
 
+  it('gives up the identity’s width before the action’s', () => {
+    // The other half of the same rule, and it took a round to notice it was missing. The rule above
+    // says text that does not fit elides — and the elide set is `span, a, p`, so a BUTTON is not in
+    // it. Under pressure the row therefore compressed the CONTROL instead: with the same 84-character
+    // address that motivated the height fix, the form shrank to 52px around a 77px button, which hung
+    // out of its parent and off the page. Header height stayed a correct 65px while the document
+    // panned 36px at 760, 761 and 768. A short address hid it, leaking 0.53px at exactly 760 — which
+    // is what got filed as a rounding hairline, and was not rounding.
+    //
+    // So the priority is declared rather than left to flex defaults: an identity can be abbreviated
+    // and an action cannot. "Sign o…" is not a button.
+    const form: ElementSpec[] = [...headerAccount, { tag: 'form' }];
+    const control: ElementSpec[] = [...headerAccount, { tag: 'button', classes: ['aa-btn'] }];
+
+    for (const [name, path] of [
+      ['the form around a control', form],
+      ['the control itself', control],
+    ] as const) {
+      expect(
+        winningDeclaration(rules, path, 'flex', 1440)?.value,
+        `${name} can be compressed below its content again, and a button does not elide — it spills`
+      ).toBe('none');
+    }
+
+    // And the text half still holds, or the width has to come from somewhere else.
+    expect(
+      winningDeclaration(rules, [...headerAccount, { tag: 'span' }], 'text-overflow', 1440)?.value
+    ).toBe('ellipsis');
+  });
+
   it('keeps children in the drawer footer, where they already were', () => {
     // The slot is additive. A page passing only children must render exactly as it did before.
     const html = shell({ items: ITEMS, children: 'drawer note' });

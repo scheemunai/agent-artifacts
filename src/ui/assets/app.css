@@ -420,6 +420,26 @@
       text-overflow: ellipsis;
     }
 
+    /* TEXT ELIDES; CONTROLS DO NOT. The rule above says "text that does not fit elides", and that
+       was only half true: the elide set is `span, a, p`, and a BUTTON is none of those. So under
+       pressure the row compressed the control instead — the form shrank to 52px around a 77px
+       button, which then hung out of its own parent and off the side of the page.
+
+       The height half of this problem was fixed in r4 and the width half was not, on the very case
+       that motivated it: with the 84-character service-account address named in the comment above,
+       the header stayed one row at 65px — correct — while the document panned 36px at 760, 761 and
+       768, and 3px at 1024. A short address hid it, leaking only 0.53px at exactly 760, which is
+       what got filed as a rounding hairline. It was not rounding; it was this, measured small.
+
+       So the priority is stated rather than left to flex defaults: an identity is abbreviatable and
+       an action is not. "Sign o…" is not a button. The text gives up its width — 116px to 56px at
+       760 — and the control keeps every pixel it needs. Measured after: pan 0 at 760/761/768/1024/
+       1440 with both a short address and the 84-character one, header still 65px in all ten. */
+    .aa-app-nav__account form,
+    .aa-app-nav__account .aa-btn {
+      flex: none;
+    }
+
     /* Specificity, not source order. The trigger is a `.aa-btn`, and `.aa-btn { display:
        inline-flex }` is emitted later in this layer; a bare `.aa-mobile-trigger` hide is an equal
        (0,1,0) tie that the later rule wins, so the Menu button rendered next to the full desktop
