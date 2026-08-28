@@ -10,9 +10,12 @@ The register GAUNTLET points at. Three fixtures, each with the cell it unlocks n
 > here. If a cloud dashboard cell needs provisioning, that is a different fixture with a different
 > lifetime and it should be designed as one.
 
-**Credentials are NOT in this file and NOT in git.** Both accounts share one password, readable at:
-
-    /opt/projects/control-room/memory/eb0227c4-4709-4250-bf10-99ddc86d3bc4/.qa-fixture-password  (mode 600)
+**Credentials are NOT in this file and NOT in git.** All fixture accounts share one password, held in a
+mode-600 file named `.qa-fixture-password` inside the operator lane's Control Room session-memory
+directory. The absolute path is deliberately not written here: `release-check.sh` flags internal
+host and filesystem paths in shipped files, and it is right to — a register that ships with an
+operator's directory layout in it has leaked something, however harmlessly. Ask the operator lane for
+the path, or read it from that lane's memory directory.
 
 Re-provision (idempotent; resets the password, seeds sacrificial content only if absent):
 
