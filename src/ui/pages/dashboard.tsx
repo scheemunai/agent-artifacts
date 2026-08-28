@@ -142,7 +142,7 @@ export function DashboardHomePage({
       <section class="aa-section">
         <header class="aa-section-header">
           <p class="aa-page-kicker">Artifacts</p>
-          <h1 class="aa-section-title">Your agent's published work</h1>
+          <h1 class="aa-section-title">Your agent's published work.</h1>
         </header>
         {/* A search form over an empty list is dead UI at the exact moment the product has to
             teach. It stays when a filter is what emptied the list, because removing it there

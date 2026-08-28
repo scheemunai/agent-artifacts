@@ -3261,13 +3261,8 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .aa-dashboard-card__badges,
-    .aa-dashboard-card__actions {
+    .aa-dashboard-card__badges {
       justify-content: flex-start;
-    }
-
-    .aa-dashboard-card__actions {
-      justify-self: start;
     }
   }
 
