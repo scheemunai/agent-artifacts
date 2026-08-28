@@ -36,3 +36,9 @@ When the owner is decided, update this section first, then update the places tha
 - `docs/self-hosting.md` Docker Compose walkthrough
 - `docs/deploy.md` platform sections
 - `docker-compose.yml` only if the default should switch from local build tag to the published GHCR image
+- **`AA_GITHUB_URL` in the deployment environment** — this is the only entry that changes a PRODUCT
+  surface rather than a document. The home page's open-source line carries the copy deck's closing
+  action ("Star it on GitHub.") and its nav and footer links, and all of them are conditional on
+  this variable: unset, the claim renders and the action is withheld, so no visitor meets a dead
+  link. Setting it is what makes the OSS pitch actionable, and nothing else on this list does it —
+  update every document here and the page stays silent until this variable is set.

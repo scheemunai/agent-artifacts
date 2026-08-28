@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { heroArtifactUrl, publicArtifactUrl } from '../../src/services/live-artifact-meta.js';
@@ -83,6 +84,34 @@ describe('cloud marketing homepage', () => {
       // The open-source claim itself survives; only the link is withheld.
       expect(html).toContain('MIT licensed and self-hostable, end to end.');
       expect(html).not.toMatch(/<a[^>]+href="(?!\/)[^"]*"[^>]*>\s*GitHub/i);
+    });
+
+    it('keeps the product surface on the checklist that unblocks it', () => {
+      // V10-N1 came in as "the OSS pitch renders without its action". It does, and that is correct:
+      // the repository is an open founder decision and answers 404 unauthenticated, so the link is
+      // withheld rather than shipped dead. Both render directions were already pinned above.
+      //
+      // What was NOT pinned is the thing that actually ends the wait. `docs/decisions.md` carries
+      // the checklist the founder works through when the owner is chosen, and every entry on it was
+      // a DOCUMENT — README, CONTRIBUTING, self-hosting, deploy, compose. Nothing pointed at the
+      // one variable that changes a page. Work the whole list and the open-source pitch is still
+      // silent, because no document sets `AA_GITHUB_URL`.
+      //
+      // So this guards the checklist rather than the markup: the record must name the variable, and
+      // it must still be the variable this page actually reads. A dependency nobody can act on is
+      // the same as an undocumented one.
+      const decisions = readFileSync('docs/decisions.md', 'utf8');
+      const publication = decisions.slice(decisions.indexOf('## Repository publication status'));
+
+      expect(
+        publication,
+        'the decision record does not name the variable that makes the OSS action appear, so the ' +
+          'founder can complete every item on its list and the page stays dark'
+      ).toContain('AA_GITHUB_URL');
+      expect(
+        readFileSync('src/config.ts', 'utf8'),
+        'the record names a variable the config no longer reads'
+      ).toContain('AA_GITHUB_URL');
     });
 
     it('restores nav, open source, and footer links once the repository url is set', () => {

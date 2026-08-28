@@ -221,6 +221,20 @@ export function HomePage({
           <MarketingSection id="home-terms" label="Pricing and open source">
             <MarketingTermsCard
               price="Free artifacts live for seven days, then fade. For $9 a month they live forever, on your own subdomain, with no footer but yours."
+              /* THE COPY DECK'S CLOSING ACTION, AND WHY IT IS NOT ON THE LIVE PAGE.
+                 §7 ends "MIT licensed and self-hostable, end to end. Star it on GitHub." — the
+                 claim and its action. Only the claim renders today, and that is correct rather
+                 than missing: a CTA's target is a factual claim, and this one is not yet true.
+                 `github.com/ZeroPointRepo/agent-artifacts` answers 404 to an unauthenticated GET,
+                 because the repository owner is still an open founder decision (docs/decisions.md,
+                 "Repository publication status"). Shipping the line anyway would put a dead link
+                 at the end of the open-source pitch, which is a worse failure than a quiet one.
+                 So the action is withheld and the claim survives — MIT licensing is true whether
+                 or not anyone can see the source today.
+                 The dependency is not a TODO: it is on the founder checklist in that decision
+                 record, as the one entry that changes a product surface. Set `AA_GITHUB_URL` and
+                 this line, the nav link and the footer link all appear together; both directions
+                 are pinned in home-page.test.ts under "unpublished repository posture". */
               oss={
                 githubUrl ? (
                   <>
