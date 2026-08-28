@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { HomePage } from '../../src/ui/pages/home.js';
+import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
 import {
   type ElementSpec,
   inheritedValue,
@@ -27,11 +28,23 @@ import {
  * a sentence. That distinction cannot be computed here, so it is argued here.
  */
 const rules = parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8'));
-const html = renderToString(
-  HomePage({ baseUrl: 'https://agentartifact.ai', githubUrl: 'https://github.com/example/aa' }) as
-    // biome-ignore lint/suspicious/noExplicitAny: the page's own props type is not exported for tests
-    any
-);
+
+/**
+ * BOTH surfaces that render marketing components, not just the one the rule was reported on.
+ *
+ * This walked the home page alone, while the style guide renders the same components twenty-six
+ * times — so a centred block introduced in a specimen was invisible to a guard whose whole subject
+ * is centred blocks. Found by asking the frame question of my own walks: the rule is about
+ * marketing PROSE, and the home page is where it was first seen, not where it lives.
+ */
+const html = [
+  renderToString(
+    HomePage({ baseUrl: 'https://agentartifact.ai', githubUrl: 'https://github.com/example/aa' }) as
+      // biome-ignore lint/suspicious/noExplicitAny: the page's own props type is not exported for tests
+      any
+  ),
+  renderToString(StyleGuidePage()),
+].join('\n');
 
 /**
  * Above this many characters a block will wrap on a phone, so centring it is a claim that needs

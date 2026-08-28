@@ -41,6 +41,28 @@ function unionMembers(typeName: string): string[] {
   return members;
 }
 
+/**
+ * The members of an inline union declared on a prop, e.g. `size?: 'sm' | 'md' | 'lg'`.
+ *
+ * Needed because not every variant axis has an exported type. Reading them anyway is the point of
+ * the frame audit that added the last three cases below: the walk covered five components while
+ * SEVEN places in `primitives.tsx` build a class name from a prop, and the three it missed were
+ * exactly the ones whose unions were inline rather than named. A guard that only sees the
+ * well-declared half of a pattern is a guard with a frame.
+ */
+function propUnion(interfaceName: string, prop: string): string[] {
+  const block = new RegExp(`interface ${interfaceName}[^{]*\\{([\\s\\S]*?)\\n\\}`).exec(
+    primitivesSource
+  )?.[1];
+  const declaration = new RegExp(`\\b${prop}\\??:([^;]+);`).exec(block ?? '')?.[1] ?? '';
+  const members = Array.from(declaration.matchAll(/'([\w-]+)'/g), (match) => String(match[1]));
+  expect(
+    members.length,
+    `${interfaceName}.${prop} is not an inline union any more`
+  ).toBeGreaterThan(1);
+  return members;
+}
+
 /** Each case renders one primitive across one prop's declared union. */
 const CASES: Array<{ label: string; render: () => string[] }> = [
   {
@@ -78,6 +100,36 @@ const CASES: Array<{ label: string; render: () => string[] }> = [
         renderToString(
           primitives.StatusHeading({ tone: tone as never, status: 'Live', children: 'Title' })
         )
+      ),
+  },
+  // The three the frame audit added. Each builds a class from a prop exactly like the five above;
+  // the only thing that kept them out was that their unions are declared inline.
+  {
+    label: 'Button size',
+    render: () =>
+      propUnion('ButtonProps', 'size').map((size) =>
+        renderToString(primitives.Button({ size: size as never, children: 'x' }))
+      ),
+  },
+  {
+    label: 'Badge size',
+    render: () =>
+      unionMembers('BadgeSize').map((size) =>
+        renderToString(primitives.Badge({ size: size as never, children: 'x' }))
+      ),
+  },
+  {
+    label: 'Avatar size',
+    render: () =>
+      propUnion('AvatarProps', 'size').map((size) =>
+        renderToString(primitives.Avatar({ size: size as never, name: 'Ada Byron' }))
+      ),
+  },
+  {
+    label: 'ButtonRow align',
+    render: () =>
+      unionMembers('ButtonRowAlign').map((align) =>
+        renderToString(primitives.ButtonRow({ align: align as never, children: 'x' }))
       ),
   },
 ];
