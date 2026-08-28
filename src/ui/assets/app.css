@@ -18,7 +18,22 @@
    Honest residual: this does not eliminate word-derived utilities, it makes them DETERMINISTIC.
    `.shrink` survives both builds because the word appears in prose inside `src/` — including a hint
    in the style guide that explains why a track could not shrink. Same output everywhere is the
-   guarantee being bought here; a scanner that understands English is not on offer. */
+   guarantee being bought here; a scanner that understands English is not on offer.
+
+   AND THE BOUNDARY DECIDES, WHICH IS WHY NOBODY SHOULD TRY TO WRITE AROUND THIS. Whether a word in
+   prose becomes a rule depends on the characters either side of it, not on the word. Measured:
+
+     "trying to shrink."        emits nothing   — `.` is legal in a candidate (`p-1.5`), so the
+                                                  extractor takes `shrink.` whole and discards it
+     "rather than shrinking"    emits nothing   — inflected, so the candidate is `shrinking`
+     "shrink-wrapping"          emits nothing   — compound
+     "it did shrink — and"      EMITS `.shrink` — bare, space-delimited
+     "not shrink with the"      EMITS `.shrink` — bare, space-delimited
+
+   Three files carried the word for months and emitted nothing; two sentences added in r5 emitted
+   the rule, because they happened to put a space after it. That is not a thing an author can be
+   asked to track while writing documentation — which is the argument for confining the scan rather
+   than policing the vocabulary. The count is a property of the prose's PUNCTUATION. */
 @import "tailwindcss" source(none);
 @source "../../";
 
