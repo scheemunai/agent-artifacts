@@ -117,6 +117,20 @@ function bindCopyBlocks() {
   });
 }
 
+/**
+ * Every dialog behaviour is delegated from the document, like everything else in this bundle.
+ *
+ * It used to be half and half: opening and the close button were delegated, while the scrim click,
+ * the tab trap and the scroll release were attached with `querySelectorAll` at bind time — ten
+ * lines apart, in one function, with nothing marking the difference. Nothing was broken, because
+ * every dialog in the product is server-rendered at load and therefore present when that ran. The
+ * asymmetry was the defect: a dialog inserted afterwards would open, lock the page's scrolling, and
+ * then have no scrim close, no tab trap and no release — leaving the reader in a modal they can
+ * dismiss only with Escape, on a page that no longer scrolls.
+ *
+ * Delegation is not a style preference here. It is the difference between "works for the markup
+ * that happened to exist" and "works for the component".
+ */
 function bindDialogs() {
   document.addEventListener('click', (event) => {
     const opener =
@@ -139,20 +153,38 @@ function bindDialogs() {
         dialog.close();
       }
     }
+
+    // The scrim. A click on the backdrop reports the DIALOG as its target — the panel and
+    // everything in it report themselves — so "target is the dialog" is exactly "outside the
+    // panel", with no geometry involved.
+    if (event.target instanceof HTMLDialogElement && event.target.matches('[data-aa-dialog]')) {
+      event.target.close();
+    }
   });
 
-  document.querySelectorAll('dialog[data-aa-dialog]').forEach((dialog) => {
-    if (!(dialog instanceof HTMLDialogElement)) {
-      return;
+  /*
+   * `cancel` and `close` DO NOT BUBBLE. That is the whole reason these two are registered with
+   * `capture: true` rather than alongside the delegated handlers above: a normal document listener
+   * never sees them, but the capture phase still walks document → target for a non-bubbling event,
+   * so this reaches every dialog including ones that did not exist at bind time.
+   *
+   * Verified rather than assumed — a bubble-phase listener for these two fires zero times in
+   * Chromium while the capture-phase one fires for Escape (cancel then close) and for `.close()`.
+   */
+  const releaseScroll = (event) => {
+    if (event.target instanceof HTMLDialogElement && event.target.matches('[data-aa-dialog]')) {
+      unlockScroll();
     }
-    dialog.addEventListener('cancel', unlockScroll);
-    dialog.addEventListener('close', unlockScroll);
-    dialog.addEventListener('click', (event) => {
-      if (event.target === dialog) {
-        dialog.close();
-      }
-    });
-    dialog.addEventListener('keydown', (event) => trapTab(event, dialog));
+  };
+  document.addEventListener('cancel', releaseScroll, true);
+  document.addEventListener('close', releaseScroll, true);
+
+  document.addEventListener('keydown', (event) => {
+    const dialog =
+      event.target instanceof Element ? event.target.closest('dialog[data-aa-dialog]') : null;
+    if (dialog instanceof HTMLDialogElement) {
+      trapTab(event, dialog);
+    }
   });
 }
 

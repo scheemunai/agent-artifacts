@@ -59,13 +59,17 @@ test.describe('destructive confirm dialog', () => {
       'the scroll lock outlived the dialog'
     ).not.toBe('hidden');
 
-    // Scrim: a click on the dialog element itself is a click outside the panel.
+    // Scrim: the backdrop. A click there reports the DIALOG as its target, which is precisely what
+    // the close handler tests for — no geometry involved.
+    //
+    // Deliberately far from the panel rather than just outside it. The first version of this
+    // clicked 4px into the dialog's own corner, which passed at every width for a reason it did not
+    // state: the panel is inset by exactly 1px, so 4px is *inside* the panel's box, and the click
+    // only missed it because the corner is ROUNDED. That assertion was load-bearing on a border
+    // radius nobody thinks of as load-bearing — reduce the radius and it fails loudly, pointing at
+    // the dialog rather than at itself, which is the worst kind of failure to inherit.
     const { dialog: reopened } = await openFirstDialog(page);
-    const corner = await reopened.evaluate((node) => {
-      const box = node.getBoundingClientRect();
-      return { x: box.x + 4, y: box.y + 4 };
-    });
-    await page.mouse.click(corner.x, corner.y);
+    await page.mouse.click(6, 6);
     await expect(reopened).toHaveJSProperty('open', false);
     expect(await activeDescription(page), 'the scrim close dropped focus').toMatchObject({
       isTrigger: true,
@@ -141,6 +145,62 @@ test.describe('destructive confirm dialog', () => {
     await expect(status, 'withdrawing the action is as much a change as granting it').toHaveText(
       /unavailable until the confirmation matches/
     );
+  });
+
+  test('binds a dialog that did not exist when the page loaded', async ({ page }) => {
+    // The asymmetry this closes: opening and the close button were delegated from the document,
+    // while the scrim, the tab trap and the scroll release were attached with `querySelectorAll` at
+    // bind time. Nothing was broken, because every dialog in this product is server-rendered and so
+    // was present when that ran — which is exactly what makes it the kind of defect that waits.
+    //
+    // The failure it was waiting for is not subtle: a dialog inserted later would open, lock the
+    // page's scrolling, and then have no scrim close and no release. The reader gets a modal they
+    // can only dismiss with Escape, on a page that no longer scrolls afterwards.
+    //
+    // So this injects one and exercises the behaviours that used to be bind-time. It is also the
+    // only test here that could not be written against the shipped markup — the defect had no live
+    // instance, which is why it needed manufacturing rather than finding.
+    await page.goto('/style-guide');
+    await page.evaluate(() => {
+      document.body.insertAdjacentHTML(
+        'beforeend',
+        `<button data-aa-open-dialog="injected-dialog">Open injected</button>
+         <dialog class="aa-dialog" id="injected-dialog" data-aa-dialog="true"
+                 aria-labelledby="injected-title">
+           <div class="aa-dialog__panel">
+             <h2 class="aa-dialog__title" id="injected-title">Injected after load</h2>
+             <footer class="aa-dialog__actions">
+               <button data-aa-close-dialog="true" data-aa-cancel="true">Cancel</button>
+             </footer>
+           </div>
+         </dialog>`
+      );
+    });
+
+    const injected = page.locator('#injected-dialog');
+    await page.locator('[data-aa-open-dialog="injected-dialog"]').click();
+    await expect(
+      injected,
+      'the delegated opener never reached an injected dialog'
+    ).toHaveJSProperty('open', true);
+    await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+
+    // Tab trap: the injected dialog has one focusable control, so focus cannot go anywhere else.
+    await page.keyboard.press('Tab');
+    expect(await activeDescription(page), 'Tab escaped an injected modal').toMatchObject({
+      insideDialog: true,
+    });
+
+    // Scrim, and the release. Before delegation, this click did nothing and the page stayed locked.
+    await page.mouse.click(6, 6);
+    await expect(injected, 'the scrim never bound, so the dialog would not close').toHaveJSProperty(
+      'open',
+      false
+    );
+    expect(
+      await page.evaluate(() => getComputedStyle(document.body).overflow),
+      'the scroll lock outlived an injected dialog — the page is now unscrollable'
+    ).not.toBe('hidden');
   });
 
   test('is a modal with a name and a description in the accessibility tree', async ({ page }) => {
