@@ -217,7 +217,14 @@ export class DashboardReadModelService {
       versionNum: row.version_num,
       htmlPreview:
         row.type === 'markdown'
-          ? renderMarkdown(row.content, { contentHash: row.content_hash, headingOffset: 1 })
+          ? // Offset 1 is deliberate and load-bearing: the preview embeds a whole document inside
+            // a page that already has its own h1, so the embedded headings are demoted to keep
+            // exactly one h1 per page. Setting this to 0 to match the viewer byte-for-byte —
+            // which is what "preview parity" sounds like it wants — puts two h1s on the artifact
+            // detail page; dashboard-heading-regression.test.ts measures it as 2 and fails. The
+            // hierarchy the owner sees is the same one the reader gets, shifted by one level, and
+            // the offset is part of the render-cache key precisely so the two may differ safely.
+            renderMarkdown(row.content, { contentHash: row.content_hash, headingOffset: 1 })
           : null,
     };
   }
