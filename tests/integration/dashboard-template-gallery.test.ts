@@ -102,7 +102,8 @@ describe('the templates listing shows the example instead of describing its fiel
     // Decorative: the accessible name of the one link in the card is the template's name.
     expect(card).toContain('alt=""');
     expect(card).toContain('>Recap</a>');
-    expect(card).toContain('>HTML</span>');
+    // Lowercase, as the artifact badges and the preview panel spell it.
+    expect(card).toContain('>html</span>');
     expect(card).toContain('>starter</span>');
   });
 
@@ -115,9 +116,13 @@ describe('the templates listing shows the example instead of describing its fiel
     ).text();
 
     const card = cardFor(html, promotedId);
-    expect(card).toContain('aa-template-card__placeholder');
+    const cover = card.split('</div>')[0] as string;
+    expect(cover).toContain('aa-template-card__placeholder');
     expect(card, 'a null thumbnail must never reach an img element').not.toContain('<img');
-    expect(card).toContain('>My Own Page</span>');
+    // The mark and nothing else: the body below already prints the name and the type badge.
+    expect(cover).toContain('class="aa-mark"');
+    expect(cover).not.toContain('My Own Page');
+    expect(card).toContain('>My Own Page</a>');
     expect(card).toContain('>yours</span>');
   });
 
@@ -182,7 +187,14 @@ describe('the template frame is gated the way the artifact frame is', () => {
     expect(framed.headers.get('content-type')).toContain('text/html');
     expect(framed.headers.get('content-security-policy')).toContain('sandbox allow-scripts');
     expect(framed.headers.get('content-security-policy')).toContain("frame-ancestors 'self'");
-    expect(await framed.text()).toContain('AI Engineering Daily');
+    // Raw, exactly as the artifact frame serves an artifact: a template promoted from an artifact
+    // must not preview differently here than it does on the page it was promoted from.
+    const stored = (
+      ctx.db.sqlite.prepare('SELECT content FROM templates WHERE id = ?').get(recapId) as {
+        content: string;
+      }
+    ).content;
+    expect(await framed.text()).toBe(stored);
 
     const anonymous = await ctx.app.request(`/dashboard/templates/${recapId}/frame`);
     expect(anonymous.status, 'the frame answered without a session').toBe(302);

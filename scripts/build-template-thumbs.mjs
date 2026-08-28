@@ -43,7 +43,16 @@ const ASPECT = 16 / 10;
 const OUTPUT_HEIGHT = Math.round(OUTPUT_WIDTH / ASPECT);
 const REVIEW_WIDTH = 1280;
 const VIEWPORT_BY_TYPE = { html: 1280, markdown: 1024 };
-const VIEWPORT_BY_SLUG = { 'report-html': 1024 };
+/**
+ * `report-html` is a 42rem reading column on a paper card, and the width it is captured at decides
+ * what KIND of object the grid shows. At 1024 the paper is 768px of white inside 256px of page
+ * background: at card size that reads as a small sheet floating in a grey mat, which is not what
+ * `recap` and `metrics-dashboard` — full-bleed layouts, captured edge to edge — read as, so one
+ * card in the row looked like a different species. 768 is the paper's own outer width and also the
+ * template's `max-width: 48rem` breakpoint, so the capture lands on the compact padding and the
+ * document fills the frame with only its own margin showing.
+ */
+const VIEWPORT_BY_SLUG = { 'report-html': 768 };
 
 /**
  * Realistic values for the markdown starters' slots. A thumbnail of `{{title}}` sells nothing, and

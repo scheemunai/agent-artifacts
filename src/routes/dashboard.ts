@@ -43,7 +43,6 @@ import {
   DashboardSettingsPage,
   DashboardTemplatesPage,
 } from '../ui/pages/dashboard.js';
-import { FrameDocument } from '../ui/pages/frame-document.js';
 import {
   type SetupErrorField,
   SetupKeyHiddenPage,
@@ -616,12 +615,12 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
   /*
    * The HTML template's own rendering, for the preview panel to frame.
    *
-   * Same posture as `/dashboard/artifacts/:id/frame`: session-gated, owner-or-built-in only, and
-   * served with the dashboard-preview headers, whose CSP sandboxes the document and forbids it
-   * every request. It wraps through `FrameDocument` — the built-in examples are whole documents
-   * and pass through untouched, while a template promoted from an HTML fragment gets the same
-   * charset, viewport and typographic ground the public frame gives it, instead of rendering as
-   * Times New Roman against the UA's default margin.
+   * Same posture as `/dashboard/artifacts/:id/frame`, down to the bytes: session-gated,
+   * owner-or-built-in only, served with the dashboard-preview headers whose CSP sandboxes the
+   * document and forbids it every request, and serving the stored content raw. It briefly wrapped
+   * through `FrameDocument` so a fragment would get a charset and a typographic ground; that made
+   * the same fragment render differently here than on the artifact page it was promoted from,
+   * which is the wrong trade. A template previews exactly as the artifact does.
    */
   app.get('/dashboard/templates/:id/frame', async (routeContext) => {
     const session = await requirePageSession(routeContext, services);
@@ -635,11 +634,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (template?.type !== 'html') {
       return routeContext.notFound();
     }
-    return routeContext.body(
-      FrameDocument({ content: template.content, title: template.name }),
-      200,
-      dashboardPreviewFrameHeaders(services.config)
-    );
+    return routeContext.body(template.content, 200, dashboardPreviewFrameHeaders(services.config));
   });
 
   app.get('/dashboard/settings', async (routeContext) => {

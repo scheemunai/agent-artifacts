@@ -1623,7 +1623,7 @@ function TemplateCard({ template }: { template: DashboardTemplateView }) {
         {template.thumbnailUrl ? (
           <img class="aa-template-card__image" src={template.thumbnailUrl} alt="" loading="lazy" />
         ) : (
-          <TemplateCoverPlaceholder template={template} />
+          <TemplateCoverPlaceholder />
         )}
       </div>
       <div class="aa-template-card__body">
@@ -1636,7 +1636,7 @@ function TemplateCard({ template }: { template: DashboardTemplateView }) {
           <Badge tone={template.builtIn ? 'info' : 'accent'}>
             {template.builtIn ? 'starter' : 'yours'}
           </Badge>
-          <Badge tone="neutral">{template.type === 'markdown' ? 'MD' : 'HTML'}</Badge>
+          <Badge tone="neutral">{template.type === 'markdown' ? 'md' : 'html'}</Badge>
         </div>
         <p class="aa-template-card__subline">
           {template.description ?? 'No description yet — open the preview to see the example.'}
@@ -1656,18 +1656,18 @@ function TemplateCard({ template }: { template: DashboardTemplateView }) {
  *
  * Every built-in ships a rendered thumbnail; a template you promote from your own artifact has
  * none, and `<img src="">` on a null is a broken-image glyph in the middle of a grid of real ones.
- * This fills the same 16:10 box with the product mark, the template's name and its type — a tile
- * that reads as deliberate rather than as a failed load. It is `aria-hidden` because every word in
- * it is already in the card body beside it.
+ * This fills the same 16:10 box with the product mark on a tinted tile — a cover that reads as
+ * deliberate rather than as a failed load.
+ *
+ * The mark is all of it. It first carried the template's name and type as well, which the card
+ * body prints again immediately below: on a personal card the name appeared twice, 30px apart,
+ * and the type both as a word and as a badge. A thumbnail on a built-in card carries no caption
+ * either, so a bare tile is also the consistent one.
  */
-function TemplateCoverPlaceholder({ template }: { template: DashboardTemplateView }) {
+function TemplateCoverPlaceholder() {
   return (
     <div class="aa-template-card__placeholder" aria-hidden="true">
       <ProductMark />
-      <span class="aa-template-card__placeholder-name">{template.name}</span>
-      <span class="aa-template-card__placeholder-type">
-        {template.type === 'markdown' ? 'Markdown' : 'HTML'}
-      </span>
     </div>
   );
 }

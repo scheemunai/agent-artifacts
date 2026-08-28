@@ -92,7 +92,7 @@ export const starterTemplateManifest = [
   },
   {
     "slug": "report-html",
-    "name": "Report",
+    "name": "Executive report",
     "description": "Editorial single-column document: cover header, executive summary callout, numbered sections, key figures, and owned next steps.",
     "type": "html",
     "content_file": "report-html.html",
