@@ -38,8 +38,13 @@ function upsertAccount(email: string): string {
 
 const emptyId = upsertAccount('qa-empty-state@example.test');
 const sacId = upsertAccount('qa-sacrificial@example.test');
+// Separate from the content fixture ON PURPOSE: settings' account-level mutations change the email,
+// change the password, or delete the account outright. Aimed at qa-sacrificial they would take the
+// artifacts and bots with them, so account-level destruction gets its own body to destroy.
+const acctId = upsertAccount('qa-sacrificial-account@example.test');
 console.log('empty-state account   :', emptyId);
 console.log('sacrificial account   :', sacId);
+console.log('sacrificial-account   :', acctId);
 
 // The empty fixture must STAY empty; assert rather than assume.
 const emptyArts = (
@@ -113,6 +118,59 @@ if (existing === 0) {
     );
   }
 }
+// A little content so deleting the account exercises the cascade rather than removing an empty row.
+const acctArts = (
+  db
+    .prepare('select count(*) c from artifacts where account_id=? and deleted_at is null')
+    .get(acctId) as { c: number }
+).c;
+if (acctArts === 0) {
+  const artId = id('art');
+  const body =
+    '# Cascade check\n\nThis exists so deleting the account has something to take with it.';
+  const bodyHash = createHash('sha256').update(body).digest('hex');
+  db.prepare(
+    `insert into artifacts (id,account_id,slug,type,title,content,content_hash,metadata,version_num,created_at,updated_at)
+     values (?,?,?,?,?,?,?,?,?,?,?)`
+  ).run(
+    artId,
+    acctId,
+    'cascade-check',
+    'markdown',
+    'Cascade check',
+    body,
+    bodyHash,
+    '{}',
+    1,
+    now(),
+    now()
+  );
+  db.prepare(
+    `insert into artifact_versions (artifact_id,version_num,type,title,content,content_hash,change_summary,created_at)
+     values (?,?,?,?,?,?,?,?)`
+  ).run(artId, 1, 'markdown', 'Cascade check', body, bodyHash, 'seed', now());
+  const cascadeKey = `aa_bot_${randomBytes(18).toString('base64url')}`;
+  db.prepare(
+    `insert into bots (id,account_id,name,byline,api_key_hash,api_key_last4,created_at,updated_at)
+     values (?,?,?,?,?,?,?,?)`
+  ).run(
+    id('bot'),
+    acctId,
+    'Cascade bot',
+    'goes with the account',
+    createHash('sha256').update(cascadeKey).digest('hex'),
+    cascadeKey.slice(-4),
+    now(),
+    now()
+  );
+}
+const acctFinal = (
+  db
+    .prepare('select count(*) c from artifacts where account_id=? and deleted_at is null')
+    .get(acctId) as { c: number }
+).c;
+console.log(`account fixture holds  : ${acctFinal} artifact(s) + 1 bot, for the delete cascade`);
+
 const sacArts = (
   db
     .prepare('select count(*) c from artifacts where account_id=? and deleted_at is null')

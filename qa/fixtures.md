@@ -1,6 +1,6 @@
 # QA fixtures — agent-artifacts
 
-The register GAUNTLET points at. Everything here lives on the **self-hosted dev instance**
+The register GAUNTLET points at. Three fixtures, each with the cell it unlocks named. Everything here lives on the **self-hosted dev instance**
 (`http://127.0.0.1:4600`, database `data/agent-artifacts.db`).
 
 > **WHY SELF-HOSTED AND NOT CLOUD.** `src/routes/auth.ts` forces sign-in mode to `magic` whenever
@@ -46,6 +46,26 @@ restore/promote have history to act on), 2 bots (`Disposable bot 1`, `Disposable
 
 **Intended to be destroyed.** Delete the artifacts, revoke and regenerate the bots, promote and restore
 versions — that is what it is for. When exhausted, re-run the provisioner and it rebuilds the content.
+
+## 3. `qa-sacrificial-account@example.test` — ACCOUNT-LEVEL DESTRUCTION (accepted, r10)
+**For:** settings D3. Without it, settings' mutations are a stated exclusion; with it, email change,
+password change and delete-account can each be activated against something built to be lost.
+**Holds:** 1 artifact (`cascade-check`) + 1 bot (`Cascade bot`) — deliberately a little content, so
+deleting the account exercises the CASCADE rather than removing an empty row.
+
+**IT IS A SEPARATE ACCOUNT FROM FIXTURE 2 ON PURPOSE.** Account-level mutations change the email,
+change the password, or delete the account outright. Aimed at `qa-sacrificial`, any of the three would
+take the artifact, version and bot fixtures with it — the delete literally, the email/password change
+by making the registered credential wrong. One destructive scope per body.
+
+**Verified rendering** on 2026-08-28: `/dashboard/settings` offers `Delete account permanently`,
+`Change password`, `Update email`, `New email`, `New password`; the cascade content renders on
+`/dashboard` and `/dashboard/bots`.
+
+**Expected to be consumed.** Change its email, change its password, delete it — that is the point. Any
+of those makes it unreachable by the registered credential, WHICH IS NOT A FAULT: re-run the
+provisioner and it is rebuilt. If the email was changed rather than deleted, the old account lingers
+under its new address; that is harmless, but sweep it if the register starts collecting strays.
 
 ---
 
