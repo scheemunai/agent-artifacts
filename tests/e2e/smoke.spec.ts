@@ -13,7 +13,9 @@ const selfPort = Number(process.env.E2E_SELF_PORT ?? 3197);
 const cloudPort = Number(process.env.E2E_CLOUD_PORT ?? 3198);
 const SELF_BASE_URL = process.env.E2E_SELF_BASE_URL ?? `http://127.0.0.1:${selfPort}`;
 const CLOUD_BASE_URL = process.env.E2E_CLOUD_BASE_URL ?? `http://127.0.0.1:${cloudPort}`;
-const SELF_STATE_DIR = path.resolve('.scratch/e2e-self');
+// Set by playwright.config.ts, which owns the per-run directory names. The literal is the
+// fallback for a direct `playwright test` invocation that skipped the config's publication.
+const SELF_STATE_DIR = path.resolve(process.env.E2E_SELF_SCRATCH ?? '.scratch/e2e-self');
 const SEED_PATH = path.join(SELF_STATE_DIR, 'seed.json');
 const SETUP_TOKEN_PATH = path.join(SELF_STATE_DIR, '.setup-token');
 const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;

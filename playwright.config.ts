@@ -1,18 +1,95 @@
+import { execFileSync } from 'node:child_process';
 import { defineConfig, devices } from '@playwright/test';
 
-const selfPort = Number(process.env.E2E_SELF_PORT ?? 3197);
-const cloudPort = Number(process.env.E2E_CLOUD_PORT ?? 3198);
+/**
+ * TWO LANES CAN RUN THIS SUITE AT ONCE. That took two attempts and one wrong diagnosis.
+ *
+ * Fixed ports meant the second lane lost its webserver to "…:3197/healthz is already used" — loud,
+ * unmistakable, and not the dangerous half. The dangerous half was the SCRATCH DIRECTORIES: both
+ * runs did `rm -rf .scratch/e2e-self`, so a second run deleted the first run's database mid-flight
+ * and the first failed with ordinary assertion errors that look exactly like a regression somebody
+ * just introduced. Ports and directories are fixed together here on purpose — shipping the loud
+ * half alone converts an obvious failure into a phantom, which is worse than the bug.
+ *
+ * ── HOW THE PORTS REACH EVERY PROCESS ──────────────────────────────────────────────────────────
+ *
+ * `listen(0)` asks the OS for ports nobody holds — the same trick `scripts/docker-probe.sh` uses,
+ * so the pattern is proven here rather than imported. All three sockets are held open at once and
+ * released together, which is what makes the three differ from each other.
+ *
+ * The claim happens ONCE, in the runner's evaluation, and the values are published into
+ * `process.env`. Playwright evaluates this file in the runner and again in every worker, and the
+ * workers are CHILDREN of the runner, so they inherit the variables and take the `??` branch
+ * instead of claiming their own. That is measured, not assumed: instrumenting a full run showed one
+ * evaluation with no preset (the runner, which claims) and seven children that all saw it.
+ *
+ * An earlier attempt was reverted on the theory that env does not propagate. THAT THEORY WAS WRONG.
+ * The stray port pairs that seemed to prove it belonged to a DIFFERENT PROCESS TREE — another lane
+ * running concurrently, which is the very thing this change exists to make safe. A concurrency
+ * artefact was mistaken for a mechanism.
+ *
+ * AN EXPLICIT OVERRIDE STILL WINS: set E2E_SELF_PORT and friends and nothing is claimed. Note what
+ * that override does NOT do, because it was once published as a workaround and it is not one — it
+ * moves ports only, and two runs sharing the scratch directories still destroy each other.
+ */
+function claimFreePorts(count: number): number[] {
+  const script = [
+    "const net = require('node:net');",
+    `const servers = Array.from({ length: ${count} }, () => net.createServer());`,
+    `let pending = ${count};`,
+    'for (const server of servers) {',
+    "  server.listen(0, '127.0.0.1', () => {",
+    '    pending -= 1;',
+    '    if (pending > 0) return;',
+    '    process.stdout.write(JSON.stringify(servers.map((s) => s.address().port)));',
+    '    for (const s of servers) s.close();',
+    '  });',
+    '}',
+  ].join('\n');
+
+  return JSON.parse(
+    execFileSync(process.execPath, ['-e', script], { encoding: 'utf8' })
+  ) as number[];
+}
+
+const preassigned =
+  process.env.E2E_SELF_PORT && process.env.E2E_CLOUD_PORT && process.env.E2E_CLOUD_SANDBOX_ORIGIN;
+const [claimedSelf, claimedCloud, claimedSandbox] = preassigned ? [0, 0, 0] : claimFreePorts(3);
+
+const selfPort = Number(process.env.E2E_SELF_PORT ?? claimedSelf);
+const cloudPort = Number(process.env.E2E_CLOUD_PORT ?? claimedCloud);
 const selfBaseURL = process.env.E2E_SELF_BASE_URL ?? `http://127.0.0.1:${selfPort}`;
 const cloudBaseURL = process.env.E2E_CLOUD_BASE_URL ?? `http://127.0.0.1:${cloudPort}`;
 const cloudSandboxOrigin =
-  process.env.E2E_CLOUD_SANDBOX_ORIGIN ?? `http://127.0.0.1:${cloudPort + 1000}`;
+  process.env.E2E_CLOUD_SANDBOX_ORIGIN ?? `http://127.0.0.1:${claimedSandbox}`;
+
+// Published so the spec — which resolves the base URLs itself — and every worker use the ports that
+// were actually claimed, without importing anything from this file.
+process.env.E2E_SELF_PORT = String(selfPort);
+process.env.E2E_CLOUD_PORT = String(cloudPort);
+process.env.E2E_SELF_BASE_URL = selfBaseURL;
+process.env.E2E_CLOUD_BASE_URL = cloudBaseURL;
+process.env.E2E_CLOUD_SANDBOX_ORIGIN = cloudSandboxOrigin;
+
+/**
+ * The quiet half: a database per run, named after the ports that run claimed.
+ *
+ * Published on the same channel as the ports because the spec reads the self-host state directory
+ * directly — it needs the one-time `.setup-token` the server writes there. Renaming these without
+ * telling it is how the first attempt at this commit failed: 64 tests died on a missing token while
+ * the ports themselves were working perfectly.
+ */
+const selfScratch = `.scratch/e2e-self-${selfPort}`;
+const cloudScratch = `.scratch/e2e-cloud-${cloudPort}`;
+process.env.E2E_SELF_SCRATCH = selfScratch;
+process.env.E2E_CLOUD_SCRATCH = cloudScratch;
 
 const e2eSecret = 'e2e-session-secret-with-at-least-32-bytes';
 const selfEnv = [
   'DEPLOYMENT=self-hosted',
   `PORT=${selfPort}`,
   `BASE_URL=${selfBaseURL}`,
-  'AA_SQLITE_PATH=.scratch/e2e-self/app.db',
+  `AA_SQLITE_PATH=${selfScratch}/app.db`,
   'AA_RATE_LIMITS_DISABLED=true',
   'LOG_LEVEL=error',
 ].join(' ');
@@ -20,7 +97,7 @@ const cloudEnv = [
   'DEPLOYMENT=cloud',
   `PORT=${cloudPort}`,
   `BASE_URL=${cloudBaseURL}`,
-  'AA_SQLITE_PATH=.scratch/e2e-cloud/app.db',
+  `AA_SQLITE_PATH=${cloudScratch}/app.db`,
   `SESSION_SECRET=${e2eSecret}`,
   `SANDBOX_ORIGIN=${cloudSandboxOrigin}`,
   'AA_MAIL_TRANSPORT=log',
@@ -48,8 +125,8 @@ export default defineConfig({
   webServer: [
     {
       command: [
-        'rm -rf .scratch/e2e-self',
-        'mkdir -p .scratch/e2e-self',
+        `rm -rf ${selfScratch}`,
+        `mkdir -p ${selfScratch}`,
         `${selfEnv} pnpm exec tsx src/index.ts`,
       ].join(' && '),
       url: `${selfBaseURL}/healthz`,
@@ -58,8 +135,8 @@ export default defineConfig({
     },
     {
       command: [
-        'rm -rf .scratch/e2e-cloud',
-        'mkdir -p .scratch/e2e-cloud',
+        `rm -rf ${cloudScratch}`,
+        `mkdir -p ${cloudScratch}`,
         `${cloudEnv} pnpm exec tsx src/index.ts`,
       ].join(' && '),
       url: `${cloudBaseURL}/healthz`,
@@ -96,10 +173,23 @@ export default defineConfig({
      * plus 375 for the small end and 1440 for the roomy end of the wide region.
      *
      * THE MIN-SIDE EDGE WAS THE SET'S OWN BLIND SPOT, and it cost a defect before it was closed: a
-     * 36px horizontal pan lived at 760–1024, and nothing rendered there. r5 closed "the band nobody
-     * photographs" on the max side and left the same shape above the compact boundary — 1440 sits
-     * deep inside the wide region, where there is room to spare, so it cannot see a layout that only
-     * overflows when the wide rules apply with the LEAST room available. That is 760 exactly.
+     * 36px horizontal pan lived at 760–1024, and nothing rendered there. 1440 sits deep inside the
+     * wide region, where there is room to spare, so it cannot see a layout that only overflows when
+     * the wide rules apply with the LEAST room available. That is 760 exactly.
+     *
+     * IT WAS NOT THE SAME KIND OF GAP AS 481–759, and the distinction is the useful part. 481–759
+     * was a candidate this scheme GENERATED and nobody had added yet — being behind. 760 was never
+     * generated at all, because the enumeration ran over `max-width` boundaries and a `min-width`
+     * rule has no max-width edge to derive from — being blind. A rule that only enumerates one
+     * boundary type produces a set that is closed over that type and silent about the rest, and it
+     * will not announce the difference. Hence the wording below is "every breakpoint", on purpose.
+     *
+     * ONE HONEST LIMIT: `viewer.css` also carries a `max-height: 450px` rule, and by the sentence
+     * below its turn-on edge belongs in a project. It is asserted in the spec instead — smoke.spec's
+     * landscape test measures at 375 AND at the 450 edge — because a height edge would multiply
+     * every test in the suite by another viewport to check a rule that governs one element's
+     * layout. That is a judgement about cost, not a claim that heights are exempt; if height rules
+     * spread beyond the viewer chrome, this set needs a height axis rather than a footnote.
      *
      * WHY 760 AND NOT ALSO A MID-BAND SAMPLE: there is no breakpoint between 760 and infinity, so
      * 760–1439 is a single rule combination, already bracketed at both extremes. A 1024 would add no
