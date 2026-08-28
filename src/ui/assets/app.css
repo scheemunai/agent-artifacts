@@ -314,6 +314,13 @@
     line-height: 1;
   }
 
+  /* The brand mark on the auth pages is a link home — the one way back from a sign-in dead-end.
+     Inline-flex so it wraps the mark tightly; the mark keeps its own accent colour. */
+  .aa-auth-home {
+    display: inline-flex;
+    border-radius: var(--radius-aa-sm);
+  }
+
   .aa-mark svg {
     display: block;
     width: 100%;

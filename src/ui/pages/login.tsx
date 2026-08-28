@@ -1,6 +1,5 @@
 import { Layout } from '../components/layout.js';
 import {
-  Badge,
   Button,
   ButtonRow,
   Card,
@@ -64,7 +63,9 @@ export function LoginPage({
               ) : (
                 <>
                   <div>
-                    <ProductMark />
+                    <a class="aa-auth-home" href="/" aria-label="Agent Artifacts home">
+                      <ProductMark />
+                    </a>
                     <p class="aa-page-kicker">Human dashboard</p>
                     <h1 class="aa-section-title">{title}</h1>
                     <p class="aa-section-note">
@@ -105,7 +106,6 @@ export function LoginPage({
                           Email me a link instead
                         </Button>
                       ) : null}
-                      {isMagic ? <Badge tone="info">15-minute link</Badge> : null}
                     </ButtonRow>
                     {isMagic ? (
                       <p class="aa-hint">
