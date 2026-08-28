@@ -147,8 +147,17 @@ export class DashboardReadModelService {
     accountId: string;
     filters: DashboardListFilters;
     retentionDays: number | null;
-  }): Promise<{ artifacts: DashboardArtifactListViewModel[]; nextCursor: string | null }> {
+  }): Promise<{
+    artifacts: DashboardArtifactListViewModel[];
+    nextCursor: string | null;
+    cursorRejected: boolean;
+  }> {
     const cursor = decodeCursor(input.filters.cursor);
+    // "Rejected", not "expired": a cursor that fails to decode may be stale, truncated by a mail
+    // client, or edited by hand, and this layer cannot tell those apart. It reports the fact it
+    // has — the reader was sent somewhere the list could not honour — and lets the route choose
+    // the kindest true wording. An absent cursor is not a rejected one.
+    const cursorRejected = Boolean(input.filters.cursor) && cursor === null;
     const params: unknown[] = [input.accountId];
     const clauses = ['a.account_id = ?', 'a.deleted_at IS NULL'];
 
@@ -183,7 +192,7 @@ export class DashboardReadModelService {
       pageRows.map((row) => this.artifactListItemFromRow(row, input.retentionDays))
     );
     const nextCursor = rows.length > pageSize ? encodeCursor(pageRows[pageRows.length - 1]) : null;
-    return { artifacts, nextCursor };
+    return { artifacts, nextCursor, cursorRejected };
   }
 
   async getDashboardArtifactDetail(input: {

@@ -396,11 +396,29 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     const filters = readDashboardListFilters(routeContext.req.query());
     const plan = await services.cloudModule.resolvePlan(accountToCloudAccount(session.account));
     const bots = await services.auth.listBots(session.account.id);
-    const { artifacts, nextCursor } = await services.dashboardReads.listDashboardArtifacts({
-      accountId: session.account.id,
-      filters,
-      retentionDays: plan.artifact_retention_days,
-    });
+    const { artifacts, nextCursor, cursorRejected } =
+      await services.dashboardReads.listDashboardArtifacts({
+        accountId: session.account.id,
+        filters,
+        retentionDays: plan.artifact_retention_days,
+      });
+    if (cursorRejected) {
+      // Redirect rather than render: the bad cursor has to leave the URL, or a refresh walks the
+      // reader straight back into it. Their filters are kept, because throwing them back to an
+      // unfiltered list would be a bigger surprise than the one being reported.
+      const params = new URLSearchParams();
+      if (filters.q) {
+        params.set('q', filters.q);
+      }
+      if (filters.botId) {
+        params.set('bot', filters.botId);
+      }
+      if (filters.type) {
+        params.set('type', filters.type);
+      }
+      params.set('notice', 'cursor_expired');
+      return routeContext.redirect(`/dashboard?${params.toString()}`, 303);
+    }
     return routeContext.html(
       DashboardHomePage({
         account: accountView(session.account),
@@ -1163,6 +1181,13 @@ function noticeFromQuery(value: string | undefined): DashboardNotice | undefined
       return { tone: 'success', message: 'Check the new email address to confirm the change.' };
     case 'template_promoted':
       return { tone: 'success', message: 'Template promoted.' };
+    case 'cursor_expired':
+      // Not phrased as an error, because the reader did nothing wrong: they followed a link that
+      // named a position this list can no longer find. It says where they ended up instead.
+      return {
+        tone: 'info',
+        message: 'That page link was out of date, so this is the first page.',
+      };
     case 'password_required':
       return { tone: 'danger', message: 'Enter a password first.' };
 

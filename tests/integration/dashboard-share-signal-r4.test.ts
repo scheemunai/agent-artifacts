@@ -124,8 +124,15 @@ describe('V3-N1 · the end-of-list count says which count it is', () => {
 
     // On a later page the same string meant something else entirely — "8 artifacts · end of
     // list" on a 28-artifact account read as "this account has 8".
+    // This used to fake "a later page" with the string 'notarealcursor', which worked only because
+    // an undecodable cursor was silently swallowed. B-C9 made that state impossible — it now
+    // redirects — so the fixture has to be a cursor that really decodes. The old version was
+    // asserting real behaviour through a door the product has since, correctly, shut.
+    const cursor = Buffer.from(
+      JSON.stringify({ updatedAt: Date.now() + 60_000, id: 'art_beforeeverything' })
+    ).toString('base64url');
     const later = await (
-      await ctx.app.request('/dashboard?cursor=notarealcursor', { headers: { Cookie: cookie } })
+      await ctx.app.request(`/dashboard?cursor=${cursor}`, { headers: { Cookie: cookie } })
     ).text();
     expect(later).not.toContain('3 artifacts · end of list');
     expect(later).toContain('3 on this page · end of list');
