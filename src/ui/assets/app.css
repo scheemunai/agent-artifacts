@@ -2542,16 +2542,18 @@
     }
   }
 
+  /* The hero card's right cluster (published timestamp + visibility control) stays on the meta bar
+     down to 390px — there is room for it on most phones. Below 390px it stands down, leaving the
+     agent name and version chip, because that is where the four fields stop fitting on one line. */
+  @media (max-width: 389.98px) {
+    .aa-marketing-hero-card__meta-end {
+      display: none;
+    }
+  }
+
   @media (max-width: 560px) {
     .aa-app-nav {
       align-items: flex-start;
-    }
-
-    /* On phones the hero card's meta bar keeps only the agent name and version chip. The right-hand
-       cluster (published timestamp + visibility control) stands down: the visibility dropdown needs
-       room the bar does not have here, and the bar reads cleaner left-aligned without it. */
-    .aa-marketing-hero-card__meta-end {
-      display: none;
     }
 
     /* The marketing header carries only a wordmark and one or two compact actions, so it centers
