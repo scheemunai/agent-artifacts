@@ -14,7 +14,10 @@ const DB = 'data/agent-artifacts.db';
 const PASSWORD = process.env.QA_FIXTURE_PASSWORD;
 if (!PASSWORD) throw new Error('QA_FIXTURE_PASSWORD not set');
 
-const id = (p: string) => `${p}_${randomBytes(12).toString('base64url')}`;
+// The app validates its own ids as `<prefix>_<21 chars>` (see the artifact_id schema). 12 random
+// bytes base64url to 16 characters, which RENDERS fine and FAILS every route that validates the
+// id — controls appeared and actions were rejected. 16 bytes gives 22; take 21.
+const id = (p: string) => `${p}_${randomBytes(16).toString('base64url').slice(0, 21)}`;
 const now = () => Date.now();
 const db = new DatabaseSync(DB);
 const hash = await hashPassword(PASSWORD);
@@ -170,6 +173,56 @@ const acctFinal = (
     .get(acctId) as { c: number }
 ).c;
 console.log(`account fixture holds  : ${acctFinal} artifact(s) + 1 bot, for the delete cascade`);
+
+// Guarded INDEPENDENTLY of the content seeding above. Nesting it under that guard meant an
+// already-seeded account skipped it silently: the script printed a healthy summary and created
+// nothing. A seeding step that can be skipped must state its own precondition.
+const slotted = (
+  db
+    .prepare(
+      "select count(*) c from artifacts where account_id=? and content like '%{{%' and deleted_at is null"
+    )
+    .get(sacId) as { c: number }
+).c;
+if (slotted === 0) {
+  // Two slotted markdown sources for the promote-through-SUCCESS path. TWO on purpose: promoting
+  // creates a template at that slug, and a second promote of the same slug would collide — so one is
+  // spent proving the path works and the other is left pristine for the hunt. The account starts with
+  // no templates, which is what makes "promote actually lands" true rather than hoped.
+  for (let t = 1; t <= 2; t += 1) {
+    const artId = id('art');
+    const body = `# Slotted source ${t}\n\nHello {{owner}}, welcome to {{project_name}}.\n\nPromote this to reuse it.`;
+    const bodyHash = createHash('sha256').update(body).digest('hex');
+    db.prepare(
+      `insert into artifacts (id,account_id,slug,type,title,content,content_hash,metadata,version_num,created_at,updated_at)
+       values (?,?,?,?,?,?,?,?,?,?,?)`
+    ).run(
+      artId,
+      sacId,
+      `slotted-source-${t}`,
+      'markdown',
+      `Slotted source ${t}`,
+      body,
+      bodyHash,
+      '{}',
+      1,
+      now(),
+      now()
+    );
+    db.prepare(
+      `insert into artifact_versions (artifact_id,version_num,type,title,content,content_hash,change_summary,created_at)
+       values (?,?,?,?,?,?,?,?)`
+    ).run(artId, 1, 'markdown', `Slotted source ${t}`, body, bodyHash, 'seed', now());
+  }
+}
+const slottedFinal = (
+  db
+    .prepare(
+      "select count(*) c from artifacts where account_id=? and content like '%{{%' and deleted_at is null"
+    )
+    .get(sacId) as { c: number }
+).c;
+console.log(`slotted sources        : ${slottedFinal} (promote-through-success)`);
 
 const sacArts = (
   db

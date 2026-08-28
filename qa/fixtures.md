@@ -70,6 +70,31 @@ of those makes it unreachable by the registered credential, WHICH IS NOT A FAULT
 provisioner and it is rebuilt. If the email was changed rather than deleted, the old account lingers
 under its new address; that is harmless, but sweep it if the register starts collecting strays.
 
+## 4. Slotted sources — PROMOTE-THROUGH-SUCCESS (inside `qa-sacrificial`)
+**For:** the promote path, verified to the point where it LANDS rather than merely offers a control.
+**Holds:** `slotted-source-1` and `slotted-source-2`, markdown containing `{{owner}}` and
+`{{project_name}}`. The account starts with no templates, which is what makes "promote can actually
+land" true rather than hoped.
+
+TWO on purpose: promoting creates a template at that slug and a second promote of the same slug would
+collide. **`slotted-source-1` HAS BEEN SPENT** proving the path (template `slotted-src-1` exists, both
+slots detected, redirect `/dashboard/templates?notice=template_promoted`). **`slotted-source-2` IS
+PRISTINE** — that one is the hunt's.
+
+---
+
+## ⚠ THE ID FORMAT — read this before adding any fixture row
+The app validates its own identifiers as `<prefix>_<21 characters>`. The provisioner originally emitted
+16, which **renders perfectly and fails every route that validates the id**: the detail page showed
+Delete and Promote, the bots page showed Regenerate and Revoke, and every one of those actions would
+have been rejected as `validation_failed`. Rendering is not activation, and a fixture built for
+activation cells must be verified by ACTIVATING something, not by looking at it.
+
+Worse, the promote failure surfaced to the UI as `promote_error=markdown_only` on an artifact that IS
+markdown — `promoteFailureCode` falls back to that code for any validation failure whose message does
+not contain "slot". Anyone debugging from the UI code alone would have gone looking at the artifact
+type. The real reason was only in the server log. **Filed as a product observation, not fixed here.**
+
 ---
 
 ## What is NOT to be touched
