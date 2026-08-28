@@ -354,6 +354,67 @@ describe('style guide registry', () => {
     ).toEqual([]);
   });
 
+  it('sets type from the scale, including at the ends of a fluid clamp', () => {
+    // V3 dismissed these in r6 by judgment, and said so: a judged dismissal is not "found none",
+    // so it came back every pass. This makes it a stated rule instead.
+    //
+    // A clamp's ENDPOINTS are not incidental — they are the sizes actually rendered at the narrow
+    // and wide ends, because the vw term is outside the clamp range at both real viewports. So they
+    // are judged exactly like a static value, and an exception for a fluid ramp is not an exception
+    // for both of its ends.
+    //
+    // Measured before deciding, per the spacing precedent: of sixteen endpoints across eight
+    // clamps, thirteen sat 0.20-4.40px from an existing token, and the four display clamps grew at
+    // four different ratios (1.25, 1.50, 1.30, 1.39). Four independent guesses is not a display
+    // scale, so there was no intent to exempt — they are tokens now, and the rendered ladder is the
+    // scale's own steps: 17 / 20 / 24 / 30 / 40 / 54.
+    //
+    // ONE literal survives, and by the same category the spacing walk uses: above the ceiling. The
+    // marketing headline's 54px maximum is past `--text-aa-hero`/40px, the top of a ladder built
+    // for product UI, and a token used once is a step no component reaches for. Its MINIMUM is a
+    // token — only the growth is exempt.
+    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
+    const ceiling = Math.max(
+      ...Array.from(css.matchAll(/^\s*--text-aa-[\w]+:\s*([\d.]+)rem;/gm), (match) =>
+        Number.parseFloat(String(match[1]))
+      )
+    );
+    expect(ceiling, 'the type scale did not parse').toBeGreaterThan(1);
+
+    const offScale: string[] = [];
+    let endpoints = 0;
+
+    for (const rule of parseStylesheet(css)) {
+      const declared = declarationValue(rule.block, 'font-size');
+      if (!declared?.startsWith('clamp(')) {
+        continue;
+      }
+      const parts = splitTopLevel(declared.slice(6, -1)).map((part) => part.trim());
+      // First and last: the minimum and the maximum. The middle term is the viewport ramp.
+      for (const end of [parts[0], parts.at(-1)]) {
+        endpoints += 1;
+        if (!end || end.startsWith('var(')) {
+          continue;
+        }
+        const rem = Number.parseFloat(end);
+        if (/rem$/.test(end) && rem > ceiling) {
+          continue; // above the ceiling — the stated category, argued at the rule
+        }
+        offScale.push(`${rule.selector} { font-size: clamp(… ${end} …) }`);
+      }
+    }
+
+    expect(endpoints, 'no clamp endpoints parsed — the walk is measuring nothing').toBeGreaterThan(
+      10
+    );
+    expect(
+      offScale,
+      'these clamp endpoints are literals the type scale has a token for. A fluid size still ' +
+        'renders a real size at each end; take the token, or — only above the scale’s ceiling — ' +
+        'state at the rule why the scale cannot reach it.'
+    ).toEqual([]);
+  });
+
   it('renders no duplicate id anywhere in the design contract', () => {
     // A necessary check, but NOT the one that catches the class — see the note in
     // `tests/unit/ui-duplicate-ids.test.ts`. This guard only sees what the guide happens to render,

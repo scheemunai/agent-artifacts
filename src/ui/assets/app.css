@@ -475,7 +475,7 @@
     margin: var(--spacing-aa-3) 0 0;
     max-width: 16ch;
     color: var(--color-aa-ink);
-    font-size: clamp(2rem, 6vw, var(--text-aa-hero));
+    font-size: clamp(var(--text-aa-3xl), 6vw, var(--text-aa-hero));
     font-weight: 650;
     letter-spacing: -0.035em;
     line-height: 1.08;
@@ -1677,11 +1677,30 @@
     gap: var(--spacing-aa-4);
   }
 
+  /* THE ONE FONT SIZE IN THIS SHEET THAT IS NOT A TOKEN, and the category is the same one the
+     spacing walk uses: a literal survives only where the scale CANNOT reach.
+
+     `--text-aa-3xl`/30px and `--text-aa-hero`/40px are the top of a ladder built for PRODUCT UI —
+     page titles, section headings, the largest thing a dashboard ever says. A marketing headline is
+     a different job: it is the first thing on the page and it carries the whole hierarchy under it.
+     3.375rem/54px is above the ceiling, and adding `--text-aa-display` for a single value used once
+     would put a step in the token block that no component will ever reach for — the same argument
+     that keeps the 108px section rhythm a literal.
+
+     The MINIMUM is a token, and that is the half worth checking: an exception for a fluid ramp is
+     not an exception for both of its ends. This clamp starts at `--text-aa-hero` and grows past the
+     ladder; only the growth is exempt.
+
+     Everything else here was drift rather than display. The seven other clamps in this sheet held
+     fifteen endpoints and thirteen were within 0.20-4.40px of an existing token, growing at four
+     different ratios (1.25, 1.50, 1.30, 1.39) — which is not a display scale, it is four
+     independent guesses. They are tokens now, and the rendered ladder is the scale's own steps:
+     17 / 20 / 24 / 30 / 40 / 54. */
   .aa-marketing-hero__title {
     max-width: 17ch;
     margin: 0;
     color: var(--color-aa-ink);
-    font-size: clamp(2.25rem, 6.4vw, 3.375rem);
+    font-size: clamp(var(--text-aa-hero), 6.4vw, 3.375rem);
     font-weight: 600;
     letter-spacing: -0.018em;
     line-height: 1.1;
@@ -1691,7 +1710,7 @@
     max-width: 34ch;
     margin: 0;
     color: var(--color-aa-muted);
-    font-size: clamp(1.09rem, 2.3vw, 1.22rem);
+    font-size: clamp(var(--text-aa-md), 2.3vw, var(--text-aa-xl));
     line-height: 1.65;
   }
 
@@ -1736,7 +1755,7 @@
     max-width: 18ch;
     margin: 0;
     color: var(--color-aa-ink);
-    font-size: clamp(1.65rem, 4vw, 2.15rem);
+    font-size: clamp(var(--text-aa-2xl), 4vw, var(--text-aa-3xl));
     font-weight: 600;
     letter-spacing: -0.018em;
     line-height: 1.15;
@@ -1864,7 +1883,7 @@
     max-width: 16ch;
     margin: 0;
     color: var(--color-aa-ink);
-    font-size: clamp(1.65rem, 4vw, 2.3rem);
+    font-size: clamp(var(--text-aa-2xl), 4vw, var(--text-aa-hero));
     font-weight: 600;
     letter-spacing: -0.018em;
     line-height: 1.12;
@@ -1882,7 +1901,7 @@
     max-width: 34rem;
     gap: var(--spacing-aa-3);
     color: var(--color-aa-muted);
-    font-size: clamp(1rem, 2.2vw, 1.08rem);
+    font-size: clamp(var(--text-aa-base), 2.2vw, var(--text-aa-md));
     line-height: 1.65;
     text-align: left;
     pointer-events: none;
@@ -2120,7 +2139,7 @@
     max-width: 46ch;
     margin: 0 0 var(--spacing-aa-5);
     color: var(--color-aa-ink);
-    font-size: clamp(1.05rem, 2.4vw, 1.18rem);
+    font-size: clamp(var(--text-aa-md), 2.4vw, var(--text-aa-lg));
     line-height: 1.66;
     text-align: left;
   }
@@ -2170,7 +2189,7 @@
   .aa-marketing-terms__price {
     margin: 0 0 var(--spacing-aa-4);
     color: var(--color-aa-ink);
-    font-size: clamp(1.28rem, 3vw, 1.48rem);
+    font-size: clamp(var(--text-aa-xl), 3vw, var(--text-aa-2xl));
     font-weight: 650;
     letter-spacing: -0.01em;
     line-height: 1.45;
