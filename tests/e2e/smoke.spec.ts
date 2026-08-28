@@ -249,7 +249,11 @@ test('password gate unlocks a protected markdown artifact', async ({ page }) => 
   ).toBeVisible();
   await expect(page.locator('[data-aa-document="true"]')).toBeHidden();
 
-  await page.getByLabel('Password').fill(seed.protectedPassword);
+  // `exact` because the reveal toggle's accessible name is "Show password", and Playwright's
+  // default string match is case-insensitive SUBSTRING — so a bare 'Password' resolves to the
+  // field AND the button, and strict mode refuses. Both names are correct; this locator simply
+  // stopped being specific enough the moment the page gained the affordance.
+  await page.getByLabel('Password', { exact: true }).fill(seed.protectedPassword);
   await page.getByRole('button', { name: 'View artifact' }).click();
 
   await expect(page.locator('[data-aa-password-gate="true"]')).toBeHidden();
@@ -534,7 +538,8 @@ async function loginToDashboard(page: Page): Promise<void> {
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Log in to Agent Artifacts' })).toBeVisible();
   await page.getByLabel('Email').fill(seed.email);
-  await page.getByLabel('Password').fill(seed.password);
+  // Same ambiguity as the viewer gate: "Show password" contains "Password". See the note there.
+  await page.getByLabel('Password', { exact: true }).fill(seed.password);
   await page.getByRole('button', { name: 'Log in' }).click();
   await expect(page).toHaveURL(`${SELF_BASE_URL}/dashboard`);
 }
