@@ -55,6 +55,53 @@ function exportedComponents(source: string): string[] {
   );
 }
 
+/**
+ * Every stylesheet the product ships, ENUMERATED FROM DISK rather than named in a list.
+ *
+ * V12-N1 escaped the clamp-endpoint guard because that guard read `app.css` and the defect was in
+ * `viewer.css` — the third time a walk of mine has been narrower than the rule it defends, and the
+ * second time the narrowness was a filename. A list of sheets rots the moment someone adds one; a
+ * directory read cannot, so the reach of these walks is now a property of the repository instead of
+ * a property of what I remembered while writing them.
+ *
+ * The writing-time tell applies here and is the reason this exists: these comments say "every
+ * font-size", "no class in the sheet", "any container dimension". If the prose quantifies over
+ * everything, the assertion has to quantify over every sheet.
+ */
+const STYLESHEET_DIR = 'src/ui/assets';
+
+function productStylesheets(): Array<{ path: string; css: string }> {
+  return readdirSync(STYLESHEET_DIR)
+    .filter((entry) => entry.endsWith('.css'))
+    .sort()
+    .map((entry) => {
+      const path = join(STYLESHEET_DIR, entry);
+      return { path, css: stripComments(readFileSync(path, 'utf8')) };
+    });
+}
+
+/** The design tokens, which one sheet defines and the others consume. */
+const ALL_STYLESHEET_CSS = productStylesheets()
+  .map((sheet) => sheet.css)
+  .join('\n');
+
+/**
+ * Every rule in every product stylesheet, tagged with the sheet it came from.
+ *
+ * A flat list rather than a nested loop, so each walk below stays a single pass and its failure
+ * message can name the file. The walks that use it are the ones whose RULE is about CSS rather than
+ * about one sheet: a type scale, a legibility floor, a clamp endpoint. Those were all written
+ * against `app.css` because that is where they were first needed, which is how V12-N1 hid.
+ */
+function allStylesheetRules(): Array<{
+  path: string;
+  rule: ReturnType<typeof parseStylesheet>[0];
+}> {
+  return productStylesheets().flatMap((sheet) =>
+    parseStylesheet(sheet.css).map((rule) => ({ path: sheet.path, rule }))
+  );
+}
+
 describe('style guide registry', () => {
   it('registers every exported primitive as a rendered element, not a mention', () => {
     // This accepted `Name(` or `<Name` anywhere in the file, comments included — so a primitive
@@ -114,8 +161,14 @@ describe('style guide registry', () => {
     // with no test is a scaffold that can come back silently, so the retirement is pinned in the
     // same place the exception used to be, and the CSS is read rather than the compiled output so
     // the guard holds without a build.
+    // Every sheet: a retired class can come back anywhere, and "it is not in app.css" is a
+    // narrower claim than the one this test's name makes.
+    for (const sheet of productStylesheets()) {
+      expect(sheet.css, `${sheet.path} redefines the retired alias`).not.toMatch(
+        /\.aa-specimen-row\s*[,{]/
+      );
+    }
     const css = readFileSync('src/ui/assets/app.css', 'utf8');
-    expect(css).not.toMatch(/\.aa-specimen-row\s*[,{]/);
     // ButtonRow's own class is what survives, and it must survive — the alias shared its block.
     expect(css).toMatch(/\.aa-button-row\s*\{/);
   });
@@ -191,9 +244,9 @@ describe('style guide registry', () => {
     // 375 minus the shell's two 16px insets. Anything wider than this that is not a table — and
     // every table in this sheet lives inside `.aa-table-scroll` — would push the page sideways.
     const contentBox = 375 - 2 * 16;
-    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
+    const variables = themeVariables(ALL_STYLESHEET_CSS);
 
-    for (const rule of parseStylesheet(css)) {
+    for (const { path, rule } of allStylesheetRules()) {
       const declared = declarationValue(rule.block, 'min-width');
       // Percentages and intrinsic keywords resolve against the parent, so they cannot force a
       // page wider than its container.
@@ -205,13 +258,13 @@ describe('style guide registry', () => {
         continue;
       }
 
-      const width = maxLength(resolveVars(declared, themeVariables(css)), 375);
+      const width = maxLength(resolveVars(declared, variables), 375);
       if (width <= contentBox) {
         continue;
       }
       expect(
         /(?:^|[\s.])table$|\.aa-table$/.test(rule.selector),
-        `${rule.selector} sets min-width ${declared} and is not a scroll-contained table`
+        `${path}: ${rule.selector} sets min-width ${declared} and is not a scroll-contained table`
       ).toBe(true);
     }
   });
@@ -230,12 +283,11 @@ describe('style guide registry', () => {
     // on a parent this cannot know, and `inherit` says nothing, so those are skipped. `clamp()` is
     // read at its FIRST argument — the smallest it can compute to — because a floor cares about the
     // worst case, not the comfortable one.
-    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
-    const variables = themeVariables(css);
+    const variables = themeVariables(ALL_STYLESHEET_CSS);
     const FLOOR_PX = 12;
     let checked = 0;
 
-    for (const rule of parseStylesheet(css)) {
+    for (const { path, rule } of allStylesheetRules()) {
       const declared = declarationValue(rule.block, 'font-size');
       if (!declared) {
         continue;
@@ -261,7 +313,7 @@ describe('style guide registry', () => {
       checked += 1;
       expect(
         px,
-        `${rule.selector} sets font-size ${declared} (${px}px), under the ${FLOOR_PX}px floor`
+        `${path}: ${rule.selector} sets font-size ${declared} (${px}px), under the ${FLOOR_PX}px floor`
       ).toBeGreaterThanOrEqual(FLOOR_PX);
     }
 
@@ -316,6 +368,14 @@ describe('style guide registry', () => {
     // against a radius, icon alignment: spacing the eye reads, not rhythm the layout keeps) or
     // above its 64px ceiling (marketing section rhythm, which needs roughly double the top step).
     // Anything BETWEEN two steps is drift by definition, because the scale has a step for it.
+    // STATED NARROWNESS, and the only walk in this file that still reads one sheet.
+    //
+    // `viewer.css` declares `.aa-viewer-footer__brand { gap: 0.35rem }` — 5.6px, between the 4px and
+    // 8px steps, and the same literal I snapped out of `.aa-badge` in r8. That fix was itself
+    // frame-limited to this sheet, so the value survived one file over. Widening this walk today
+    // would turn a defect in someone else's in-flight file into a red shared gate, which is not a
+    // thing to do to a lane mid-edit — so the gap is FILED and this line is the record of why the
+    // guard is smaller than its own comment. It widens the moment that gap closes.
     const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
     const steps = Array.from(css.matchAll(/^\s*--spacing-aa-\d+:\s*([\d.]+)rem;/gm), (match) =>
       Number.parseFloat(String(match[1]))
@@ -368,9 +428,8 @@ describe('style guide registry', () => {
     // ONE literal survives, and NOT under the above-the-ceiling category even though it qualifies
     // numerically. See the rule: it is an `aria-hidden` glyph used as a drawing, so it is not type
     // at all — and the exemption is granted by CHECKING that, below, rather than by naming it.
-    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
     const tokens = new Set(
-      Array.from(css.matchAll(/^\s*--text-aa-[\w]+:\s*([\d.]+)rem;/gm), (match) =>
+      Array.from(ALL_STYLESHEET_CSS.matchAll(/^\s*--text-aa-[\w]+:\s*([\d.]+)rem;/gm), (match) =>
         Number.parseFloat(String(match[1]))
       )
     );
@@ -380,7 +439,7 @@ describe('style guide registry', () => {
     const drift: string[] = [];
     let sizes = 0;
 
-    for (const rule of parseStylesheet(css)) {
+    for (const { path, rule } of allStylesheetRules()) {
       const declared = declarationValue(rule.block, 'font-size');
       if (!declared || declared.includes('clamp(')) {
         continue;
@@ -401,7 +460,7 @@ describe('style guide registry', () => {
         if (ornament) {
           continue;
         }
-        drift.push(`${rule.selector} { font-size: ${declared} }`);
+        drift.push(`${path}: ${rule.selector} { font-size: ${declared} }`);
       }
     }
 
@@ -434,40 +493,53 @@ describe('style guide registry', () => {
     // marketing headline's 54px maximum is past `--text-aa-hero`/40px, the top of a ladder built
     // for product UI, and a token used once is a step no component reaches for. Its MINIMUM is a
     // token — only the growth is exempt.
-    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
+    // EVERY SHEET, not the one this rule was first written against. V12-N1's clamp minimum sat in
+    // `viewer.css` and this walk read `app.css`, so the guard reported clean on a defect of exactly
+    // the kind it exists to catch. The scale is defined in one sheet and consumed by the others, so
+    // the ceiling is read from all of them together.
     const ceiling = Math.max(
-      ...Array.from(css.matchAll(/^\s*--text-aa-[\w]+:\s*([\d.]+)rem;/gm), (match) =>
+      ...Array.from(ALL_STYLESHEET_CSS.matchAll(/^\s*--text-aa-[\w]+:\s*([\d.]+)rem;/gm), (match) =>
         Number.parseFloat(String(match[1]))
       )
     );
     expect(ceiling, 'the type scale did not parse').toBeGreaterThan(1);
 
+    const sheets = productStylesheets();
+    expect(sheets.length, 'only one stylesheet found — the walk narrowed again').toBeGreaterThan(1);
+
     const offScale: string[] = [];
     let endpoints = 0;
 
-    for (const rule of parseStylesheet(css)) {
-      const declared = declarationValue(rule.block, 'font-size');
-      if (!declared?.startsWith('clamp(')) {
-        continue;
-      }
-      const parts = splitTopLevel(declared.slice(6, -1)).map((part) => part.trim());
-      // First and last: the minimum and the maximum. The middle term is the viewport ramp.
-      for (const end of [parts[0], parts.at(-1)]) {
-        endpoints += 1;
-        if (!end || end.startsWith('var(')) {
+    for (const sheet of sheets) {
+      for (const rule of parseStylesheet(sheet.css)) {
+        const declared = declarationValue(rule.block, 'font-size');
+        if (!declared?.startsWith('clamp(')) {
           continue;
         }
-        const rem = Number.parseFloat(end);
-        if (/rem$/.test(end) && rem > ceiling) {
-          continue; // above the ceiling — the stated category, argued at the rule
+        const parts = splitTopLevel(declared.slice(6, -1)).map((part) => part.trim());
+        // First and last: the minimum and the maximum. The middle term is the viewport ramp.
+        for (const end of [parts[0], parts.at(-1)]) {
+          endpoints += 1;
+          if (!end || end.startsWith('var(')) {
+            continue;
+          }
+          const rem = Number.parseFloat(end);
+          if (/rem$/.test(end) && rem > ceiling) {
+            continue; // above the ceiling — the stated category, argued at the rule
+          }
+          offScale.push(`${sheet.path}: ${rule.selector} { font-size: clamp(… ${end} …) }`);
         }
-        offScale.push(`${rule.selector} { font-size: clamp(… ${end} …) }`);
       }
     }
 
-    expect(endpoints, 'no clamp endpoints parsed — the walk is measuring nothing').toBeGreaterThan(
-      10
-    );
+    // Vacuity guard tuned to the REACH, not just to emptiness. `app.css` alone yields 16 endpoints
+    // and `viewer.css` adds 2, so a threshold above 16 fails the moment this walk narrows back to
+    // one sheet — which is exactly how V12-N1 escaped. A guard that only asks "did I parse
+    // anything?" cannot notice that it stopped looking somewhere.
+    expect(
+      endpoints,
+      'fewer endpoints than one sheet contributes — the walk has narrowed or stopped parsing'
+    ).toBeGreaterThan(16);
     expect(
       offScale,
       'these clamp endpoints are literals the type scale has a token for. A fluid size still ' +
