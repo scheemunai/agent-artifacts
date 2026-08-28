@@ -1848,11 +1848,13 @@
   .aa-marketing-setup-label {
     margin: var(--spacing-aa-2) 0 0;
     color: var(--color-aa-muted);
-    font-family: var(--font-mono);
-    font-size: var(--text-aa-xs);
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    /* Technical-caption mono, per a reference the founder liked: 500 / 14px / 1, mixed case, no
+       letterspacing — reads as a clean code caption rather than an uppercase kicker. Family is the
+       requested stack (ui-monospace leads, same as --font-mono; the rest are its fallbacks). */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: var(--text-aa-sm);
+    font-weight: 500;
+    line-height: 1;
   }
 
   /* "published 3h ago" is desktop-only; the phone meta bar already carries the agent, the version
