@@ -287,3 +287,55 @@ verified red-before-green.
 
 Until now this was explained only in a code comment. PRD §7.2.8 still prescribes the shape that is
 not shipped, so a v1.2 amendment is owed there too.
+
+## 2026-08-28 — Template thumbnails and HTML examples (PKG-B)
+
+No new environment variables, endpoints, or runtime code paths. The change is content plus one
+generator script.
+
+### Thumbnails are committed derived bytes, and the generator is not part of `build`
+
+`scripts/build-template-thumbs.mjs` (`pnpm run build:template-thumbs`) writes
+`public/assets/template-thumbs/<slug>.png` for every built-in template, and `templates/manifest.ts`
+names those paths in each entry's `thumbnail`. The PNGs are committed for the same reason
+`og-fallback.png` is: they are served as static files. They are also *derived*, so the same
+obligation applies — re-run the script when a template changes and commit the result.
+
+It is deliberately excluded from `pnpm run build`. The generator needs a Chromium download; a
+production image has no business carrying a browser to reproduce bytes that are already in the
+repository. `tests/unit/template-seed.test.ts` closes the loop the build no longer does: it asserts
+every manifest `thumbnail` names `/assets/template-thumbs/<slug>.png` and that the file exists, so a
+new template without a generated thumbnail fails the suite rather than shipping a broken image.
+
+### Markdown thumbnails go through the product's own renderer
+
+The five markdown starters are not typed cover tiles. Each is merged with sample slot values, run
+through `renderMarkdown()`, wrapped in the viewer's own `.aa-prose-page` container and linked
+against the compiled `app.css` — served over loopback for the length of the run, because a
+`setContent()` page has no origin for `/assets/app-<hash>.css` or the font it asks for. The
+thumbnail is therefore the page the template actually produces, and it cannot drift from it.
+
+The sample slot values live in the script, not in the shipped templates: a thumbnail of `{{title}}`
+sells nothing, and `mergeTemplateContent()` refuses to render a required slot with no value.
+
+### Thumbnail geometry is uniform; the viewport is not, on purpose
+
+Every PNG is 1000×625 (16:10, 2x a ~500px card) so the grid is uniform. The *viewport* behind it is
+per-template: 1280 for the full-bleed HTML examples, 1024 for anything that is a reading column
+(the five markdown starters and `report-html`). At 1280 a 72ch measure sits in the middle of the
+frame with ~300px of empty gutter either side and reads as a blank tile at card size. The capture is
+always the top-left 16:10 region, so only the design width differs, never the output.
+
+### The three HTML examples are self-contained by contract
+
+`recap`, `metrics-dashboard` and `report-html` ship as `type: "html"` with `slots: []`: they are
+example artifacts an agent rehashes with new content, not slot templates. Each is one file with all
+CSS in a `<style>` block, custom properties for colour and spacing, system fonts, and no images —
+which is not stylistic. The dashboard-preview frame CSP (`src/lib/frame-policy.ts`) serves them
+under `font-src 'none'` and `img-src data: https:`, so anything external would simply not render.
+Their thumbnails are captured with `setContent()` and no server at all, so an example that stops
+being self-contained shows up in its own thumbnail.
+
+`metrics-dashboard` carries one series hue for data marks and reserves the status palette for
+state, always paired with a text label and glyph. The two colour families are adjacent in places
+(an amber "at risk" meter beside a red delta), which the icon + label pairing is there to cover.

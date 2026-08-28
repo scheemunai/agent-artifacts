@@ -1,6 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pino from 'pino';
 import { describe, expect, it } from 'vitest';
 import { runMigrations } from '../../src/db/migrations.js';
@@ -27,8 +28,11 @@ describe('starter template manifest seeding', () => {
         'briefing',
         'changelog',
         'dashboard',
+        'metrics-dashboard',
         'one-pager',
+        'recap',
         'report',
+        'report-html',
       ]);
       expect(report).toBeDefined();
 
@@ -48,13 +52,16 @@ describe('starter template manifest seeding', () => {
         )
         .all() as StarterTemplateSeedRow[];
 
-      expect(count.count).toBe(5);
+      expect(count.count).toBe(8);
       expect(rows.map((row) => row.slug)).toEqual([
         'briefing',
         'changelog',
         'dashboard',
+        'metrics-dashboard',
         'one-pager',
+        'recap',
         'report',
+        'report-html',
       ]);
       for (const row of rows) {
         const starter = starters.find((template) => template.slug === row.slug);
@@ -72,6 +79,22 @@ describe('starter template manifest seeding', () => {
       ]);
     } finally {
       await ctx.cleanup();
+    }
+  });
+
+  it('points every starter thumbnail at a committed file under public/assets/template-thumbs', () => {
+    // `scripts/build-template-thumbs.mjs` writes these and the manifest names them; nothing at
+    // runtime checks that the two agree. A manifest entry whose thumbnail 404s is a broken image
+    // in the template picker, which is exactly the surface the thumbnails exist for.
+    for (const starter of loadStarterTemplates()) {
+      expect(starter.thumbnail).toBe(`/assets/template-thumbs/${starter.slug}.png`);
+      expect(
+        existsSync(
+          fileURLToPath(
+            new URL(`../../public/assets/template-thumbs/${starter.slug}.png`, import.meta.url)
+          )
+        )
+      ).toBe(true);
     }
   });
 

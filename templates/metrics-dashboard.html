@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Growth &amp; reliability — Week 34</title>
+    <style>
+      /* ------------------------------------------------------------------
+         DESIGN TOKENS
+         Rehashing this artifact? Change the numbers and labels freely; touch
+         these only to re-theme. Data marks use ONE series hue: this page has a
+         single series, so no categorical palette is needed. Status colours are
+         reserved for state and always ship with a text label, never colour
+         alone.
+      ------------------------------------------------------------------ */
+      :root {
+        --bg: #edf1ee;
+        --card: #ffffff;
+        --card-tint: #f8faf8;
+        --ink: #222d33;
+        --muted: #56646c;
+        --subtle: #78848b;
+        --line: #e2e8e4;
+        --line-strong: #ccd6d0;
+        --accent: #c2482a;
+        --accent-soft: #fbede6;
+        --accent-line: #f0cbbd;
+
+        /* Data marks: one hue, light→dark. Track is a lighter step of it. */
+        --series: #2a78d6;
+        --series-track: #dce9f9;
+
+        /* Status: good / warning / critical. Always paired with a label. */
+        --good: #047857;
+        --good-soft: #ecfdf5;
+        --good-line: #a7f3d0;
+        --warn: #b45309;
+        --warn-soft: #fffbeb;
+        --warn-line: #fde68a;
+        --critical: #b91c1c;
+        --critical-soft: #fef2f2;
+
+        --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+        --space-1: 0.25rem;
+        --space-2: 0.5rem;
+        --space-3: 0.75rem;
+        --space-4: 1rem;
+        --space-5: 1.5rem;
+        --space-6: 2rem;
+        --space-7: 3rem;
+        --space-8: 4rem;
+
+        --radius-sm: 0.375rem;
+        --radius-md: 0.625rem;
+        --radius-lg: 1rem;
+        --radius-pill: 999px;
+
+        --shadow-card: 0 1px 2px rgb(34 45 51 / 0.04), 0 14px 34px -22px rgb(34 45 51 / 0.28);
+        --page-max: 76rem;
+      }
+
+      /* ------------------------------------------------------------------
+         BASE
+      ------------------------------------------------------------------ */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: 1rem;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: -0.015em;
+        line-height: 1.2;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .page {
+        max-width: var(--page-max);
+        margin-inline: auto;
+        padding: var(--space-7) var(--space-5) var(--space-8);
+      }
+
+      /* ------------------------------------------------------------------
+         PAGE HEADER — what this is, how fresh it is, overall state
+      ------------------------------------------------------------------ */
+      .head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-5);
+        padding-bottom: var(--space-5);
+        border-bottom: 1px solid var(--line-strong);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-3);
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: var(--radius-pill);
+        background: var(--accent);
+      }
+
+      .head__title {
+        font-size: clamp(1.875rem, 3.6vw, 2.5rem);
+        font-weight: 700;
+      }
+
+      .head__sub {
+        margin-top: var(--space-2);
+        color: var(--muted);
+        font-size: 1.0625rem;
+      }
+
+      .head__aside {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: var(--space-2);
+        text-align: right;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-3);
+        border: 1px solid var(--good-line);
+        border-radius: var(--radius-pill);
+        background: var(--good-soft);
+        color: var(--good);
+        font-size: 0.8125rem;
+        font-weight: 700;
+      }
+
+      .status__icon {
+        font-size: 0.75rem;
+        line-height: 1;
+      }
+
+      .stamp {
+        color: var(--subtle);
+        font-size: 0.8125rem;
+      }
+
+      /* ------------------------------------------------------------------
+         STAT TILES — label · value · delta · caption
+         The first tile is the page's one hero figure and carries the trend.
+      ------------------------------------------------------------------ */
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--space-4);
+        margin-top: var(--space-6);
+      }
+
+      .tile {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        padding: var(--space-5);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: var(--card);
+        box-shadow: var(--shadow-card);
+      }
+
+      /* The one hero figure on the page: its own full-width band, with the trend beside the
+         number rather than under it. */
+      .tile--hero {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-4) var(--space-6);
+        align-items: end;
+        background: linear-gradient(180deg, var(--card) 0%, var(--card-tint) 100%);
+      }
+
+      .tile__figure {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .tile__label {
+        color: var(--subtle);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .tile__value {
+        color: var(--ink);
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+      }
+
+      .tile--hero .tile__value {
+        font-size: 3.25rem;
+      }
+
+      .tile__row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--space-3);
+      }
+
+      .delta {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.3em;
+        font-size: 0.875rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .delta--good {
+        color: var(--good);
+      }
+
+      .delta--bad {
+        color: var(--critical);
+      }
+
+      .delta--flat {
+        color: var(--muted);
+      }
+
+      .tile__caption {
+        color: var(--subtle);
+        font-size: 0.8125rem;
+      }
+
+      /* Trend strip: 12 periods, de-emphasised, current period in the series hue.
+         Bars are capped thin, separated by a 2px surface gap, rounded at the
+         data end and square at the baseline. */
+      .trend {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 5rem;
+        margin-top: var(--space-2);
+      }
+
+      .trend__bar {
+        flex: 1 1 0;
+        max-width: 2.25rem;
+        border-radius: 4px 4px 0 0;
+        background: var(--series-track);
+      }
+
+      .trend__caption {
+        color: var(--subtle);
+        font-size: 0.8125rem;
+      }
+
+      .trend__bar--current {
+        background: var(--series);
+      }
+
+      /* ------------------------------------------------------------------
+         PANELS — table and meters sit side by side on desktop
+      ------------------------------------------------------------------ */
+      .panels {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+        gap: var(--space-4);
+        margin-top: var(--space-4);
+        align-items: start;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: var(--card);
+        box-shadow: var(--shadow-card);
+      }
+
+      .panel__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-3);
+        padding: var(--space-5) var(--space-5) var(--space-3);
+      }
+
+      .panel__title {
+        font-size: 1.0625rem;
+        font-weight: 700;
+      }
+
+      .panel__note {
+        color: var(--subtle);
+        font-size: 0.8125rem;
+      }
+
+      /* Table --------------------------------------------------------- */
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9375rem;
+      }
+
+      thead th {
+        padding: var(--space-2) var(--space-5);
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--card-tint);
+        color: var(--subtle);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-align: left;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      tbody td,
+      tbody th {
+        padding: var(--space-3) var(--space-5);
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        font-weight: 400;
+      }
+
+      tbody tr:last-child td,
+      tbody tr:last-child th {
+        border-bottom: 0;
+      }
+
+      tbody th {
+        color: var(--ink);
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .num {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+
+      th.num {
+        text-align: right;
+      }
+
+      .num--strong {
+        color: var(--ink);
+        font-weight: 650;
+      }
+
+      tfoot td,
+      tfoot th {
+        padding: var(--space-3) var(--space-5);
+        border-top: 1px solid var(--line-strong);
+        background: var(--card-tint);
+        color: var(--ink);
+        font-weight: 700;
+        text-align: left;
+      }
+
+      /* Meters -------------------------------------------------------- */
+      .meters {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+        padding: var(--space-2) var(--space-5) var(--space-5);
+      }
+
+      .meter__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-3);
+      }
+
+      .meter__label {
+        color: var(--ink);
+        font-size: 0.9375rem;
+        font-weight: 650;
+      }
+
+      .meter__value {
+        color: var(--ink);
+        font-size: 0.9375rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .meter__track {
+        height: 0.5rem;
+        margin-top: var(--space-2);
+        border-radius: var(--radius-pill);
+        background: var(--series-track);
+        overflow: hidden;
+      }
+
+      .meter__fill {
+        height: 100%;
+        border-radius: var(--radius-pill);
+        background: var(--series);
+      }
+
+      .meter--warn .meter__track {
+        background: var(--warn-soft);
+      }
+
+      .meter--warn .meter__fill {
+        background: var(--warn);
+      }
+
+      .meter--good .meter__track {
+        background: var(--good-soft);
+      }
+
+      .meter--good .meter__fill {
+        background: var(--good);
+      }
+
+      .meter__foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-2);
+        margin-top: var(--space-2);
+        color: var(--subtle);
+        font-size: 0.8125rem;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35em;
+        padding: 0 var(--space-2);
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .tag--good {
+        background: var(--good-soft);
+        color: var(--good);
+      }
+
+      .tag--warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .tag--critical {
+        background: var(--critical-soft);
+        color: var(--critical);
+      }
+
+      /* ------------------------------------------------------------------
+         NOTES
+      ------------------------------------------------------------------ */
+      .notes {
+        margin-top: var(--space-4);
+        padding: var(--space-5);
+        border: 1px solid var(--accent-line);
+        border-radius: var(--radius-lg);
+        background: var(--accent-soft);
+      }
+
+      .notes__title {
+        margin-bottom: var(--space-2);
+        color: var(--accent);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .notes li {
+        position: relative;
+        padding-left: var(--space-5);
+        color: var(--ink);
+        font-size: 0.9375rem;
+      }
+
+      .notes li + li {
+        margin-top: var(--space-2);
+      }
+
+      .notes li::before {
+        content: "";
+        position: absolute;
+        top: 0.6875rem;
+        left: var(--space-2);
+        width: 0.3125rem;
+        height: 0.3125rem;
+        border-radius: var(--radius-pill);
+        background: var(--accent);
+      }
+
+      .colophon {
+        margin-top: var(--space-6);
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--line-strong);
+        color: var(--subtle);
+        font-size: 0.8125rem;
+      }
+
+      /* ------------------------------------------------------------------
+         RESPONSIVE
+      ------------------------------------------------------------------ */
+      @media (max-width: 60rem) {
+        .tiles {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .tile--hero {
+          grid-template-columns: minmax(0, 1fr);
+          align-items: stretch;
+        }
+
+        .panels {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      @media (max-width: 34rem) {
+        .page {
+          padding: var(--space-5) var(--space-4) var(--space-7);
+        }
+
+        .tiles {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .tile--hero .tile__value {
+          font-size: 2.5rem;
+        }
+
+        .head__aside {
+          align-items: flex-start;
+          text-align: left;
+        }
+
+        thead th,
+        tbody td,
+        tbody th,
+        tfoot td,
+        tfoot th {
+          padding-inline: var(--space-4);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <!-- HEADER --------------------------------------------------------- -->
+      <header class="head">
+        <div>
+          <span class="eyebrow">Weekly status</span>
+          <h1 class="head__title">Growth &amp; reliability</h1>
+          <p class="head__sub">Week 34 · 17–23 August 2026, compared with the previous week.</p>
+        </div>
+        <div class="head__aside">
+          <span class="status"><span class="status__icon" aria-hidden="true">●</span> All systems nominal</span>
+          <span class="stamp">Updated 24 Aug 2026, 06:00 UTC</span>
+        </div>
+      </header>
+
+      <!-- STAT TILES ----------------------------------------------------- -->
+      <section class="tiles" aria-label="Headline metrics">
+        <article class="tile tile--hero">
+          <div class="tile__figure">
+            <h2 class="tile__label">Weekly active workspaces</h2>
+            <div class="tile__row">
+              <span class="tile__value">12,480</span>
+              <span class="delta delta--good"><span aria-hidden="true">▲</span> 8.4%</span>
+            </div>
+            <p class="tile__caption">vs 11,512 last week · 968 net new workspaces</p>
+          </div>
+          <div class="tile__figure">
+            <p class="trend__caption">12-week trend · current week highlighted</p>
+            <!-- 12-point trend: bar height is the only encoding; the current period
+                 is the one bar in the series hue. -->
+            <div class="trend" aria-hidden="true">
+              <span class="trend__bar" style="height: 46%"></span>
+              <span class="trend__bar" style="height: 52%"></span>
+              <span class="trend__bar" style="height: 49%"></span>
+              <span class="trend__bar" style="height: 58%"></span>
+              <span class="trend__bar" style="height: 61%"></span>
+              <span class="trend__bar" style="height: 57%"></span>
+              <span class="trend__bar" style="height: 66%"></span>
+              <span class="trend__bar" style="height: 72%"></span>
+              <span class="trend__bar" style="height: 69%"></span>
+              <span class="trend__bar" style="height: 78%"></span>
+              <span class="trend__bar" style="height: 86%"></span>
+              <span class="trend__bar trend__bar--current" style="height: 100%"></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="tile">
+          <h2 class="tile__label">Artifacts published</h2>
+          <div class="tile__row">
+            <span class="tile__value">38.2K</span>
+            <span class="delta delta--good"><span aria-hidden="true">▲</span> 12.1%</span>
+          </div>
+          <p class="tile__caption">vs 34.1K last week</p>
+        </article>
+
+        <article class="tile">
+          <h2 class="tile__label">Median publish time</h2>
+          <div class="tile__row">
+            <span class="tile__value">410 ms</span>
+            <span class="delta delta--good"><span aria-hidden="true">▼</span> 34 ms</span>
+          </div>
+          <p class="tile__caption">Faster is better · vs 444 ms last week</p>
+        </article>
+
+        <article class="tile">
+          <h2 class="tile__label">Paid conversion</h2>
+          <div class="tile__row">
+            <span class="tile__value">4.6%</span>
+            <span class="delta delta--bad"><span aria-hidden="true">▼</span> 0.3 pt</span>
+          </div>
+          <p class="tile__caption">vs 4.9% last week · 214 new paid workspaces</p>
+        </article>
+
+        <article class="tile">
+          <h2 class="tile__label">Support backlog</h2>
+          <div class="tile__row">
+            <span class="tile__value">27</span>
+            <span class="delta delta--flat"><span aria-hidden="true">▬</span> 0</span>
+          </div>
+          <p class="tile__caption">Open tickets · unchanged week on week</p>
+        </article>
+      </section>
+
+      <!-- TABLE + METERS -------------------------------------------------- -->
+      <div class="panels">
+        <section class="panel" aria-labelledby="channels-title">
+          <div class="panel__head">
+            <h2 class="panel__title" id="channels-title">Signups by channel</h2>
+            <p class="panel__note">Week 34 · attributed on first touch</p>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Channel</th>
+                  <th class="num" scope="col">Sessions</th>
+                  <th class="num" scope="col">Signups</th>
+                  <th class="num" scope="col">Conv.</th>
+                  <th class="num" scope="col">vs W33</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Docs &amp; API reference</th>
+                  <td class="num">48,210</td>
+                  <td class="num num--strong">1,904</td>
+                  <td class="num">3.9%</td>
+                  <td class="num">+14.2%</td>
+                </tr>
+                <tr>
+                  <th scope="row">Organic search</th>
+                  <td class="num">39,884</td>
+                  <td class="num num--strong">1,201</td>
+                  <td class="num">3.0%</td>
+                  <td class="num">+6.8%</td>
+                </tr>
+                <tr>
+                  <th scope="row">Shared artifact links</th>
+                  <td class="num">27,455</td>
+                  <td class="num num--strong">1,143</td>
+                  <td class="num">4.2%</td>
+                  <td class="num">+21.5%</td>
+                </tr>
+                <tr>
+                  <th scope="row">Partner integrations</th>
+                  <td class="num">11,092</td>
+                  <td class="num num--strong">402</td>
+                  <td class="num">3.6%</td>
+                  <td class="num">−2.1%</td>
+                </tr>
+                <tr>
+                  <th scope="row">Community &amp; social</th>
+                  <td class="num">9,640</td>
+                  <td class="num num--strong">188</td>
+                  <td class="num">2.0%</td>
+                  <td class="num">−8.4%</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total</th>
+                  <td class="num">136,281</td>
+                  <td class="num">4,838</td>
+                  <td class="num">3.6%</td>
+                  <td class="num">+9.7%</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="slo-title">
+          <div class="panel__head">
+            <h2 class="panel__title" id="slo-title">Service levels</h2>
+            <p class="panel__note">30-day window</p>
+          </div>
+          <div class="meters">
+            <div class="meter meter--good">
+              <div class="meter__head">
+                <span class="meter__label">API availability</span>
+                <span class="meter__value">99.98%</span>
+              </div>
+              <div class="meter__track">
+                <div class="meter__fill" style="width: 99.98%"></div>
+              </div>
+              <p class="meter__foot">
+                <span>Target 99.90%</span>
+                <span class="tag tag--good"><span aria-hidden="true">✓</span> Met</span>
+              </p>
+            </div>
+
+            <div class="meter">
+              <div class="meter__head">
+                <span class="meter__label">Latency budget used</span>
+                <span class="meter__value">62%</span>
+              </div>
+              <div class="meter__track">
+                <div class="meter__fill" style="width: 62%"></div>
+              </div>
+              <p class="meter__foot">
+                <span>p95 under 500 ms</span>
+                <span>18 days left in window</span>
+              </p>
+            </div>
+
+            <div class="meter meter--warn">
+              <div class="meter__head">
+                <span class="meter__label">Error budget consumed</span>
+                <span class="meter__value">81%</span>
+              </div>
+              <div class="meter__track">
+                <div class="meter__fill" style="width: 81%"></div>
+              </div>
+              <p class="meter__foot">
+                <span>Spent by the 19 Aug ingest incident</span>
+                <span class="tag tag--warn"><span aria-hidden="true">!</span> At risk</span>
+              </p>
+            </div>
+
+            <div class="meter meter--good">
+              <div class="meter__head">
+                <span class="meter__label">Backups verified</span>
+                <span class="meter__value">30 / 30</span>
+              </div>
+              <div class="meter__track">
+                <div class="meter__fill" style="width: 100%"></div>
+              </div>
+              <p class="meter__foot">
+                <span>Restore drill passed 21 Aug</span>
+                <span class="tag tag--good"><span aria-hidden="true">✓</span> Healthy</span>
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- NOTES ----------------------------------------------------------- -->
+      <section class="notes" aria-labelledby="notes-title">
+        <h2 class="notes__title" id="notes-title">What changed this week</h2>
+        <ul>
+          <li>
+            Shared artifact links overtook partner integrations as the third-largest signup
+            channel, up 21.5% after link previews shipped on Monday.
+          </li>
+          <li>
+            Paid conversion slipped 0.3 pt. The drop is concentrated in self-serve trials that
+            started during the 19 August ingest incident.
+          </li>
+          <li>
+            Error budget is 81% consumed with 18 days to run — the deploy freeze stays in place
+            for the ingest service until it drops below 70%.
+          </li>
+        </ul>
+      </section>
+
+      <footer class="colophon">
+        Figures are drawn from the analytics warehouse at 06:00 UTC daily; the service-level window
+        is rolling 30 days. Percentages compare with the equivalent prior period.
+      </footer>
+    </div>
+  </body>
+</html>

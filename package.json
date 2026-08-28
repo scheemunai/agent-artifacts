@@ -15,6 +15,7 @@
     "build:assets": "mkdir -p .scratch && tailwindcss -i ./src/ui/assets/app.css -o ./.scratch/app.css --minify && node scripts/build-assets.mjs && node scripts/copy-font-assets.mjs",
     "build:css": "pnpm run build:assets",
     "build:og-fallback": "tsx scripts/build-og-fallback.mjs",
+    "build:template-thumbs": "tsx scripts/build-template-thumbs.mjs",
     "typecheck": "tsc --noEmit",
     "check": "biome ci . && pnpm run typecheck",
     "test": "pnpm run build:assets && vitest run",

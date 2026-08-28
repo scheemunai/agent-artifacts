@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Engineering Daily — Recap</title>
+    <style>
+      /* ------------------------------------------------------------------
+         DESIGN TOKENS
+         Rehashing this artifact? Change content freely; touch these only to
+         re-theme. Everything below is expressed in terms of these values.
+      ------------------------------------------------------------------ */
+      :root {
+        --bg: #edf1ee;
+        --card: #ffffff;
+        --card-tint: #f8faf8;
+        --ink: #222d33;
+        --muted: #56646c;
+        --subtle: #78848b;
+        --line: #e0e6e2;
+        --line-strong: #ccd6d0;
+        --accent: #c2482a;
+        --accent-soft: #fbede6;
+        --accent-line: #f0cbbd;
+
+        --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+        --space-1: 0.25rem;
+        --space-2: 0.5rem;
+        --space-3: 0.75rem;
+        --space-4: 1rem;
+        --space-5: 1.5rem;
+        --space-6: 2rem;
+        --space-7: 3rem;
+        --space-8: 4rem;
+
+        --radius-sm: 0.375rem;
+        --radius-md: 0.625rem;
+        --radius-lg: 1rem;
+        --radius-pill: 999px;
+
+        --shadow-card: 0 1px 2px rgb(34 45 51 / 0.04), 0 14px 34px -22px rgb(34 45 51 / 0.28);
+        --page-max: 76rem;
+      }
+
+      /* ------------------------------------------------------------------
+         BASE
+      ------------------------------------------------------------------ */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: 1rem;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: -0.015em;
+        line-height: 1.2;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .page {
+        max-width: var(--page-max);
+        margin-inline: auto;
+        padding: var(--space-7) var(--space-5) var(--space-8);
+      }
+
+      /* ------------------------------------------------------------------
+         MASTHEAD — what this recap is, when it was made, how big it is
+      ------------------------------------------------------------------ */
+      .masthead {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-5);
+        padding-bottom: var(--space-5);
+        border-bottom: 1px solid var(--line-strong);
+      }
+
+      .masthead__lead {
+        min-width: 0;
+        max-width: 42rem;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-3);
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: var(--radius-pill);
+        background: var(--accent);
+      }
+
+      .masthead__title {
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        font-weight: 700;
+      }
+
+      .masthead__standfirst {
+        margin-top: var(--space-3);
+        color: var(--muted);
+        font-size: 1.0625rem;
+      }
+
+      .masthead__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2) var(--space-4);
+        color: var(--subtle);
+        font-size: 0.875rem;
+      }
+
+      .masthead__meta dt {
+        display: inline;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .masthead__meta dd {
+        display: inline;
+        margin: 0 var(--space-4) 0 var(--space-1);
+      }
+
+      /* ------------------------------------------------------------------
+         LAYOUT — index rail + summary column
+      ------------------------------------------------------------------ */
+      .recap {
+        display: grid;
+        grid-template-columns: 17rem minmax(0, 1fr);
+        gap: var(--space-7);
+        margin-top: var(--space-6);
+        align-items: start;
+      }
+
+      .rail {
+        position: sticky;
+        top: var(--space-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+      }
+
+      .rail__heading {
+        margin-bottom: var(--space-3);
+        color: var(--subtle);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .toc {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .toc__item {
+        display: grid;
+        grid-template-columns: 1.5rem minmax(0, 1fr);
+        gap: var(--space-3);
+        padding: var(--space-3) 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .toc__item:first-of-type {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .toc__index {
+        color: var(--subtle);
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        line-height: 1.5rem;
+      }
+
+      .toc__link {
+        color: var(--ink);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        line-height: 1.35;
+        text-decoration: none;
+      }
+
+      .toc__source {
+        display: block;
+        margin-top: var(--space-1);
+        color: var(--subtle);
+        font-size: 0.8125rem;
+        font-weight: 400;
+      }
+
+      .rail__panel {
+        padding: var(--space-4);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: var(--card-tint);
+      }
+
+      .rail__note {
+        color: var(--muted);
+        font-size: 0.875rem;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+      }
+
+      .chip {
+        padding: 0.125rem var(--space-3);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius-pill);
+        background: var(--card);
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .chip--accent {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      /* ------------------------------------------------------------------
+         SUMMARY CARDS — one per source item
+      ------------------------------------------------------------------ */
+      .stream {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+      }
+
+      .item {
+        position: relative;
+        padding: var(--space-5);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: var(--card);
+        box-shadow: var(--shadow-card);
+        scroll-margin-top: var(--space-5);
+      }
+
+      .item__head {
+        display: grid;
+        grid-template-columns: 2.25rem minmax(0, 1fr);
+        gap: var(--space-4);
+        align-items: start;
+      }
+
+      .item__index {
+        display: grid;
+        place-items: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: var(--radius-pill);
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.875rem;
+        font-weight: 700;
+      }
+
+      .item__title {
+        font-size: 1.3125rem;
+        font-weight: 700;
+      }
+
+      .item__meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-2);
+        margin-top: var(--space-2);
+        color: var(--subtle);
+        font-size: 0.8125rem;
+      }
+
+      .item__meta > span:not(:last-child)::after {
+        content: "·";
+        margin-left: var(--space-2);
+        color: var(--line-strong);
+      }
+
+      .item__source {
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .tldr {
+        margin-top: var(--space-4);
+        padding: var(--space-4);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        background: var(--accent-soft);
+      }
+
+      .tldr__label {
+        display: block;
+        margin-bottom: var(--space-1);
+        color: var(--accent);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .tldr__body {
+        color: var(--ink);
+        font-size: 1rem;
+      }
+
+      .points {
+        margin-top: var(--space-4);
+      }
+
+      .points__label {
+        margin-bottom: var(--space-2);
+        color: var(--subtle);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .points li {
+        position: relative;
+        padding-left: var(--space-5);
+        color: var(--muted);
+        font-size: 0.9375rem;
+      }
+
+      .points li + li {
+        margin-top: var(--space-2);
+      }
+
+      .points li::before {
+        content: "";
+        position: absolute;
+        top: 0.6875rem;
+        left: var(--space-2);
+        width: 0.3125rem;
+        height: 0.3125rem;
+        border-radius: var(--radius-pill);
+        background: var(--line-strong);
+      }
+
+      .points strong {
+        color: var(--ink);
+        font-weight: 650;
+      }
+
+      .item__foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin-top: var(--space-5);
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--line);
+      }
+
+      .verdict {
+        color: var(--muted);
+        font-size: 0.8125rem;
+      }
+
+      .verdict strong {
+        color: var(--ink);
+      }
+
+      /* ------------------------------------------------------------------
+         FOOTER
+      ------------------------------------------------------------------ */
+      .colophon {
+        margin-top: var(--space-7);
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--line-strong);
+        color: var(--subtle);
+        font-size: 0.8125rem;
+      }
+
+      /* ------------------------------------------------------------------
+         RESPONSIVE
+      ------------------------------------------------------------------ */
+      @media (max-width: 60rem) {
+        .recap {
+          grid-template-columns: minmax(0, 1fr);
+          gap: var(--space-5);
+        }
+
+        .rail {
+          position: static;
+        }
+      }
+
+      @media (max-width: 30rem) {
+        .page {
+          padding: var(--space-5) var(--space-4) var(--space-7);
+        }
+
+        .item {
+          padding: var(--space-4);
+        }
+
+        .item__head {
+          grid-template-columns: minmax(0, 1fr);
+          gap: var(--space-3);
+        }
+
+        .item__foot {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <!-- MASTHEAD ------------------------------------------------------ -->
+      <header class="masthead">
+        <div class="masthead__lead">
+          <span class="eyebrow">Daily recap</span>
+          <h1 class="masthead__title">AI Engineering Daily</h1>
+          <p class="masthead__standfirst">
+            Five things worth your attention from yesterday's feeds — watched, read and
+            condensed so you can skip the ones that don't move your work.
+          </p>
+        </div>
+        <dl class="masthead__meta">
+          <dt>Date</dt>
+          <dd>Tuesday, 12 August 2026</dd>
+          <dt>Sources</dt>
+          <dd>5 of 34 reviewed</dd>
+          <dt>Saved</dt>
+          <dd>2 h 51 m of watch time</dd>
+        </dl>
+      </header>
+
+      <div class="recap">
+        <!-- INDEX RAIL -------------------------------------------------- -->
+        <aside class="rail">
+          <nav>
+            <h2 class="rail__heading">In this recap</h2>
+            <ul class="toc">
+              <li class="toc__item">
+                <span class="toc__index">01</span>
+                <a class="toc__link" href="#item-1"
+                  >Postgres 18 and the end of the connection pooler
+                  <span class="toc__source">Hexadecimal · 24 min</span></a
+                >
+              </li>
+              <li class="toc__item">
+                <span class="toc__index">02</span>
+                <a class="toc__link" href="#item-2"
+                  >We replaced our vector DB with a single table
+                  <span class="toc__source">Latent Space · 38 min</span></a
+                >
+              </li>
+              <li class="toc__item">
+                <span class="toc__index">03</span>
+                <a class="toc__link" href="#item-3"
+                  >The cost curve nobody budgets for
+                  <span class="toc__source">Infra Weekly · 17 min</span></a
+                >
+              </li>
+              <li class="toc__item">
+                <span class="toc__index">04</span>
+                <a class="toc__link" href="#item-4"
+                  >Shipping agents that other teams actually adopt
+                  <span class="toc__source">Build Notes · 52 min</span></a
+                >
+              </li>
+              <li class="toc__item">
+                <span class="toc__index">05</span>
+                <a class="toc__link" href="#item-5"
+                  >A field guide to flaky end-to-end tests
+                  <span class="toc__source">The Green Build · 40 min</span></a
+                >
+              </li>
+            </ul>
+          </nav>
+
+          <div class="rail__panel">
+            <h2 class="rail__heading">Themes today</h2>
+            <ul class="chips">
+              <li class="chip chip--accent">Cost control</li>
+              <li class="chip">Postgres</li>
+              <li class="chip">Retrieval</li>
+              <li class="chip">Agent UX</li>
+              <li class="chip">CI reliability</li>
+            </ul>
+          </div>
+
+          <div class="rail__panel">
+            <h2 class="rail__heading">Skipped</h2>
+            <p class="rail__note">
+              29 items filtered out: re-uploads, conference trailers, and three product
+              launches with no technical detail.
+            </p>
+          </div>
+        </aside>
+
+        <!-- SUMMARY STREAM ---------------------------------------------- -->
+        <main class="stream">
+          <article class="item" id="item-1">
+            <div class="item__head">
+              <span class="item__index">01</span>
+              <div>
+                <h2 class="item__title">Postgres 18 and the end of the connection pooler</h2>
+                <p class="item__meta">
+                  <span class="item__source">Hexadecimal</span>
+                  <span>24 min</span>
+                  <span>Published 06:40</span>
+                </p>
+              </div>
+            </div>
+            <div class="tldr">
+              <span class="tldr__label">TL;DR</span>
+              <p class="tldr__body">
+                Built-in connection multiplexing lands in 18, and for fleets under roughly 500
+                clients it removes the case for running PgBouncer at all. Above that, the pooler
+                still wins on failover behaviour.
+              </p>
+            </div>
+            <div class="points">
+              <p class="points__label">Key points</p>
+              <ul>
+                <li>
+                  <strong>Benchmarks:</strong> 12k connections held at 41 MB of backend memory,
+                  down from 1.7 GB on 17 with the same workload.
+                </li>
+                <li>
+                  <strong>Caveat:</strong> prepared statements still pin a backend, so the win
+                  shrinks for ORMs that prepare aggressively.
+                </li>
+                <li>
+                  <strong>Migration:</strong> the presenter kept the pooler in front for a week and
+                  cut over by lowering its pool size to zero — no client changes.
+                </li>
+              </ul>
+            </div>
+            <div class="item__foot">
+              <p class="verdict"><strong>Worth watching if</strong> you own the database tier.</p>
+              <ul class="chips">
+                <li class="chip">Postgres</li>
+                <li class="chip">Cost control</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="item" id="item-2">
+            <div class="item__head">
+              <span class="item__index">02</span>
+              <div>
+                <h2 class="item__title">We replaced our vector DB with a single table</h2>
+                <p class="item__meta">
+                  <span class="item__source">Latent Space</span>
+                  <span>38 min</span>
+                  <span>Published 09:05</span>
+                </p>
+              </div>
+            </div>
+            <div class="tldr">
+              <span class="tldr__label">TL;DR</span>
+              <p class="tldr__body">
+                A 40-million-chunk corpus moved from a managed vector store into pgvector with an
+                HNSW index. Recall held at 0.94, p95 latency rose 11 ms, and the bill fell by
+                $9.4k a month.
+              </p>
+            </div>
+            <div class="points">
+              <p class="points__label">Key points</p>
+              <ul>
+                <li>
+                  <strong>The unlock was hybrid search:</strong> full-text and vector scores are
+                  merged in one query, which the managed service billed as two.
+                </li>
+                <li>
+                  <strong>Index build is the pain:</strong> nine hours on a 16-core box, done
+                  offline against a replica and promoted.
+                </li>
+                <li>
+                  <strong>Don't do this</strong> below ~2 million chunks — the operational cost
+                  outweighs the savings.
+                </li>
+              </ul>
+            </div>
+            <div class="item__foot">
+              <p class="verdict"><strong>Worth watching if</strong> your retrieval bill has a comma in it.</p>
+              <ul class="chips">
+                <li class="chip">Retrieval</li>
+                <li class="chip">Cost control</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="item" id="item-3">
+            <div class="item__head">
+              <span class="item__index">03</span>
+              <div>
+                <h2 class="item__title">The cost curve nobody budgets for</h2>
+                <p class="item__meta">
+                  <span class="item__source">Infra Weekly</span>
+                  <span>17 min</span>
+                  <span>Published 11:20</span>
+                </p>
+              </div>
+            </div>
+            <div class="tldr">
+              <span class="tldr__label">TL;DR</span>
+              <p class="tldr__body">
+                Egress, not compute, is what turns a cheap architecture expensive. A worked example
+                shows a $300/month cluster carrying $4,100/month of cross-zone traffic because of
+                one misplaced replica.
+              </p>
+            </div>
+            <div class="points">
+              <p class="points__label">Key points</p>
+              <ul>
+                <li>
+                  <strong>Rule of thumb:</strong> price every hop that crosses an availability zone
+                  before you price the instances.
+                </li>
+                <li>
+                  <strong>Topology-aware routing</strong> fixed 80% of it in one config change.
+                </li>
+                <li>
+                  <strong>Watch for:</strong> observability agents shipping full payloads — the
+                  second-largest line item in the example.
+                </li>
+              </ul>
+            </div>
+            <div class="item__foot">
+              <p class="verdict"><strong>Worth watching if</strong> you sign off the cloud invoice.</p>
+              <ul class="chips">
+                <li class="chip">Cost control</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="item" id="item-4">
+            <div class="item__head">
+              <span class="item__index">04</span>
+              <div>
+                <h2 class="item__title">Shipping agents that other teams actually adopt</h2>
+                <p class="item__meta">
+                  <span class="item__source">Build Notes</span>
+                  <span>52 min</span>
+                  <span>Published 14:02</span>
+                </p>
+              </div>
+            </div>
+            <div class="tldr">
+              <span class="tldr__label">TL;DR</span>
+              <p class="tldr__body">
+                Adoption tracked with one thing: whether the agent produced an artifact a human
+                could forward. Teams whose agents only answered in chat churned within two weeks.
+              </p>
+            </div>
+            <div class="points">
+              <p class="points__label">Key points</p>
+              <ul>
+                <li>
+                  <strong>Durable output beats chat:</strong> a link that survives the session is
+                  what gets shared into other teams.
+                </li>
+                <li>
+                  <strong>Name the owner:</strong> agents with a named human sponsor were three
+                  times more likely to still run after 90 days.
+                </li>
+                <li>
+                  <strong>Keep the surface small:</strong> the most-adopted internal agent had four
+                  tools, not forty.
+                </li>
+              </ul>
+            </div>
+            <div class="item__foot">
+              <p class="verdict"><strong>Worth watching if</strong> you are rolling agents out internally.</p>
+              <ul class="chips">
+                <li class="chip">Agent UX</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="item" id="item-5">
+            <div class="item__head">
+              <span class="item__index">05</span>
+              <div>
+                <h2 class="item__title">A field guide to flaky end-to-end tests</h2>
+                <p class="item__meta">
+                  <span class="item__source">The Green Build</span>
+                  <span>40 min</span>
+                  <span>Published 16:35</span>
+                </p>
+              </div>
+            </div>
+            <div class="tldr">
+              <span class="tldr__label">TL;DR</span>
+              <p class="tldr__body">
+                Four flake families cover almost everything: unawaited state, shared fixtures,
+                clock drift and resource contention. Each gets a detection recipe you can run
+                against existing CI logs.
+              </p>
+            </div>
+            <div class="points">
+              <p class="points__label">Key points</p>
+              <ul>
+                <li>
+                  <strong>Quarantine, don't retry:</strong> blanket retries hid a real race for
+                  seven months in the case study.
+                </li>
+                <li>
+                  <strong>Measure flake rate per test,</strong> not per suite — one test was 60% of
+                  all failures.
+                </li>
+                <li>
+                  <strong>Freeze the clock</strong> in fixtures; two of the four families disappear.
+                </li>
+              </ul>
+            </div>
+            <div class="item__foot">
+              <p class="verdict"><strong>Worth watching if</strong> your CI is red more than it's green.</p>
+              <ul class="chips">
+                <li class="chip">CI reliability</li>
+              </ul>
+            </div>
+          </article>
+        </main>
+      </div>
+
+      <!-- COLOPHON -------------------------------------------------------- -->
+      <footer class="colophon">
+        Compiled 12 August 2026 at 18:05 UTC from 34 subscriptions. Items are summarised from the
+        source transcript; figures are the presenters' own.
+      </footer>
+    </div>
+  </body>
+</html>

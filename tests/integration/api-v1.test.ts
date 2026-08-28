@@ -566,7 +566,7 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
       });
       expect(templatesResponse.status).toBe(200);
       const templates = await json(templatesResponse);
-      expect(templates.items as unknown[]).toHaveLength(5);
+      expect(templates.items as unknown[]).toHaveLength(8);
 
       const reportResponse = await ctx.app.request('/v1/templates/report', {
         headers: ctx.authHeaders,
@@ -575,7 +575,7 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
       expect(await json(reportResponse)).toMatchObject({
         slug: 'report',
         built_in: true,
-        thumbnail_url: null,
+        thumbnail_url: '/assets/template-thumbs/report.png',
         type: 'markdown',
       });
 
