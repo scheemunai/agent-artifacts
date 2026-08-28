@@ -59,10 +59,48 @@ describe('the viewer password gate', () => {
     const client = readClientSource('viewer.js');
 
     // The hand-rolled field carried `required`, and the browser's constraint validation is what
-    // stopped an empty submit before the handler ran. `InputProps` has no `required` pass-through,
-    // so adopting the primitive drops that guard — and the client would happily POST an empty
-    // string, spend a rate-limit attempt, and answer "Incorrect password." to someone who typed
-    // nothing. The guard moves into the script that actually does the submitting.
+    // stopped an empty submit before the handler ran. Adopting the primitive dropped that guard
+    // for one round — the client would have POSTed an empty string, spent a rate-limit attempt,
+    // and answered "Incorrect password." to someone who typed nothing — so the guard moved into
+    // the script that actually does the submitting, and stays there. See below for why it stays
+    // even now that the declarative half is back.
     expect(client).toMatch(/if\s*\(!passwordInput\.value/);
+  });
+
+  /**
+   * Both layers, asserted together, because either one alone is a different and weaker claim.
+   *
+   * `required` is the first line: it is the browser's own stop, it arrives before any script runs,
+   * it survives a script that fails to load, and it is what makes the field announce itself as
+   * required to assistive technology rather than merely behaving that way. That is why it is worth
+   * declaring the moment the primitive can carry it.
+   *
+   * It is not the last line. Constraint validation is trivially bypassable — a submit fired from
+   * script, an autofilled-then-cleared field, `noValidate` on the form — and the request that
+   * results costs a real attempt against the rate limiter. So the script guard is not redundant
+   * with it; it is the half that still answers when the first half is skipped.
+   *
+   * Asserting only the attribute would let the script guard be deleted silently, and asserting only
+   * the script would let the attribute be dropped again. The defect this round exists to close was
+   * created by exactly that kind of one-sided assertion.
+   */
+  it('states the requirement declaratively and still guards it in script', () => {
+    const html = gateHtml(true);
+    const client = readClientSource('viewer.js');
+
+    const passwordInputTag = html.match(/<input[^>]*data-aa-password-input="true"[^>]*>/)?.[0];
+    expect(
+      passwordInputTag,
+      'the gate no longer renders the registered password input'
+    ).toBeDefined();
+    expect(
+      passwordInputTag,
+      'the browser-side stop is missing — the field is not declared required'
+    ).toContain('required');
+
+    expect(
+      client,
+      'the script guard was removed — an empty submit now reaches the server whenever validation is bypassed'
+    ).toMatch(/if\s*\(!passwordInput\.value/);
   });
 });

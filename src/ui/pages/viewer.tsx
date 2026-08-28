@@ -255,6 +255,7 @@ export function PasswordGate({ visible }: { visible: boolean }) {
             label="Password"
             autocomplete="current-password"
             autofocus={visible}
+            required
           />
           {/* Always in flow with a reserved line height: revealing the message must not move the
               submit button. Empty content keeps it silent for assistive tech until it has copy. */}
