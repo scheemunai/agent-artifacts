@@ -268,6 +268,40 @@ test('the viewer keeps most of a landscape phone for the artifact', async ({ pag
   }
 });
 
+/**
+ * V6-N3, viewer half: the footer's standalone text links are real targets.
+ *
+ * The rule in force product-wide is deliberately two-tier — CONTROLS take our 44px floor, STANDALONE
+ * TEXT LINKS take WCAG 2.5.8's 24px. Not 44: a row of tertiary links at 44px each becomes a band of
+ * empty space, and 2.5.8's inline exemption does not cover a glyph-separated standalone row like
+ * this one. 24 is the floor that applies, so 24 is what is asserted.
+ *
+ * These links had no declared size at all — their height was whatever line-height arithmetic
+ * produced, which is how the sibling instances measured 23.80px: failing by two tenths of a pixel,
+ * for no reason anybody chose. On this surface it matters more than most, because when the product
+ * footer is off, "Report abuse" is the ONLY abuse affordance a public page has.
+ *
+ * Checked at every width because the footer wraps, and wrapping is exactly what changes a box.
+ */
+test('the viewer footer links are large enough to hit', async ({ page }) => {
+  await page.goto(seed.markdownShareUrl);
+
+  const links = page.locator('.aa-viewer-footer a');
+  const count = await links.count();
+  expect(count, 'the viewer footer has no links to measure').toBeGreaterThan(0);
+
+  for (let index = 0; index < count; index += 1) {
+    const link = links.nth(index);
+    const label = (await link.innerText()).replace(/\s+/g, ' ').trim();
+    const box = await link.boundingBox();
+    expect(box, `"${label}" has no box`).not.toBeNull();
+    expect(
+      box?.height ?? 0,
+      `"${label}" is ${(box?.height ?? 0).toFixed(2)}px tall — under the 24px standalone-link floor`
+    ).toBeGreaterThanOrEqual(24);
+  }
+});
+
 test('public HTML viewer renders sandboxed frame content and no overflow', async ({ page }) => {
   await page.goto(seed.htmlShareUrl);
 

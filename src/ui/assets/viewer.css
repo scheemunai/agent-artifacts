@@ -225,8 +225,20 @@
 
 /* These read as captions otherwise — same colour, same weight, no underline as the surrounding
    "Made with … ·" text. On a paid plan the footer collapses to a single link, and that link is
-   "Report abuse": the only abuse affordance a public page has. It has to look like a link. */
+   "Report abuse": the only abuse affordance a public page has. It has to look like a link.
+
+   V6-N3 — AND IT HAS TO BE HITTABLE. Nothing here declared a size, so the box was whatever
+   line-height arithmetic happened to produce: 22.39px measured, failing a 24px floor by a pixel and
+   a half that nobody chose. The floor is WCAG 2.5.8's 24px for STANDALONE TEXT LINKS, not our 44px
+   control floor — deliberately, because a row of tertiary links at 44 each becomes a band of empty
+   space, and 2.5.8's inline exemption does not cover a glyph-separated standalone row like this one.
+   `24px` rather than `1.5rem` because the success criterion is stated in CSS pixels, and a reader
+   who has shrunk their root font is exactly the reader this protects.
+   `inline-flex` so the extra height centres the text instead of hanging below it. */
 .aa-viewer-footer a {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
   color: var(--color-aa-muted);
   text-decoration: underline;
   text-decoration-thickness: 0.08em;
