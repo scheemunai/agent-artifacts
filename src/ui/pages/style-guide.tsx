@@ -888,11 +888,58 @@ function badgeSection() {
   );
 }
 
+/**
+ * The specimen carries the product's RICHEST row, not its politest one.
+ *
+ * It used to show a single "Shared" badge and a bare title. The artifacts list renders a slug and
+ * byline under the title and up to three badges beside it — type, share state, and an expiry — and
+ * that difference is not cosmetic: the wide badge set is the whole mechanism of V4-N1, so for two
+ * rounds the guide demonstrated a row that could not exhibit the defect the real one had. A
+ * specimen thinner than production is a contract for a component nobody ships.
+ */
 function listRowSection() {
-  const rows: Array<[string, string, BadgeTone, string]> = [
-    ['default', 'Weekly Ops Report', 'success', 'v3'],
-    ['hover', 'Q3 revenue breakdown', 'accent', 'v11'],
-    ['focus', 'Customer interview notes', 'neutral', 'v1'],
+  const rows: Array<{
+    state: string;
+    title: string;
+    slug: string;
+    byline: string;
+    badges: Array<[BadgeTone, string]>;
+    meta: string;
+  }> = [
+    {
+      state: 'default',
+      title: 'Weekly Ops Report',
+      slug: 'weekly-ops-report',
+      byline: 'by Atlas',
+      badges: [
+        ['neutral', 'md'],
+        ['accent', 'Shared · password'],
+        ['warn', 'expires in 3d'],
+      ],
+      meta: 'updated {relative} · 128 views',
+    },
+    {
+      state: 'hover',
+      title: 'Q3 revenue breakdown',
+      slug: 'q3-revenue-breakdown',
+      byline: 'by Atlas',
+      badges: [
+        ['neutral', 'html'],
+        ['warn', 'Link revoked'],
+      ],
+      meta: 'updated {relative} · 3 views',
+    },
+    {
+      state: 'focus',
+      title: 'Customer interview notes',
+      slug: 'customer-interview-notes',
+      byline: 'by Atlas',
+      badges: [
+        ['neutral', 'md'],
+        ['neutral', 'private'],
+      ],
+      meta: 'updated {relative} · 0 views',
+    },
   ];
 
   return (
@@ -901,29 +948,38 @@ function listRowSection() {
       description="The row pattern for every list of artifacts: aligned columns, one target, accent spent only on the row being pointed at."
     >
       <div class="aa-list">
-        {rows.map(([state, title, tone, version]) => (
-          <div class="aa-list-row" data-aa-state={state === 'default' ? undefined : state}>
+        {rows.map((row) => (
+          <div class="aa-list-row" data-aa-state={row.state === 'default' ? undefined : row.state}>
             <span class="aa-list-row__title">
               <a class="aa-list-row__link" href="/style-guide#components">
-                {title}
+                {row.title}
               </a>
+              <br />
+              <span class="aa-hint">
+                <code>{row.slug}</code> · {row.byline}
+              </span>
             </span>
-            <Badge tone={tone}>Shared</Badge>
-            <span class="aa-list-row__meta">
-              {version} · updated {'{relative}'}
-            </span>
+            <ButtonRow>
+              {row.badges.map(([tone, label]) => (
+                <Badge tone={tone}>{label}</Badge>
+              ))}
+            </ButtonRow>
+            <span class="aa-list-row__meta">{row.meta}</span>
           </div>
         ))}
       </div>
       <p class="aa-hint">
         <code>.aa-list</code> owns the columns and each <code>.aa-list-row</code> borrows them with{' '}
-        <code>subgrid</code>, so badge and meta line up down the whole list instead of every row
-        sizing itself. Below 480px they stop sharing a line — the title takes its own and the badge
-        and meta sit under it, because three columns on a phone leave the title about forty pixels
-        and alignment buys nothing when only one row is being read. Titles are ink: a list where
-        every title is coloured has no emphasis left for the one under the cursor, so accent is
-        spent on hover and focus only. The whole row is the click target via a stretched link, and
-        the row — not the invisible overlay — is what shows the focus ring.
+        <code>subgrid</code>, so badges and meta line up down the whole list instead of every row
+        sizing itself. Below 480px the row becomes a single column and the title, the badges and the
+        meta each take a line. Two of them sharing a line was the defect: the badge track takes its
+        max-content while the meta track may collapse to nothing, and{' '}
+        <code>.aa-list-row__meta</code> is <code>white-space: nowrap</code>, so its text could not
+        shrink with the track it was given and overhung the page instead. Alignment buys nothing
+        when only one row is being read. Titles are ink: a list where every title is coloured has no
+        emphasis left for the one under the cursor, so accent is spent on hover and focus only. The
+        whole row is the click target via a stretched link, and the row — not the invisible overlay
+        — is what shows the focus ring.
       </p>
     </Card>
   );

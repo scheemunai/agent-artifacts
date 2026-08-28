@@ -2537,16 +2537,27 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    /* Overrides the `subgrid` above — same specificity, later in the file, and the parent has one
-       column here anyway. `minmax(0, 1fr)` on the second track, not `auto`: an auto track sizes to
-       its content, and the meta would sooner push the row sideways than wrap. */
+    /* ONE column, not two. The previous `auto minmax(0, 1fr)` kept the badges and the meta sharing
+       a line, and that pairing is what made this rule pan the page for two rounds (V4-N1, latent
+       since r3): an `auto` track is greedy and takes its max-content, while `minmax(0, 1fr)` may
+       collapse to zero — but `.aa-list-row__meta` is `white-space: nowrap`, so its CONTENT cannot
+       collapse with its track. A track that reaches 0 holding 204px of unbreakable text does not
+       wrap and does not clip; it overhangs, and the document grows.
+       Measured on the rich b-list shape at 375 (three badges + slug line), worst row:
+         badges 299px · meta track 0px · meta content 204px · document 547px · page pans 172px
+       The obvious fix is not the fix. Dropping `nowrap` below 480 leaves the badges greedy and the
+       meta's own min-content beside them — measured 26px of pan, not 0. So does relaxing the badge
+       track to `minmax(0, auto)`. Only taking the two off the same line reaches zero, because the
+       row then has nothing to divide: min-content is the widest single child, not their sum.
+       This is the collapse above finishing its own argument. It already says the columns exist to
+       align rows against each other and that at this width there is nothing to align — and then
+       kept two of them. Now the title, the badges and the meta each take a line.
+       The cost, stated rather than discovered later: about 30px per row (list of four, 509 → 628).
+       That is what not panning costs, and a row that must be dragged sideways to be read is not
+       cheaper. */
     .aa-list-row {
-      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       row-gap: var(--spacing-aa-2);
-    }
-
-    .aa-list-row__title {
-      grid-column: 1 / -1;
     }
   }
 

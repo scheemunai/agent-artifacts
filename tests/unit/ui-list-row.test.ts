@@ -24,6 +24,14 @@ import {
  *
  * Resolved through the cascade rather than matched as strings: what makes these correct is which
  * declaration wins on a real element, which a literal assertion cannot see.
+ *
+ * Honest limit, and it is the limit that let V4-N1 live for two rounds: the resolver decides which
+ * declaration wins, and an overflow is not a declaration. Nothing in this file can see a page pan.
+ * What sees it is the browser — `/style-guide exercises primitives without mobile overflow` in the
+ * e2e suite, asserting `documentScrollWidth === innerWidth` at 375 — and that probe only became
+ * able to see this once the specimen in the guide carried the product's widest row instead of a
+ * single tidy badge. The guard here pins the MECHANISM; the guard there pins the RESULT, and
+ * neither is a substitute for the other.
  */
 const cssSource = readFileSync('src/ui/assets/app.css', 'utf8');
 const rules = parseStylesheet(cssSource);
@@ -46,6 +54,7 @@ function block(selector: string): string {
 const list: ElementSpec = { tag: 'div', classes: ['aa-list'] };
 const row: ElementSpec = { tag: 'div', classes: ['aa-list-row'] };
 const title: ElementSpec = { tag: 'span', classes: ['aa-list-row__title'] };
+const meta: ElementSpec = { tag: 'span', classes: ['aa-list-row__meta'] };
 
 function rowInState(state: string): ElementSpec {
   return { ...row, attributes: { 'data-aa-state': state } };
@@ -91,20 +100,36 @@ describe('list row', () => {
     expect(enhancement?.order).toBeGreaterThan(fallback?.order ?? Number.POSITIVE_INFINITY);
   });
 
-  it('stops sharing one line at the width where the title stops fitting', () => {
+  it('gives every part of the row its own line at the width where they stop fitting', () => {
     // The defect this pins was only visible at 375: the meta is `nowrap` and the badge is a pill,
     // so the two of them took the row and left the title roughly forty pixels, which
     // `overflow-wrap: anywhere` shredded a character at a time into a 127px-tall row. A specimen at
     // 1280 reported the pattern as working.
+    //
+    // CONTRACT CHANGED (V4-N1). The first collapse moved the title to its own line and left the
+    // badges and meta sharing the second — and that pairing was the rest of the same defect. An
+    // `auto` badge track takes its max-content while a `minmax(0, 1fr)` meta track may collapse to
+    // zero, and the meta's `nowrap` text cannot collapse with it: measured at 375 on the rich
+    // b-list shape, a 0px track holding 204px of unbreakable text, panning the page 172px. So the
+    // assertion is no longer "the title spans both columns" but "there are no columns to span".
+    //
+    // Deliberately a property of the TRACK LIST, not of the title. Pinning the title's
+    // `grid-column: 1 / -1` would pass just as happily on a two-track row — it did, for two rounds,
+    // while the row underneath it overflowed.
+    const phone = winningDeclaration(rules, [list, row], 'grid-template-columns', 375)?.value ?? '';
+    expect(phone, 'the row still borrows three columns on a phone').not.toBe('subgrid');
     expect(
-      winningDeclaration(rules, [list, row], 'grid-template-columns', 375)?.value,
-      'the row still borrows three columns on a phone'
-    ).not.toBe('subgrid');
+      splitTopLevel(phone, ' ').filter(Boolean),
+      `a phone row still divides into columns: ${phone}`
+    ).toHaveLength(1);
 
+    // The nowrap is what makes a single column load-bearing rather than cosmetic: it is why the
+    // meta cannot be asked to share. If a later edit relaxes it, this rule's reason is gone and
+    // the comment above is a lie — so the two are pinned together.
     expect(
-      winningDeclaration(rules, [list, row, title], 'grid-column', 375)?.value,
-      'the title does not get its own line on a phone'
-    ).toBe('1 / -1');
+      winningDeclaration(rules, [list, row, meta], 'white-space', 375)?.value,
+      'the meta wraps now, so the single column is no longer the fix it is documented as'
+    ).toBe('nowrap');
 
     // And the alignment comes back once there is room for it.
     expect(winningDeclaration(rules, [list, row], 'grid-template-columns', 1440)?.value).toBe(
