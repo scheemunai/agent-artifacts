@@ -816,6 +816,43 @@
     opacity: 0.72;
   }
 
+  /* PasswordInput. The toggle sits BESIDE the field rather than floating inside it: a control
+     overlaid on a text box has to reserve padding the value can still scroll under, and it reads as
+     decoration on the surface it covers. A real bordered button in the row cannot be mistaken for
+     anything but a control, which is the constraint this component was specified around. */
+  .aa-password {
+    display: flex;
+    min-width: 0;
+    align-items: stretch;
+    gap: var(--spacing-aa-2);
+  }
+
+  .aa-password__input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Square to the field's own height rather than the touch floor alone, so the pair reads as one
+     control instead of a button that happens to stand next to a box. */
+  .aa-password__toggle {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: var(--spacing-aa-touch);
+  }
+
+  /* The glyph depicts the ACTION, matching the label: an open eye means "show", the struck-through
+     eye means "hide". `aria-pressed` is the state, so the mark is free to be an instruction. */
+  .aa-password__toggle[aria-pressed="false"] .aa-password__slash {
+    display: none;
+  }
+
+  .aa-password__caps {
+    margin: var(--spacing-aa-1) 0 0;
+    color: var(--color-aa-warn);
+    font-size: var(--text-aa-sm);
+    font-weight: 600;
+  }
+
   textarea.aa-control {
     min-height: 8rem;
     padding-block: var(--spacing-aa-3);

@@ -214,6 +214,24 @@ interface InputProps {
    * form with the same value — and offers to save the wrong one afterwards.
    */
   autocomplete?: string | undefined;
+  /**
+   * Focus this field on load. For the FIRST actionable field of a page whose only job is that
+   * form — a login, a gate — where the reader's next act is certainly to type into it. Not for a
+   * field inside a larger page: moving focus on load scrolls the viewport and steals the caret
+   * from someone who arrived to read.
+   */
+  autofocus?: boolean | undefined;
+  /**
+   * The three opt-outs a machine-generated value needs, and the reason they are separate props
+   * rather than one `hardened` flag: they are independent browser behaviours and a caller usually
+   * wants a specific one. `autocapitalize="none"` is the load-bearing one on iOS, which otherwise
+   * uppercases the first character of a token — silently turning a correct paste into a failed
+   * login.
+   */
+  spellcheck?: boolean | undefined;
+  /** The element's own vocabulary, not a widened string — a typo here fails silently at runtime. */
+  autocapitalize?: 'none' | 'off' | 'on' | 'sentences' | 'words' | 'characters' | undefined;
+  autocorrect?: 'on' | 'off' | undefined;
 }
 
 export function Input({
@@ -229,6 +247,10 @@ export function Input({
   state,
   name,
   autocomplete,
+  autofocus,
+  spellcheck,
+  autocapitalize,
+  autocorrect,
 }: InputProps) {
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
@@ -240,11 +262,122 @@ export function Input({
         value={value}
         placeholder={placeholder}
         autocomplete={autocomplete}
+        autofocus={autofocus}
+        spellcheck={spellcheck}
+        autocapitalize={autocapitalize}
+        autocorrect={autocorrect}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
         {...stateData(state)}
       />
+    </FieldShell>
+  );
+}
+
+/**
+ * A password field that can be read back, and that says so when Caps Lock is on.
+ *
+ * Two constraints, both earned rather than chosen, and both about the same failure — a control
+ * that describes a state instead of an action:
+ *
+ *  - THE TOGGLE IS A REAL CONTROL. It is a 44px `iconOnly` button with the product's border
+ *    treatment, not a glyph floating in the field. A bare mark beside a bordered input does not
+ *    read as pressable, and `min-height` alone leaves an icon button 33px wide — under the touch
+ *    floor, which is the whole of A-26.
+ *  - ITS LABEL NAMES WHAT IT WILL DO, NOT WHAT YOU ARE LOOKING AT. Masked, it says "Show
+ *    password"; revealed, "Hide password". The tempting version labels the current state, which
+ *    puts the control one step out of phase with every reader who takes it at its word.
+ *
+ * `aria-pressed` carries the state for assistive tech, so the visible label is free to be an
+ * instruction rather than doing both jobs badly.
+ *
+ * The caps hint is always in the DOM and always referenced by `aria-describedby`, hidden until it
+ * has something to say — the CopyBlock pattern, for the CopyBlock reason: a hidden target is
+ * correctly ignored by assistive tech, and a reference that only sometimes resolves is worse than
+ * one that always does.
+ */
+export interface PasswordInputProps extends Omit<InputProps, 'type'> {
+  /** Reveal by default. The toggle still governs it; this is the initial position only. */
+  revealed?: boolean | undefined;
+}
+
+export function PasswordInput({
+  id,
+  label,
+  value,
+  placeholder,
+  hint,
+  error,
+  optional,
+  disabled,
+  state,
+  name,
+  autocomplete,
+  autofocus,
+  spellcheck,
+  autocapitalize,
+  autocorrect,
+  revealed = false,
+}: PasswordInputProps) {
+  const capsId = `${id}-caps`;
+  const describedByIds = [describedBy(id, hint, error), capsId].filter(Boolean).join(' ');
+
+  return (
+    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+      <div class="aa-password" data-aa-password="true">
+        <input
+          class="aa-control aa-password__input"
+          id={id}
+          name={name ?? id}
+          type={revealed ? 'text' : 'password'}
+          value={value}
+          placeholder={placeholder}
+          autocomplete={autocomplete}
+          autofocus={autofocus}
+          spellcheck={spellcheck}
+          autocapitalize={autocapitalize}
+          autocorrect={autocorrect}
+          disabled={disabled || state === 'disabled'}
+          aria-invalid={error || state === 'error' ? 'true' : undefined}
+          aria-describedby={describedByIds}
+          data-aa-password-input="true"
+          {...stateData(state)}
+        />
+        {/* `secondary`, not `ghost`: ghost is transparent with no border, which is precisely the
+            bare-glyph-beside-a-field this is required not to be. */}
+        <Button
+          variant="secondary"
+          iconOnly
+          class="aa-password__toggle"
+          ariaLabel={revealed ? 'Hide password' : 'Show password'}
+          title={revealed ? 'Hide password' : 'Show password'}
+          disabled={disabled || state === 'disabled'}
+          dataAttrs={{
+            'data-aa-password-toggle': id,
+            'aria-controls': id,
+            'aria-pressed': revealed ? 'true' : 'false',
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z" />
+            <circle cx="12" cy="12" r="2.75" />
+            <path class="aa-password__slash" d="M4 20 20 4" />
+          </svg>
+        </Button>
+      </div>
+      <p class="aa-password__caps" id={capsId} data-aa-password-caps="true" hidden>
+        Caps Lock is on.
+      </p>
     </FieldShell>
   );
 }
@@ -272,6 +405,10 @@ export function Textarea({
   state,
   name,
   autocomplete,
+  autofocus,
+  spellcheck,
+  autocapitalize,
+  autocorrect,
   rows = 5,
 }: TextareaProps) {
   return (
@@ -283,6 +420,10 @@ export function Textarea({
         rows={rows}
         placeholder={placeholder}
         autocomplete={autocomplete}
+        autofocus={autofocus}
+        spellcheck={spellcheck}
+        autocapitalize={autocapitalize}
+        autocorrect={autocorrect}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}
@@ -316,6 +457,10 @@ export function Select({
   state,
   name,
   autocomplete,
+  autofocus,
+  spellcheck,
+  autocapitalize,
+  autocorrect,
 }: SelectProps) {
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
@@ -324,6 +469,10 @@ export function Select({
         id={id}
         name={name ?? id}
         autocomplete={autocomplete}
+        autofocus={autofocus}
+        spellcheck={spellcheck}
+        autocapitalize={autocapitalize}
+        autocorrect={autocorrect}
         disabled={disabled || state === 'disabled'}
         aria-invalid={error || state === 'error' ? 'true' : undefined}
         aria-describedby={describedBy(id, hint, error)}

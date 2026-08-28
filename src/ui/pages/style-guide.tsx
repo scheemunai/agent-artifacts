@@ -27,6 +27,7 @@ import {
   NavShell,
   Notice,
   Pagination,
+  PasswordInput,
   ProductMark,
   Select,
   Skeleton,
@@ -308,6 +309,7 @@ export function StyleGuidePage() {
             {widthSection()}
             {fieldSection()}
             {passwordFieldSection()}
+            {passwordInputSection()}
             {badgeSection()}
             {noticeSection()}
             {destructiveSection()}
@@ -799,6 +801,48 @@ function passwordFieldSection() {
         A password-typed box that is not a password wants saying so too: a one-time setup token
         rendered with <code>type="password"</code> will be offered for saving as the site password
         unless it opts out.
+      </p>
+    </Card>
+  );
+}
+
+function passwordInputSection() {
+  return (
+    <Card
+      title="Password input"
+      description="A password field that can be read back, and that says when Caps Lock is on."
+    >
+      <div class="aa-grid">
+        <PasswordInput
+          id="pw-default"
+          label="Password"
+          autocomplete="current-password"
+          hint="The toggle is a real control, not a glyph on the field."
+        />
+        <PasswordInput id="pw-revealed" label="Password (revealed)" revealed autocomplete="off" />
+        <PasswordInput
+          id="pw-error"
+          label="Password"
+          error="That password did not match."
+          state="error"
+          autocomplete="current-password"
+        />
+        <PasswordInput id="pw-disabled" label="Password" disabled autocomplete="off" />
+      </div>
+      <p class="aa-hint">
+        The toggle's label names what it <strong>will do</strong> — "Show password" while masked,
+        "Hide password" while revealed — because a control labelled with the state you are already
+        looking at is one step out of phase with anyone who takes it at its word.{' '}
+        <code>aria-pressed</code> carries the state, so the visible label is free to be an
+        instruction. The mark follows the same rule: an open eye means show, the struck eye means
+        hide.
+      </p>
+      <p class="aa-hint">
+        It is a bordered 44px button rather than a glyph inside the field, which is the A-26 floor
+        and also the difference between something that reads as pressable and something that reads
+        as decoration on the box it covers. The Caps Lock line is always in the document and always
+        referenced by <code>aria-describedby</code>, hidden until it has something to say — a
+        reference that only sometimes resolves is worse than one that always does.
       </p>
     </Card>
   );

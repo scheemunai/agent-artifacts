@@ -420,6 +420,66 @@ function bindDrawer() {
   });
 }
 
+/**
+ * PasswordInput: the reveal toggle and the Caps Lock hint.
+ *
+ * Both are delegated from the document rather than bound per field, so a password field rendered
+ * into a dialog after load works without re-binding — the same contract every other behaviour in
+ * this file uses.
+ *
+ * The label is rewritten on toggle because it names the ACTION, not the state: revealed, the next
+ * act is to hide. `aria-pressed` carries the state, so the two never have to mean the same thing.
+ */
+function bindPasswordInputs() {
+  document.addEventListener('click', (event) => {
+    const toggle =
+      event.target instanceof Element ? event.target.closest('[data-aa-password-toggle]') : null;
+    if (!toggle) {
+      return;
+    }
+    const fieldId = toggle.getAttribute('data-aa-password-toggle');
+    const field = fieldId ? document.getElementById(fieldId) : null;
+    if (!(field instanceof HTMLInputElement)) {
+      return;
+    }
+    const reveal = field.type === 'password';
+    field.type = reveal ? 'text' : 'password';
+    toggle.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+    const label = reveal ? 'Hide password' : 'Show password';
+    toggle.setAttribute('aria-label', label);
+    toggle.setAttribute('title', label);
+  });
+
+  // `getModifierState` is the only reading that is true on arrival rather than inferred from the
+  // character that was typed, so a field focused with Caps Lock already down says so immediately.
+  const syncCaps = (event) => {
+    const field =
+      event.target instanceof Element ? event.target.closest('[data-aa-password-input]') : null;
+    if (!field) {
+      return;
+    }
+    const wrap = field.closest('.aa-field');
+    const hint = wrap ? wrap.querySelector('[data-aa-password-caps]') : null;
+    if (!hint || typeof event.getModifierState !== 'function') {
+      return;
+    }
+    hint.hidden = !event.getModifierState('CapsLock');
+  };
+
+  document.addEventListener('keydown', syncCaps);
+  document.addEventListener('keyup', syncCaps);
+  document.addEventListener('focusin', syncCaps);
+  document.addEventListener('focusout', (event) => {
+    const field =
+      event.target instanceof Element ? event.target.closest('[data-aa-password-input]') : null;
+    const wrap = field ? field.closest('.aa-field') : null;
+    const hint = wrap ? wrap.querySelector('[data-aa-password-caps]') : null;
+    if (hint) {
+      hint.hidden = true;
+    }
+  });
+}
+
 bindCopyBlocks();
 bindDialogs();
 bindToasts();
@@ -428,3 +488,4 @@ bindConfirmDestructive();
 bindScrollRegions();
 bindTabs();
 bindDrawer();
+bindPasswordInputs();
