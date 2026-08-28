@@ -2299,10 +2299,9 @@
     line-height: 1.62;
   }
 
-  /* Works-with agents as an icon strip. `__mark` is a monogram tile standing in for each agent's
-     real logo; a uniform set reads better than five mismatched favicons, and it keeps the marketing
-     page free of external requests. Swap the tile for an <img> or inline SVG per agent to use real
-     brand marks. */
+  /* Works-with agents as an icon strip. Each `__mark` is a rounded tile holding the agent's real
+     brand logo (bundled under /assets/logos). `--text` is the monogram fallback for a tool whose
+     logo is not sourced yet. */
   .aa-marketing-logos {
     display: flex;
     width: 100%;
@@ -2331,7 +2330,21 @@
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    border: 1px solid var(--color-aa-line);
     border-radius: var(--radius-aa-md);
+    background: var(--color-aa-surface-raised);
+  }
+
+  .aa-marketing-logo__mark img {
+    width: 1.4rem;
+    height: 1.4rem;
+    object-fit: contain;
+  }
+
+  /* Monogram fallback: no logo sourced yet, so an accent-tinted initial in the same tile. */
+  .aa-marketing-logo__mark--text {
+    border-color: transparent;
     background: var(--color-aa-accent-soft);
     color: var(--color-aa-accent);
     font-size: var(--text-aa-sm);

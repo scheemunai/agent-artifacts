@@ -125,21 +125,23 @@ export const HOME_FEATURES: readonly HomeFeature[] = [
 ];
 
 /**
- * Agents the product works with, shown as an icon strip. `mark` is a short monogram used as a
- * placeholder tile until real brand SVGs are dropped in — a uniform set reads better than five
- * mismatched logos, and it keeps the marketing page free of external requests.
+ * Agents the product works with, shown as an icon strip. Each logo is a real brand mark fetched
+ * from the tool's own site and bundled under /assets/logos (no external request at render time).
+ * `mark` is a monogram fallback for a tool whose logo is not sourced yet.
  */
 export interface HomeTool {
   name: string;
-  mark: string;
+  /** Served logo path under /assets/logos. When absent, the monogram `mark` shows instead. */
+  icon?: string | undefined;
+  mark?: string | undefined;
 }
 
 export const HOME_WORKS_WITH: readonly HomeTool[] = [
-  { name: 'Grok Bot', mark: 'G' },
-  { name: 'Claude Code', mark: 'C' },
-  { name: 'Codex', mark: 'Cx' },
+  { name: 'Grok Bot', icon: '/assets/logos/grok.svg' },
+  { name: 'Claude Code', icon: '/assets/logos/claude.svg' },
+  { name: 'Codex', icon: '/assets/logos/codex.png' },
   { name: 'Hermes Agents', mark: 'H' },
-  { name: 'OpenClaw', mark: 'O' },
+  { name: 'OpenClaw', icon: '/assets/logos/openclaw.svg' },
 ];
 
 export interface HomePageProps {
@@ -294,8 +296,17 @@ export function HomePage({ baseUrl, authenticated = false, githubUrl }: HomePage
             <ul class="aa-marketing-logos" aria-label="Works with these agents">
               {HOME_WORKS_WITH.map((tool) => (
                 <li class="aa-marketing-logo">
-                  <span class="aa-marketing-logo__mark" aria-hidden="true">
-                    {tool.mark}
+                  <span
+                    class={`aa-marketing-logo__mark${
+                      tool.icon ? '' : ' aa-marketing-logo__mark--text'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {tool.icon ? (
+                      <img src={tool.icon} alt="" width="22" height="22" loading="lazy" />
+                    ) : (
+                      tool.mark
+                    )}
                   </span>
                   <span class="aa-marketing-logo__name">{tool.name}</span>
                 </li>
