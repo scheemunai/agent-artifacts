@@ -368,17 +368,16 @@ describe('style guide registry', () => {
     // against a radius, icon alignment: spacing the eye reads, not rhythm the layout keeps) or
     // above its 64px ceiling (marketing section rhythm, which needs roughly double the top step).
     // Anything BETWEEN two steps is drift by definition, because the scale has a step for it.
-    // STATED NARROWNESS, and the only walk in this file that still reads one sheet.
-    //
-    // `viewer.css` declares `.aa-viewer-footer__brand { gap: 0.35rem }` — 5.6px, between the 4px and
-    // 8px steps, and the same literal I snapped out of `.aa-badge` in r8. That fix was itself
-    // frame-limited to this sheet, so the value survived one file over. Widening this walk today
-    // would turn a defect in someone else's in-flight file into a red shared gate, which is not a
-    // thing to do to a lane mid-edit — so the gap is FILED and this line is the record of why the
-    // guard is smaller than its own comment. It widens the moment that gap closes.
-    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
-    const steps = Array.from(css.matchAll(/^\s*--spacing-aa-\d+:\s*([\d.]+)rem;/gm), (match) =>
-      Number.parseFloat(String(match[1]))
+    // EVERY SHEET, completing the set. This was the last walk here reading a single file, and it
+    // read one because `viewer.css` still held `.aa-viewer-footer__brand { gap: 0.35rem }` — the
+    // same between-steps literal r8 removed from `.aa-badge`, which survived one file over because
+    // that fix was frame-limited to `app.css`. The narrowness was stated here rather than hidden,
+    // and it is gone now that the value is a token: widening while that fix was in flight would
+    // have turned another lane's file into a red shared gate, which is a collision wearing a test's
+    // clothes.
+    const steps = Array.from(
+      ALL_STYLESHEET_CSS.matchAll(/^\s*--spacing-aa-\d+:\s*([\d.]+)rem;/gm),
+      (match) => Number.parseFloat(String(match[1]))
     );
     expect(steps.length, 'the spacing scale did not parse').toBeGreaterThan(5);
     const floor = Math.min(...steps);
@@ -387,17 +386,21 @@ describe('style guide registry', () => {
     const CONTAINER =
       /\b(gap|row-gap|column-gap|padding|padding-block|padding-inline|padding-top|padding-bottom|padding-left|padding-right|margin|margin-top|margin-bottom)\s*:\s*([^;]+);/g;
     const drift: string[] = [];
+    const seen = new Set<string>();
     let checked = 0;
 
-    for (const rule of parseStylesheet(css)) {
+    for (const { path, rule } of allStylesheetRules()) {
       for (const declaration of rule.block.matchAll(CONTAINER)) {
         checked += 1;
+        seen.add(path);
         for (const literal of String(declaration[2]).matchAll(/(?<![\w-])(\d*\.?\d+)rem/g)) {
           const value = Number.parseFloat(String(literal[1]));
           if (steps.includes(value) || value < floor || value > ceiling) {
             continue;
           }
-          drift.push(`${rule.selector} { ${declaration[1]}: … ${value}rem/${value * 16}px … }`);
+          drift.push(
+            `${path}: ${rule.selector} { ${declaration[1]}: … ${value}rem/${value * 16}px … }`
+          );
         }
       }
     }
@@ -406,6 +409,16 @@ describe('style guide registry', () => {
       checked,
       'no container dimensions parsed — the walk is measuring nothing'
     ).toBeGreaterThan(80);
+
+    // THE REACH, ASSERTED DIRECTLY rather than proxied by a count. A threshold like "> 190" works
+    // until someone adds three declarations to one sheet, at which point app.css alone clears it
+    // and the guard silently stops noticing that it narrowed — a magic number is a snapshot of a
+    // repository that keeps changing. This says the thing itself: every sheet contributed at least
+    // one measured declaration, so a walk that stops reading one fails whatever the totals do.
+    expect(
+      [...seen].sort(),
+      'a stylesheet contributed nothing — the walk narrowed, or a sheet stopped parsing'
+    ).toEqual(productStylesheets().map((sheet) => sheet.path));
     expect(
       [...new Set(drift)],
       'these sit between two steps of the scale, so the scale has a value for them and this one ' +
@@ -508,6 +521,7 @@ describe('style guide registry', () => {
     expect(sheets.length, 'only one stylesheet found — the walk narrowed again').toBeGreaterThan(1);
 
     const offScale: string[] = [];
+    const seen = new Set<string>();
     let endpoints = 0;
 
     for (const sheet of sheets) {
@@ -520,6 +534,7 @@ describe('style guide registry', () => {
         // First and last: the minimum and the maximum. The middle term is the viewport ramp.
         for (const end of [parts[0], parts.at(-1)]) {
           endpoints += 1;
+          seen.add(sheet.path);
           if (!end || end.startsWith('var(')) {
             continue;
           }
@@ -532,14 +547,20 @@ describe('style guide registry', () => {
       }
     }
 
-    // Vacuity guard tuned to the REACH, not just to emptiness. `app.css` alone yields 16 endpoints
-    // and `viewer.css` adds 2, so a threshold above 16 fails the moment this walk narrows back to
-    // one sheet — which is exactly how V12-N1 escaped. A guard that only asks "did I parse
-    // anything?" cannot notice that it stopped looking somewhere.
+    expect(endpoints, 'no clamp endpoints parsed — the walk is measuring nothing').toBeGreaterThan(
+      10
+    );
+
+    // THE REACH, ASSERTED DIRECTLY. This started as "> 16", chosen because app.css supplies 16 and
+    // viewer.css adds 2 — which holds until either sheet changes size and then quietly stops
+    // detecting the narrowing it was written for. A guard that only asks "did I parse anything?"
+    // cannot notice it stopped looking somewhere; a guard tuned to a COUNT stops noticing later,
+    // which is worse, because by then it is trusted. So the claim is the claim: every sheet that
+    // declares a clamp contributed endpoints.
     expect(
-      endpoints,
-      'fewer endpoints than one sheet contributes — the walk has narrowed or stopped parsing'
-    ).toBeGreaterThan(16);
+      [...seen].sort(),
+      'a stylesheet with clamps contributed no endpoints — the walk narrowed'
+    ).toEqual(sheets.filter((sheet) => sheet.css.includes('clamp(')).map((sheet) => sheet.path));
     expect(
       offScale,
       'these clamp endpoints are literals the type scale has a token for. A fluid size still ' +
