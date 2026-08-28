@@ -75,6 +75,33 @@ export default defineConfig({
         viewport: { width: 375, height: 812 },
       },
     },
+    /**
+     * The band nobody photographs.
+     *
+     * Two defects hid between 481 and 759 across two rounds — most recently a title track
+     * collapsed to 0px with rows inflated to 2047px — and the reason is structural rather than
+     * anyone's oversight: the stylesheets break at 480, 560, 720, 759 and 760, and the two
+     * projects above sit on opposite sides of ALL of them. 375 is below every `max-width` rule
+     * and 1440 is above every one, so no automated viewport had ever rendered a page in a state
+     * where some of those rules apply and others do not. The band was not under-tested; it was
+     * untested, and a defect there could only be found by a human resizing a window.
+     *
+     * 560 is chosen as a boundary, not a round number: `max-width: 560px` is inclusive, so this
+     * renders with the 560 rule ON and the 480 rules OFF — a combination neither other project can
+     * produce, and the off-by-one a `561`-style typo would break. The smoke spec's own
+     * `width <= 560` branch is exercised at its exact edge here rather than only from deep inside
+     * it at 375.
+     *
+     * ONE PROJECT COVERS ONE SUB-BAND. 561–720 and 721–759 are still unphotographed; see the
+     * report accompanying this change.
+     */
+    {
+      name: 'chromium-560',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 560, height: 900 },
+      },
+    },
     {
       name: 'chromium-1440',
       use: {
