@@ -2741,7 +2741,14 @@
      Scoped on `[data-aa-dashboard-preview]` rather than a new class: that attribute already exists,
      already means exactly "this is the owner preview", and is already pinned by
      dashboard-heading-regression and ui-prose-scope — so this needs no markup change and no other
-     lane's file. (0,2,1) against the base rules' (0,1,1), so it wins on specificity, not order. */
+     lane's file. (0,2,1) against the base rules' (0,1,1), so it wins on specificity, not order.
+
+     THE MARGIN IS PART OF THE SHIFT, and getting it wrong is how this rule first shipped. A
+     document's top heading carries NO top margin in either context — `.aa-md h1` is `0 0 0.6em`
+     because nothing precedes it — so the preview's h2 takes that, not `.aa-md h2`'s 2em section
+     rhythm. Copying the wrong level's margin also outranked `.aa-md > :first-child` at (0,2,1)
+     against (0,2,0) and reopened the 2em gap that rule exists to close, four lines up. The lower
+     levels DO take 2em, because at those levels the rhythm is what the viewer shows too. */
   /* `border-bottom-width`, not the `border-bottom` shorthand. The shorthand also resets the STYLE,
      which left this heading computing `0px none` while the viewer's h1 computes `0px solid` from
      the preflight baseline every other element carries. Both render as no border, so it changes
@@ -2749,7 +2756,7 @@
      which is exactly the check a future parity test would run. Overriding only the width that
      `.aa-md h2` set leaves the pair byte-identical. */
   [data-aa-dashboard-preview] .aa-md h2 {
-    margin: 2em 0 0.6em;
+    margin: 0 0 0.6em;
     padding-bottom: 0;
     border-bottom-width: 0;
     font-size: 1.875rem;

@@ -77,6 +77,44 @@ describe('owner preview renders the document hierarchy the reader sees', () => {
     }
   });
 
+  it('spaces every document heading the same in both contexts', () => {
+    // The assertion this file was missing, and the reason it passed over a real regression: it
+    // checked size and border and never looked at margin, so the first version of the preview rules
+    // shipped carrying `.aa-md h2`'s 2em section rhythm on the tag that renders the document TITLE.
+    // The viewer's `.aa-md h1` is `0 0 0.6em` — nothing precedes a title, at any position — and the
+    // preview must say the same thing. It did not, and at (0,2,1) it also outranked
+    // `.aa-md > :first-child { margin-top: 0 }` at (0,2,0), so it defeated the four-line-older rule
+    // written to stop preview cards opening with 2em of nothing and reopened that exact defect.
+    //
+    // Size, border AND spacing are what "the same heading" means; two out of three is how the
+    // third one moves unwatched.
+    for (const level of LEVELS) {
+      expect(
+        resolve(previewHeading(level.preview), 'margin'),
+        `a document ${level.document} is spaced differently in the preview than in the viewer`
+      ).toBe(resolve(viewerHeading(level.viewer), 'margin'));
+    }
+  });
+
+  it('opens the document flush in the preview, without leaning on the positional rule', () => {
+    // Stated limit, and the reason this is a separate assertion: the resolver strips positional
+    // pseudo-classes, so `.aa-md > :first-child` reads to it as applying everywhere. That makes it
+    // useless as a *witness* here — but it is also why the check that matters is the one below.
+    // The preview's title rule must carry a zero top margin ON ITS OWN, so the flush lead survives
+    // whether or not the positional rule wins.
+    //
+    // That is not belt-and-braces. `> :first-child` misses a document that opens with a paragraph
+    // before its heading, and in the viewer such a heading is still flush because `.aa-md h1` has no
+    // top margin at any position. Carrying the zero on the rule matches that in the preview too,
+    // and closes the positional rule's gap rather than inheriting it.
+    const margin = resolve(previewHeading('h2'), 'margin') ?? '';
+    expect(
+      /^0(?:\D|$)/.test(margin),
+      `the preview title rule declares a top margin (${margin}), which both breaks parity with ` +
+        'the viewer and, at (0,2,1), overrides the flush-lead rule at (0,2,0)'
+    ).toBe(true);
+  });
+
   it('draws the section rule at the same document level in both contexts', () => {
     for (const level of LEVELS) {
       expect(
