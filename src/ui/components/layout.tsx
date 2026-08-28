@@ -35,6 +35,7 @@ export function Layout({ title, description, children, scripts = [] }: LayoutPro
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           {description ? <meta name="description" content={description} /> : null}
           <title>{title}</title>
+          <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
           <link rel="stylesheet" href={stylesheet} />
         </head>
         <body class="aa-page">

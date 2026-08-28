@@ -203,6 +203,7 @@ export function ViewerDocument({
           <meta name="twitter:title" content={title.replace(/ · Agent Artifacts$/, '')} />
           <meta name="twitter:description" content={description} />
           <link rel="canonical" href={canonicalUrl} />
+          <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
           <link rel="stylesheet" href={stylesheetHref()} />
           {viewerStylesheet ? <link rel="stylesheet" href={viewerStylesheet} /> : null}
           <title>{pageTitle}</title>

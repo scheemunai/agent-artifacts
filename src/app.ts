@@ -112,6 +112,9 @@ export function createApp({
   // Absolute, resolved from the installation: a relative root made every /assets/* request answer
   // 404 whenever the process was started from anywhere but the app directory.
   app.get('/assets/*', serveStatic({ root: appPath('public') }));
+  // Browsers and crawlers request `/favicon.ico` at the root regardless of the page's <link>. Point
+  // it at the SVG mark rather than letting it fall through to the JSON 404 handler.
+  app.get('/favicon.ico', (context) => context.redirect('/assets/favicon.svg', 301));
   app.route('/healthz', healthRoute);
   const routesContext = {
     config,

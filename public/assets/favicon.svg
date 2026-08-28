@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Agent Artifacts">
+  <rect width="32" height="32" rx="7" fill="#c2482a"/>
+  <g transform="rotate(45 16 16) translate(16 16) scale(0.72) translate(-16 -16)">
+    <path fill="#ffffff" fill-rule="evenodd" d="M6 6 H16 L26 16 V26 H6 Z M16 6 L26 16 H16 Z"/>
+  </g>
+</svg>
