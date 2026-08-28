@@ -485,7 +485,17 @@
     min-width: 0;
   }
 
+  /* B-L4. Cards size to their own content instead of to the tallest card in the row.
+     `align-items: stretch` is the grid DEFAULT — nobody chose equal heights here, they are what
+     happens when no one says otherwise, and the cost is a shorter card carrying a bank of empty
+     space under its last line. On the settings pair that was ~73px; in this file's own two-up
+     grids it reaches 500. Empty space below content does not read as alignment, it reads as
+     something that failed to load.
+     Scoped to `--2` rather than `.aa-grid`, because that is where the defect was measured and a
+     blanket change would also retune every single-column and three-up grid in the product on an
+     argument nobody has tested there. */
   .aa-grid--2 {
+    align-items: start;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   }
 
