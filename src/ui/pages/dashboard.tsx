@@ -420,14 +420,14 @@ export function DashboardTemplatesPage({
             </p>
           </header>
         </section>
-        <TemplateTable
+        <TemplateGroup
           id="templates-starter"
           title="Starter templates"
           templates={starters}
           emptyTitle="No starter templates are installed."
           empty="Starter templates seed at boot, so this is usually a sign the seed has not run yet."
         />
-        <TemplateTable
+        <TemplateGroup
           id="templates-personal"
           title="Your templates"
           templates={personal}
@@ -1528,7 +1528,7 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
  * section's title for want of one of its own. A heading repeated is a heading that stops being
  * read; and with nothing to do next, the state described the absence and left the reader in it.
  */
-function TemplateTable({
+function TemplateGroup({
   id,
   title,
   templates,
@@ -1544,46 +1544,58 @@ function TemplateTable({
   emptyAction?: Child | undefined;
 }) {
   return templates.length === 0 ? (
-    <Card title={title}>
-      <EmptyState id={id} title={emptyTitle} description={empty} action={emptyAction} />
-    </Card>
+    <section class="aa-dashboard-group" aria-labelledby={`${id}-heading`}>
+      <h2 class="aa-dashboard-group__title" id={`${id}-heading`}>
+        {title}
+      </h2>
+      <EmptyState id={`${id}-empty`} title={emptyTitle} description={empty} action={emptyAction} />
+    </section>
   ) : (
-    <Card title={title}>
-      <Table
-        id={id}
-        label={title}
-        columnPriority
-        columns={[
-          'Name',
-          { label: 'Slug', priority: 'secondary' },
-          { label: 'Slots', priority: 'secondary' },
-          'Actions',
-        ]}
-        rows={templates.map((template) => [
-          <span>
-            <strong>{template.name}</strong>{' '}
-            <Badge tone={template.builtIn ? 'info' : 'accent'}>
-              {template.builtIn ? 'starter' : 'yours'}
-            </Badge>
-            <br />
-            <span class="aa-hint">{template.description ?? 'No description'}</span>
-          </span>,
-          <code>{template.slug}</code>,
-          <span>
-            {template.slots.length > 0
-              ? template.slots.map((slot) => <Badge tone="neutral">{`{{${slot}}}`}</Badge>)
-              : 'none'}
-          </span>,
-          <Button
-            size="sm"
-            variant="secondary"
-            href={`/dashboard/templates?preview=${template.id}#template-preview`}
-          >
-            Preview
-          </Button>,
-        ])}
-      />
-    </Card>
+    <section class="aa-dashboard-group" aria-labelledby={`${id}-heading`}>
+      <h2 class="aa-dashboard-group__title" id={`${id}-heading`}>
+        {title}
+      </h2>
+      <DashboardCardList label={title}>
+        {templates.map((template) => (
+          <TemplateCard template={template} />
+        ))}
+      </DashboardCardList>
+    </section>
+  );
+}
+
+function TemplateCard({ template }: { template: DashboardTemplateView }) {
+  return (
+    <DashboardCard
+      title={
+        <span class="aa-dashboard-card__title-row">
+          <strong>{template.name}</strong>
+          <Badge tone={template.builtIn ? 'info' : 'accent'}>
+            {template.builtIn ? 'starter' : 'yours'}
+          </Badge>
+        </span>
+      }
+      subline={template.description ?? 'No description'}
+      meta={
+        <span class="aa-dashboard-template-meta">
+          <code class="aa-dashboard-template-meta__slug">{template.slug}</code>
+          {template.slots.length > 0 ? (
+            template.slots.map((slot) => <Badge tone="neutral">{`{{${slot}}}`}</Badge>)
+          ) : (
+            <span>no slots</span>
+          )}
+        </span>
+      }
+      actions={
+        <Button
+          size="sm"
+          variant="secondary"
+          href={`/dashboard/templates?preview=${template.id}#template-preview`}
+        >
+          Preview
+        </Button>
+      }
+    />
   );
 }
 
