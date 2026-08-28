@@ -6,6 +6,7 @@ import {
   Card,
   Input,
   Notice,
+  PasswordInput,
   ProductMark,
   StatusHeading,
 } from '../components/primitives.js';
@@ -81,14 +82,16 @@ export function LoginPage({
                       type="email"
                       value={email}
                       placeholder="you@example.com"
+                      // The first actionable field in both modes, on a page whose only job is this
+                      // form. Never the password box: focus belongs where typing starts.
+                      autofocus
                       error={error && isMagic ? error : undefined}
                     />
                     {isMagic ? null : (
-                      <Input
+                      <PasswordInput
                         id="password"
                         name="password"
                         label="Password"
-                        type="password"
                         autocomplete="current-password"
                         error={error && !isMagic ? error : undefined}
                       />

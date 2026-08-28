@@ -1,5 +1,6 @@
 import { renderToString } from 'hono/jsx/dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
+import { LoginPage } from '../../src/ui/pages/login.js';
 import { SetupPage } from '../../src/ui/pages/setup.js';
 import { type AuthTestContext, createAuthTestContext, formBody } from './auth-test-utils.js';
 
@@ -115,5 +116,75 @@ describe('N-3 · the setup token is legible while it is being transcribed', () =
     const tag = /<input[^>]*id="setup_token"[^>]*>/.exec(html)?.[0] ?? '';
 
     expect(tag).toContain('autocomplete="one-time-code"');
+  });
+});
+
+/**
+ * A-39 (login half) and the N-3 residual, closed now that F2's props exist (964a677).
+ */
+describe('A-39 · the login form is ready to type into', () => {
+  it('focuses the email field, which is the first actionable field in both modes', () => {
+    for (const mode of ['password', 'magic'] as const) {
+      const html = renderToString(LoginPage({ mode, mailAvailable: true }));
+      const email = /<input[^>]*id="email"[^>]*>/.exec(html)?.[0] ?? '';
+
+      expect(email).toContain('autofocus');
+    }
+  });
+
+  it('autofocuses exactly one field, and never the password box', () => {
+    const html = renderToString(LoginPage({ mode: 'password', mailAvailable: true }));
+
+    expect((html.match(/autofocus/g) ?? []).length).toBe(1);
+    const password = /<input[^>]*id="password"[^>]*>/.exec(html)?.[0] ?? '';
+    expect(password).not.toContain('autofocus');
+  });
+
+  it('gives the password box a reveal with a real control and an action label', () => {
+    const html = renderToString(LoginPage({ mode: 'password', mailAvailable: true }));
+
+    expect(html).toContain('data-aa-password-toggle="password"');
+    // The label names what the control will do, not the state it is in.
+    expect(html).toContain('aria-label="Show password"');
+    expect(html).toContain('aria-pressed="false"');
+    // A bordered 44px control, not a bare glyph beside a field.
+    expect(html).toContain('aa-btn--secondary');
+    expect(html).toContain('aa-btn--icon');
+    // and the vocabulary from the last batch survives the swap
+    expect(html).toContain('autocomplete="current-password"');
+  });
+
+  it('reveals both setup password boxes without disturbing their vocabulary', () => {
+    const html = renderToString(SetupPage({ baseUrl: BASE }));
+
+    expect(html).toContain('data-aa-password-toggle="password"');
+    expect(html).toContain('data-aa-password-toggle="password_confirm"');
+    expect((html.match(/autocomplete="new-password"/g) ?? []).length).toBe(2);
+  });
+
+  it('keeps a field error attached after the swap', () => {
+    const html = renderToString(
+      SetupPage({
+        baseUrl: BASE,
+        error: 'Password must be at least 8 characters',
+        errorField: 'password',
+      })
+    );
+
+    expect(html).toContain('id="password-error"');
+    expect(html).toMatch(/id="password"[^>]*aria-invalid="true"/);
+  });
+});
+
+describe('N-3 residual · the setup token survives mobile input assistance', () => {
+  it('is not autocapitalized, corrected or spellchecked', () => {
+    const html = renderToString(SetupPage({ baseUrl: BASE }));
+    const tag = /<input[^>]*id="setup_token"[^>]*>/.exec(html)?.[0] ?? '';
+
+    // iOS defaults text inputs to autocapitalize=sentences, which would uppercase the first
+    // character of a token that is case-sensitive and single-use.
+    expect(tag).toContain('autocapitalize="none"');
+    expect(tag).toContain('autocorrect="off"');
+    expect(tag).toMatch(/spellcheck="?false"?/);
   });
 });

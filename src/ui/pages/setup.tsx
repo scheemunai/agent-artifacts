@@ -7,6 +7,7 @@ import {
   CopyBlock,
   Input,
   Notice,
+  PasswordInput,
   ProductMark,
 } from '../components/primitives.js';
 import { buildArtifactCurl, buildInstallPrompt, buildRedactedInstallPrompt } from './dashboard.js';
@@ -88,6 +89,12 @@ export function SetupPage({
                   // thing that actually stops a spent token being saved as the site password.
                   type="text"
                   autocomplete="one-time-code"
+                  // The token is case-sensitive, single-use and machine-generated. iOS otherwise
+                  // capitalises the first character of a text input, which turns a correct
+                  // transcription into a failed one for a reason the operator cannot see.
+                  autocapitalize="none"
+                  autocorrect="off"
+                  spellcheck={false}
                   value={setupToken}
                   hint="Find this one-time token in the server boot log."
                   error={fieldError('setup_token')}
@@ -100,19 +107,17 @@ export function SetupPage({
                   value={email}
                   placeholder="you@example.com"
                 />
-                <Input
+                <PasswordInput
                   id="password"
                   name="password"
                   label="Password"
-                  type="password"
                   autocomplete="new-password"
                   error={fieldError('password')}
                 />
-                <Input
+                <PasswordInput
                   id="password_confirm"
                   name="password_confirm"
                   label="Confirm password"
-                  type="password"
                   autocomplete="new-password"
                   error={fieldError('password_confirm')}
                 />

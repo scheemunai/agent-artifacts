@@ -51,7 +51,11 @@ describe('A-47 · the setup token survives a validation error', () => {
     // Rung 2 of the attachment ladder: the message rides the field.
     expect(html).toMatch(/id="password-error"/);
     expect(html).toMatch(/id="password"[^>]*aria-invalid="true"/);
-    expect(html).toMatch(/aria-describedby="password-error"/);
+    // Amended, not weakened. The invariant is that the error is ANNOUNCED WITH the field, and that
+    // is still asserted. What changed is that the field now also owns a caps-lock hint, so
+    // aria-describedby legitimately carries two ids; pinning the attribute to one exact value would
+    // have made a correct a11y addition look like a regression. Substring, not equality.
+    expect(html).toMatch(/id="password"[^>]*aria-describedby="[^"]*password-error/);
 
     // The defect was a *detached* error: a bare `aa-error` paragraph parked above the form with no
     // field of its own. FieldShell's own error paragraph carries an id, so the invariant is that
