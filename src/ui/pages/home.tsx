@@ -138,7 +138,7 @@ export const HOME_WORKS_WITH: readonly HomeTool[] = [
   { name: 'Grok Bot', icon: '/assets/logos/grok.svg' },
   { name: 'Claude Code', icon: '/assets/logos/claude.svg' },
   { name: 'Codex', icon: '/assets/logos/codex.png' },
-  { name: 'Hermes Agents', mark: 'H' },
+  { name: 'Hermes Agents', icon: '/assets/logos/hermes.png' },
   { name: 'OpenClaw', icon: '/assets/logos/openclaw.svg' },
 ];
 
