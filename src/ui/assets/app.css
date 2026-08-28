@@ -310,7 +310,7 @@
     height: 1.75rem;
     place-items: center;
     color: var(--color-aa-accent);
-    font-size: 1rem;
+    font-size: var(--text-aa-base);
     line-height: 1;
   }
 
@@ -1580,7 +1580,7 @@
     color: var(--color-aa-ink);
     background: var(--color-aa-surface);
     font-family: var(--font-mono);
-    font-size: 0.84375rem;
+    font-size: var(--text-aa-sm);
     line-height: 1.6;
     overflow-wrap: anywhere;
     scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface);
@@ -1732,7 +1732,7 @@
   .aa-marketing-section-label {
     margin: 0;
     color: var(--color-aa-muted);
-    font-size: 0.78rem;
+    font-size: var(--text-aa-xs);
     font-weight: 650;
     letter-spacing: 0.14em;
     line-height: 1.2;
@@ -1813,7 +1813,7 @@
     padding: var(--spacing-aa-4) clamp(var(--spacing-aa-4), 4vw, var(--spacing-aa-6));
     border-bottom: 1px solid var(--color-aa-line);
     color: var(--color-aa-muted);
-    font-size: 0.84rem;
+    font-size: var(--text-aa-sm);
     line-height: 1.35;
   }
 
@@ -1947,7 +1947,7 @@
     display: block;
     margin-bottom: var(--spacing-aa-2);
     color: var(--color-aa-accent);
-    font-size: 0.82rem;
+    font-size: var(--text-aa-sm);
     font-variant-numeric: tabular-nums;
     font-weight: 650;
     letter-spacing: 0.06em;
@@ -1956,7 +1956,7 @@
   .aa-marketing-example p {
     margin: 0;
     color: var(--color-aa-ink);
-    font-size: 1rem;
+    font-size: var(--text-aa-base);
     line-height: 1.62;
   }
 
@@ -2037,7 +2037,7 @@
     padding: var(--spacing-aa-5) var(--spacing-aa-6);
     color: var(--color-aa-dark-text);
     font-family: var(--font-mono);
-    font-size: 0.82rem;
+    font-size: var(--text-aa-sm);
     line-height: 1.85;
     scrollbar-color: var(--color-aa-dark-line) var(--color-aa-dark-card);
     scrollbar-width: thin;
@@ -2068,7 +2068,7 @@
     max-width: 34rem;
     margin: 0;
     color: var(--color-aa-ink);
-    font-size: 1.08rem;
+    font-size: var(--text-aa-md);
     font-weight: 650;
     line-height: 1.45;
     text-align: center;
@@ -2098,7 +2098,7 @@
   .aa-marketing-feature p {
     margin: 0;
     color: var(--color-aa-muted);
-    font-size: 1rem;
+    font-size: var(--text-aa-base);
     line-height: 1.62;
   }
 
@@ -2106,7 +2106,7 @@
     max-width: 56ch;
     margin: 0;
     color: var(--color-aa-muted);
-    font-size: 1rem;
+    font-size: var(--text-aa-base);
     line-height: 1.62;
     text-align: center;
   }
@@ -2122,6 +2122,24 @@
     text-align: center;
   }
 
+  /* THE ONE STATIC FONT SIZE THAT IS NOT A TOKEN, and the category is not "above the ceiling"
+     even though 45.6px is above `--text-aa-hero`/40px. THIS IS NOT TYPE.
+
+     The element is `<p aria-hidden="true">“</p>` — a single glyph, removed from the accessibility
+     tree, which nothing will ever read. `font-size` is simply the mechanism CSS gives you for
+     sizing a character used as a drawing. The type scale governs sizes at which text is READ; a
+     ladder of reading sizes has no opinion about how big a decorative quotation mark should be,
+     any more than it has one about an icon's width.
+
+     Stated this way rather than as an "ornament scale", because there is exactly ONE ornament and
+     a scale of one is not a scale — that would be one number wearing a costume, and the ratio test
+     has nothing to apply to. The claim here is narrower and checkable: this class is `aria-hidden`
+     at its only call site, and the guard verifies that rather than remembering this name. Make the
+     mark readable and the exemption evaporates, because then it IS type.
+
+     Deliberately not "above the ceiling" either: if the scale ever gains a 48px step that category
+     would silently expire and force a 48px glyph, which is a decision about a drawing made by a
+     ladder built for prose. */
   .aa-marketing-origin__mark {
     margin: 0 0 var(--spacing-aa-2);
     color: var(--color-aa-accent);
@@ -2147,7 +2165,7 @@
   .aa-marketing-origin__byline {
     margin: 0;
     color: var(--color-aa-accent-hover);
-    font-size: 0.78rem;
+    font-size: var(--text-aa-xs);
     font-weight: 650;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -2198,7 +2216,7 @@
   .aa-marketing-terms__oss {
     margin: 0;
     color: var(--color-aa-muted);
-    font-size: 1rem;
+    font-size: var(--text-aa-base);
     line-height: 1.62;
   }
 
@@ -2843,7 +2861,7 @@
   .aa-md {
     color: var(--color-aa-ink);
     font-family: var(--font-sans);
-    font-size: 1.0625rem;
+    font-size: var(--text-aa-md);
     line-height: 1.65;
     overflow-wrap: break-word;
   }
@@ -2885,7 +2903,7 @@
 
   .aa-md h1 {
     margin: 0 0 0.6em;
-    font-size: 1.875rem;
+    font-size: var(--text-aa-3xl);
     font-weight: 650;
     letter-spacing: -0.015em;
     line-height: 1.25;
@@ -2895,7 +2913,7 @@
     margin: 2em 0 0.6em;
     padding-bottom: 0.45em;
     border-bottom: 1px solid var(--color-aa-line);
-    font-size: 1.5rem;
+    font-size: var(--text-aa-2xl);
     font-weight: 650;
     letter-spacing: -0.01em;
     line-height: 1.3;
@@ -2903,14 +2921,14 @@
 
   .aa-md h3 {
     margin: 2em 0 0.6em;
-    font-size: 1.25rem;
+    font-size: var(--text-aa-xl);
     font-weight: 600;
     line-height: 1.35;
   }
 
   .aa-md h4 {
     margin: 2em 0 0.6em;
-    font-size: 1.0625rem;
+    font-size: var(--text-aa-md);
     font-weight: 600;
     line-height: 1.45;
   }
@@ -2947,7 +2965,7 @@
     margin: 0 0 0.6em;
     padding-bottom: 0;
     border-bottom-width: 0;
-    font-size: 1.875rem;
+    font-size: var(--text-aa-3xl);
     font-weight: 650;
     letter-spacing: -0.015em;
     line-height: 1.25;
@@ -2957,7 +2975,7 @@
     margin: 2em 0 0.6em;
     padding-bottom: 0.45em;
     border-bottom: 1px solid var(--color-aa-line);
-    font-size: 1.5rem;
+    font-size: var(--text-aa-2xl);
     font-weight: 650;
     letter-spacing: -0.01em;
     line-height: 1.3;
@@ -2965,14 +2983,14 @@
 
   [data-aa-dashboard-preview] .aa-md h4 {
     margin: 2em 0 0.6em;
-    font-size: 1.25rem;
+    font-size: var(--text-aa-xl);
     font-weight: 600;
     line-height: 1.35;
   }
 
   [data-aa-dashboard-preview] .aa-md h5 {
     margin: 2em 0 0.6em;
-    font-size: 1.0625rem;
+    font-size: var(--text-aa-md);
     font-weight: 600;
     line-height: 1.45;
   }
@@ -3039,7 +3057,7 @@
     padding: var(--spacing-aa-4);
     background: var(--color-aa-surface);
     font-family: var(--font-mono);
-    font-size: 0.84375rem;
+    font-size: var(--text-aa-sm);
     line-height: 1.6;
     scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface);
     scrollbar-gutter: stable;

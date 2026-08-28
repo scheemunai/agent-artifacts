@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { type ElementSpec, parseStylesheet, winningDeclaration } from '../support/css-cascade.js';
+import {
+  type ElementSpec,
+  parseStylesheet,
+  resolveVars,
+  themeVariables,
+  winningDeclaration,
+} from '../support/css-cascade.js';
 
 /**
  * B-P3's visual half, and the contract it leaves behind.
@@ -22,7 +28,8 @@ import { type ElementSpec, parseStylesheet, winningDeclaration } from '../suppor
  * not what a reader sees. The live computed-style comparison that settled the border-style question
  * is in the commit message, not here — a browser is the only thing that can run it.
  */
-const rules = parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8'));
+const cssSource = readFileSync('src/ui/assets/app.css', 'utf8');
+const rules = parseStylesheet(cssSource);
 
 const previewHeading = (tag: string): ElementSpec[] => [
   { tag: 'div', attributes: { 'data-aa-dashboard-preview': 'markdown' } },
@@ -139,6 +146,12 @@ describe('owner preview renders the document hierarchy the reader sees', () => {
     // anywhere else must keep the unshifted treatment.
     const looseMarkdown: ElementSpec[] = [{ tag: 'article', classes: ['aa-md'] }, { tag: 'h2' }];
     expect(hasBottomRule(looseMarkdown), 'the shift leaked out of the preview').toBe(true);
-    expect(resolve(looseMarkdown, 'font-size')).toBe('1.5rem');
+
+    // Asserted as a SIZE, not as a spelling. This read `'1.5rem'` and broke when the ramp moved onto
+    // the type scale — `var(--text-aa-2xl)` is the same 24px, so the invariant never changed and
+    // only the string did. A test that pins how a value is written will fail every time the value
+    // is expressed better, which trains the next person to edit the test instead of reading it.
+    const variables = themeVariables(cssSource);
+    expect(resolveVars(resolve(looseMarkdown, 'font-size') ?? '', variables)).toBe('1.5rem');
   });
 });

@@ -354,6 +354,67 @@ describe('style guide registry', () => {
     ).toEqual([]);
   });
 
+  it('sets every static type size from the scale too, not only the fluid ones', () => {
+    // V9-N1, and the finding my own guard's frame could not see. The clamp walk audited a
+    // MECHANISM — fluid sizes — and drift lives just as happily in values that never engaged it.
+    // Two static literals blocked the D1 yield, and walking the PROPERTY instead of the mechanism
+    // found nine: four different mono sizes between 13.12px and 13.5px, three labels at 12.48px,
+    // a caption 0.28px off a token. All between steps, so all drift by the spacing doctrine.
+    //
+    // Two of them are product surfaces the row did not name — `.aa-copy pre` and `.aa-md pre`,
+    // which reaches the viewer. The reported surface is not the walk's boundary; it was not last
+    // round either, and this is the second guard of mine whose frame was narrower than its subject.
+    //
+    // ONE literal survives, and NOT under the above-the-ceiling category even though it qualifies
+    // numerically. See the rule: it is an `aria-hidden` glyph used as a drawing, so it is not type
+    // at all — and the exemption is granted by CHECKING that, below, rather than by naming it.
+    const css = stripComments(readFileSync('src/ui/assets/app.css', 'utf8'));
+    const tokens = new Set(
+      Array.from(css.matchAll(/^\s*--text-aa-[\w]+:\s*([\d.]+)rem;/gm), (match) =>
+        Number.parseFloat(String(match[1]))
+      )
+    );
+    expect(tokens.size, 'the type scale did not parse').toBeGreaterThan(5);
+
+    const marketingSource = readFileSync('src/ui/components/marketing.tsx', 'utf8');
+    const drift: string[] = [];
+    let sizes = 0;
+
+    for (const rule of parseStylesheet(css)) {
+      const declared = declarationValue(rule.block, 'font-size');
+      if (!declared || declared.includes('clamp(')) {
+        continue;
+      }
+      sizes += 1;
+      for (const literal of declared.matchAll(/(?<![\w-])(\d*\.?\d+)rem/g)) {
+        const value = Number.parseFloat(String(literal[1]));
+        if (tokens.has(value)) {
+          continue;
+        }
+        // The only exemption: a class whose element is aria-hidden where it is rendered. That is a
+        // glyph used as a drawing, and a ladder of reading sizes has no opinion about it. Evaluated
+        // from the component source, so making the element readable removes the licence.
+        const className = /\.([\w-]+)\s*$/.exec(rule.selector)?.[1];
+        const ornament =
+          className &&
+          new RegExp(`class="${className}"[^>]*aria-hidden="true"`).test(marketingSource);
+        if (ornament) {
+          continue;
+        }
+        drift.push(`${rule.selector} { font-size: ${declared} }`);
+      }
+    }
+
+    expect(sizes, 'no static font sizes parsed — the walk is measuring nothing').toBeGreaterThan(
+      20
+    );
+    expect(
+      drift,
+      'these static sizes sit off the type scale. Take the token — a size that is not fluid is ' +
+        'not exempt from the ladder just because nothing interpolates it.'
+    ).toEqual([]);
+  });
+
   it('sets type from the scale, including at the ends of a fluid clamp', () => {
     // V3 dismissed these in r6 by judgment, and said so: a judged dismissal is not "found none",
     // so it came back every pass. This makes it a stated rule instead.
