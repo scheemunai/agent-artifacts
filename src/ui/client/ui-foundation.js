@@ -223,8 +223,27 @@ function bindConfirmDestructive() {
     const submit = owner
       ? document.querySelector(`[data-aa-confirm-submit="${owner}"]`)
       : field.closest('dialog')?.querySelector('[data-aa-confirm-submit]');
-    if (submit instanceof HTMLButtonElement) {
-      submit.disabled = field.value !== expected;
+    if (!(submit instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const blocked = field.value !== expected;
+    if (submit.disabled === blocked) {
+      // Nothing changed, so there is nothing to say. Announcing on every keystroke would make the
+      // region narrate typing instead of reporting the one event that matters.
+      return;
+    }
+
+    submit.disabled = blocked;
+
+    // A disabled button leaves the tab order entirely, so without this the destructive action
+    // appears and disappears with no signal to anyone not watching it dim.
+    const status = owner ? document.getElementById(`${owner}-state`) : null;
+    if (status instanceof HTMLElement) {
+      const action = (submit.textContent || 'The action').trim();
+      status.textContent = blocked
+        ? `${action} is unavailable until the confirmation matches.`
+        : `Confirmation matches. ${action} is now available.`;
     }
   });
 }

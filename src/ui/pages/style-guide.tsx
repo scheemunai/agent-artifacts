@@ -1146,6 +1146,15 @@ function destructiveSection() {
         also the quietest. The client-side match is a courtesy — the server revalidates the typed
         confirmation, and must keep doing so.
       </div>
+      <div class="aa-usage">
+        The dialog dismisses on <kbd>Esc</kbd> and on a click outside the panel, both of which
+        restore the page's scrolling and return focus to the trigger that opened it. <kbd>Tab</kbd>{' '}
+        and <kbd>Shift</kbd> + <kbd>Tab</kbd> cycle inside the dialog and cannot leave it while it
+        is open. And because <code>disabled</code> removes the confirming button from the tab order
+        outright, unlocking it is announced: a polite live region says the action is now available,
+        and says so again in reverse if a character is deleted. Without that, the whole state change
+        is a button undimming — which is nothing at all if you are not watching it.
+      </div>
       <ButtonRow>
         <ConfirmDestructive
           id="style-guide-revoke"

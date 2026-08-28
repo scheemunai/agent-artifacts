@@ -76,6 +76,50 @@ describe('ConfirmDestructive', () => {
     expect(foundationScript).toContain('[data-aa-cancel]');
   });
 
+  it('says out loud that the action has become available', () => {
+    // The gap the round-4 dialogs' 9s left. `disabled` removes a control from the tab order
+    // ENTIRELY, so a screen-reader user tabbing this dialog met two controls and no destructive
+    // action — and then, once the transcription happened to be right, a third control silently
+    // existed. Nothing was wrong and nothing was announced; the whole state change was carried by
+    // a button visibly undimming.
+    //
+    // The region is server-rendered and EMPTY. A live region that arrives with text in it has
+    // already missed its moment — assistive tech announces changes to it, not its initial value —
+    // and text at first paint would also be a claim about a state the user has not reached.
+    const html = render();
+
+    expect(html, 'no live region for the confirmation state').toMatch(
+      /<p class="sr-only" id="revoke-share-state" aria-live="polite"><\/p>/
+    );
+    expect(html, 'the region is not visually hidden, so the message is also on screen').toContain(
+      'class="sr-only"'
+    );
+  });
+
+  it('announces the transition only, in both directions', () => {
+    // Two halves, both of which have to be true for the region to be worth having.
+    //
+    // ONLY on change: a polite region rewritten on every keystroke narrates typing instead of
+    // reporting the one event that matters, so the client returns early when the state is unchanged.
+    // BOTH directions: deleting a character withdraws the destructive action, and that is exactly
+    // as much of a state change as arriving at it. A region that only ever announces good news
+    // leaves the user believing the button is still there.
+    expect(foundationScript).toContain('submit.disabled === blocked');
+    expect(foundationScript).toMatch(/is now available/);
+    expect(foundationScript).toMatch(/unavailable until the confirmation matches/);
+
+    // `disabled` stays the mechanism — the platform refusing the submit, not a script that must be
+    // trusted. The announcement is the missing half, not a replacement for it.
+    expect(foundationScript).toContain('submit.disabled = blocked');
+    const confirmButton = /<button[^>]*data-aa-confirm-submit="revoke-share"[^>]*>/.exec(
+      render()
+    )?.[0];
+    expect(
+      confirmButton,
+      'the announcement replaced the attribute instead of joining it'
+    ).toContain('disabled');
+  });
+
   it('submits a real form with the fields the action needs', () => {
     const html = render();
 

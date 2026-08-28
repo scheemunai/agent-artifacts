@@ -1078,6 +1078,21 @@ export function ConfirmDestructive({
               'data-aa-confirm-for': id,
             }}
           />
+          {/* The typed phrase gates a `disabled` button, and until now that gate was legible only
+              to someone who could see it undim. A disabled control is not in the tab order at all,
+              so a screen-reader user tabbing this dialog found two controls and no destructive
+              action — no error, nothing announced, just an action that silently began to exist once
+              the transcription happened to be right.
+
+              `disabled` stays: it is the platform stopping the submit, and a real attribute beats a
+              script guard, the same reasoning `required` gets on the field shell. What is added is
+              the missing half — saying so. The client writes here only when the state CHANGES, in
+              both directions, so a deleted character is as audible as a completed phrase and a
+              polite region is not narrating every keystroke.
+
+              Same shape as CopyBlock's status: server renders the empty region, client owns the
+              text, no announcement can outlive the state it describes. */}
+          <p class="sr-only" id={`${id}-state`} aria-live="polite" />
         </form>
       </Dialog>
     </>
