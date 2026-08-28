@@ -259,7 +259,14 @@
 .aa-viewer-footer__brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  /* Snapped off a between-steps literal: 0.35rem is 5.6px, between the 4px and 8px steps and on
+     neither. It is the SAME literal r8 removed from .aa-badge in app.css — that fix was frame-limited
+     to one sheet and the value survived one file over, which is the narrow-frame class paying out
+     against the very commit that named it.
+     Not inert, checked rather than assumed: the link is inline-flex with three items ("Made with ",
+     the mark, " Agent Artifacts"), so there are TWO live gaps, and the r8 badge precedent (a gap that
+     turned out to render nothing) is exactly why that needed checking before any zero-pixel claim. */
+  gap: var(--spacing-aa-1);
 }
 
 .aa-viewer-footer__brand .aa-mark {
