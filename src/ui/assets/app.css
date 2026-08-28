@@ -2523,16 +2523,37 @@
     box-shadow: none;
   }
 
-  /* Below 480 the three columns cannot share a line. The meta is `nowrap` and the badge is a pill,
-     so on a 375px screen they take everything and leave the title about forty pixels — which
-     `overflow-wrap: anywhere` then shreds one character at a time into a 127px-tall row. The
-     columns exist to align rows against each other, and at this width there is nothing to align:
-     a phone reads one row at a time. So the title takes its own line and the badge and meta sit
-     under it.
+  /* Below 760 the three columns cannot share a line. The meta is `nowrap` and the badges are pills,
+     so they take everything and leave the title about forty pixels — which `overflow-wrap: anywhere`
+     then shreds one character at a time. The columns exist to align rows against each other, and at
+     these widths there is nothing to align: a narrow screen reads one row at a time. So the title,
+     the badges and the meta each take their own line.
 
      This is the failure the desktop rule above warns about, arriving from the other direction: a
-     specimen at 1280 says the pattern works, and only a narrow viewport disagrees. */
-  @media (max-width: 480px) {
+     specimen at 1280 says the pattern works, and only a narrow viewport disagrees.
+
+     760 IS NOT A NEW NUMBER — it is the boundary `@media (min-width: 760px)` already draws for the
+     app shell, where the desktop nav appears and the drawer trigger stands down. The list now
+     collapses on the same line the chrome does, so "compact" means one thing in this sheet instead
+     of two. The threshold used to be 480, and the 280px between them was V4-N2: the SAME greedy
+     `auto` starving the same `minmax(0, 1fr)` as V4-N1, one breakpoint up, where three columns were
+     still nominally in force but no longer fit. Measured on the rich b-list shape, on the shipped
+     stylesheet, before this change:
+       481–600px · title track 0px · tallest row 2047px · list 5474px
+       660px · title 40px · row 639px      720px · title 100px · row 230px
+       768px · title 148px · row 204px — the first width where it merely reads badly
+     Titles were being shredded one character per line for 280px of viewport that nobody photographs,
+     which is exactly why two rounds of screenshots at 375 and 1440 came back clean.
+
+     WHY NOT FLOOR THE TITLE INSTEAD, e.g. `minmax(10rem, 1fr) auto auto` — it was measured, and it
+     passes every number while producing a worse row: at 481 the badge track is squeezed to 29px and
+     the pills stack into an 88px vertical column. No pan, no shred, no overflow, and a layout no one
+     would ship. Numbers alone could not reject it; that is worth remembering next time a candidate
+     satisfies the invariant.
+
+     The cost, stated rather than discovered later: the band 481–759 goes from three columns to
+     stacked rows — list of four, 543px against 5474px at 560. Above 760 nothing changes at all. */
+  @media (max-width: 759px) {
     .aa-list {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -2545,7 +2566,7 @@
        wrap and does not clip; it overhangs, and the document grows.
        Measured on the rich b-list shape at 375 (three badges + slug line), worst row:
          badges 299px · meta track 0px · meta content 204px · document 547px · page pans 172px
-       The obvious fix is not the fix. Dropping `nowrap` below 480 leaves the badges greedy and the
+       The obvious fix is not the fix. Dropping `nowrap` here leaves the badges greedy and the
        meta's own min-content beside them — measured 26px of pan, not 0. So does relaxing the badge
        track to `minmax(0, auto)`. Only taking the two off the same line reaches zero, because the
        row then has nothing to divide: min-content is the widest single child, not their sum.

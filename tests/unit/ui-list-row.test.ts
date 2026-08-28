@@ -141,6 +141,42 @@ describe('list row', () => {
     ).toBeUndefined();
   });
 
+  it('collapses on the same line the app shell calls compact, not one of its own', () => {
+    // V4-N2. The collapse used to key on 480 while the three-column row needs about 760 to hold a
+    // real artifact row, so for 280px of viewport the columns were nominally in force and did not
+    // fit. Measured on the shipped sheet across that band: 481-600 gave a 0px title track and a
+    // 2047px row, 660 gave 40px, 720 gave 100px — titles shredded one character per line. It
+    // survived two rounds of screenshots because 375 and 1440 are both outside it.
+    //
+    // The threshold is `@media (min-width: 760px)` — the boundary this sheet ALREADY draws, where
+    // the desktop nav appears and the drawer trigger stands down. Pinned as a relationship rather
+    // than as the number 760: if the shell's boundary moves and the list's does not, "compact"
+    // means two different things in one stylesheet again, and the gap between them is where this
+    // defect lives. The literal is asserted once, below, so the two cannot drift apart silently.
+    const shellBoundary = /@media \(min-width:\s*(\d+)px\)/.exec(cssSource)?.[1];
+    expect(shellBoundary, 'the app shell no longer declares a desktop boundary').toBeDefined();
+
+    const compact = Number(shellBoundary) - 1;
+    expect(
+      winningDeclaration(rules, [list, row], 'grid-template-columns', compact)?.value,
+      `the row still borrows columns at ${compact}px, one pixel below the shell's own compact line`
+    ).not.toBe('subgrid');
+    expect(
+      winningDeclaration(rules, [list, row], 'grid-template-columns', Number(shellBoundary))?.value,
+      'the row does not take its columns back where the desktop chrome arrives'
+    ).toBe('subgrid');
+
+    // The middle of the band, which is what actually regressed and what no screenshot covered.
+    for (const width of [481, 560, 660, 720]) {
+      const tracks =
+        winningDeclaration(rules, [list, row], 'grid-template-columns', width)?.value ?? '';
+      expect(
+        splitTopLevel(tracks, ' ').filter(Boolean),
+        `a row at ${width}px still divides into columns it cannot fill: ${tracks}`
+      ).toHaveLength(1);
+    }
+  });
+
   it('spends accent on the row being pointed at, not on every title', () => {
     expect(
       winningDeclaration(rules, [list, row, title], 'color', 1440)?.value,

@@ -971,15 +971,17 @@ function listRowSection() {
       <p class="aa-hint">
         <code>.aa-list</code> owns the columns and each <code>.aa-list-row</code> borrows them with{' '}
         <code>subgrid</code>, so badges and meta line up down the whole list instead of every row
-        sizing itself. Below 480px the row becomes a single column and the title, the badges and the
-        meta each take a line. Two of them sharing a line was the defect: the badge track takes its
-        max-content while the meta track may collapse to nothing, and{' '}
-        <code>.aa-list-row__meta</code> is <code>white-space: nowrap</code>, so its text could not
-        shrink with the track it was given and overhung the page instead. Alignment buys nothing
-        when only one row is being read. Titles are ink: a list where every title is coloured has no
-        emphasis left for the one under the cursor, so accent is spent on hover and focus only. The
-        whole row is the click target via a stretched link, and the row — not the invisible overlay
-        — is what shows the focus ring.
+        sizing itself. Below 760px — the same width where the desktop nav gives way to the drawer,
+        so the list and the chrome agree on what compact means — the row becomes a single column and
+        the title, the badges and the meta each take a line. Anything sharing a line was the defect,
+        twice: the badge track takes its max-content while the other track may collapse to nothing,
+        and <code>.aa-list-row__meta</code> is <code>white-space: nowrap</code>, so its text could
+        not shrink with the track it was given and overhung the page instead. When the title was the
+        starved one it did shrink — and <code>overflow-wrap: anywhere</code> shredded it a character
+        per line. Alignment buys nothing when the row cannot fit the things being aligned. Titles
+        are ink: a list where every title is coloured has no emphasis left for the one under the
+        cursor, so accent is spent on hover and focus only. The whole row is the click target via a
+        stretched link, and the row — not the invisible overlay — is what shows the focus ring.
       </p>
     </Card>
   );
