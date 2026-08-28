@@ -59,6 +59,16 @@ function installPasswordGate() {
       return;
     }
 
+    // The hand-rolled field carried `required`, so the browser's own constraint validation stopped
+    // an empty submit before this handler ran. The registered field has no `required` pass-through
+    // yet, and without a guard an empty box would POST "", spend a rate-limit attempt, and come
+    // back "Incorrect password." to someone who typed nothing.
+    if (!passwordInput.value) {
+      setPasswordError('Enter the password to view this artifact.');
+      passwordInput.focus();
+      return;
+    }
+
     setPasswordError('');
     setPasswordBusy(true);
     try {

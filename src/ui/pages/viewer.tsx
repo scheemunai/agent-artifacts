@@ -2,7 +2,7 @@ import type { Child } from 'hono/jsx';
 import type { ViewerContentResult, ViewerPageModel } from '../../services/viewer.js';
 import { assetHref, stylesheetHref } from '../assets.js';
 import { DOCTYPE } from '../components/layout.js';
-import { Button, Notice, ProductMark } from '../components/primitives.js';
+import { Button, Notice, PasswordInput, ProductMark } from '../components/primitives.js';
 import {
   CLIENT_TERMINAL_COPY,
   type ClientTerminalStatus,
@@ -226,7 +226,7 @@ export function ViewerDocument({
   );
 }
 
-function PasswordGate({ visible }: { visible: boolean }) {
+export function PasswordGate({ visible }: { visible: boolean }) {
   return (
     <section
       class="aa-viewer-gate"
@@ -242,16 +242,19 @@ function PasswordGate({ visible }: { visible: boolean }) {
         )}
         <p>Enter the password to view this artifact.</p>
         <form class="aa-viewer-password-form" data-aa-password-form="true">
-          <label class="aa-label" for="aa-share-password">
-            Password
-          </label>
-          <input
-            class="aa-control"
+          {/* The registered field, not a local one: the reveal toggle and the Caps Lock warning are
+              the two things this gate was missing, and both belong to every password field in the
+              product rather than to this page.
+              `autofocus` is conditional because the gate element renders on every viewer page and
+              is hidden when the artifact needs no password — the primitive's rule is the FIRST
+              actionable field of a page whose only job is that form, and a hidden field is not
+              that. */}
+          <PasswordInput
             id="aa-share-password"
             name="password"
-            type="password"
+            label="Password"
             autocomplete="current-password"
-            required
+            autofocus={visible}
           />
           {/* Always in flow with a reserved line height: revealing the message must not move the
               submit button. Empty content keeps it silent for assistive tech until it has copy. */}
