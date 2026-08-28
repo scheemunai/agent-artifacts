@@ -1347,7 +1347,7 @@ function NewBotDisclosure({
               optional
             />
             <Button variant="primary" type="submit">
-              New bot
+              Create bot
             </Button>
           </form>
         </Card>

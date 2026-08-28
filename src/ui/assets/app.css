@@ -3056,13 +3056,23 @@
   .aa-dashboard-disclosure {
     display: grid;
     min-width: 0;
-    justify-items: start;
+    justify-items: stretch;
     gap: var(--spacing-aa-3);
   }
 
   .aa-dashboard-disclosure__summary {
+    justify-self: start;
     list-style: none;
     cursor: pointer;
+  }
+
+  .aa-dashboard-disclosure__summary::after {
+    content: "+";
+    font-weight: 700;
+  }
+
+  .aa-dashboard-disclosure[open] > .aa-dashboard-disclosure__summary::after {
+    content: "−";
   }
 
   .aa-dashboard-disclosure__summary::-webkit-details-marker {
