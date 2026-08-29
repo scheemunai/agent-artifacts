@@ -9,7 +9,7 @@ import {
   frameHeaders,
   publicArtifactFrameHeaders,
 } from '../lib/frame-policy.js';
-import { isSandboxHostRequest } from '../lib/host-guard.js';
+import { sandboxRedirectUrl } from '../lib/host-guard.js';
 import { generateCachedOgImage } from '../lib/og.js';
 import {
   clientIp,
@@ -235,7 +235,7 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
 
   app.on(['GET', 'HEAD'], '/a/:share_id/frame', async (context) => {
     const frameContext = context as unknown as PublicContext;
-    const redirectUrl = frameRedirectUrl(frameContext, ctx.config);
+    const redirectUrl = sandboxRedirectUrl(ctx.config, context.req.url, context.req.header('host'));
     if (redirectUrl) {
       return context.redirect(redirectUrl, 301);
     }
@@ -558,22 +558,6 @@ function safeShareUrl(context: PublicContext, config: AppConfig): string {
   }
 
   return new URL('/a/not-found', config.baseUrl).toString();
-}
-
-function frameRedirectUrl(context: PublicContext, config: AppConfig): string | null {
-  if (!config.sandboxOrigin) {
-    return null;
-  }
-
-  if (isSandboxHostRequest(config, context.req.url, context.req.header('host'))) {
-    return null;
-  }
-
-  const url = new URL(context.req.url);
-  const target = new URL(config.sandboxOrigin);
-  target.pathname = url.pathname;
-  target.search = url.search;
-  return target.toString();
 }
 
 function rateLimited(context: PublicContext, retryAfterSeconds: number): Response {

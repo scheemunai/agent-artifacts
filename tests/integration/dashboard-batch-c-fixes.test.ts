@@ -290,9 +290,15 @@ describe('Batch C accepted dashboard fixes', () => {
     });
     const cookie = await login(ctx, account.email, 'password123');
 
-    const response = await ctx.app.request(`/dashboard/artifacts/${created.artifact.id}/frame`, {
+    const page = await ctx.app.request(`/dashboard/artifacts/${created.artifact.id}`, {
       headers: { Cookie: cookie },
     });
+    const src = (await page.text()).match(
+      /<iframe[^>]*\ssrc="([^"]*\/preview\/[^"]*)"/
+    )?.[1] as string;
+    expect(src, 'the detail page rendered no owner preview iframe').toBeDefined();
+
+    const response = await ctx.app.request(src);
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
   });

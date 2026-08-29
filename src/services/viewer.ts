@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import argon2 from 'argon2';
 import type { Pool, PoolClient } from 'pg';
 import type { AppConfig } from '../config.js';
@@ -6,6 +6,7 @@ import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } fro
 import type { Account, ArtifactEvent, CloudModule, Plan } from '../extension/cloud-module.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { buildOgDescription } from '../lib/og.js';
+import { hmacHex, timingSafeEqualHex } from '../lib/signed-token.js';
 import type { Logger } from '../logger.js';
 import type { ArtifactType } from './artifacts.js';
 import { ServiceError } from './errors.js';
@@ -609,9 +610,7 @@ export class ViewerService {
     passwordUpdatedAt: number | null,
     expiresAt: number
   ): string {
-    return createHmac('sha256', this.config.sessionSecret)
-      .update(`${shareId}|${passwordUpdatedAt ?? 0}|${expiresAt}`)
-      .digest('hex');
+    return hmacHex(this.config.sessionSecret, `${shareId}|${passwordUpdatedAt ?? 0}|${expiresAt}`);
   }
 
   private frameUrl(input: {
@@ -936,12 +935,4 @@ function protectedMeta(canonicalUrl: string, imageUrl: string): ViewerMeta {
     canonicalUrl,
     protected: true,
   };
-}
-
-function timingSafeEqualHex(actual: string, expected: string): boolean {
-  if (!/^[a-f0-9]+$/i.test(actual) || actual.length !== expected.length) {
-    return false;
-  }
-
-  return timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
 }

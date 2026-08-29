@@ -129,7 +129,7 @@ describe('error responses are content-negotiated', () => {
     const ctx = await createAuthTestContext();
     try {
       // No session: the dashboard's own guard answers, and a browser must never see raw JSON.
-      const response = await ctx.app.request('/dashboard/artifacts/art_x/frame', {
+      const response = await ctx.app.request('/dashboard/artifacts/art_x', {
         headers: { Accept: HTML_ACCEPT },
       });
 

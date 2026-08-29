@@ -5,7 +5,7 @@ import { ArtifactService } from '../../src/services/artifacts.js';
 import { AuthService, accountToCloudAccount } from '../../src/services/auth.js';
 import { createAuthTestContext, login } from './auth-test-utils.js';
 
-const DASHBOARD_PREVIEW_CSP = [
+const OWNER_PREVIEW_CSP = [
   "default-src 'none'",
   "script-src 'unsafe-inline'",
   "style-src 'unsafe-inline'",
@@ -16,7 +16,8 @@ const DASHBOARD_PREVIEW_CSP = [
   "base-uri 'none'",
   // The pin moves for the first time since T3, and only here: the dashboard-preview variant was
   // the one frame response in the codebase with no framing restriction at all. Same-origin,
-  // because the dashboard embeds this route with a relative `src`.
+  // because on a deployment with one host the dashboard and the preview share an origin. The
+  // cloud shape — where they do not — is pinned separately below.
   "frame-ancestors 'self'",
   'sandbox allow-scripts',
 ].join('; ');
@@ -59,8 +60,24 @@ describe('central frame policy', () => {
     expect(frameCsp(config, 'public-artifact')).toContain(
       'frame-ancestors https://agentartifact.example.test'
     );
-    // Same-origin by construction: the dashboard embeds it with a relative src.
-    expect(frameCsp(config, 'dashboard-preview')).toContain("frame-ancestors 'self'");
+    // One host, so the dashboard and the preview share an origin and `'self'` names it exactly.
+    expect(frameCsp(config, 'owner-preview')).toContain("frame-ancestors 'self'");
+  });
+
+  it('names the app origin as the owner preview embedder wherever the hosts differ', () => {
+    // The directive that had to learn where it is running. On cloud the owner preview is served by
+    // the sandbox host and framed by the app host — the same cross-origin arrangement the public
+    // variant has always had — so `'self'` would name the *sandbox* origin and refuse the only
+    // embedder there is.
+    const cloud = {
+      baseUrl: 'https://agentartifact.example.test',
+      sandboxOrigin: 'https://usercontent.example.test',
+    } as never;
+
+    expect(frameCsp(cloud, 'owner-preview')).toContain(
+      'frame-ancestors https://agentartifact.example.test'
+    );
+    expect(frameCsp(cloud, 'owner-preview')).not.toContain("frame-ancestors 'self'");
   });
 
   it('preserves dashboard owner HTML preview frame headers byte-for-byte', async () => {
@@ -85,9 +102,18 @@ describe('central frame policy', () => {
       });
       const cookie = await login(ctx, account.email, 'password123');
 
-      const response = await ctx.app.request(`/dashboard/artifacts/${created.artifact.id}/frame`, {
+      // Through the page, not by guessing the URL: the preview frame is now reached by a token the
+      // detail page mints, and asserting the headers on a URL the product does not actually emit
+      // is how the CSP defect survived every green test of the route it replaced.
+      const page = await ctx.app.request(`/dashboard/artifacts/${created.artifact.id}`, {
         headers: { Cookie: cookie },
       });
+      const src = (await page.text()).match(
+        /<iframe[^>]*\ssrc="([^"]*\/preview\/[^"]*)"/
+      )?.[1] as string;
+      expect(src, 'the detail page rendered no owner preview iframe').toBeDefined();
+
+      const response = await ctx.app.request(src);
       const body = await response.text();
 
       expect(response.status).toBe(200);
@@ -95,13 +121,17 @@ describe('central frame policy', () => {
       // Deliberately approved policy change: the original uppercase charset was accidental;
       // lowercase utf-8 is canonical and matches the rest of the application.
       expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
-      expect(response.headers.get('content-security-policy')).toBe(DASHBOARD_PREVIEW_CSP);
+      expect(response.headers.get('content-security-policy')).toBe(OWNER_PREVIEW_CSP);
       expect(response.headers.get('x-content-type-options')).toBe('nosniff');
       expect(response.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
       expect(response.headers.get('permissions-policy')).toBe(
         'camera=(), microphone=(), geolocation=(), payment=()'
       );
-      expect(response.headers.get('cross-origin-resource-policy')).toBeNull();
+      // Two additions, both consequences of the move to a token URL on a second host: the response
+      // is one owner's private draft and must never enter a shared cache, and it is now fetched
+      // cross-origin like the public frame beside it.
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(response.headers.get('cross-origin-resource-policy')).toBe('cross-origin');
       expect(response.headers.get('set-cookie')).toBeNull();
     } finally {
       await ctx.cleanup();

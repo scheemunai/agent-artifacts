@@ -152,7 +152,10 @@ describe('the template preview shows the example, not only its source', () => {
     ).text();
     const panel = html.split('<section id="template-preview"')[1] ?? '';
 
-    expect(panel).toContain(`src="/dashboard/templates/${recapId}/frame"`);
+    // The URL is the token one the panel was handed, not a path built from the template id. It is
+    // absolute because on cloud it points at the sandbox host, which is the only origin the
+    // dashboard's own CSP will frame.
+    expect(panel).toMatch(/src="[^"]*\/preview\/[A-Za-z0-9_-]+\.[a-f0-9]{64}\/frame"/);
     expect(panel).toContain('sandbox="allow-scripts"');
     expect(panel).toContain('Template source');
   });
@@ -176,13 +179,20 @@ describe('the template preview shows the example, not only its source', () => {
 });
 
 describe('the template frame is gated the way the artifact frame is', () => {
-  it('serves an HTML template sandboxed, and only to a signed-in owner', async () => {
+  it('serves an HTML template sandboxed, to whoever holds the preview token', async () => {
     const ctx = await makeContext();
     const { cookie, recapId } = await seed(ctx);
+    const panel = (
+      await (
+        await ctx.app.request(`/dashboard/templates?preview=${recapId}`, {
+          headers: { Cookie: cookie },
+        })
+      ).text()
+    ).split('<section id="template-preview"')[1] as string;
+    const src = panel.match(/\ssrc="([^"]*\/preview\/[^"]*)"/)?.[1] as string;
+    expect(src, 'the panel rendered no preview iframe').toBeDefined();
 
-    const framed = await ctx.app.request(`/dashboard/templates/${recapId}/frame`, {
-      headers: { Cookie: cookie },
-    });
+    const framed = await ctx.app.request(src);
     expect(framed.status).toBe(200);
     expect(framed.headers.get('content-type')).toContain('text/html');
     expect(framed.headers.get('content-security-policy')).toContain('sandbox allow-scripts');
@@ -196,17 +206,31 @@ describe('the template frame is gated the way the artifact frame is', () => {
     ).content;
     expect(await framed.text()).toBe(stored);
 
-    const anonymous = await ctx.app.request(`/dashboard/templates/${recapId}/frame`);
-    expect(anonymous.status, 'the frame answered without a session').toBe(302);
+    // The session is no longer what authorises this, and that is the fix rather than a regression:
+    // on cloud the frame is served by a host the session cookie never reaches. What replaces it is
+    // the five-minute, account-scoped token in the URL — exercised for expiry, forgery and
+    // cross-account reads in tests/integration/owner-preview-frame.test.ts.
+    const withoutSession = await ctx.app.request(src);
+    expect(withoutSession.status).toBe(200);
+    const withoutToken = await ctx.app.request('/preview/not-a-token/frame', {
+      headers: { Cookie: cookie },
+    });
+    expect(withoutToken.status, 'a session was accepted in place of a token').toBe(404);
   });
 
   it('has nothing to frame for a markdown template', async () => {
     const ctx = await makeContext();
     const { cookie, reportId } = await seed(ctx);
 
-    const response = await ctx.app.request(`/dashboard/templates/${reportId}/frame`, {
-      headers: { Cookie: cookie },
-    });
-    expect(response.status).toBe(404);
+    const html = await (
+      await ctx.app.request(`/dashboard/templates?preview=${reportId}`, {
+        headers: { Cookie: cookie },
+      })
+    ).text();
+    const panel = html.split('<section id="template-preview"')[1] ?? '';
+
+    // No frame at all rather than a frame that 404s: markdown previews are rendered inline.
+    expect(panel).not.toContain('/preview/');
+    expect(panel).not.toContain('<iframe');
   });
 });

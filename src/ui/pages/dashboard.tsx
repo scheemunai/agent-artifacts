@@ -94,6 +94,8 @@ export interface DashboardTemplateView {
 export interface DashboardTemplatePreview extends DashboardTemplateView {
   content: string;
   htmlPreview: string | null;
+  /** Absolute, sandbox-origin, token-authorised. `null` for markdown, which previews inline. */
+  previewUrl: string | null;
 }
 
 export interface DashboardNotice {
@@ -210,6 +212,8 @@ export interface DashboardArtifactPageProps {
   artifact: DashboardArtifactDetail;
   versions: DashboardArtifactVersion[];
   diff: { left: DashboardArtifactVersion; right: DashboardArtifactVersion } | null;
+  /** Absolute, sandbox-origin, token-authorised. `null` for markdown, which previews inline. */
+  previewUrl?: string | null | undefined;
   extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
   promoteError?: string | null | undefined;
@@ -220,6 +224,7 @@ export function DashboardArtifactPage({
   artifact,
   versions,
   diff,
+  previewUrl,
   extensionNavItems,
   notice,
   promoteError,
@@ -273,13 +278,17 @@ export function DashboardArtifactPage({
                 data-aa-dashboard-preview="markdown"
                 dangerouslySetInnerHTML={{ __html: artifact.htmlPreview }}
               />
-            ) : (
-              <iframe
-                title={artifact.title}
-                sandbox="allow-scripts"
-                src={`/dashboard/artifacts/${artifact.id}/frame`}
-              ></iframe>
-            )}
+            ) : previewUrl ? (
+              /*
+               * Absolute and cross-origin on cloud, absolute and same-origin self-hosted — the URL
+               * the route handed down, never one built here. A relative `src` is what broke this
+               * card: it resolves to the dashboard origin, and the dashboard's own CSP admits only
+               * the sandbox host to `frame-src`, so on cloud the browser refused the load and the
+               * "Rendered preview" was blank. `sandbox="allow-scripts"` stays: the attribute keeps
+               * the document in an opaque origin whichever host served it.
+               */
+              <iframe title={artifact.title} sandbox="allow-scripts" src={previewUrl}></iframe>
+            ) : null}
           </Card>
           <SharePanel artifact={artifact} />
         </div>
@@ -1489,9 +1498,9 @@ function BotActions({ bot }: { bot: DashboardBotView }) {
  * A template is an example artifact an agent rehashes, so the first question a reader has is what
  * it looks like — and for an HTML template the source answers that only if you can read CSS. The
  * HTML branch therefore renders the template through the same sandboxed frame the owner preview of
- * an HTML artifact uses (`/dashboard/templates/:id/frame`, dashboard-preview CSP), and markdown
- * keeps its server-rendered `htmlPreview`. The source block stays either way: it is what the agent
- * actually receives from the API.
+ * an HTML artifact uses (`/preview/:token/frame` on the sandbox origin, owner-preview CSP), and
+ * markdown keeps its server-rendered `htmlPreview`. The source block stays either way: it is what
+ * the agent actually receives from the API.
  *
  * Slots are listed only when there are any. "Slots: none" on the three HTML examples that declare
  * none was a field-form frame on something that is not a form.
@@ -1525,12 +1534,12 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
               ))}
             </p>
           ) : null}
-          {isHtml ? (
+          {isHtml && template.previewUrl ? (
             <iframe
               class="aa-template-frame"
               title={`${template.name} example`}
               sandbox="allow-scripts"
-              src={`/dashboard/templates/${template.id}/frame`}
+              src={template.previewUrl}
             ></iframe>
           ) : null}
           {!isHtml && template.htmlPreview ? (

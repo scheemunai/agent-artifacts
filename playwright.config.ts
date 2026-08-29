@@ -54,14 +54,34 @@ function claimFreePorts(count: number): number[] {
 
 const preassigned =
   process.env.E2E_SELF_PORT && process.env.E2E_CLOUD_PORT && process.env.E2E_CLOUD_SANDBOX_ORIGIN;
-const [claimedSelf, claimedCloud, claimedSandbox] = preassigned ? [0, 0, 0] : claimFreePorts(3);
+const [claimedSelf, claimedCloud] = preassigned ? [0, 0] : claimFreePorts(2);
 
 const selfPort = Number(process.env.E2E_SELF_PORT ?? claimedSelf);
 const cloudPort = Number(process.env.E2E_CLOUD_PORT ?? claimedCloud);
 const selfBaseURL = process.env.E2E_SELF_BASE_URL ?? `http://127.0.0.1:${selfPort}`;
 const cloudBaseURL = process.env.E2E_CLOUD_BASE_URL ?? `http://127.0.0.1:${cloudPort}`;
-const cloudSandboxOrigin =
-  process.env.E2E_CLOUD_SANDBOX_ORIGIN ?? `http://127.0.0.1:${claimedSandbox}`;
+/**
+ * A SECOND HOST, NOT A SECOND PORT — and the distinction is the only reason this suite can see the
+ * cloud frame defects at all.
+ *
+ * This used to claim a third port and hand it over as `SANDBOX_ORIGIN` with nothing listening on
+ * it. That satisfied the config validator and it satisfied every assertion anyone had written, but
+ * it could not serve a byte: a browser sent to the sandbox origin got a connection refused, so no
+ * test ever framed anything from it. The one thing a cloud instance is FOR — two origins, one
+ * isolating the other — was configured and then never exercised, which is how the owner preview
+ * could be blank on cloud through a green suite.
+ *
+ * `localhost` and `127.0.0.1` resolve to the same socket and are DIFFERENT ORIGINS to a browser:
+ * origins compare host strings, not addresses. So one process answers on both, exactly as the real
+ * deployment does behind two DNS names, while CSP, cookies and the sandbox host guard all treat
+ * them as the separate hosts they are. `frame-src http://localhost:PORT` genuinely refuses an
+ * iframe whose `src` is `http://127.0.0.1:PORT`, which is the production failure, reproduced.
+ *
+ * The app host must stay `127.0.0.1` and the sandbox host `localhost` rather than the reverse:
+ * `use.baseURL` and every relative `page.goto` in the suite are on the app host, and Playwright's
+ * cookie handling follows it.
+ */
+const cloudSandboxOrigin = process.env.E2E_CLOUD_SANDBOX_ORIGIN ?? `http://localhost:${cloudPort}`;
 
 // Published so the spec — which resolves the base URLs itself — and every worker use the ports that
 // were actually claimed, without importing anything from this file.
@@ -102,8 +122,24 @@ const cloudEnv = [
   `SANDBOX_ORIGIN=${cloudSandboxOrigin}`,
   'AA_MAIL_TRANSPORT=log',
   'AA_RATE_LIMITS_DISABLED=true',
-  'LOG_LEVEL=error',
+  // `warn`, not `error`, and only on the cloud instance: cloud has no password login and no setup
+  // wizard, so the ONLY way into its dashboard is a magic link — and with `AA_MAIL_TRANSPORT=log`
+  // that link is a `warn` line on stdout. At `error` the suite could reach every signed-out cloud
+  // surface and no signed-in one, which is why the owner dashboard had never been opened on a
+  // cloud instance by any test.
+  'LOG_LEVEL=warn',
 ].join(' ');
+
+/**
+ * The cloud server's stdout, kept as a file so a spec can read the magic link out of it.
+ *
+ * Redirected rather than teed on purpose: `tee` block-buffers its output file, so a line could sit
+ * unwritten for as long as it takes to accumulate 4KB — a flaky wait with no visible cause. The
+ * cost is that Playwright no longer echoes this server's output on failure; it is one file away,
+ * beside the database of the same run.
+ */
+const cloudLogPath = `${cloudScratch}/server.log`;
+process.env.E2E_CLOUD_LOG = cloudLogPath;
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -137,7 +173,7 @@ export default defineConfig({
       command: [
         `rm -rf ${cloudScratch}`,
         `mkdir -p ${cloudScratch}`,
-        `${cloudEnv} pnpm exec tsx src/index.ts`,
+        `${cloudEnv} pnpm exec tsx src/index.ts > ${cloudLogPath} 2>&1`,
       ].join(' && '),
       url: `${cloudBaseURL}/healthz`,
       timeout: 120_000,

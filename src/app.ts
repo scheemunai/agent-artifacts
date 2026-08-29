@@ -11,6 +11,7 @@ import { appPath } from './lib/runtime-paths.js';
 import type { Logger } from './logger.js';
 import { registerHumanRoutes } from './routes/dashboard.js';
 import { healthRoute } from './routes/health.js';
+import { registerOwnerPreviewRoutes } from './routes/preview.js';
 import { registerPublicRoutes } from './routes/public.js';
 import { registerRobotsAndSandboxGuard } from './routes/robots.js';
 import { registerV1Routes } from './routes/v1/index.js';
@@ -124,6 +125,9 @@ export function createApp({
   };
   registerV1Routes(app, routesContext);
   registerPublicRoutes(app, routesContext);
+  // Mounted beside the public frame rather than inside the dashboard: it answers on the sandbox
+  // host, where no `/dashboard` path is allowed to exist at all.
+  registerOwnerPreviewRoutes(app, routesContext);
   registerHumanRoutes(app, routesContext);
   app.route('/', createWebRoute(config));
   cloudModule?.registerRoutes?.(app as unknown as OpenAPIHono);

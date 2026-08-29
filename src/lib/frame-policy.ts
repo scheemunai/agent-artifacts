@@ -3,7 +3,7 @@ import type { AppConfig } from '../config.js';
 export const FRAME_CONTENT_TYPE = 'text/html; charset=utf-8';
 export const APP_PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=()';
 
-const DASHBOARD_PREVIEW_CONTENT_TYPE = 'text/html; charset=utf-8';
+const OWNER_PREVIEW_CONTENT_TYPE = 'text/html; charset=utf-8';
 
 /**
  * Every frame variant, as data. The type is derived from this array rather than declared beside it,
@@ -11,7 +11,7 @@ const DASHBOARD_PREVIEW_CONTENT_TYPE = 'text/html; charset=utf-8';
  * miss. A hand-written union plus a hand-written test array is two lists that agree until they
  * don't — which is what "a third variant cannot forget" claimed while iterating a literal.
  */
-export const FRAME_POLICY_VARIANTS = ['public-artifact', 'dashboard-preview'] as const;
+export const FRAME_POLICY_VARIANTS = ['public-artifact', 'owner-preview'] as const;
 
 export type FramePolicyVariant = (typeof FRAME_POLICY_VARIANTS)[number];
 
@@ -32,8 +32,8 @@ export function frameCsp(config: AppConfig, variant: FramePolicyVariant): string
   switch (variant) {
     case 'public-artifact':
       return publicArtifactFrameCsp(config);
-    case 'dashboard-preview':
-      return dashboardPreviewFrameCsp();
+    case 'owner-preview':
+      return ownerPreviewFrameCsp(config);
     default:
       return assertNeverVariant(variant);
   }
@@ -43,8 +43,8 @@ export function frameHeaders(input: FrameHeadersInput): Record<string, string> {
   switch (input.variant) {
     case 'public-artifact':
       return publicArtifactFrameHeaders(input);
-    case 'dashboard-preview':
-      return dashboardPreviewFrameHeaders(input.config);
+    case 'owner-preview':
+      return ownerPreviewFrameHeaders(input.config);
     default:
       return assertNeverVariant(input.variant);
   }
@@ -70,13 +70,22 @@ export function publicArtifactFrameHeaders(
   };
 }
 
-export function dashboardPreviewFrameHeaders(config: AppConfig): Record<string, string> {
-  void config;
+export function ownerPreviewFrameHeaders(config: AppConfig): Record<string, string> {
   return {
-    'Content-Type': DASHBOARD_PREVIEW_CONTENT_TYPE,
-    'Content-Security-Policy': frameCsp(config, 'dashboard-preview'),
+    'Content-Type': OWNER_PREVIEW_CONTENT_TYPE,
+    'Content-Security-Policy': frameCsp(config, 'owner-preview'),
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // The response is one owner's unpublished content behind a five-minute token, and on cloud it
+    // now travels through whatever sits in front of the sandbox host. `no-store` is the difference
+    // between that and a shared cache holding a private document at a guessable-once URL. The
+    // public artifact frame can be cached for an hour precisely because it is public; this cannot.
+    'Cache-Control': 'no-store',
+    // Matches the public artifact frame. Not load-bearing today — the dashboard sets no COEP, so
+    // nothing enforces CORP on this navigation — but the two frame responses are served from the
+    // same host to embedders on another origin, and having one of them silently break the day a
+    // COEP header appears is not a distinction worth keeping.
+    'Cross-Origin-Resource-Policy': 'cross-origin',
     'Permissions-Policy': APP_PERMISSIONS_POLICY,
   };
 }
@@ -97,7 +106,24 @@ function publicArtifactFrameCsp(config: AppConfig): string {
   ].join('; ');
 }
 
-function dashboardPreviewFrameCsp(): string {
+/**
+ * The owner's own preview of their HTML — the artifact detail card and the template panel.
+ *
+ * Stricter than the public variant on every directive that grants a capability, and deliberately
+ * so: a public artifact is a published page whose author expects it to behave like one, while this
+ * is a thumbnail of your own draft. No external script, no `connect-src`, no font, no form.
+ *
+ * `frame-ancestors` is the one directive that has to know where it is running, because this
+ * response is served from a different host in the two deployments:
+ *
+ *   · cloud — served by the sandbox host, framed by the app host. Two genuinely different origins,
+ *     so the app origin must be named, exactly as the public variant names it.
+ *   · self-hosted — one host serves both, so `'self'` *is* the dashboard origin by definition and
+ *     cannot drift from it behind a proxy, on a custom domain, or in development. That was the
+ *     original reasoning for `'self'` here and it still holds wherever it still applies.
+ */
+function ownerPreviewFrameCsp(config: AppConfig): string {
+  const embedder = config.sandboxOrigin ? new URL(config.baseUrl).origin : "'self'";
   return [
     "default-src 'none'",
     "script-src 'unsafe-inline'",
@@ -107,13 +133,7 @@ function dashboardPreviewFrameCsp(): string {
     "connect-src 'none'",
     "form-action 'none'",
     "base-uri 'none'",
-    // `'self'` rather than the configured base URL, and the difference matters: the dashboard
-    // embeds this route with a *relative* `src`, so the framing parent is whatever origin served
-    // the dashboard — which is not always `baseUrl` behind a proxy, on a custom domain, or in
-    // development. `'self'` is that origin by definition and cannot drift from it. The public
-    // variant has to name an origin for the opposite reason: it is served from the sandbox host
-    // and framed by the app host, so the two genuinely differ.
-    "frame-ancestors 'self'",
+    `frame-ancestors ${embedder}`,
     'sandbox allow-scripts',
   ].join('; ');
 }

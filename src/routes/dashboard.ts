@@ -6,8 +6,8 @@ import type { DatabaseHandle } from '../db/client.js';
 import type { Account, CloudModule, QuotaAction } from '../extension/cloud-module.js';
 import { createDefaultCloudModule } from '../extension/default-module.js';
 import { AppError } from '../lib/errors.js';
-import { dashboardPreviewFrameHeaders } from '../lib/frame-policy.js';
 import { renderMarkdown } from '../lib/markdown.js';
+import { ownerPreviewFrameUrl, previewContentDigest } from '../lib/preview-token.js';
 import type { Logger } from '../logger.js';
 import { ArtifactService, type TemplatePreview } from '../services/artifacts.js';
 import {
@@ -500,27 +500,22 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         artifact,
         versions,
         diff,
+        // Minted on the page that already passed the session gate, spent on the sandbox host that
+        // cannot see the session. Markdown renders inline and needs no frame, so it gets no token.
+        previewUrl:
+          artifact.type === 'html'
+            ? ownerPreviewFrameUrl(services.config, {
+                accountId: session.account.id,
+                subject: 'artifact',
+                subjectId: artifact.id,
+                contentHash: artifact.contentHash,
+              })
+            : null,
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
         promoteError: routeContext.req.query('promote_error') ?? null,
       })
     );
-  });
-
-  app.get('/dashboard/artifacts/:id/frame', async (routeContext) => {
-    const session = await requirePageSession(routeContext, services);
-    if (session instanceof Response) {
-      return session;
-    }
-    const artifact = await services.dashboardReads.getDashboardArtifactDetail({
-      accountId: session.account.id,
-      artifactId: routeContext.req.param('id'),
-      retentionDays: null,
-    });
-    if (artifact?.type !== 'html') {
-      return routeContext.notFound();
-    }
-    return routeContext.body(artifact.content, 200, dashboardPreviewFrameHeaders(services.config));
   });
 
   app.get('/dashboard/artifacts/:id/download', async (routeContext) => {
@@ -610,31 +605,6 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         notice: noticeFromQuery(routeContext.req.query('notice')),
       })
     );
-  });
-
-  /*
-   * The HTML template's own rendering, for the preview panel to frame.
-   *
-   * Same posture as `/dashboard/artifacts/:id/frame`, down to the bytes: session-gated,
-   * owner-or-built-in only, served with the dashboard-preview headers whose CSP sandboxes the
-   * document and forbids it every request, and serving the stored content raw. It briefly wrapped
-   * through `FrameDocument` so a fragment would get a charset and a typographic ground; that made
-   * the same fragment render differently here than on the artifact page it was promoted from,
-   * which is the wrong trade. A template previews exactly as the artifact does.
-   */
-  app.get('/dashboard/templates/:id/frame', async (routeContext) => {
-    const session = await requirePageSession(routeContext, services);
-    if (session instanceof Response) {
-      return session;
-    }
-    const template = await services.artifacts.getTemplatePreview(
-      session.account.id,
-      routeContext.req.param('id')
-    );
-    if (template?.type !== 'html') {
-      return routeContext.notFound();
-    }
-    return routeContext.body(template.content, 200, dashboardPreviewFrameHeaders(services.config));
   });
 
   app.get('/dashboard/settings', async (routeContext) => {
@@ -1110,11 +1080,18 @@ function pruneKeyReveals(reveals: Map<string, KeyReveal>): void {
   }
 }
 
+/**
+ * The preview panel's view model, including the sandbox URL its HTML frame loads.
+ *
+ * A built-in template has no `account_id`, so the token is scoped to the account that asked for it
+ * — which is the same predicate `getTemplatePreview` reads with (`account_id IS NULL OR = ?`). The
+ * token can therefore only ever spend on a template this account may already see.
+ */
 async function getTemplatePreview(
   services: HumanServices,
   accountId: string,
   templateId: string
-): Promise<(TemplatePreview & { htmlPreview: string | null }) | null> {
+): Promise<(TemplatePreview & { htmlPreview: string | null; previewUrl: string | null }) | null> {
   const template = await services.artifacts.getTemplatePreview(accountId, templateId);
   if (!template) {
     return null;
@@ -1124,6 +1101,15 @@ async function getTemplatePreview(
     ...template,
     htmlPreview:
       template.type === 'markdown' ? renderMarkdown(template.content, { headingOffset: 1 }) : null,
+    previewUrl:
+      template.type === 'html'
+        ? ownerPreviewFrameUrl(services.config, {
+            accountId,
+            subject: 'template',
+            subjectId: template.id,
+            contentHash: previewContentDigest(template.content),
+          })
+        : null,
   };
 }
 

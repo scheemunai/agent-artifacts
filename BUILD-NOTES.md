@@ -339,3 +339,100 @@ being self-contained shows up in its own thumbnail.
 `metrics-dashboard` carries one series hue for data marks and reserves the status palette for
 state, always paired with a text label and glyph. The two colour families are adjacent in places
 (an amber "at risk" meter beside a red delta), which the icon + label pairing is there to cover.
+
+## 2026-08-29 — The owner "Rendered preview" was blank on cloud
+
+### The defect
+
+`src/app.ts` sends every HTML page `frame-src ${config.frameOrigin}`, and `config.frameOrigin` is
+`SANDBOX_ORIGIN` when one is set and `'self'` when it is not. The owner preview iframe on the
+artifact detail page — and the HTML branch of the template preview panel — pointed at a *relative*
+`/dashboard/artifacts/:id/frame`, which resolves to the dashboard's own origin. A cloud dashboard
+therefore forbade its own preview: the only origin in `frame-src` is the sandbox host, so the
+browser blocked the load and the "Rendered preview" card rendered blank. Self-hosted has no
+`SANDBOX_ORIGIN`, `frame-src` falls back to `'self'`, and the identical markup worked, which is why
+the defect reached production behind a green suite.
+
+The rejected one-line fix is `frame-src 'self' ${frameOrigin}`. That re-admits artifact scripts to
+the origin holding the owner's session cookie — the precise risk the sandbox host exists to remove.
+
+### The fix: the owner preview moves to the sandbox host, like every other artifact frame
+
+`GET /preview/:token/frame` (`src/routes/preview.ts`) is a sibling of `/a/:share_id/frame`. It
+answers on the sandbox host, is listed in `isSandboxAllowedPath`, carries a frame CSP that sandboxes
+the document, and **reads no cookie in either deployment**. What authorises it is a short-lived
+signed token rather than a share id, because unpublished content has no share id and a cross-origin
+host never receives the session.
+
+`src/lib/preview-token.ts` mints it: `base64url(json).hmac-sha256-hex` over `SESSION_SECRET`, with
+the *purpose* inside the signed payload so it cannot be confused with the share-access token that
+uses the same secret and construction. Claims are `{accountId, subject, subjectId, contentHash,
+exp}`, five-minute TTL, minted only by a page render that already passed the session gate. The
+account id is a predicate in the SQL read, not a check afterwards, so a valid token can never
+surface another owner's work. `src/lib/signed-token.ts` now holds the HMAC and constant-time-compare
+primitives that `services/viewer.ts` had kept private, so there is one implementation of both.
+
+`ownerPreviewFrameUrl()` resolves against `sandboxOrigin ?? baseUrl` — the same single conditional
+`ViewerService.frameUrl()` already makes for public frames. Self-hosted keeps a same-origin preview
+its own `frame-src 'self'` permits; cloud gets the sandbox origin. One code path, both deployments,
+which is what stops them from drifting apart again. The two session-gated
+`/dashboard/{artifacts,templates}/:id/frame` routes are deleted rather than left as a second way to
+do the same thing.
+
+**No new environment variable.** The token is signed with the existing `SESSION_SECRET`, and the
+origin choice reads the existing `SANDBOX_ORIGIN`. PRD §6 has nothing to add.
+
+### Frame policy: `dashboard-preview` is renamed `owner-preview` and learns where it is running
+
+Same directive set, still stricter than the public variant on everything that grants a capability.
+Two changes. `frame-ancestors` is now `'self'` only when there is no sandbox origin and the app
+origin when there is one — `'self'` would name the *sandbox* origin on cloud and refuse the only
+embedder there is. And the response gains `Cache-Control: no-store` (one owner's private draft, on a
+URL that now travels through cloud infrastructure) and `Cross-Origin-Resource-Policy: cross-origin`
+(parity with the public frame beside it, so neither breaks the day a COEP header appears).
+
+`contentHash` is signed but deliberately **not** compared at read time. Binding it makes the frame
+URL change whenever the content does, so nothing can serve a stale preview; requiring it to match
+would turn a routine republish inside the five-minute window into a terminal page instead of the
+current content. The token authorises *this owner's copy of this artifact*, at whatever revision
+that is.
+
+The preview route is not rate-limited. An invalid token costs one HMAC and no database read, and a
+limiter in front of the owner's own preview buys little for the risk of throttling it.
+
+### The harness change that made the bug visible: a second HOST, not a second port
+
+`playwright.config.ts` claimed a third port for `SANDBOX_ORIGIN` and left **nothing listening on
+it**. That satisfied the config validator and every assertion anyone had written, and it could not
+serve a byte — so no test had ever framed anything from a sandbox origin. The thing a cloud instance
+exists for was configured and never exercised.
+
+`SANDBOX_ORIGIN` is now `http://localhost:<cloudPort>` against a `BASE_URL` of
+`http://127.0.0.1:<cloudPort>`. The two resolve to the same socket and are *different origins* to a
+browser, which compares host strings and not addresses — so one process answers on both, exactly as
+the real deployment does behind two DNS names, while CSP, cookies and the sandbox host guard all
+treat them as separate hosts.
+
+The cloud instance also moves to `LOG_LEVEL=warn` with stdout redirected to `<scratch>/server.log`.
+Cloud has no password login and no setup wizard, so the only way into its dashboard is a magic link,
+and with `AA_MAIL_TRANSPORT=log` that link is a `warn` line. At `error` the suite could reach every
+signed-out cloud surface and no signed-in one — which is why no browser test had ever opened the
+cloud dashboard. Redirected rather than teed: `tee` block-buffers its output file, which would make
+the wait flaky for no visible reason.
+
+### What the new tests assert that the old ones structurally could not
+
+`tests/e2e/owner-preview.spec.ts` signs in to the **cloud** instance through the real magic-link
+flow and asserts the preview `src` is on the sandbox origin, that the framed document actually
+rendered the artifact's own heading, and that the browser logged no CSP violation. Reintroducing the
+defect (pointing `ownerPreviewFrameUrl` back at `baseUrl`) fails it with Chromium's own sentence:
+`Framing 'http://127.0.0.1:PORT/preview/…' violates the following Content Security Policy directive:
+"frame-src http://localhost:PORT"`. The console matcher is copied from that failure rather than
+written from memory — Chromium says "Framing … violates", not "Refused to frame".
+
+The old integration tests requested the frame route *directly*. A CSP is enforced by the embedder
+and never by the response, so a frame route can answer 200 with immaculate headers and still be
+un-framable; fetching it proves nothing about whether a page can show it. Every assertion in
+`tests/integration/owner-preview-frame.test.ts` is therefore about a relationship between two
+responses — the origin the dashboard puts in the `src` against the origin its own CSP admits — and
+it reaches the frame URL by reading it off the rendered page rather than by constructing it.
