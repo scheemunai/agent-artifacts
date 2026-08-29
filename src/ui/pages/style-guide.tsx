@@ -7,6 +7,7 @@ import {
   MarketingFeatureLine,
   MarketingFinalCta,
   MarketingOriginNote,
+  MarketingWaitlist,
   MarketingWorksWith,
 } from '../components/marketing.js';
 import {
@@ -470,7 +471,7 @@ function marketingComponentsSection() {
     <StyleGuideSection
       id="marketing-components"
       title="Fresh Air marketing components"
-      note="Home page components are registered here first: artifact embed, example card, API block, feature line, works-with line, origin note, terms copy, and the closing call to action."
+      note="Home page components are registered here first: artifact embed, example card, API block, feature line, works-with line, waitlist form, origin note, terms copy, and the closing call to action."
     >
       <div class="aa-stack">
         <MarketingArtifactEmbed
@@ -553,6 +554,12 @@ function marketingComponentsSection() {
           <strong>Grok Bot, Claude Code, Codex, Hermes Agents, Openclaw,</strong> and any agent that
           can make an HTTP request.
         </MarketingWorksWith>
+
+        {/* The coming-soon homepage's one action, and a real `Input` + `Button` rather than a
+            hand-rolled row — the label, hint and error slot it inherits are the whole reason it is
+            built out of the primitives. The action points back at this section: a specimen that
+            posts is a specimen that signs the reader up for something. */}
+        <MarketingWaitlist action="/style-guide#marketing-components" />
 
         <MarketingOriginNote quote="I asked my bot for something simple: a visual list of newsletters I should probably unsubscribe from, so I could make quick decisions. It did the work, then handed me an HTML file to download. I didn't want a file. I wanted a link I could open, look through, and reply to, with the bot fixing what I flagged. That link is what we built." />
 

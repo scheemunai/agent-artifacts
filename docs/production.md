@@ -85,6 +85,30 @@ Before opening signups:
 5. Confirm the email arrives, the link host matches `BASE_URL`, and the link logs the user in.
 6. Check provider dashboards for bounces, suppression, SPF/DKIM failures, or rate-limit warnings.
 
+### Pre-launch: the coming-soon homepage and its waitlist
+
+`AA_COMING_SOON=true` serves the homepage as a waitlist page. It is a variant of the marketing homepage — same brand, same hero card, same feature list — with the pitch replaced by a signup form, and the examples and pricing sections dropped because neither can be honoured before launch.
+
+**The flag governs the homepage and nothing else.** `/login`, `/dashboard`, `/v1`, `/skill.md` and every share URL answer exactly as they do after launch, so early accounts and agents keep working while the front door says soon.
+
+```env
+AA_COMING_SOON=true
+RESEND_AUDIENCE_ID=...              # the Resend audience signups are written to
+RESEND_AUDIENCE_API_KEY=...         # a Resend key allowed to write contacts
+AA_WAITLIST_FROM=Agent Artifacts <hello@agentartifact.ai>
+AA_WAITLIST_CONFIRMATION=true       # one confirmation email per new signup
+```
+
+`RESEND_AUDIENCE_ID` and `RESEND_AUDIENCE_API_KEY` must be set together — half the pair is a fatal boot error, because the alternative is a form that accepts addresses and stores none of them. With neither set, the page shows a mail address instead of a form.
+
+**Security note, stated rather than buried.** Resend has no contacts-only permission, so `RESEND_AUDIENCE_API_KEY` is a full-access key: anything that can read the app's environment can also manage the Resend account. Three things follow.
+
+- Keep `RESEND_API_KEY` a **sending-only** key. The transactional path never touches audiences, so it does not need more, and the two keys failing separately is the point.
+- `chmod 600` the production `.env` and keep it owned by the service user.
+- Rotate `RESEND_AUDIENCE_API_KEY` when the waitlist closes. After launch, unset `AA_COMING_SOON` and both audience variables; the app then holds no full-access key at all.
+
+Signups are rate limited per address (5/hour) and per client IP (20/hour), a repeat submission of the same address is accepted without a second confirmation email, and every signup is single opt-in: one confirmation, nothing else until launch.
+
 ## 3. Secrets
 
 ### `SESSION_SECRET`

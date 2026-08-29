@@ -1,5 +1,5 @@
 import type { Child } from 'hono/jsx';
-import { Button, cx, ProductMark } from './primitives.js';
+import { Button, cx, Input, ProductMark } from './primitives.js';
 
 export interface MarketingArtifactEmbedProps {
   href: string;
@@ -127,6 +127,62 @@ export function MarketingApiBlock({ id, label, children }: MarketingApiBlockProp
         Scroll inside the block to view everything. Copy includes the full text.
       </p>
     </section>
+  );
+}
+
+export interface MarketingWaitlistProps {
+  /** Where the form posts. Passed rather than assumed so the page owns its own route. */
+  action: string;
+  email?: string | undefined;
+  /** Rendered on the field itself, not above the card — the error is about what was typed. */
+  error?: string | undefined;
+  label?: string | undefined;
+  hint?: string | undefined;
+}
+
+/**
+ * The waitlist signup: one address in, one confirmation out.
+ *
+ * A real `Input` and a real `Button` rather than a bare `<input>` beside a link, because everything
+ * the field shell carries is load-bearing here — the label a screen reader announces, the hint that
+ * states how often we will mail, the `aa-error` slot the server writes a rejection into. A
+ * hand-rolled row would have to re-earn all four, and the two places this product hand-rolled a
+ * field before are the reason the shell exists.
+ *
+ * SUBMITS WITHOUT SCRIPT. The page is server-rendered and so is its answer, so the form works with
+ * a blocked bundle, on a slow connection, and before hydration — a waitlist that needs JavaScript
+ * to accept an address loses the visitors least likely to come back.
+ */
+export function MarketingWaitlist({
+  action,
+  email = '',
+  error,
+  label = 'Email',
+  hint = 'One email, at launch. Nothing else, and you can leave any time.',
+}: MarketingWaitlistProps) {
+  return (
+    <form class="aa-marketing-waitlist" method="post" action={action}>
+      <Input
+        id="waitlist-email"
+        name="email"
+        label={label}
+        type="email"
+        value={email}
+        placeholder="you@example.com"
+        autocomplete="email"
+        // A machine-readable value typed on a phone: iOS capitalises the first character of an
+        // address unless told not to, which turns a correct address into a rejected one.
+        autocapitalize="none"
+        autocorrect="off"
+        spellcheck={false}
+        required
+        hint={hint}
+        error={error}
+      />
+      <Button variant="primary" type="submit" fullWidth>
+        Notify me
+      </Button>
+    </form>
   );
 }
 

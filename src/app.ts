@@ -129,7 +129,7 @@ export function createApp({
   // host, where no `/dashboard` path is allowed to exist at all.
   registerOwnerPreviewRoutes(app, routesContext);
   registerHumanRoutes(app, routesContext);
-  app.route('/', createWebRoute(config));
+  app.route('/', createWebRoute(config, logger));
   cloudModule?.registerRoutes?.(app as unknown as OpenAPIHono);
 
   app.notFound((context) => {

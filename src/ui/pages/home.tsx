@@ -11,6 +11,7 @@ import {
   MarketingFooter,
   MarketingOriginNote,
   MarketingSection,
+  MarketingWaitlist,
   MarketingWorksWith,
 } from '../components/marketing.js';
 import { Button, ProductMark } from '../components/primitives.js';
@@ -22,6 +23,37 @@ export const HOME_AGENT_SKILL_COPY =
   'An agent reads one skill file to learn how to publish here: base URL, auth header, create, update, share.';
 export const HOME_ORIGIN_QUOTE =
   "I asked my bot for something simple: a visual list of newsletters I should probably unsubscribe from, so I could make quick decisions. It did the work, then handed me an HTML file to download. I didn't want a file. I wanted a link I could open, look through, and reply to, with the bot fixing what I flagged. That link is what we built.";
+
+/**
+ * The pre-launch homepage, in one place.
+ *
+ * A VARIANT, NOT A SECOND SITE. `AA_COMING_SOON` decides which face of this module renders, so the
+ * host that is not launched yet and the host that is run the same build, the same brand, the same
+ * hero card. The alternative — a separate page, or a separate deployment — is how the two drift:
+ * the pre-launch one stops getting the design fixes because nobody is looking at it.
+ */
+export const HOME_COMING_SOON_HERO = 'Agent Artifacts is launching soon.';
+export const HOME_COMING_SOON_SUBLINE =
+  'Let your agent show its work — clean, versioned pages with a link you can share. Join the waitlist and we will email you once, when it opens.';
+export const HOME_COMING_SOON_JOINED_TITLE = 'You’re on the list.';
+/**
+ * The confirmation names the address it was given back to the reader, because a signup form that
+ * answers "thanks!" and nothing else cannot tell someone they typed `gmial.com` — and a waitlist
+ * only gets one chance at the address. Falls back to the general sentence when the address is
+ * somehow absent rather than printing an empty gap where it should be.
+ */
+export function homeComingSoonJoinedBody(email?: string | undefined): string {
+  return email
+    ? `We will email you at ${email} when Agent Artifacts opens. One message, nothing else in the meantime.`
+    : HOME_COMING_SOON_JOINED_BODY;
+}
+
+export const HOME_COMING_SOON_JOINED_BODY =
+  'We will email you when Agent Artifacts opens. One message, nothing else in the meantime.';
+/** Shown instead of the form on an instance with no audience wired up. */
+export const HOME_COMING_SOON_CONTACT_EMAIL = 'hello@agentartifact.ai';
+/** The one route the coming-soon page posts to. Named here so the page and the route agree. */
+export const HOME_WAITLIST_ACTION = '/waitlist';
 
 export const HOME_CTA_LABEL = 'Get started';
 export const HOME_HERO_CTA_LABEL = 'Get started';
@@ -142,9 +174,36 @@ export const HOME_WORKS_WITH: readonly HomeTool[] = [
   { name: 'OpenClaw', icon: '/assets/logos/openclaw.svg' },
 ];
 
+/**
+ * Where the waitlist form is in its own lifecycle, decided by the server.
+ *
+ * `idle` is the form as first served, `error` the same form carrying a rejection on the field, and
+ * `joined` the confirmation that replaces it. There is no fourth state for "already on the list":
+ * a second submit of the same address gets the identical confirmation, because from the reader's
+ * side it is true and the difference is only ours (it decides whether we mail them again).
+ */
+export type HomeWaitlistState = 'idle' | 'error' | 'joined';
+
+export interface HomeWaitlist {
+  /**
+   * Whether an audience is actually wired up. False renders a mail address instead of a form —
+   * a signup box that has nowhere to put an address is worse than no box, because it collects
+   * something and then loses it.
+   */
+  enabled: boolean;
+  state?: HomeWaitlistState | undefined;
+  /** Echoed back so a rejection does not also make the visitor retype what they typed. */
+  email?: string | undefined;
+  error?: string | undefined;
+  contactEmail?: string | undefined;
+}
+
 export interface HomePageProps {
   baseUrl: string;
   authenticated?: boolean | undefined;
+  /** Renders the pre-launch waitlist face of this page instead of the marketing one. */
+  comingSoon?: boolean | undefined;
+  waitlist?: HomeWaitlist | undefined;
   /**
    * Public repository URL. The repo is unpublished (docs/decisions.md, "Repository
    * publication status"), so this is unset by default and every GitHub affordance
@@ -156,7 +215,22 @@ export interface HomePageProps {
   now?: number | undefined;
 }
 
-export function HomePage({ baseUrl, authenticated = false, githubUrl }: HomePageProps) {
+export function HomePage({
+  baseUrl,
+  authenticated = false,
+  githubUrl,
+  comingSoon = false,
+  waitlist,
+}: HomePageProps) {
+  if (comingSoon) {
+    return ComingSoonHome({
+      baseUrl,
+      authenticated,
+      githubUrl,
+      waitlist: waitlist ?? { enabled: false },
+    });
+  }
+
   const agentSkillUrl = heroArtifactUrl(baseUrl);
   // Display host for the copy-paste prompt: the agent reads the same /skill.md the footer links to,
   // shown without the scheme so the prompt stays readable ("agentartifact.ai/skill.md").
@@ -379,6 +453,170 @@ export function HomePage({ baseUrl, authenticated = false, githubUrl }: HomePage
                 View on GitHub
               </Button>
             </aside>
+          </MarketingSection>
+        </div>
+      </main>
+
+      <MarketingFooter>
+        {githubUrl ? (
+          <>
+            <a href={githubUrl}>GitHub</a>
+            <span class="aa-marketing-separator" aria-hidden="true">
+              ·
+            </span>
+          </>
+        ) : null}
+        <a href="/skill.md">Agent Skill</a>
+        <span class="aa-marketing-separator" aria-hidden="true">
+          ·
+        </span>
+        <a href="/llms.txt">API contract</a>
+        {authenticated ? null : (
+          <>
+            <span class="aa-marketing-separator" aria-hidden="true">
+              ·
+            </span>
+            <a href={HOME_CTA_HREF}>Log in</a>
+          </>
+        )}
+        <span class="aa-marketing-separator" aria-hidden="true">
+          ·
+        </span>
+        <a href={agentSkillUrl}>Live artifact</a>
+      </MarketingFooter>
+    </Layout>
+  );
+}
+
+interface ComingSoonHomeProps {
+  baseUrl: string;
+  authenticated: boolean;
+  githubUrl?: string | undefined;
+  waitlist: HomeWaitlist;
+}
+
+/**
+ * The pre-launch homepage: the same brand, the same hero card, one thing to do.
+ *
+ * WHAT IT KEEPS is the point. The header, the artifact-framed hero, the feature list and the
+ * works-with strip all render exactly as they do on the marketing page, because a coming-soon page
+ * that invents its own look is a second design to maintain and a weaker promise about the first.
+ *
+ * WHAT IT DROPS is examples, pricing and the origin note. Not for length — for honesty. Pricing
+ * quotes plan terms nobody can buy yet, and the examples link out to artifacts a visitor cannot
+ * make. What is left says what the thing is and offers the one action there is.
+ *
+ * The app itself is untouched: `/login`, `/dashboard` and the API keep answering. This flag governs
+ * the homepage and nothing else, so an early account still works while the front door says soon.
+ */
+function ComingSoonHome({ baseUrl, authenticated, githubUrl, waitlist }: ComingSoonHomeProps) {
+  const agentSkillUrl = heroArtifactUrl(baseUrl);
+  const joined = waitlist.state === 'joined';
+  const contactEmail = waitlist.contactEmail ?? HOME_COMING_SOON_CONTACT_EMAIL;
+
+  return (
+    <Layout title="Agent Artifacts — coming soon" description={HOME_COMING_SOON_SUBLINE}>
+      <header class="aa-app-header">
+        <div class="aa-shell aa-marketing-shell aa-app-nav">
+          <a class="aa-brand" href="/" aria-label="Agent Artifacts home">
+            <ProductMark />
+            <span>Agent Artifacts</span>
+          </a>
+          {/* No "Get started" here, and that is the flag doing its job: the header of a page that
+              says "soon" must not carry an action that contradicts it. Someone who already has an
+              account still gets their door — the dashboard button — because the app is live even
+              though the launch is not. */}
+          {authenticated || githubUrl ? (
+            <nav class="aa-button-row aa-home-actions" aria-label="Primary">
+              {githubUrl ? (
+                <Button variant="ghost" size="xs" href={githubUrl} class="aa-btn--compact-hide">
+                  GitHub
+                </Button>
+              ) : null}
+              {authenticated ? (
+                <Button variant="primary" size="xs" href="/dashboard">
+                  Dashboard
+                </Button>
+              ) : null}
+            </nav>
+          ) : null}
+        </div>
+      </header>
+
+      <main class="aa-main aa-marketing-main">
+        <div class="aa-shell aa-marketing-shell">
+          <section class="aa-marketing-hero" aria-labelledby="home-title">
+            <article class="aa-marketing-hero-card">
+              <header class="aa-marketing-artifact__meta aa-marketing-hero-card__meta">
+                <span class="aa-marketing-artifact__dot" aria-hidden="true"></span>
+                <span class="aa-marketing-artifact__agent">agent-artifacts</span>
+                <span class="aa-marketing-chip">soon</span>
+                <span class="aa-marketing-hero-card__meta-end">
+                  <span class="aa-marketing-artifact__updated aa-marketing-hero-card__published">
+                    waitlist open
+                  </span>
+                </span>
+              </header>
+
+              {/* `aria-live` because the confirmation and the field-level rejection both arrive as
+                  a fresh document after a POST, and a reader who submitted with a screen reader
+                  needs the outcome announced rather than left for them to go and find. */}
+              <div class="aa-marketing-hero-card__body" aria-live="polite">
+                <h1 class="aa-marketing-hero-card__title" id="home-title">
+                  {joined ? HOME_COMING_SOON_JOINED_TITLE : HOME_COMING_SOON_HERO}
+                </h1>
+                <p class="aa-marketing-hero-card__sub">
+                  {joined ? homeComingSoonJoinedBody(waitlist.email) : HOME_COMING_SOON_SUBLINE}
+                </p>
+
+                {joined ? null : waitlist.enabled ? (
+                  <MarketingWaitlist
+                    action={HOME_WAITLIST_ACTION}
+                    email={waitlist.email ?? ''}
+                    error={waitlist.error}
+                  />
+                ) : (
+                  <p class="aa-marketing-hero-card__sub">
+                    Want a note when it opens? Write to{' '}
+                    <a href={`mailto:${contactEmail}`}>{contactEmail}</a> and we will add you.
+                  </p>
+                )}
+              </div>
+            </article>
+          </section>
+
+          <MarketingSection id="home-features" label="What it is">
+            <div class="aa-marketing-features">
+              {HOME_FEATURES.map((feature) => (
+                <MarketingFeatureLine>
+                  <strong class="aa-marketing-feature__label">{feature.label}:</strong>{' '}
+                  {feature.body}
+                </MarketingFeatureLine>
+              ))}
+            </div>
+          </MarketingSection>
+
+          <MarketingSection id="home-works" label="Works with">
+            <ul class="aa-marketing-logos" aria-label="Works with these agents">
+              {HOME_WORKS_WITH.map((tool) => (
+                <li class="aa-marketing-logo">
+                  <span
+                    class={`aa-marketing-logo__mark${
+                      tool.icon ? '' : ' aa-marketing-logo__mark--text'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {tool.icon ? (
+                      <img src={tool.icon} alt="" width="22" height="22" loading="lazy" />
+                    ) : (
+                      tool.mark
+                    )}
+                  </span>
+                  <span class="aa-marketing-logo__name">{tool.name}</span>
+                </li>
+              ))}
+            </ul>
+            <MarketingWorksWith>and any agent that can make an HTTP request.</MarketingWorksWith>
           </MarketingSection>
         </div>
       </main>

@@ -184,7 +184,12 @@ Variables are read once at boot.
 | `SMTP_PASS` | no | unset | both | yes | SMTP password. |
 | `SMTP_FROM` | no | unset | both | no | From address, for example `Agent Artifacts <no-reply@example.com>`. Required if any SMTP setting is present. |
 | `AA_MAIL_TRANSPORT` | no | unset | both | no | Optional mail transport override: `smtp`, `resend`, or `log`. Unset auto-detects: `RESEND_API_KEY` → Resend; else complete SMTP (`SMTP_HOST` + `SMTP_FROM`) → SMTP; else no mail configured. In cloud mode, unset with neither configured is a fatal boot error. `smtp` forces SMTP and requires `SMTP_HOST` + `SMTP_FROM` (`SMTP_USER`/`SMTP_PASS` optional). `resend` forces Resend and requires `RESEND_API_KEY`; `SMTP_FROM` may supply the From address. `log` is development only: no network delivery, satisfies the cloud boot gate, writes magic links to the log at warn level, and prints `MAIL TRANSPORT IS 'log' — NOT FOR PRODUCTION` on every boot. Never use `log` in production because users receive no email and login links are written to logs. |
-| `RESEND_API_KEY` | no | unset | both | yes | Resend mail adapter key; takes precedence over SMTP when auto-detecting. |
+| `RESEND_API_KEY` | no | unset | both | yes | Resend mail adapter key; takes precedence over SMTP when auto-detecting. A sending-only key is enough — this is the transactional path and it never touches audiences. |
+| `AA_COMING_SOON` | no | `false` | both | no | `true` serves the homepage as a pre-launch waitlist page instead of the marketing page. Homepage only: `/login`, `/dashboard`, `/v1` and every share URL are unaffected. |
+| `RESEND_AUDIENCE_ID` | no | unset | both | no | Resend audience the waitlist writes to. Must be set together with `RESEND_AUDIENCE_API_KEY`; half the pair is a fatal boot error. Unset means the coming-soon page shows a mail address instead of a form. |
+| `RESEND_AUDIENCE_API_KEY` | no | unset | both | yes | Resend key allowed to write contacts. Resend has no contacts-only permission, so this is a **full-access** key — keep it separate from `RESEND_API_KEY`, which stays sending-only, and do not reuse it anywhere else. |
+| `AA_WAITLIST_FROM` | no | `Agent Artifacts <hello@agentartifact.ai>` | both | no | Verified sender for the single waitlist confirmation. |
+| `AA_WAITLIST_CONFIRMATION` | no | `true` | both | no | Send one confirmation email per new signup. Needs `RESEND_API_KEY` to do anything; `false` makes the waitlist silent until launch. |
 | `AA_RATE_LIMIT_RPM` | no | `60` | both | no | Per-API-key requests per minute. |
 | `AA_RATE_LIMIT_WRITES_PER_MIN` | no | `10` | both | no | Per-API-key write requests per minute. |
 | `AA_RATE_LIMITS_DISABLED` | no | `false` | both | no | Disables rate limiting for tests/CI; do not enable on a public instance. |

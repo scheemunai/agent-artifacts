@@ -7,6 +7,9 @@ const DEPLOYMENTS = ['cloud', 'self-hosted'] as const;
 const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const;
 const MAIL_TRANSPORTS = ['smtp', 'resend', 'log'] as const;
 
+/** The product's own verified sender. Overridden per deployment with `AA_WAITLIST_FROM`. */
+const DEFAULT_WAITLIST_FROM = 'Agent Artifacts <hello@agentartifact.ai>';
+
 export class ConfigError extends Error {
   constructor(readonly issues: string[]) {
     super(`Invalid configuration: ${issues.join(', ')}`);
@@ -93,6 +96,21 @@ const rawEnvSchema = z.object({
   SESSION_SECRET: optionalString(),
   AA_CLOUD_MODULE: optionalString(),
   AA_HIDE_FOOTER: booleanFromEnv(false),
+  /**
+   * Serve the homepage as a "coming soon" waitlist instead of the marketing page. A per-deployment
+   * variant, not a fork: the same build renders the full marketing homepage everywhere the flag is
+   * unset, so a pre-launch host and a normal host run identical code.
+   */
+  AA_COMING_SOON: booleanFromEnv(false),
+  RESEND_AUDIENCE_ID: optionalString(),
+  /**
+   * A Resend key with CONTACT scope — deliberately separate from `RESEND_API_KEY`, which stays the
+   * send-only transactional key. Resend has no contacts-only permission, so this is a full-access
+   * key: keep it out of the transactional path, and see docs/deployment for the tradeoff.
+   */
+  RESEND_AUDIENCE_API_KEY: optionalString(),
+  AA_WAITLIST_FROM: optionalString(),
+  AA_WAITLIST_CONFIRMATION: booleanFromEnv(true),
   SANDBOX_ORIGIN: z.preprocess(emptyStringToUndefined, originString('SANDBOX_ORIGIN').optional()),
   SMTP_HOST: optionalString(),
   SMTP_PORT: integerFromEnv(587, 1, 65_535),
@@ -127,6 +145,22 @@ export interface MailConfig {
   resendApiKey?: string;
 }
 
+/**
+ * Where a waitlist signup goes, and who confirms it.
+ *
+ * `audienceId` and `apiKey` travel together and are both optional: an instance with neither is one
+ * that has not wired a waitlist up, and the coming-soon page renders a mail address instead of a
+ * form rather than collecting addresses it has nowhere to put.
+ */
+export interface WaitlistConfig {
+  audienceId?: string;
+  apiKey?: string;
+  /** Verified sender for the single opt-in confirmation. */
+  from: string;
+  /** Send ONE confirmation on signup. Needs a send-capable transactional key to do anything. */
+  confirmation: boolean;
+}
+
 export interface AppConfig {
   deployment: RawEnv['DEPLOYMENT'];
   port: number;
@@ -138,6 +172,8 @@ export interface AppConfig {
   sessionSecretPath?: string;
   aaCloudModule?: string;
   aaHideFooter: boolean;
+  comingSoon: boolean;
+  waitlist: WaitlistConfig;
   sandboxOrigin?: string;
   frameOrigin: string;
   mail: MailConfig;
@@ -192,6 +228,13 @@ export function loadConfig(
     ...(path ? { sessionSecretPath: path } : {}),
     ...(raw.AA_CLOUD_MODULE ? { aaCloudModule: raw.AA_CLOUD_MODULE } : {}),
     aaHideFooter: raw.AA_HIDE_FOOTER,
+    comingSoon: raw.AA_COMING_SOON,
+    waitlist: {
+      ...(raw.RESEND_AUDIENCE_ID ? { audienceId: raw.RESEND_AUDIENCE_ID } : {}),
+      ...(raw.RESEND_AUDIENCE_API_KEY ? { apiKey: raw.RESEND_AUDIENCE_API_KEY } : {}),
+      from: raw.AA_WAITLIST_FROM ?? DEFAULT_WAITLIST_FROM,
+      confirmation: raw.AA_WAITLIST_CONFIRMATION,
+    },
     ...(raw.SANDBOX_ORIGIN ? { sandboxOrigin: raw.SANDBOX_ORIGIN } : {}),
     frameOrigin,
     mail: {
@@ -258,6 +301,13 @@ function validateModeRequirements(raw: RawEnv): string[] {
 
   if (raw.AA_MAIL_TRANSPORT === 'resend' && !raw.RESEND_API_KEY) {
     issues.push('RESEND_API_KEY is required when AA_MAIL_TRANSPORT=resend');
+  }
+
+  // The audience id and the key that may write to it are one setting in two variables. Half of the
+  // pair boots an instance whose waitlist form silently cannot store anything, which is the one
+  // outcome a signup form must never have — so a half-configured waitlist fails at boot instead.
+  if (Boolean(raw.RESEND_AUDIENCE_ID) !== Boolean(raw.RESEND_AUDIENCE_API_KEY)) {
+    issues.push('RESEND_AUDIENCE_ID and RESEND_AUDIENCE_API_KEY must be set together');
   }
 
   if (raw.DEPLOYMENT === 'cloud') {

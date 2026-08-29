@@ -1806,6 +1806,20 @@
     margin-top: var(--spacing-aa-1);
   }
 
+  /* The coming-soon waitlist form, inside the hero card.
+     Two things it has to undo, and both come from the card rather than from the form. The card
+     body centres its text, and a form is the one thing in it that must not be centred: a label
+     floating above the middle of a full-width box stops naming the field under it. And the panel is
+     48.75rem wide, so an unconstrained email input is a 780px box asking for one short string —
+     the narrow-shell width is the measure this product already uses for a single-column form. */
+  .aa-marketing-waitlist {
+    display: grid;
+    gap: var(--spacing-aa-4);
+    width: min(100%, var(--width-aa-shell-narrow));
+    margin-top: var(--spacing-aa-2);
+    text-align: left;
+  }
+
   .aa-marketing-setup-label {
     margin: var(--spacing-aa-2) 0 0;
     color: var(--color-aa-muted);
