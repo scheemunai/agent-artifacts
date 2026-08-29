@@ -199,6 +199,13 @@ describe('the real failures keep their specific copy', () => {
     // Three things wrong with that sentence at once: it is false about the artifact, it never names
     // the mistake the user actually made, and it appears on a panel that only renders for markdown
     // artifacts in the first place — so it contradicts the page it is printed on.
+    //
+    // That sentence has since been deleted outright, along with the refusal behind it: templates are
+    // reusable examples now and HTML promotes fine. So the guard below moved from the retired
+    // sentence to the live one it would be mis-said as — `promote_invalid`'s honest generic. Left
+    // pointed at a string the codebase no longer contains, this assertion would pass forever and
+    // stop testing anything; the defect it exists for is "a cause nobody verified, printed anyway",
+    // and that shape survives its original wording.
     const ctx = await makeContext();
     const markdown = await seedArtifact(ctx, 'markdown');
 
@@ -225,12 +232,18 @@ describe('the real failures keep their specific copy', () => {
     expect(html).toContain('id="template_slug-error"');
     expect(html).toMatch(/id="template_slug"[^>]*aria-invalid="true"/);
 
-    // And the false cause is gone. This is the assertion the defect was: a markdown artifact being
-    // told it is not markdown.
+    // And no other cause is offered beside it. The retired sentence must be unreachable — nothing
+    // may resurrect a refusal the service cannot raise — and the generic must not appear either,
+    // because a specific cause was found and saying both makes the reader check whether they are
+    // two different problems.
     expect(
       html,
       'the form still blames the artifact type for a mistake in the slug field'
     ).not.toContain('Only markdown artifacts can be promoted to templates.');
+    expect(
+      html,
+      'the slug refusal is repeated as an unnamed validation failure above the form'
+    ).not.toContain('Something in that form did not pass validation');
   });
 
   it('accepts html and slotless promotions instead of carrying old refusal codes', async () => {

@@ -436,3 +436,74 @@ un-framable; fetching it proves nothing about whether a page can show it. Every 
 `tests/integration/owner-preview-frame.test.ts` is therefore about a relationship between two
 responses — the origin the dashboard puts in the `src` against the origin its own CSP admits — and
 it reaches the frame URL by reading it off the rendered page rather than by constructing it.
+
+## 2026-08-29 — Cleanup: promote panel, stale e2e assertions, biome
+
+No new environment variables, endpoints or dependencies. Three items, plus one regression the
+second item uncovered.
+
+### The Promote panel now matches the promote rules
+
+`promoteArtifactToTemplate` stopped refusing HTML artifacts and slot-free artifacts when templates
+became reusable *examples*, but `PromotePanel` still hard-blocked `artifact.type !== 'markdown'` and
+offered "Only markdown artifacts can be promoted" beside a card described as "Templates fill
+{{slots}} in markdown". The UI was refusing what the service accepts, which is the one disagreement
+a form can have with its own endpoint that a reader cannot work around.
+
+`ArtifactType` is exactly `'markdown' | 'html'`, so the gate is removed rather than widened — there
+is no third type to keep a branch for. Slots are surfaced only when the artifact has them ("Slots
+your agent can fill: …"); the old "Detected slots: none yet" read as a precondition on a panel whose
+submit worked fine without one. The submit says "Save as template".
+
+The two refusal codes those rejections fed, `markdown_only` and `needs_a_slot`, are deleted from
+both `promoteFailureCode` (route) and `promoteFailureMessage` (page) rather than left unreachable. A
+branch for a cause nothing can raise is a sentence waiting to be printed by mistake, which is
+exactly the V10-N2 defect those functions already carry a comment about. Markdown slot merging is
+untouched: `mergeTemplate` still returns content verbatim when a template declares no slots.
+
+### `columnPriority` is restored to the version-history table
+
+`83d3fe6` deleted `columnPriority` from the version table with no stated reason, and `8dce0a2` — a
+commit about HTML templates — then flipped `dashboard-table-priority.test.ts` from `toContain` to
+`not.toContain` so the suite went green. What that pair shipped is the defect `178f849` fixed:
+`.aa-table` forces a 42rem minimum, so with priority off the table scrolls and Actions leaves the
+viewport. Measured in Chromium at 375px before restoring it: **the Diff control ended at 532px, 157
+pixels past the right edge**, behind a scroll region nothing signposts. Diff and Restore were
+unreachable on a phone.
+
+The flipped assertion was also incoherent on its own terms — it kept asserting Summary is declared
+`secondary` while asserting the machinery that acts on that declaration is off, so the markup
+described a behaviour the page did not have. This is the one place in this pass where product
+behaviour changed rather than a test: the alternative was weakening `expectActionsColumnReachable`,
+which would have blessed an unreachable control.
+
+### The homepage smoke assertions describe the shipped homepage
+
+`smoke.spec.ts` still described the first marketing page. Two of its assertions changed *meaning*
+and are commented in place rather than quietly rewritten. **GitHub is now intentional**: the old
+rule was `a[href*="github.com"]` count 0, because an unpublished repo must not be linked; the hero
+and the self-host card both carry "View on GitHub", so the assertion is inverted to "the affordance
+exists and points at github.com". It deliberately does not fetch that URL — a local smoke suite
+cannot assert a third-party host without going flaky, and `HOME_REPO_URL` already records that it
+404s until the repo is published. **The meta strip is no longer fetched**: it had to be absent
+because an unreachable live artifact must not fall back to a literal, but the hero is now a static
+illustration of an artifact card, so its parts are asserted present instead. The fixed
+"published 3h ago" is a property of the shipped page and is noted in the test rather than lost in a
+deleted line.
+
+The dashboard row assertions moved with the UI: `.aa-list-row` → `.aa-dashboard-card`, the share
+badge vocabulary from "Shared" to Public / Private / Password-protected / Link revoked, and the
+stretched-link hit test to `aa-dashboard-card__link`. The hero's visibility control is asserted per
+width, because it stands down below 390px and is in the DOM either way.
+
+### biome
+
+`noDescendingSpecificity` (×4) is fixed by reordering, not suppressed. Each override moved to sit
+after the base rule it overrides — the app-nav `.aa-btn` rule after `.aa-btn` (carrying its
+`min-width: 760px` media query with it), the two hero-card `.aa-marketing-api` rules after
+`.aa-marketing-api`, and the hero-card `__agent` rule past the last `.aa-marketing-artifact__agent`
+rule. Verified as a pure reorder: compiling the sheet before and after yields the identical multiset
+of 578 rules with the same at-rule nesting, and only those four change position. Nothing about the
+resolved cascade moves — the qualified selectors already won on specificity — only the order the
+file reads in. `noSvgWithoutTitle` is fixed with a real `<title>` in each logo; both render through
+`<img alt="">`, so the title serves anyone who opens the file on its own.

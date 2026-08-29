@@ -337,12 +337,19 @@ function ViewerChrome({
             hidden={latestVersion > 1 ? undefined : true}
           >
             {Array.from({ length: latestVersion }, (_, index) => index + 1).map((version) => (
-              <option value={String(version)} selected={(pinnedVersion ?? latestVersion) === version}>
+              <option
+                value={String(version)}
+                selected={(pinnedVersion ?? latestVersion) === version}
+              >
                 v{version}
               </option>
             ))}
           </select>
-          <Button variant="secondary" href={downloadHref} dataAttrs={{ 'data-aa-download': 'true' }}>
+          <Button
+            variant="secondary"
+            href={downloadHref}
+            dataAttrs={{ 'data-aa-download': 'true' }}
+          >
             ⭳ Download
           </Button>
           <Button

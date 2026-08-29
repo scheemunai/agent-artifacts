@@ -76,7 +76,27 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
     expect(html).toContain('Revoke key');
   });
 
-  it('version history keeps every column in a scrollable table', async () => {
+  /**
+   * This assertion was inverted once, and putting it back is the point of the test.
+   *
+   * `83d3fe6` deleted `columnPriority` from the version-history table with no stated reason, and
+   * `8dce0a2` — a commit about HTML templates — then flipped this expectation from `toContain` to
+   * `not.toContain` so the suite went green again. What that pair shipped is the exact defect
+   * `178f849` fixed: `.aa-table` forces a 42rem minimum, so with priority off the table scrolls and
+   * the Actions column leaves the viewport. Measured in Chromium at 375px: the Diff control ended
+   * at 532px — 157px past the right edge, behind a scroll region nothing signposts. Diff and
+   * Restore were unreachable on a phone.
+   *
+   * The flipped version was incoherent on its own terms as well: it kept asserting that Summary is
+   * declared `secondary` while asserting that the machinery which acts on that declaration is
+   * switched off. A column marked demotable that can never be demoted is markup describing a
+   * behaviour the page does not have.
+   *
+   * So the trade is asserted rather than the markup: below 480px the Summary column is dropped and
+   * the controls stay on screen. The e2e suite measures the other half — `expectActionsColumnReachable`
+   * in `smoke.spec.ts` checks where Diff actually lands, at every viewport edge.
+   */
+  it('version history drops Summary rather than pushing Diff and Restore off-screen', async () => {
     const ctx = await makeContext();
     const { cookie, artifactId } = await seedAll(ctx);
 
@@ -85,7 +105,10 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
     ).text();
 
     expect(html).toContain('<table class="aa-table" id="artifact-versions">');
-    expect(html).not.toContain('aa-table-scroll--priority');
+    expect(
+      html,
+      'the version table forces its 42rem minimum again, which puts Diff and Restore off-screen at 375'
+    ).toContain('aa-table-scroll--priority');
     expect(headerPriorities(html, 'artifact-versions')).toEqual([
       ['Version', 'primary'],
       ['Summary', 'secondary'],

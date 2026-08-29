@@ -167,6 +167,11 @@ function settingsFailureCode(error: unknown): string {
  * not say what, because an unmatched cause is by definition one this function did not verify — and
  * a wrong specific reason is worse than an honest general one. That is the whole defect, in the
  * shape it would come back.
+ *
+ * Since then the promote rules themselves changed: templates are reusable EXAMPLES, so the service
+ * no longer refuses HTML or slot-free artifacts and the panel offers the form for both types. The
+ * two codes those refusals fed — `markdown_only` and `needs_a_slot` — were removed rather than left
+ * unreachable, here and in the page's message table.
  */
 function promoteFailureCode(error: unknown): string {
   if (error instanceof AppError) {
@@ -181,13 +186,11 @@ function promoteFailureCode(error: unknown): string {
       const reason = typeof details.reason === 'string' ? details.reason : '';
       const field = typeof details.field === 'string' ? details.field : '';
 
-      // Reasons the service states outright.
-      if (reason === 'html_not_supported') {
-        return 'markdown_only';
-      }
-      if (reason === 'no_slots') {
-        return 'needs_a_slot';
-      }
+      // Reasons the service states outright. `html_not_supported` and `no_slots` used to be mapped
+      // here and are not, because the service stopped raising them: a template is a reusable
+      // EXAMPLE now, so an HTML artifact and a slot-free artifact are both promotable. A branch for
+      // a reason nothing can report is a sentence waiting to be printed by mistake, which is the
+      // exact shape of the defect the rest of this comment describes.
       if (reason === 'invalid_slot_marker') {
         return 'invalid_slot_marker';
       }

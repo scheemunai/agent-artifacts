@@ -1102,9 +1102,17 @@ function VersionHistory({
       title="Version history"
       description="Restores create a new version; history is never rewritten."
     >
+      {/* `columnPriority` is load-bearing, not decoration. `.aa-table` forces a 42rem minimum, so
+          without it this table scrolls at 375 and every Diff and Restore sits ~157px past the right
+          edge behind a scroll nobody signposted — measured, not assumed: the Diff control ended at
+          532px in a 375px viewport. That is the defect 178f849 fixed for all three dashboard
+          tables, and it came back when the flag was dropped from this one table. The Summary column
+          is the demoted one on purpose: a reader who cannot reach a control is worse off than one
+          who cannot read a change summary. No Actions column is `secondary` anywhere. */}
       <Table
         id="artifact-versions"
         label="Version history"
+        columnPriority
         columns={['Version', { label: 'Summary', priority: 'secondary' }, 'Actions']}
         rows={versions
           .slice()
@@ -1211,12 +1219,13 @@ function promoteFailureMessage(code: string | null): string | null {
   switch (code) {
     case 'slug_taken':
       return 'That template slug is already in use. Choose another.';
-    case 'needs_a_slot':
-      return 'Add at least one {{slot}} placeholder to the artifact first.';
+    // `needs_a_slot` and `markdown_only` were retired with the refusals that produced them. A
+    // template is a reference example now, so neither "this is HTML" nor "this declares no slots"
+    // is a reason to say no, and the service stopped raising them. Their sentences are gone from
+    // this vocabulary too: a message with no reachable cause is a claim the product can no longer
+    // make, and leaving it here only preserves the chance of printing it by accident.
     case 'invalid_slot_marker':
       return 'One of the {{slot}} markers in this artifact is malformed. Fix it and try again.';
-    case 'markdown_only':
-      return 'Only markdown artifacts can be promoted to templates.';
     case 'artifact_missing':
       return 'That artifact is no longer here.';
     case 'promote_invalid':
@@ -1259,25 +1268,17 @@ function PromotePanel({
   // the reader check whether they are two different problems.
   const fieldError = errorCode ? PROMOTE_FIELD_ERRORS[errorCode] : undefined;
   const error = fieldError ? null : promoteFailureMessage(errorCode);
-  // An HTML artifact used to get the whole panel: a prefilled name, a prefilled slug, an editable
-  // description, an error line and a submit at 55% opacity — a form the reader can type into that
-  // can never be sent. State the rule once and offer nothing to fill in.
-  if (artifact.type !== 'markdown') {
-    return (
-      <Card title="Promote to template" description="Templates fill {{slots}} in markdown.">
-        <p class="aa-section-note">
-          Only markdown artifacts can be promoted. Publish this content as markdown if you want a
-          reusable start from it.
-        </p>
-      </Card>
-    );
-  }
-
+  // Slots are an optional extra, not the price of entry. The panel used to hard-block anything that
+  // was not markdown — "Only markdown artifacts can be promoted", beside a card described as
+  // "Templates fill {{slots}} in markdown" — which described a product that no longer exists: a
+  // template is a reference EXAMPLE the agent rehashes, and an HTML page is the best example there
+  // is. The service accepts both types and accepts no slots at all, so the form is offered for both
+  // and the slot line only appears when there is something to say.
   const slots = Array.from(new Set(artifact.content.match(/{{[a-z0-9_]+}}/g) ?? []));
   return (
     <Card
       title="Promote to template"
-      description="Reuse this artifact's content as a start for new ones."
+      description="Save this as a reusable example your agent can rehash into new work — same style, fresh content."
       notice={
         error ? (
           <Notice tone="danger" title="That template was not created">
@@ -1291,7 +1292,9 @@ function PromotePanel({
         method="post"
         action={`/dashboard/api/artifacts/${artifact.id}/promote-template`}
       >
-        <p class="aa-hint">Detected slots: {slots.length > 0 ? slots.join(' ') : 'none yet'}</p>
+        {slots.length > 0 ? (
+          <p class="aa-hint">Slots your agent can fill: {slots.join(' ')}</p>
+        ) : null}
         <Input
           id="template_name"
           name="name"
@@ -1314,7 +1317,7 @@ function PromotePanel({
           rows={3}
         />
         <Button variant="secondary" type="submit">
-          Promote markdown artifact
+          Save as template
         </Button>
       </form>
     </Card>

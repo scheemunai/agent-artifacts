@@ -319,7 +319,11 @@ export function HomePage({ baseUrl, authenticated = false, githubUrl }: HomePage
             <MarketingOriginNote quote={HOME_ORIGIN_QUOTE} />
           </MarketingSection>
 
-          <MarketingSection id="home-pricing" label="Pricing" title="Start free. Keep what matters.">
+          <MarketingSection
+            id="home-pricing"
+            label="Pricing"
+            title="Start free. Keep what matters."
+          >
             <div class="aa-marketing-pricing">
               <article class="aa-marketing-plan">
                 <header class="aa-marketing-plan__head">

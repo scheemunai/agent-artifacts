@@ -36,7 +36,12 @@ async function makeContext(retentionDays: number | null = null): Promise<AuthTes
 
 async function seed(
   ctx: AuthTestContext,
-  options: { type?: 'markdown' | 'html'; versions?: number; share?: boolean } = {}
+  options: {
+    type?: 'markdown' | 'html';
+    versions?: number;
+    share?: boolean;
+    content?: string;
+  } = {}
 ): Promise<{ cookie: string; artifactId: string; email: string }> {
   const auth = new AuthService(ctx.db, ctx.config, ctx.logger);
   const account = await auth.createPasswordAccount('sweep@example.test', 'password123');
@@ -53,7 +58,7 @@ async function seed(
     slug: 'sweep-target',
     type,
     title: 'Sweep Target',
-    content: type === 'markdown' ? '# One' : '<h1>One</h1>',
+    content: options.content ?? (type === 'markdown' ? '# One' : '<h1>One</h1>'),
     share: options.share ?? false,
   });
   for (let index = 1; index < (options.versions ?? 1); index += 1) {
@@ -137,8 +142,18 @@ describe('B-C1 / B-C4 · no control that cannot do anything', () => {
   });
 });
 
-describe('B-C2 · the Promote panel does not offer a form that can never submit', () => {
-  it('explains itself on an HTML artifact instead of prefilling a dead form', async () => {
+/**
+ * B-C2 keeps its subject and loses its rule: a promote form is offered only where it can submit.
+ *
+ * The rule used to be "markdown only, and only with at least one slot", so the HTML case was
+ * asserted as an EXPLANATION with no form — a panel that said "Only markdown artifacts can be
+ * promoted". Templates are reference examples now: the service takes an HTML artifact and takes an
+ * artifact with no slots at all, so the form that could never submit is the form that is no longer
+ * refused. Asserting the refusal is gone matters as much as asserting the form is there — a stale
+ * sentence contradicting a working form is the same class of defect as a form that cannot be sent.
+ */
+describe('B-C2 · the Promote panel offers a form wherever the service accepts one', () => {
+  it('offers the form on an HTML artifact instead of refusing it for its type', async () => {
     const ctx = await makeContext();
     const { cookie, artifactId } = await seed(ctx, { type: 'html' });
 
@@ -147,10 +162,11 @@ describe('B-C2 · the Promote panel does not offer a form that can never submit'
     ).text();
 
     expect(html).toContain('Promote to template');
-    expect(html).not.toContain('id="template_name"');
-    expect(html).not.toContain('id="template_slug"');
-    expect(html).not.toContain('promote-template');
-    expect(html).toContain('Only markdown artifacts');
+    expect(html).toContain('id="template_name"');
+    expect(html).toContain('id="template_slug"');
+    expect(html).toContain('promote-template');
+    expect(html).toContain('Save as template');
+    expect(html).not.toContain('Only markdown artifacts');
   });
 
   it('still offers the form on a markdown artifact', async () => {
@@ -162,6 +178,32 @@ describe('B-C2 · the Promote panel does not offer a form that can never submit'
     ).text();
     expect(html).toContain('id="template_name"');
     expect(html).toContain('promote-template');
+  });
+
+  it('names the slots when there are some and stays silent when there are none', async () => {
+    const ctx = await makeContext();
+    const withSlots = await seed(ctx, { content: '# {{title}}\n\nBy {{author}}.' });
+
+    const slotted = await (
+      await ctx.app.request(`/dashboard/artifacts/${withSlots.artifactId}`, {
+        headers: { Cookie: withSlots.cookie },
+      })
+    ).text();
+    expect(slotted).toContain('Slots your agent can fill:');
+    expect(slotted).toContain('{{title}}');
+    expect(slotted).toContain('{{author}}');
+
+    // The slot-free case is the one the old copy got wrong: "Detected slots: none yet" read as a
+    // precondition the reader still had to satisfy, on a panel whose submit worked fine without it.
+    const plain = await makeContext();
+    const withoutSlots = await seed(plain, { type: 'html' });
+    const bare = await (
+      await plain.app.request(`/dashboard/artifacts/${withoutSlots.artifactId}`, {
+        headers: { Cookie: withoutSlots.cookie },
+      })
+    ).text();
+    expect(bare).not.toContain('Slots your agent can fill:');
+    expect(bare).not.toContain('none yet');
   });
 });
 

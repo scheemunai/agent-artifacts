@@ -448,26 +448,6 @@
       text-overflow: ellipsis;
     }
 
-    /* TEXT ELIDES; CONTROLS DO NOT. The rule above says "text that does not fit elides", and that
-       was only half true: the elide set is `span, a, p`, and a BUTTON is none of those. So under
-       pressure the row compressed the control instead — the form shrank to 52px around a 77px
-       button, which then hung out of its own parent and off the side of the page.
-
-       The height half of this problem was fixed in r4 and the width half was not, on the very case
-       that motivated it: with the 84-character service-account address named in the comment above,
-       the header stayed one row at 65px — correct — while the document panned 36px at 760, 761 and
-       768, and 3px at 1024. A short address hid it, leaking only 0.53px at exactly 760, which is
-       what got filed as a rounding hairline. It was not rounding; it was this, measured small.
-
-       So the priority is stated rather than left to flex defaults: an identity is abbreviatable and
-       an action is not. "Sign o…" is not a button. The text gives up its width — 116px to 56px at
-       760 — and the control keeps every pixel it needs. Measured after: pan 0 at 760/761/768/1024/
-       1440 with both a short address and the 84-character one, header still 65px in all ten. */
-    .aa-app-nav__account form,
-    .aa-app-nav__account .aa-btn {
-      flex: none;
-    }
-
     /* Specificity, not source order. The trigger is a `.aa-btn`, and `.aa-btn { display:
        inline-flex }` is emitted later in this layer; a bare `.aa-mobile-trigger` hide is an equal
        (0,1,0) tie that the later rule wins, so the Menu button rendered next to the full desktop
@@ -651,6 +631,37 @@
       border-color 160ms ease,
       color 160ms ease,
       transform 120ms ease;
+  }
+
+  /* MOVED HERE FOR CASCADE ORDER, NOT FOR ORGANISATION — `noDescendingSpecificity`.
+     `.aa-app-nav__account .aa-btn` is (0, 2, 0) and `.aa-btn` directly above is (0, 1, 0), and
+     this rule used to sit in the app-nav block ~180 lines earlier — the strong selector first,
+     the weak one after. The cascade is unchanged (the qualified selector already won, and no
+     rule between the two positions declares `flex` on either selector), and the media query
+     travelled with the rule so the 760px condition is untouched. Only the reading order moved.
+
+     TEXT ELIDES; CONTROLS DO NOT. `.aa-app-nav__account :where(span, a, p)` says "text that
+     does not fit elides", and that was only half true: the elide set is `span, a, p`, and a
+     BUTTON is none of those. So under pressure the row compressed the control instead — the
+     form shrank to 52px around a 77px button, which then hung out of its own parent and off the
+     side of the page.
+
+     The height half of this problem was fixed in r4 and the width half was not, on the very
+     case that motivated it: with the 84-character service-account address, the header stayed
+     one row at 65px — correct — while the document panned 36px at 760, 761 and 768, and 3px at
+     1024. A short address hid it, leaking only 0.53px at exactly 760, which is what got filed
+     as a rounding hairline. It was not rounding; it was this, measured small.
+
+     So the priority is stated rather than left to flex defaults: an identity is abbreviatable
+     and an action is not. "Sign o…" is not a button. The text gives up its width — 116px to
+     56px at 760 — and the control keeps every pixel it needs. Measured after: pan 0 at
+     760/761/768/1024/1440 with both a short address and the 84-character one, header still
+     65px in all ten. */
+  @media (min-width: 760px) {
+    .aa-app-nav__account form,
+    .aa-app-nav__account .aa-btn {
+      flex: none;
+    }
   }
 
   .aa-btn:hover,
@@ -1722,25 +1733,12 @@
     animation: aa-artifact-settle 520ms cubic-bezier(0.19, 0.62, 0.27, 1) both;
   }
 
-  /* The card content is centered, but the prompt is code — it stays left so the lines read as
-     something you paste, not prose. Isolated here so the card's `text-align: center` cannot reach
-     into the block's bar label or its `<pre>`. */
-  .aa-marketing-hero-card .aa-marketing-api {
-    text-align: left;
-  }
-
   .aa-marketing-hero-card__meta {
     justify-content: flex-start;
     /* The card body is centered; the meta bar is not — override the inherited centering so the
        agent name and chips read left, on desktop and on the phone where the agent used to grow and
        center itself. */
     text-align: left;
-  }
-
-  /* Keep the left group tight (dot · example-artifact · v1); the artifact embed lets the agent grow
-     to push a trailing timestamp right, but the hero card carries its own right-hand cluster. */
-  .aa-marketing-hero-card__meta .aa-marketing-artifact__agent {
-    flex: 0 0 auto;
   }
 
   /* published + the visibility control, pushed to the right edge as one group so the timestamp sits
@@ -1806,11 +1804,6 @@
     justify-content: center;
     gap: var(--spacing-aa-3);
     margin-top: var(--spacing-aa-1);
-  }
-
-  /* Full width so the prompt block, which the setup label heads, spans the card. */
-  .aa-marketing-hero-card__body .aa-marketing-api {
-    width: 100%;
   }
 
   .aa-marketing-setup-label {
@@ -2118,6 +2111,26 @@
     overflow: hidden;
     border-radius: var(--radius-aa-lg);
     background: var(--color-aa-dark-card);
+  }
+
+  /* MOVED HERE FOR CASCADE ORDER, NOT FOR ORGANISATION — `noDescendingSpecificity`.
+     These overrides are (0, 2, 0) and the base rule above is (0, 1, 0), so while they sat up in
+     the hero section the file presented the strong rule first and the weak one several hundred
+     lines later. Nothing about the resolved cascade changes: higher specificity already won
+     regardless of order, and neither override collides with a base declaration (`text-align`
+     is not set by the base at all, and `width: 100%` is the same value it already carries).
+     What changes is that the sheet now reads in the order it resolves in, so the next reader
+     does not have to hold two distant rules in their head to know which one applies. */
+  /* The card content is centered, but the prompt is code — it stays left so the lines read as
+     something you paste, not prose. Isolated here so the card's `text-align: center` cannot reach
+     into the block's bar label or its `<pre>`. */
+  .aa-marketing-hero-card .aa-marketing-api {
+    text-align: left;
+  }
+
+  /* Full width so the prompt block, which the setup label heads, spans the card. */
+  .aa-marketing-hero-card__body .aa-marketing-api {
+    width: 100%;
   }
 
   .aa-marketing-api__bar {
@@ -2743,6 +2756,19 @@
       margin-left: auto;
       text-align: left;
     }
+  }
+
+  /* MOVED HERE FOR CASCADE ORDER, NOT FOR ORGANISATION — `noDescendingSpecificity`. This is
+     (0, 2, 0) and both `.aa-marketing-artifact__agent` rules it overrides — the base above and
+     the `max-width: 560px` one — are (0, 1, 0), so it had to clear the LAST of them to stop
+     reading as descending. It stays outside every media query, exactly as before: the hero
+     card's left group is tight at every width. The 560px rule sets `flex: 1 1 auto` and this
+     sets `flex: 0 0 auto`; the qualified selector won that collision before the move and wins
+     it after, so the resolved value is unchanged at every viewport. */
+  /* Keep the left group tight (dot · example-artifact · v1); the artifact embed lets the agent grow
+     to push a trailing timestamp right, but the hero card carries its own right-hand cluster. */
+  .aa-marketing-hero-card__meta .aa-marketing-artifact__agent {
+    flex: 0 0 auto;
   }
 
   @media (prefers-reduced-motion: reduce) {

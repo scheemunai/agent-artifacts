@@ -63,52 +63,124 @@ test.afterEach(async ({ page }, testInfo) => {
   await assertBrowserIsClean(page, testInfo);
 });
 
+/**
+ * The homepage this asserts is the one that ships, and it is not the one this test was written for.
+ *
+ * The old assertions described the first marketing page — "Artifacts for Agents", "Send a link, not
+ * a file.", a live-artifact embed whose meta strip had to stay silent, a "Get your key" closing CTA,
+ * and a hard rule that NO surface may link to github.com. Every one of those is gone from
+ * `home.tsx`. What survives is this test's actual job, and it is stated three ways below: the
+ * page's STRUCTURE is present zone by zone, the brand lockup holds one line, and nothing overflows
+ * horizontally at any of the seven viewport edges.
+ *
+ * TWO ASSERTIONS CHANGED MEANING RATHER THAN WORDING, so they are called out rather than quietly
+ * rewritten:
+ *
+ * 1. GITHUB IS NOW INTENTIONAL. The repository was unpublished, so the old rule was "count 0" — a
+ *    link that 404s is worse than no link. The shipped hero and the self-host card both carry a
+ *    "View on GitHub" action, so the assertion is inverted: the affordance must EXIST and must
+ *    point at github.com. It deliberately does not fetch that URL. Whether a third-party host
+ *    answers is not something a local smoke suite can assert without going flaky on the network,
+ *    and `HOME_REPO_URL`'s own comment already records that it 404s until the repo is published.
+ *
+ * 2. THE META STRIP IS NO LONGER FETCHED. `.aa-marketing-artifact__updated` had to be absent
+ *    because the strip was filled from a live artifact and an unreachable one must not fall back to
+ *    a literal. The hero is now a self-referential ILLUSTRATION of an artifact card — a fixed
+ *    "example-artifact · v1 · published 3h ago" — so absence is the wrong assertion and the strip's
+ *    parts are asserted present instead. The static age is a property of the shipped page, noted
+ *    here so the change is visible rather than lost in a deleted line.
+ */
 test('cloud homepage renders Fresh Air structure without mobile overflow', async ({ page }) => {
   await page.goto(CLOUD_BASE_URL);
 
-  await expect(page.getByRole('heading', { name: 'Artifacts for Agents' })).toBeVisible();
+  // Zone 1 — the hero IS an artifact: a meta bar naming the agent, then the pitch and the actions.
+  const heroCard = page.locator('.aa-marketing-hero-card');
   await expect(
-    page.getByText('Shareable Artifacts your agent can use to show its work.')
+    page.getByRole('heading', { name: 'Let your agent show its work.', level: 1 })
   ).toBeVisible();
-  await expect(page.getByText('this-is-artifact')).toBeVisible();
-  // The meta strip is fetched from the live artifact. This instance has no such artifact,
-  // so the strip must stay silent rather than fall back to a hard-coded age.
-  await expect(page.locator('.aa-marketing-artifact__updated')).toHaveCount(0);
-  await expect(page.getByText(/updated \d+ (min|h|d|mo) ago/)).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Agent Skill' })).toBeVisible();
   await expect(
-    page.getByRole('link', { name: 'Open the live Agent Skill artifact' })
-  ).toHaveAttribute('href', /\/a\//);
-  await expect(page.getByRole('link', { name: '/skill.md' }).first()).toHaveAttribute(
+    page.getByText(
+      'Agents can generate custom UI and create clean, versioned pages with a shareable link.'
+    )
+  ).toBeVisible();
+  await expect(heroCard.locator('.aa-marketing-artifact__agent')).toHaveText('example-artifact');
+  await expect(heroCard.locator('.aa-marketing-chip')).toHaveText('v1');
+  await expect(heroCard.locator('.aa-marketing-artifact__updated')).toHaveText('published 3h ago');
+  // The right-hand cluster (published + visibility) stands down below 390px, where four fields stop
+  // fitting on one meta line. Asserted per width rather than skipped: the control is in the DOM at
+  // every width, so only a real viewport can tell "stood down as designed" from "lost".
+  const heroVisibility = heroCard.getByLabel('Artifact visibility');
+  await expect(heroVisibility).toHaveCount(1);
+  if ((page.viewportSize()?.width ?? 0) >= 390) {
+    await expect(heroVisibility).toBeVisible();
+  } else {
+    await expect(heroVisibility).toBeHidden();
+  }
+
+  await expect(heroCard.getByRole('link', { name: 'Get started' })).toHaveAttribute(
     'href',
-    '/skill.md'
+    '/login?mode=magic'
   );
+
+  // The copy-paste prompt that sets an agent up, and the skill file it sends the agent to read.
+  await expect(page.getByText('Set up with your agent')).toBeVisible();
+  await expect(page.locator('#home-prompt')).toContainText(
+    'Create a skill so you can publish to Agent Artifacts.'
+  );
+  await expect(page.locator('#home-prompt')).toContainText('/skill.md and set it up.');
+
+  // Zone 2 — what people use it for.
   await expect(page.getByRole('heading', { name: 'What people use it for' })).toBeVisible();
-  await expect(page.getByText('A status tracker')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Send a link, not a file.' })).toBeVisible();
-  await expect(page.locator('#home-api-code')).toContainText('POST agentartifact.ai/v1/artifacts');
-  await expect(
-    page.getByText("That's the whole API. Your agent already knows how to use it.")
-  ).toBeVisible();
+  await expect(page.getByText('A status tracker your agent keeps current.')).toBeVisible();
+  await expect(page.getByText('Quick decision lists you can act on.')).toBeVisible();
+
+  // Zone 3 — the capability index, each line led by its bolded term.
   await expect(page.getByText('Versioning: the agent edits the document')).toBeVisible();
   await expect(
-    page.getByText('Grok Bot, Claude Code, Codex, Hermes Agents, Openclaw')
+    page.getByText('Templates: keep an example page your agent rehashes into new work')
   ).toBeVisible();
+
+  // Zone 4 — works with: a named icon strip, not a single run-on sentence of tool names.
+  const worksWith = page.getByRole('list', { name: 'Works with these agents' });
+  await expect(worksWith.locator('li')).toHaveCount(5);
+  await expect(worksWith.getByText('Claude Code')).toBeVisible();
+  await expect(worksWith.getByText('OpenClaw')).toBeVisible();
+  await expect(page.getByText('and any agent that can make an HTTP request.')).toBeVisible();
+
+  // Zone 5 — the origin note. The section label and its screen-reader heading both carry the
+  // kicker, so this is scoped to the first rather than made ambiguous.
   await expect(page.getByText('Why this exists').first()).toBeVisible();
-  await expect(page.getByText('Free artifacts live for seven days, then fade.')).toBeVisible();
-  await expect(page.getByText('MIT licensed and self-hostable, end to end.')).toBeVisible();
+
+  // Zone 6 — pricing, then the self-host card that closes the page.
+  await expect(page.getByRole('heading', { name: 'Start free. Keep what matters.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Free', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pro', exact: true })).toBeVisible();
+  await expect(page.getByText('Artifacts live 7 days, then fade')).toBeVisible();
+  const selfHost = page.locator('.aa-marketing-selfhost');
+  await expect(selfHost.getByRole('heading', { name: 'Self-host? No problem.' })).toBeVisible();
+  await expect(selfHost).toContainText('MIT licensed and self-hostable, end to end');
+
+  // The footer keeps the agent-facing surfaces reachable from every state.
   await expect(page.getByRole('link', { name: 'Agent Skill', exact: true })).toHaveAttribute(
     'href',
     '/skill.md'
   );
+  await expect(page.getByRole('link', { name: 'API contract' })).toHaveAttribute(
+    'href',
+    '/llms.txt'
+  );
 
-  // Deck zone 8 closes with a call to action carrying the reassurance line.
-  const finalCta = page.locator('.aa-marketing-cta');
-  await expect(finalCta.getByRole('link', { name: 'Get your key' })).toBeVisible();
-  await expect(finalCta.getByText('Hashed URL · free · no card')).toBeVisible();
-
-  // The repository is unpublished, so no surface may link to it.
-  await expect(page.locator('a[href*="github.com"]')).toHaveCount(0);
+  // The GitHub affordance is intentional now — see note 1 in this test's header. Asserted as
+  // "exists and points at github.com", never as "that URL resolves".
+  const githubLinks = page.locator('a[href*="github.com"]');
+  expect(
+    await githubLinks.count(),
+    'the homepage offers no GitHub affordance at all'
+  ).toBeGreaterThan(0);
+  await expect(heroCard.getByRole('link', { name: 'View on GitHub' })).toHaveAttribute(
+    'href',
+    /^https:\/\/github\.com\/[^/]+\/[^/]+/
+  );
 
   // A-13: the header holds one row and the brand never breaks mid-name. Below 560px the secondary
   // action stands down rather than wrapping into the header rule; the footer keeps it reachable.
@@ -389,19 +461,21 @@ test('authenticated dashboard list to detail preserves history and share control
     await expect(page.locator('.aa-drawer__scrim')).toBeHidden();
   }
   await expect(page.getByRole('link', { name: seed.dashboardArtifactTitle })).toBeVisible();
-  // The list is the published aligned-row pattern now, not a stack of cards. Its columns align
-  // down the list above 480px and collapse below it — title on its own line, badge and meta
-  // stacked — so this scope is deliberately about the row, not about the alignment.
-  const dashboardRow = page.locator('.aa-list-row').filter({
+  // The list is `.aa-dashboard-card` now — the raised white-card pattern Bots and Templates share —
+  // rather than the aligned `.aa-list-row` this test was written against. That class still exists
+  // and is still registered in the style guide, so the old locator matched nothing and failed on
+  // the next line instead of here. The scope is deliberately the row, not the alignment.
+  const dashboardRow = page.locator('.aa-dashboard-card').filter({
     has: page.getByRole('link', { name: seed.dashboardArtifactTitle }),
   });
-  // The row's share-state affordance. It used to read "◆ shared", asserted on the glyph; the
-  // diamond was retired because one symbol was doing two unrelated jobs — the brand mark and a
-  // status marker — and the same fact had three different renderings across the product. What is
-  // protected here is unchanged: a shared artifact says so on its own row, at both viewports.
-  // `exact` still earns its keep — this share carries no password, and the protected variant
-  // reads "Shared · password".
-  await expect(dashboardRow.getByText('Shared', { exact: true })).toBeVisible();
+  // The row's share-state affordance. It has been renamed twice: "◆ shared" was asserted on the
+  // glyph, then "Shared" on the word, and the vocabulary is now the four states the artifact can
+  // actually be in — Public / Private / Password-protected / Link revoked. This seed's share is
+  // active and carries no password, so it reads Public.
+  //
+  // `exact` still earns its keep, and for the same reason it always did: it is what distinguishes
+  // this state from its neighbours rather than matching any badge that happens to contain the word.
+  await expect(dashboardRow.getByText('Public', { exact: true })).toBeVisible();
   await expect(dashboardRow.getByText('e2e-dashboard')).toBeVisible();
 
   // B-N3: the whole row is the target, not the title text alone. Asked as a hit test rather than
@@ -417,7 +491,9 @@ test('authenticated dashboard list to detail preserves history and share control
     const hit = document.elementFromPoint(box.right - 8, box.top + box.height / 2);
     return hit instanceof Element ? hit.className : 'nothing-in-the-viewport';
   });
-  expect(hitAtFarEdge, 'the far side of the row is not the link').toContain('aa-list-row__link');
+  expect(hitAtFarEdge, 'the far side of the row is not the link').toContain(
+    'aa-dashboard-card__link'
+  );
 
   await page.getByRole('link', { name: seed.dashboardArtifactTitle }).click();
 
