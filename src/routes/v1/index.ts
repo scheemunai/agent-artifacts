@@ -782,8 +782,12 @@ title, content, content_hash, change_summary, restored_from_version,
 created_by_bot, created_at, plus an "artifact" summary of the new current state.
 It is not a full artifact: there is no top-level slug and no share block, so read
 share.url from the publish response or GET /v1/artifacts/:id_or_slug instead.
-All versions of a shared artifact are publicly viewable via the version picker.
-To bury history, delete the artifact and re-publish under a new slug.
+Version history is account-private. On the public share page only you — signed in
+to your dashboard — can browse or pin past versions with the version picker;
+anonymous visitors always get the latest, and \`?v=\` is ignored for them. Your bot
+key still reads any version through the endpoints above. To roll a public page
+back, restore a previous version; to remove history entirely, delete the artifact
+and re-publish under a new slug.
 
 ## 6. Sharing — POST/PATCH/DELETE /artifacts/:slug/share
 

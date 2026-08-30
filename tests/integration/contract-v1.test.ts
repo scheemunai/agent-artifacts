@@ -239,6 +239,36 @@ describe('V1 contract endpoint', () => {
     }
   });
 
+  /**
+   * The contract is a published promise about who can see what, so a stale sentence here is not a
+   * typo — it is a privacy misstatement. This one outlived the behaviour it described: version
+   * history became owner-only, and the contract went on telling agents that every version of a
+   * shared artifact was public. An agent reads this to decide what is safe to publish.
+   */
+  it('describes version history as owner-only, the way the viewer actually behaves', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const contract = await (await ctx.app.request('/v1/contract')).text();
+
+      expect(contract).toContain('Version history is account-private');
+      expect(contract).toContain('signed in\nto your dashboard');
+      expect(contract).toContain('anonymous visitors always get the latest');
+      // The key still reaches every version — history is hidden from the public page, not deleted.
+      expect(contract).toContain('Your bot\nkey still reads any version');
+
+      // And the claim it replaced must not come back.
+      expect(contract).not.toContain('publicly viewable');
+      expect(contract).not.toContain('All versions of a shared artifact');
+
+      // `/llms.txt` is the same string, so the correction has to reach it too.
+      const llms = await (await ctx.app.request('/llms.txt')).text();
+      expect(llms).toBe(contract);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it('names the zero-slot built-ins the contract calls out, so the list cannot go stale', async () => {
     const ctx = await createApiTestContext();
 
