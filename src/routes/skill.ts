@@ -181,6 +181,7 @@ A template is a reusable example artifact — markdown or HTML — you rehash in
 - GET /v1/templates lists the examples available to you.
 - GET /v1/templates/:slug returns one, with its content and any slots it declares.
 - POST /v1/templates creates an account template from an existing markdown or HTML artifact. \`{{slot_name}}\` markers are optional; a template with no slots is an example you copy and rewrite.
+- DELETE /v1/templates/:slug deletes one of your own account templates. Built-in slugs are reserved: you cannot create a template that shadows one (409 slug_conflict) and you cannot delete one (403 built_in_template).
 
 Create template body:
 

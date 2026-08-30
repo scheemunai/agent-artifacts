@@ -189,8 +189,75 @@ describe('V1 contract endpoint', () => {
       );
       expect(undocumented).toEqual([]);
       expect(contract).toContain('POST /v1/templates');
+      expect(contract).toContain('DELETE /v1/templates/:slug');
       expect(contract).toContain('Templates with no slots are copied verbatim.');
       expect(contract).toContain('markdown or HTML artifact');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  /**
+   * This product is contract-first: an endpoint or a behaviour that only the code knows about is
+   * a defect, not a detail. Each assertion below is a question an agent got wrong while
+   * dogfooding the live API against this document.
+   */
+  it('documents the behaviours agents got wrong when the contract stayed quiet', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/contract');
+      expect(response.status).toBe(200);
+      const contract = await response.text();
+
+      // The `q` search filter existed only in openapi.json.
+      expect(contract).toContain('?q=weekly');
+      expect(contract).toContain('over title and slug only');
+
+      // Restore hands back a version, not an artifact — no slug, no share block.
+      expect(contract).toContain('Restore answers 201 with a VERSION object');
+      expect(contract).toContain('there is no top-level slug and no share block');
+
+      // A title change is a change, and does create a version.
+      expect(contract).toContain('a title is a change');
+      expect(contract).not.toContain('Every content change = a new version.');
+
+      // Zero-slot templates are examples to rehash, not forms to fill.
+      expect(contract).toContain('Zero-slot templates');
+      expect(contract).toContain('slots` you send are silently ignored');
+      for (const slug of ['recap', 'metrics-dashboard', 'report-html']) {
+        expect(contract).toContain(slug);
+      }
+
+      // Built-in slugs are reserved, and the write budget prices writes.
+      expect(contract).toContain('RESERVED');
+      expect(contract).toContain('403 built_in_template');
+      expect(contract).toContain('Only writes that succeed count against the 10/min write budget');
+      expect(contract).toContain('details.retry_after');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('names the zero-slot built-ins the contract calls out, so the list cannot go stale', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/templates?limit=50', {
+        headers: ctx.authHeaders,
+      });
+      expect(response.status).toBe(200);
+      const items = (await json(response)).items as Array<{
+        slug: string;
+        built_in: boolean;
+        slots: unknown[];
+      }>;
+
+      const zeroSlotBuiltIns = items
+        .filter((item) => item.built_in && item.slots.length === 0)
+        .map((item) => item.slug)
+        .sort();
+      expect(zeroSlotBuiltIns).toEqual(['metrics-dashboard', 'recap', 'report-html']);
     } finally {
       await ctx.cleanup();
     }

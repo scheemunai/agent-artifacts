@@ -17,6 +17,12 @@ export interface RateLimitPolicy {
 
 export interface RateLimitStore {
   take(key: string, limit: number, windowMs: number, now?: number): RateLimitResult;
+  /**
+   * Hands a token back to the current window. Returns the corrected result so the caller can
+   * restate its `X-RateLimit-*` headers, or `null` when there is nothing to refund (unknown key,
+   * or the window already rolled over and the token no longer exists).
+   */
+  refund(key: string, limit: number, now?: number): RateLimitResult | null;
   reset(): void;
 }
 
@@ -46,6 +52,22 @@ export class InMemoryRateLimitStore implements RateLimitStore {
       remaining: Math.max(0, limit - bucket.count),
       resetAt: bucket.resetAt,
       retryAfter,
+    };
+  }
+
+  refund(key: string, limit: number, now = Date.now()): RateLimitResult | null {
+    const bucket = this.buckets.get(key);
+    if (!bucket || bucket.resetAt <= now || bucket.count === 0) {
+      return null;
+    }
+
+    bucket.count -= 1;
+    return {
+      allowed: bucket.count <= limit,
+      limit,
+      remaining: Math.max(0, limit - bucket.count),
+      resetAt: bucket.resetAt,
+      retryAfter: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)),
     };
   }
 
@@ -117,6 +139,30 @@ export function enforceRateLimit(
     });
   }
 
+  return result;
+}
+
+/**
+ * Gives a token back and restates the headers so the client is told the truth.
+ *
+ * Used for budgets that are meant to price *work*, not traffic: a request the server refused
+ * before doing any work never spent the thing the budget protects. The token has to be taken
+ * before the handler runs (the limit is a gate, not a bill), so the correction happens after the
+ * outcome is known. Traffic itself is still priced by the per-key request limit, which charges
+ * every call including the refused ones — that is the backstop that keeps this from becoming a
+ * free retry loop.
+ */
+export function refundRateLimit(
+  context: Context,
+  store: RateLimitStore,
+  key: string,
+  limit: number,
+  headers = false
+): RateLimitResult | null {
+  const result = store.refund(key, limit);
+  if (result && headers) {
+    setRateLimitHeaders(context, result);
+  }
   return result;
 }
 

@@ -5,7 +5,12 @@ import type { AppConfig } from '../../config.js';
 import type { DatabaseHandle } from '../../db/client.js';
 import type { CloudModule } from '../../extension/cloud-module.js';
 import { AppError } from '../../lib/errors.js';
-import { clientIp, enforceRateLimit, globalRateLimitStore } from '../../lib/rate-limit.js';
+import {
+  clientIp,
+  enforceRateLimit,
+  globalRateLimitStore,
+  refundRateLimit,
+} from '../../lib/rate-limit.js';
 import {
   artifactListQuerySchema,
   createShareSchema,
@@ -17,8 +22,10 @@ import {
   updateArtifactSchema,
   versionListQuerySchema,
 } from '../../lib/schemas/index.js';
+import { type ValidationIssue, validationFailed } from '../../lib/validation.js';
 import type { Logger } from '../../logger.js';
 import {
+  deleteTemplateResponse,
   getTemplateResponse,
   listTemplatesResponse,
   mergeTemplate,
@@ -409,6 +416,17 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
     );
   });
 
+  v1.delete('/templates/:slug', async (context) => {
+    const auth = requireAuth(context);
+    return context.json(
+      await deleteTemplateResponse({
+        db: requireDb(ctx),
+        accountId: auth.account.id,
+        slug: context.req.param('slug'),
+      })
+    );
+  });
+
   methodNotAllowed(v1, '/contract', 'GET');
   methodNotAllowed(v1, '/openapi.json', 'GET');
   methodNotAllowed(v1, '/artifacts', 'GET, POST');
@@ -419,41 +437,91 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
   methodNotAllowed(v1, '/artifacts/:id_or_slug/share', 'POST, PATCH, DELETE');
   methodNotAllowed(v1, '/artifacts/:id_or_slug/download', 'GET');
   methodNotAllowed(v1, '/templates', 'GET, POST');
-  methodNotAllowed(v1, '/templates/:slug', 'GET');
+  methodNotAllowed(v1, '/templates/:slug', 'GET, DELETE');
 
   app.route('/v1', v1);
 }
 
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * The write budget prices writes, not attempts.
+ *
+ * It has to be taken before the handler runs — it is a gate, not an invoice — but a request that
+ * comes back 4xx never wrote anything, so the token is handed back once the outcome is known. An
+ * agent doing ordinary work (create → update → share) with a typo in the middle of it used to walk
+ * into a 429 on its fourth *successful* call, which reads as "the service is broken" rather than
+ * "you are going too fast".
+ *
+ * Traffic is still priced: the per-key request limit above charges every call, refused ones
+ * included, so this cannot be turned into an unmetered retry loop.
+ */
 function authMiddleware(ctx: V1RoutesContext): MiddlewareHandler<V1Env> {
   return async (context, next) => {
+    // `/artifacts` and `/artifacts/*` are both registered, and a collection request matches BOTH,
+    // so this middleware is entered twice for `POST /v1/artifacts` and once for
+    // `PUT /v1/artifacts/:slug`. Authenticating twice is only waste; charging the rate limit twice
+    // was the bug — it silently halved both published budgets on the collection endpoints, so the
+    // "10 writes/min" in the contract was really 5, and only when publishing. The registrations
+    // stay (matching a collection with a trailing wildcard is a router detail, not a promise); the
+    // work is what becomes once-per-request.
+    if (context.get('auth')) {
+      await next();
+      return;
+    }
+
     const token = bearerToken(context.req.header('authorization'));
     const auth = await authenticateBotToken(requireDb(ctx), token);
     context.set('auth', auth);
 
-    if (!ctx.config.rateLimitsDisabled) {
-      enforceRateLimit(
-        context,
-        globalRateLimitStore,
-        `v1:key:${auth.apiKeyHash}`,
-        ctx.config.rateLimitRpm,
-        60_000,
-        true
-      );
-
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(context.req.method)) {
-        enforceRateLimit(
-          context,
-          globalRateLimitStore,
-          `v1:write:${auth.apiKeyHash}`,
-          ctx.config.rateLimitWritesPerMin,
-          60_000,
-          true
-        );
-      }
+    if (ctx.config.rateLimitsDisabled) {
+      await next();
+      return;
     }
 
-    await next();
+    enforceRateLimit(
+      context,
+      globalRateLimitStore,
+      `v1:key:${auth.apiKeyHash}`,
+      ctx.config.rateLimitRpm,
+      60_000,
+      true
+    );
+
+    if (!WRITE_METHODS.has(context.req.method)) {
+      await next();
+      return;
+    }
+
+    const writeKey = `v1:write:${auth.apiKeyHash}`;
+    const writeLimit = ctx.config.rateLimitWritesPerMin;
+    enforceRateLimit(context, globalRateLimitStore, writeKey, writeLimit, 60_000, true);
+
+    const refundWrite = (): void => {
+      refundRateLimit(context, globalRateLimitStore, writeKey, writeLimit, true);
+    };
+
+    // Both exits are real. A thrown AppError normally reaches the error handler as a response
+    // before this middleware resumes, but a handler further out can also reject outright, and a
+    // rejection that skipped the refund would silently reinstate the bug.
+    try {
+      await next();
+    } catch (error) {
+      if (error instanceof AppError && isClientError(error.status)) {
+        refundWrite();
+      }
+      throw error;
+    }
+
+    if (isClientError(context.res.status)) {
+      refundWrite();
+    }
   };
+}
+
+/** 4xx except 429: the request the limiter itself refused keeps its token, so it cannot loop. */
+function isClientError(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 429;
 }
 
 function requireDb(ctx: V1RoutesContext): DatabaseHandle {
@@ -514,41 +582,22 @@ async function readJson(
   }
 }
 
-function parseBody<T>(
-  value: Record<string, unknown>,
-  schema: {
-    safeParse(
-      input: unknown
-    ):
-      | { success: true; data: T }
-      | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
-  }
-): T {
+interface ParsableSchema<T> {
+  safeParse(
+    input: unknown
+  ): { success: true; data: T } | { success: false; error: { issues: ValidationIssue[] } };
+}
+
+function parseBody<T>(value: Record<string, unknown>, schema: ParsableSchema<T>): T {
   const parsed = schema.safeParse(value);
   if (parsed.success) {
     return parsed.data;
   }
 
-  const issue = parsed.error.issues[0];
-  throw new AppError(400, 'validation_failed', issue?.message ?? 'Validation failed', {
-    ...(issue?.path[0] ? { field: String(issue.path[0]) } : {}),
-    issues: parsed.error.issues.map((item) => ({
-      field: item.path.join('.'),
-      message: item.message,
-    })),
-  });
+  throw validationFailed(parsed.error.issues);
 }
 
-function parseQuery<T>(
-  context: Context,
-  schema: {
-    safeParse(
-      input: unknown
-    ):
-      | { success: true; data: T }
-      | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
-  }
-): T {
+function parseQuery<T>(context: Context, schema: ParsableSchema<T>): T {
   return parseBody(context.req.query(), schema);
 }
 
@@ -590,6 +639,7 @@ Documented endpoints:
 - GET /v1/templates
 - POST /v1/templates
 - GET /v1/templates/:slug
+- DELETE /v1/templates/:slug
 - GET /v1/artifacts/:id_or_slug/download
 
 ## The one rule that matters: publish by slug
@@ -640,6 +690,27 @@ Send template + slots INSTEAD of type + content (server uses the template's type
 For templates with slots, missing/unknown slot names come back as a 400 that
 lists the valid slots. Templates with no slots are copied verbatim.
 
+### Zero-slot templates: fetch, rewrite, publish (do NOT use template:)
+
+Check the slots array before you reach for \`template:\`. Several built-ins ship
+with \`"slots": []\` — today \`recap\`, \`metrics-dashboard\` and \`report-html\`, all
+HTML. A zero-slot template is an EXAMPLE, not a form. \`template:"recap"\` copies
+that example VERBATIM and any \`slots\` you send are silently ignored, so you get a
+201 and the demo content, not your content. That is working as designed, and it
+is not what you wanted.
+
+The intended flow for a zero-slot template is three steps:
+
+  1. GET /v1/templates/recap        → read \`content\` (and \`type\`)
+  2. Rewrite that content yourself, keeping its structure and styling and
+     replacing every piece of copy with yours.
+  3. POST /v1/artifacts {"slug":"...","type":"html","title":"...",
+     "content":"<your rewritten document>"} — an ordinary publish. No
+     \`template\` field.
+
+Rule of thumb: slots non-empty → send \`template\` + \`slots\`. Slots empty → GET it,
+rehash it, publish it as \`type\`+\`content\`.
+
 ## 3. Promote an artifact into a template — POST /templates
 
 Promote an existing markdown or HTML artifact into an account template your bots
@@ -654,7 +725,10 @@ curl -X POST ${config.baseUrl}/v1/templates \\
 Request body:
 - artifact_id: existing artifact id in your account.
 - name: template display name (1..80 chars).
-- slug: lowercase letters/numbers/dashes, unique among your account templates.
+- slug: lowercase letters/numbers/dashes, unique among your account templates AND
+  distinct from every built-in slug. Built-in slugs (report, changelog, briefing,
+  dashboard, one-pager, recap, metrics-dashboard, report-html) are RESERVED: you
+  cannot create a template that shadows one.
 - description: optional short description (max 300 chars).
 
 Response: 201 with id, slug, name, description, thumbnail_url, type,
@@ -663,13 +737,30 @@ source artifact. The slots list is derived from {{slot_name}} markers in the
 artifact content, or is empty for verbatim templates.
 
 Errors:
-- 409 slug_conflict when the slug already exists.
+- 409 slug_conflict when the slug already exists in your account, or when it is
+  reserved by a built-in (details.built_in:true).
 - 404 not_found when artifact_id is unknown or deleted.
+
+### Delete one of your templates — DELETE /templates/:slug
+
+curl -X DELETE ${config.baseUrl}/v1/templates/ops-brief \\
+  -H "Authorization: Bearer aa_bot_YOUR_KEY"
+
+Response: 200 { "deleted": true, "id": "tpl_...", "slug": "ops-brief" }.
+Only your own account templates can be deleted; artifacts already published from
+the template are untouched.
+
+Errors:
+- 403 built_in_template when the slug names a built-in template.
+- 404 not_found when your account has no template with that slug.
 
 ## 4. Read back — GET
 
 GET /v1/artifacts                        → list (newest first; no content)
     filters: ?bot=bot_ID  ?type=markdown  ?updated_since=2026-08-01T00:00:00Z
+             ?q=weekly   — case-insensitive "contains" over title and slug only
+                           (NOT content), max 80 chars, treated as literal text
+                           rather than a pattern; combines with the filters above
     paging:  ?limit=20&cursor=...  → { "items": [...], "next_cursor": "..."|null }
 GET /v1/artifacts/weekly-report          → one artifact, full content + share state
     (works with the slug or the art_... id)
@@ -682,8 +773,15 @@ curl -X PUT .../v1/artifacts/weekly-report -H "Authorization: Bearer aa_bot_YOUR
   -d '{"content":"# Updated...","change_summary":"Fixed numbers"}'
 Accepted PUT /v1/artifacts/:id_or_slug request fields (strict; unknown fields return 400 validation_failed): \`title\`, \`content\`, \`type\`, \`slug\`, \`metadata\`, \`change_summary\`.
 PUT does not accept \`template\`, \`slots\`, \`share\`, \`password\`, or response-only \`expires_at\`.
-Every content change = a new version. History:
+Every change = a new version, and a title is a change: PUT {"title":"..."} alone
+bumps version_num. Re-sending values identical to the current ones changes
+nothing ("unchanged": true). History:
 GET .../weekly-report/versions           POST .../versions/3/restore
+Restore answers 201 with a VERSION object — artifact_id, version_num, type,
+title, content, content_hash, change_summary, restored_from_version,
+created_by_bot, created_at, plus an "artifact" summary of the new current state.
+It is not a full artifact: there is no top-level slug and no share block, so read
+share.url from the publish response or GET /v1/artifacts/:id_or_slug instead.
 All versions of a shared artifact are publicly viewable via the version picker.
 To bury history, delete the artifact and re-publish under a new slug.
 
@@ -700,10 +798,18 @@ DELETE /v1/artifacts/weekly-report   → soft-delete (share revoked too).
 
 ## Limits & errors
 
-- 2 MB per artifact · 60 requests/min · 10 writes/min (429 + Retry-After when over).
+- 2 MB per artifact · 60 requests/min · 10 writes/min (429 + Retry-After when over,
+  and details.retry_after carries the same number of seconds).
+- Only writes that succeed count against the 10/min write budget. A write that
+  comes back 4xx — a validation slip, a 409, a 404 — is refunded, so a typo in the
+  middle of ordinary work does not cost you a publish. Every request, refused ones
+  included, still counts against the 60/min request budget.
 - Errors are always: { "error": { "code": "snake_case", "message": "...", "details": {...} } }
   Common codes: unauthorized (401), not_found (404), validation_failed (400),
-  payload_too_large (413), rate_limited (429), slug_conflict (409).
+  payload_too_large (413), rate_limited (429), slug_conflict (409),
+  built_in_template (403).
+  On a rejected unknown field, details.field and details.issues[].field name the
+  key that was rejected.
 
 ## Habits worth forming
 
@@ -860,6 +966,14 @@ function openApiDocument(config: AppConfig): Record<string, unknown> {
           security,
           parameters: pathParameters(['slug']),
           responses: { '200': { description: 'Template' }, ...errorResponses },
+        },
+        delete: {
+          summary: 'Delete an account template',
+          description:
+            'Deletes one of the caller account’s own templates. Built-in templates are not deletable and answer 403 built_in_template.',
+          security,
+          parameters: pathParameters(['slug']),
+          responses: { '200': { description: 'Template deleted' }, ...errorResponses },
         },
       },
       '/artifacts/{id_or_slug}/download': {

@@ -14,6 +14,7 @@ import {
   slugSchema,
 } from '../lib/schemas/artifacts.js';
 import { promoteTemplateSchema, templateSlotSchema } from '../lib/schemas/templates.js';
+import { validationFailed } from '../lib/validation.js';
 import type { Logger } from '../logger.js';
 
 export interface TemplateSlot {
@@ -270,14 +271,7 @@ export async function promoteArtifactToTemplate(
       : {}),
   });
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    throw new AppError(400, 'validation_failed', issue?.message ?? 'Validation failed', {
-      ...(issue?.path[0] ? { field: String(issue.path[0]) } : {}),
-      issues: parsed.error.issues.map((item) => ({
-        field: item.path.join('.'),
-        message: item.message,
-      })),
-    });
+    throw validationFailed(parsed.error.issues);
   }
 
   const artifact = await resolveArtifactForPromotion(input.db, input.accountId, input.artifactId);
@@ -289,6 +283,10 @@ export async function promoteArtifactToTemplate(
   if (slotNames.length > 0) {
     assertNoInvalidTemplateResidue(artifact.content);
   }
+
+  // Checked here, in the position the database constraint used to occupy, so that the order errors
+  // are reported in does not shift: an unknown artifact_id is still a 404 before it is a 409.
+  await assertTemplateSlugAvailable(input.db, input.accountId, parsed.data.slug);
 
   const now = Date.now();
   const templateId = `tpl_${nanoid(21)}`;
@@ -313,9 +311,12 @@ export async function promoteArtifactToTemplate(
       now,
     });
   } catch (error) {
+    // The pre-flight check above is the one that produces a good message; this is the race backstop
+    // and the only guard the built-in index can offer, so it stays.
     if (isUniqueConstraintError(error)) {
       throw new AppError(409, 'slug_conflict', 'Template slug is already in use', {
         field: 'slug',
+        slug: parsed.data.slug,
       });
     }
     throw error;
@@ -332,6 +333,71 @@ export async function promoteTemplateResponse(
   input: PromoteArtifactToTemplateInput
 ): Promise<Record<string, unknown>> {
   return formatTemplate(await promoteArtifactToTemplate(input), true);
+}
+
+/**
+ * Built-in slugs are reserved, and the database cannot say so on its own: the unique indexes are
+ * partial (`account_id IS NOT NULL` for account rows, `IS NULL` for built-ins), so nothing stopped
+ * an account template from being created under the name of a built-in.
+ *
+ * What that bought was not a shadow you could see. `resolveTemplate` prefers the account row, so
+ * `POST /v1/artifacts {"template":"report","slots":{…}}` kept answering 201 — but against the
+ * shadow, which declares no slots, and a slot-free template is copied verbatim. The slots were
+ * dropped in silence and the caller was handed somebody else's document with a success code on it.
+ * The reservation is enforced here, at the only moment the ambiguity can be created.
+ */
+async function assertTemplateSlugAvailable(
+  db: DatabaseHandle,
+  accountId: string,
+  slug: string
+): Promise<void> {
+  const existing = await resolveTemplate(db, accountId, slug);
+  if (!existing) {
+    return;
+  }
+
+  if (existing.account_id === null) {
+    throw new AppError(
+      409,
+      'slug_conflict',
+      `Template slug "${slug}" is reserved by a built-in template`,
+      { field: 'slug', slug, built_in: true }
+    );
+  }
+
+  throw new AppError(409, 'slug_conflict', 'Template slug is already in use', {
+    field: 'slug',
+    slug,
+  });
+}
+
+export async function deleteTemplateResponse(input: {
+  db: DatabaseHandle;
+  accountId: string;
+  slug: string;
+}): Promise<Record<string, unknown>> {
+  const template = await findAccountTemplateBySlug(input.db, input.accountId, input.slug);
+  if (!template) {
+    // A built-in under this slug is a different answer from "no such template": one says the caller
+    // asked for something that is not theirs to delete, the other that it does not exist. Saying
+    // 404 for both would send an agent hunting for a template it is looking straight at.
+    const builtIn = await findBuiltInTemplateBySlug(input.db, input.slug);
+    if (builtIn) {
+      throw new AppError(403, 'built_in_template', 'Built-in templates cannot be deleted', {
+        field: 'slug',
+        slug: input.slug,
+        built_in: true,
+      });
+    }
+    throw new AppError(404, 'not_found', 'Template not found');
+  }
+
+  await execute(input.db, 'DELETE FROM templates WHERE id = ? AND account_id = ?', [
+    template.id,
+    input.accountId,
+  ]);
+
+  return { deleted: true, id: template.id, slug: template.slug };
 }
 
 export function parseSlots(slots: string): TemplateSlot[] {
@@ -557,6 +623,16 @@ async function listTemplateRows(
   );
 }
 
+/**
+ * Account row first, built-in second.
+ *
+ * That precedence is deliberate and stays. Flipping it to "built-in always wins" would look like
+ * the tidier invariant, but it would mean shipping a new starter template could silently
+ * repossess a name an account was already using — the account's own document would quietly turn
+ * into ours. Collisions are prevented at creation time by `assertTemplateSlugAvailable` instead,
+ * which is the only place where nobody is depending on the answer yet. Rows that predate that
+ * check keep resolving to the account's template until the owner deletes it.
+ */
 async function resolveTemplate(
   db: DatabaseHandle,
   accountId: string,
@@ -572,6 +648,29 @@ async function resolveTemplate(
       LIMIT 1
     `,
     [slug, accountId]
+  );
+}
+
+async function findAccountTemplateBySlug(
+  db: DatabaseHandle,
+  accountId: string,
+  slug: string
+): Promise<TemplateRow | null> {
+  return queryOne<TemplateRow>(
+    db,
+    'SELECT * FROM templates WHERE slug = ? AND account_id = ? LIMIT 1',
+    [slug, accountId]
+  );
+}
+
+async function findBuiltInTemplateBySlug(
+  db: DatabaseHandle,
+  slug: string
+): Promise<TemplateRow | null> {
+  return queryOne<TemplateRow>(
+    db,
+    'SELECT * FROM templates WHERE slug = ? AND account_id IS NULL LIMIT 1',
+    [slug]
   );
 }
 

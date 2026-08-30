@@ -90,4 +90,24 @@ curl -sS -X DELETE "$AA_BASE_URL/v1/artifacts/weekly-report/share" \
   -H "Authorization: Bearer $AA_BOT_KEY"
 ```
 
-For templates, use `GET /v1/templates` and `GET /v1/templates/:slug`, then publish with `template` and `slots` instead of `type` and `content`.
+Restore answers `201` with a **version** object, not a full artifact: it has `artifact_id`, `version_num`, `content`, and an `artifact` summary, but no top-level `slug` and no `share` block.
+
+## 6. Templates
+
+```bash
+curl -sS "$AA_BASE_URL/v1/templates" \
+  -H "Authorization: Bearer $AA_BOT_KEY"
+
+curl -sS "$AA_BASE_URL/v1/templates/report" \
+  -H "Authorization: Bearer $AA_BOT_KEY"
+
+curl -sS -X DELETE "$AA_BASE_URL/v1/templates/ops-brief" \
+  -H "Authorization: Bearer $AA_BOT_KEY"
+```
+
+Check `slots` before you publish with one:
+
+- **Slots declared** — publish with `template` and `slots` instead of `type` and `content`.
+- **`"slots": []`** — the template is an example, not a form. `template:` copies it verbatim and ignores any `slots` you send. Fetch it, rewrite the content yourself, and publish the result as an ordinary `type` + `content` artifact.
+
+Built-in slugs are reserved. `POST /v1/templates` answers `409 slug_conflict` for a slug that a built-in or one of your own templates already holds, and `DELETE /v1/templates/:slug` answers `403 built_in_template` for a built-in.
