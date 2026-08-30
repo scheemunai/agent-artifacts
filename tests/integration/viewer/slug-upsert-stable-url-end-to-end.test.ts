@@ -32,11 +32,14 @@ describe('viewer slug upsert stable URL end-to-end', () => {
       expect(latestBody.version_num).toBe(2);
       expect(latestBody.html).toContain('Version 2');
 
+      // A share link publishes the current document. Asking it for v1 as a stranger is not an
+      // error and not a way in: the link keeps working and keeps answering with what it publishes.
       const pinned = await ctx.app.request(`/a/${first.share?.shareId}/content?v=1`);
       const pinnedBody = (await pinned.json()) as { version_num: number; html: string };
       expect(pinned.status).toBe(200);
-      expect(pinnedBody.version_num).toBe(1);
-      expect(pinnedBody.html).toContain('Version 1');
+      expect(pinnedBody.version_num).toBe(2);
+      expect(pinnedBody.html).toContain('Version 2');
+      expect(pinnedBody.html).not.toContain('Version 1');
     } finally {
       await ctx.cleanup();
     }

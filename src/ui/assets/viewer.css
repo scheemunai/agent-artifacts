@@ -186,7 +186,10 @@
   display: contents;
 }
 
-.aa-viewer-menu-toggle {
+.aa-viewer-menu-toggle,
+/* The bar already shows the title in full at this size; a second copy would be a duplicate
+   heading in the accessibility tree as well as on screen. */
+.aa-viewer-menu__title {
   display: none;
 }
 
@@ -212,7 +215,9 @@
     gap: var(--spacing-aa-3);
     border: 1px solid var(--color-aa-dark-line);
     border-radius: var(--radius-aa-lg);
-    padding: var(--spacing-aa-3);
+    /* One value, all four edges. Stated as a single shorthand rather than a block/inline pair so
+       the two sides cannot be given different numbers later without somebody meaning to. */
+    padding: var(--spacing-aa-4);
     background: var(--color-aa-dark-card);
     box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
   }
@@ -223,6 +228,18 @@
     display: none;
   }
 
+  /* The whole title, wrapping, at the top of the panel: this is the one place on a phone where a
+     long title is readable, because the bar above has already had to cut it off. */
+  .aa-viewer-menu__title {
+    display: block;
+    overflow-wrap: break-word;
+    color: var(--color-aa-dark-text);
+    font-size: var(--text-aa-md);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+
   .aa-viewer-menu .aa-viewer-chrome__meta {
     display: flex;
     flex-wrap: wrap;
@@ -230,20 +247,24 @@
     white-space: normal;
   }
 
-  /* Stacked, full width: a menu row is a target, not a toolbar button. */
+  /* A ROW OF CONTROLS, NOT A STACK OF BARS. These were `width: 100%` in a grid, which turned two
+     small controls into two full-bleed slabs filling a panel that exists to be compact — and the
+     select's own 2rem chevron inset then read as the panel being lopsided. Intrinsic widths, laid
+     out in a row that wraps when it must. */
   .aa-viewer-menu .aa-viewer-actions {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--spacing-aa-2);
+    align-items: center;
   }
 
   .aa-viewer-menu .aa-viewer-version-select {
-    width: 100%;
-    min-width: 0;
+    width: auto;
+    min-width: 4.5rem;
   }
 
   .aa-viewer-menu .aa-btn {
-    width: 100%;
-    justify-content: flex-start;
+    width: auto;
   }
 
   .aa-viewer-menu-toggle {

@@ -20,6 +20,7 @@ const htmlContent: ViewerContentResult = {
   bot: { name: 'QA Bot', byline: 'polish tester' },
   passwordProtected: false,
   footer: true,
+  isOwner: false,
   html: null,
   frameUrl: '/a/AbCdEfGhIjKlMnOpQrStUv/frame',
 };
@@ -29,6 +30,7 @@ const model: ViewerPageModel = {
   canonicalUrl: `https://example.test/a/${htmlContent.shareId}`,
   passwordProtected: false,
   footer: true,
+  isOwner: false,
   meta: {
     title: htmlContent.title,
     description: 'Published with Agent Artifacts',

@@ -8,6 +8,7 @@ const passwordInput = document.getElementById('aa-share-password');
 const passwordError = document.querySelector('[data-aa-password-error]');
 const passwordSubmit = document.querySelector('[data-aa-password-submit]');
 const titleNode = document.querySelector('[data-aa-title]');
+const menuTitleNode = document.querySelector('[data-aa-menu-title]');
 const bylineNode = document.querySelector('[data-aa-byline]');
 const updatedNode = document.querySelector('[data-aa-updated-at]');
 const contentNode = document.querySelector('[data-aa-content]');
@@ -321,6 +322,11 @@ function applyContent(payload, { showUpdated, preserveScroll }) {
   }
   if (titleNode) {
     titleNode.textContent = payload.title || 'Untitled artifact';
+  }
+  // The phone panel carries the same title unabbreviated, so it has to be rewritten with it —
+  // otherwise a republished artifact shows the new title in the bar and the old one in the menu.
+  if (menuTitleNode) {
+    menuTitleNode.textContent = payload.title || 'Untitled artifact';
   }
   if (bylineNode) {
     const byline = formatByline(payload.bot);

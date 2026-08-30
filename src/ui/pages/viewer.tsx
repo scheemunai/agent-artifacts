@@ -41,13 +41,18 @@ interface BootContentPayload {
 }
 
 export function ViewerPage({ model, pinnedVersion }: ViewerPageProps) {
+  // A pin only means something for the owner. The route already refuses to echo one back to anybody
+  // else, and this is the second lock on the same door: a page that cannot be given a version it is
+  // not allowed to show cannot announce "Viewing v1 of v3" over the latest content, and cannot put
+  // `v=1` in the boot payload for the client to send on every poll.
+  const shownVersion = model.isOwner ? pinnedVersion : undefined;
   const boot = {
     shareId: model.shareId,
     contentUrl: `/a/${model.shareId}/content`,
     verifyUrl: `/a/${model.shareId}/verify-password`,
     downloadUrl: `/a/${model.shareId}/download`,
     canonicalUrl: model.canonicalUrl,
-    pinnedVersion: pinnedVersion ?? null,
+    pinnedVersion: shownVersion ?? null,
     passwordProtected: model.passwordProtected,
     initialContent: model.initialContent ? toBootContent(model.initialContent) : null,
   };
@@ -68,10 +73,14 @@ export function ViewerPage({ model, pinnedVersion }: ViewerPageProps) {
           data-aa-document="true"
           hidden={model.passwordProtected ? true : undefined}
         >
-          <ViewerChrome content={model.initialContent} pinnedVersion={pinnedVersion} />
+          <ViewerChrome
+            content={model.initialContent}
+            isOwner={model.isOwner}
+            pinnedVersion={shownVersion}
+          />
           <RefreshStatus />
           <VersionBanner
-            shownVersion={pinnedVersion ?? null}
+            shownVersion={shownVersion ?? null}
             latestVersion={
               model.initialContent?.latestVersionNum ?? model.initialContent?.versionNum ?? 1
             }
@@ -278,15 +287,21 @@ export function PasswordGate({ visible }: { visible: boolean }) {
 
 function ViewerChrome({
   content,
+  isOwner,
   pinnedVersion,
 }: {
   content: ViewerContentResult | null;
+  isOwner: boolean;
   pinnedVersion?: number | undefined;
 }) {
   const downloadHref = content
     ? `/a/${content.shareId}/download${pinnedVersion ? `?v=${pinnedVersion}` : ''}`
     : '#';
   const latestVersion = content?.latestVersionNum ?? content?.versionNum ?? 1;
+  // Not hidden — ABSENT. Version history is the owner's working record, and a control that lists it
+  // is itself a disclosure: it tells a reader how many drafts there were and invites them to try
+  // `?v=`. The server ignores that param for everyone else, and this makes sure nothing suggests it.
+  const showVersionPicker = isOwner && latestVersion > 1;
 
   const hasBot = Boolean(content?.bot);
 
@@ -323,6 +338,12 @@ function ViewerChrome({
           data-aa-menu-panel="true"
           data-aa-open="false"
         >
+          {/* The header title ellipsises on a phone — it has one line and a bar to share. The
+              panel has neither constraint, so the whole title lives here, wrapping, where somebody
+              who needs to read it can. Hidden on desktop, where the bar shows it in full. */}
+          <span class="aa-viewer-menu__title" data-aa-menu-title="true">
+            {content?.title ?? ''}
+          </span>
           <span class="aa-viewer-chrome__meta">
             <span class="aa-viewer-byline" data-aa-byline="true" hidden={hasBot ? undefined : true}>
               {content?.bot ? formatByline(content.bot) : ''}
@@ -339,24 +360,27 @@ function ViewerChrome({
             </span>
           </span>
           <div class="aa-viewer-actions">
-            <label class="sr-only" for="aa-version-picker">
-              Artifact version
-            </label>
-            <select
-              class="aa-control aa-viewer-version-select"
-              id="aa-version-picker"
-              data-aa-version-picker="true"
-              hidden={latestVersion > 1 ? undefined : true}
-            >
-              {Array.from({ length: latestVersion }, (_, index) => index + 1).map((version) => (
-                <option
-                  value={String(version)}
-                  selected={(pinnedVersion ?? latestVersion) === version}
+            {showVersionPicker ? (
+              <>
+                <label class="sr-only" for="aa-version-picker">
+                  Artifact version
+                </label>
+                <select
+                  class="aa-control aa-viewer-version-select"
+                  id="aa-version-picker"
+                  data-aa-version-picker="true"
                 >
-                  v{version}
-                </option>
-              ))}
-            </select>
+                  {Array.from({ length: latestVersion }, (_, index) => index + 1).map((version) => (
+                    <option
+                      value={String(version)}
+                      selected={(pinnedVersion ?? latestVersion) === version}
+                    >
+                      v{version}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : null}
             <Button
               variant="secondary"
               class="aa-viewer-download"

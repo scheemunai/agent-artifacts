@@ -47,6 +47,7 @@ const content: ViewerContentResult = {
   bot: { name: 'R2', byline: 'Chief of Staff' },
   passwordProtected: false,
   footer: true,
+  isOwner: false,
   html: '<article class="aa-md"><h1>Weekly Ops</h1></article>',
   frameUrl: null,
 };
@@ -58,6 +59,7 @@ const model: ViewerPageModel = {
   canonicalUrl,
   passwordProtected: false,
   footer: true,
+  isOwner: false,
   meta: {
     title: content.title,
     description: 'Published with Agent Artifacts',

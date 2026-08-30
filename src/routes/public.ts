@@ -20,6 +20,7 @@ import {
 } from '../lib/rate-limit.js';
 import type { Logger } from '../logger.js';
 import { ServiceError, toErrorEnvelope } from '../services/errors.js';
+import { SessionService } from '../services/sessions.js';
 import {
   SHARE_ID_PATTERN,
   VIEWER_COOKIE_MAX_AGE_SECONDS,
@@ -65,6 +66,32 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       })
     : null;
   const rateLimitStore = new InMemoryRateLimitStore();
+  // The dashboard's own session service, reused rather than reimplemented: "is this cookie a valid
+  // session" is a security question with one right answer, and a second copy of it here would be a
+  // second copy to keep correct.
+  const sessions = ctx.db ? new SessionService(ctx.db, ctx.config) : null;
+
+  /**
+   * The signed-in account behind this request, or null.
+   *
+   * Best-effort by design. This runs on a public page that must render for anyone, so every way of
+   * not being signed in — no cookie, a forged one, an expired session, a deleted account, or the
+   * session store being unhappy — resolves to "a stranger", which is the safe answer. It never
+   * decides whether the page is served, only whether the page's history is.
+   */
+  const requesterAccountId = async (context: Context): Promise<string | null> => {
+    if (!sessions) {
+      return null;
+    }
+
+    try {
+      const session = await sessions.validateContext(context);
+      return session?.account.id ?? null;
+    } catch (error) {
+      ctx.logger.warn({ err: error }, 'public.viewer.session_lookup_failed');
+      return null;
+    }
+  };
 
   app.use('/a/*', async (context, next) => {
     if (ctx.config.rateLimitsDisabled) {
@@ -96,12 +123,20 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       const content = await viewer.getContent(shareId, {
         ...(versionNum ? { versionNum } : {}),
         viewerToken: shareToken(context as unknown as PublicContext),
+        requesterAccountId: await requesterAccountId(context),
       });
+      // Described by what was SERVED, not by what was asked for. A stranger sending `?v=1` now
+      // receives the latest content, and marking that immutable for a day would park the current
+      // artifact in their cache under a historical URL — and hand it back to the owner, who is
+      // entitled to v1, from their own browser.
+      const servedHistoricalVersion = content.versionNum !== content.latestVersionNum;
       const etag = quoteEtag(content.contentHash);
       context.header('ETag', etag);
       context.header(
         'Cache-Control',
-        versionNum ? 'private, max-age=86400, immutable' : 'private, max-age=10, must-revalidate'
+        servedHistoricalVersion
+          ? 'private, max-age=86400, immutable'
+          : 'private, max-age=10, must-revalidate'
       );
 
       if (etagMatches(context.req.header('if-none-match'), etag)) {
@@ -112,7 +147,7 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       // the same headers but must never count and must never mint an aa_viewer cookie, or every
       // link checker and uptime probe would inflate both view_count and unique_viewer_count.
       const poll = url.searchParams.get('poll') === '1';
-      const countsView = context.req.method === 'GET' && !poll && !versionNum;
+      const countsView = context.req.method === 'GET' && !poll && !servedHistoricalVersion;
       if (countsView) {
         const viewerId = viewerCookie(context as unknown as PublicContext, viewer, ctx.config);
         await viewer.recordView({
@@ -188,14 +223,23 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         const content = await viewer.getDownload(context.req.param('share_id'), {
           ...(versionNum ? { versionNum } : {}),
           viewerToken: shareToken(context as unknown as PublicContext),
+          requesterAccountId: await requesterAccountId(context),
         });
+        // Named and cached for the version actually served: a stranger who asks for `?v=1` gets
+        // the latest artifact, and the file that lands in their downloads folder must not claim to
+        // be v1.
+        const servedHistoricalVersion = content.versionNum !== content.latestVersionNum;
         const extension = content.type === 'markdown' ? 'md' : 'html';
-        const filename = `${content.slug}${versionNum ? `-v${versionNum}` : ''}.${extension}`;
+        const filename = `${content.slug}${
+          servedHistoricalVersion ? `-v${content.versionNum}` : ''
+        }.${extension}`;
         return context.body(content.content, 200, {
           'Content-Type':
             content.type === 'markdown' ? 'text/markdown; charset=utf-8' : FRAME_CONTENT_TYPE,
           'Content-Disposition': `attachment; filename="${filename}"`,
-          'Cache-Control': versionNum ? 'private, max-age=86400, immutable' : 'private, max-age=10',
+          'Cache-Control': servedHistoricalVersion
+            ? 'private, max-age=86400, immutable'
+            : 'private, max-age=10',
         });
       },
       (serviceError) =>
@@ -250,6 +294,11 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       const content = await viewer.getContent(context.req.param('share_id'), {
         ...(versionNum ? { versionNum } : {}),
         viewerToken: token,
+        // Both, because the frame is reached two ways: same-origin in a self-host, where the
+        // owner's cookie arrives, and cross-origin on a sandbox host, where only the signed grant
+        // in the URL can speak for them.
+        requesterAccountId: await requesterAccountId(context),
+        versionToken: url.searchParams.get('vt'),
       });
 
       if (content.type !== 'html') {
@@ -290,11 +339,22 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
 
     try {
       const versionNum = parseVersionParam(new URL(context.req.url));
-      const model = await viewer.getPageModel(shareId, versionNum);
+      const model = await viewer.getPageModel(shareId, {
+        ...(versionNum ? { versionNum } : {}),
+        requesterAccountId: await requesterAccountId(context),
+      });
+      // The pin is echoed back only when the model honoured it. Passing the raw query value would
+      // have the page announce "Viewing v1 of v3" over the latest content, and would put `v=1` in
+      // the boot payload for the client to send on every poll.
+      const pinnedVersion =
+        model.initialContent &&
+        model.initialContent.versionNum !== model.initialContent.latestVersionNum
+          ? model.initialContent.versionNum
+          : undefined;
       return context.html(
         ViewerPage({
           model,
-          ...(versionNum ? { pinnedVersion: versionNum } : {}),
+          ...(pinnedVersion ? { pinnedVersion } : {}),
         }),
         200
       );

@@ -46,6 +46,8 @@ export interface ViewerContentResult {
   bot: ViewerBotRef | null;
   passwordProtected: boolean;
   footer: boolean;
+  /** True only for the artifact's own signed-in owner. History is theirs alone to browse. */
+  isOwner: boolean;
   html: string | null;
   frameUrl: string | null;
 }
@@ -55,8 +57,31 @@ export interface ViewerPageModel {
   canonicalUrl: string;
   passwordProtected: boolean;
   footer: boolean;
+  isOwner: boolean;
   meta: ViewerMeta;
   initialContent: ViewerContentResult | null;
+}
+
+/**
+ * Who is asking, and what they are allowed to ask for.
+ *
+ * A share link publishes ONE document — the current one. Version history is the owner's working
+ * record: the drafts, the wording that was pulled, the numbers before they were corrected. Every
+ * public route honoured `?v=<n>` for anybody who sent it, so a link to the finished thing was also
+ * a link to every state it had ever been in, reachable by counting from 1.
+ *
+ * Both fields are capabilities, and both are checked here rather than at the routes, because there
+ * are five routes and only one of them has to forget.
+ */
+export interface ViewerAccessOptions {
+  /** Account id behind a valid dashboard session, or null. Anything else is a stranger. */
+  requesterAccountId?: string | null;
+  /**
+   * Signed grant that carries an owner's pinned version across an origin their session cookie
+   * cannot reach — the sandbox host that serves HTML artifact frames. Same pattern, and the same
+   * reason, as the `t=` share-access token beside it.
+   */
+  versionToken?: string | null;
 }
 
 export interface ViewerMeta {
@@ -177,9 +202,13 @@ export class ViewerService {
     this.now = options.now ?? Date.now;
   }
 
-  async getPageModel(shareId: string, versionNum?: number): Promise<ViewerPageModel> {
+  async getPageModel(
+    shareId: string,
+    options: ViewerAccessOptions & { versionNum?: number | undefined } = {}
+  ): Promise<ViewerPageModel> {
     const share = await this.resolveShare(shareId);
     const canonicalUrl = this.shareUrl(shareId);
+    const isOwner = this.isOwner(share, options.requesterAccountId);
 
     if (share.passwordHash) {
       return {
@@ -187,17 +216,19 @@ export class ViewerService {
         canonicalUrl,
         passwordProtected: true,
         footer: share.plan.showFooter,
+        isOwner,
         meta: protectedMeta(canonicalUrl, this.ogImageUrl(shareId)),
         initialContent: null,
       };
     }
 
-    const content = await this.readContentFromShare(share, versionNum, null);
+    const content = await this.readContentFromShare(share, options.versionNum, null, options);
     return {
       shareId,
       canonicalUrl,
       passwordProtected: false,
       footer: share.plan.showFooter,
+      isOwner,
       meta: publicMeta(content, canonicalUrl, this.ogImageUrl(shareId)),
       initialContent: content,
     };
@@ -205,18 +236,61 @@ export class ViewerService {
 
   async getContent(
     shareId: string,
-    options: { versionNum?: number | undefined; viewerToken?: string | null } = {}
+    options: ViewerAccessOptions & {
+      versionNum?: number | undefined;
+      viewerToken?: string | null;
+    } = {}
   ): Promise<ViewerContentResult> {
     const share = await this.resolveShare(shareId);
     this.assertShareAccess(share, options.viewerToken ?? null);
-    return this.readContentFromShare(share, options.versionNum, options.viewerToken ?? null);
+    return this.readContentFromShare(
+      share,
+      options.versionNum,
+      options.viewerToken ?? null,
+      options
+    );
   }
 
   async getDownload(
     shareId: string,
-    options: { versionNum?: number | undefined; viewerToken?: string | null } = {}
+    options: ViewerAccessOptions & {
+      versionNum?: number | undefined;
+      viewerToken?: string | null;
+    } = {}
   ): Promise<ViewerContentResult> {
     return this.getContent(shareId, options);
+  }
+
+  /**
+   * Mints the grant that lets an owner's pinned version survive the hop to the sandbox origin.
+   * Bound to the share AND the version, so it cannot be replayed against another artifact or
+   * walked up and down the history it was issued for.
+   */
+  signVersionAccessToken(shareId: string, versionNum: number, expiresAt: number): string {
+    const exp = Math.floor(expiresAt);
+    return `${exp}.${this.versionAccessMac(shareId, versionNum, exp)}`;
+  }
+
+  verifyVersionAccessToken(
+    token: string | null | undefined,
+    shareId: string,
+    versionNum: number
+  ): boolean {
+    if (!token) {
+      return false;
+    }
+
+    const [expRaw, mac, extra] = token.split('.');
+    if (!expRaw || !mac || extra !== undefined || !/^[0-9]+$/.test(expRaw)) {
+      return false;
+    }
+
+    const exp = Number(expRaw);
+    if (!Number.isSafeInteger(exp) || exp <= this.now()) {
+      return false;
+    }
+
+    return timingSafeEqualHex(mac, this.versionAccessMac(shareId, versionNum, exp));
   }
 
   async verifyPassword(shareId: string, password: string): Promise<ViewerPasswordSuccess> {
@@ -398,13 +472,27 @@ export class ViewerService {
     };
   }
 
+  /**
+   * THE ONE GATE. Every public read of an artifact's body — the page, `/content`, `/download` and
+   * the sandboxed `/frame` — resolves its bytes here, so this is the only place that has to be
+   * right about who may see history.
+   *
+   * A requested version that the caller may not have is not an error, it is simply not honoured:
+   * they get the latest, which is what the share link publishes. Refusing with a 403 would answer
+   * the question the refusal is meant to withhold — "does v7 exist?" — and a 404 would break a
+   * perfectly good link over a query string somebody guessed.
+   */
   private async readContentFromShare(
     share: ShareContext,
     versionNum: number | undefined,
-    viewerToken: string | null
+    viewerToken: string | null,
+    access: ViewerAccessOptions = {}
   ): Promise<ViewerContentResult> {
-    const source = versionNum
-      ? await this.getVersionSource(share.artifact.id, versionNum)
+    const isOwner = this.isOwner(share, access.requesterAccountId);
+    const pinnedVersion = this.resolvePinnedVersion(share, versionNum, isOwner, access);
+
+    const source = pinnedVersion
+      ? await this.getVersionSource(share.artifact.id, pinnedVersion)
       : latestSource(share);
 
     if (!source) {
@@ -421,7 +509,7 @@ export class ViewerService {
         ? this.frameUrl({
             shareId: share.shareId,
             contentHash: source.contentHash,
-            versionNum,
+            versionNum: pinnedVersion,
             viewerToken: share.passwordHash ? viewerToken : null,
           })
         : null;
@@ -441,9 +529,39 @@ export class ViewerService {
       bot: source.bot,
       passwordProtected: share.passwordHash !== null,
       footer: share.plan.showFooter,
+      isOwner,
       html,
       frameUrl,
     };
+  }
+
+  /** The artifact's own owner, signed in. Nobody else, and never on an absent account id. */
+  private isOwner(share: ShareContext, requesterAccountId: string | null | undefined): boolean {
+    return Boolean(requesterAccountId) && requesterAccountId === share.account.id;
+  }
+
+  /** The version actually served: the requested one only when the caller is entitled to it. */
+  private resolvePinnedVersion(
+    share: ShareContext,
+    versionNum: number | undefined,
+    isOwner: boolean,
+    access: ViewerAccessOptions
+  ): number | undefined {
+    if (!versionNum) {
+      return undefined;
+    }
+
+    if (isOwner) {
+      return versionNum;
+    }
+
+    // The sandbox origin cannot see the owner's session cookie, so a signed grant stands in for it
+    // there. It proves the owner asked for THIS version of THIS share, minutes ago.
+    if (this.verifyVersionAccessToken(access.versionToken, share.shareId, versionNum)) {
+      return versionNum;
+    }
+
+    return undefined;
   }
 
   private assertShareAccess(share: ShareContext, viewerToken: string | null): void {
@@ -613,6 +731,13 @@ export class ViewerService {
     return hmacHex(this.config.sessionSecret, `${shareId}|${passwordUpdatedAt ?? 0}|${expiresAt}`);
   }
 
+  private versionAccessMac(shareId: string, versionNum: number, expiresAt: number): string {
+    return hmacHex(
+      this.config.sessionSecret,
+      `frame-version|${shareId}|${versionNum}|${expiresAt}`
+    );
+  }
+
   private frameUrl(input: {
     shareId: string;
     contentHash: string;
@@ -626,6 +751,17 @@ export class ViewerService {
     url.searchParams.set('h', input.contentHash);
     if (input.versionNum) {
       url.searchParams.set('v', String(input.versionNum));
+      // The frame is a cross-origin document by design, so the session that authorised this pin
+      // does not travel with the request. Only reached when the pin was already allowed above,
+      // which is what keeps this from being a way to mint one.
+      url.searchParams.set(
+        'vt',
+        this.signVersionAccessToken(
+          input.shareId,
+          input.versionNum,
+          this.now() + SHARE_ACCESS_TTL_MS
+        )
+      );
     }
     if (input.viewerToken) {
       url.searchParams.set('t', input.viewerToken);

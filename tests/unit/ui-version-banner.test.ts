@@ -32,6 +32,7 @@ const content: ViewerContentResult = {
   bot: null,
   passwordProtected: false,
   footer: true,
+  isOwner: true,
   html: '<article class="aa-md"><h1>Versioned</h1></article>',
   frameUrl: null,
 };
@@ -41,6 +42,7 @@ const model: ViewerPageModel = {
   canonicalUrl: `https://example.test/a/${content.shareId}`,
   passwordProtected: false,
   footer: true,
+  isOwner: true,
   meta: {
     title: content.title,
     description: 'Published with Agent Artifacts',

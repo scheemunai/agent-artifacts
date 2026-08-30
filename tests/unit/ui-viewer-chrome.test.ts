@@ -24,6 +24,7 @@ const content: ViewerContentResult = {
   bot: { name: 'Ops Bot', byline: 'nightly' },
   passwordProtected: false,
   footer: true,
+  isOwner: false,
   html: '<div class="aa-md"><h1>Body</h1></div>',
   frameUrl: null,
 };
@@ -33,6 +34,7 @@ const model: ViewerPageModel = {
   canonicalUrl: `https://example.test/a/${SHARE_ID}`,
   passwordProtected: false,
   footer: true,
+  isOwner: false,
   meta: {
     title: LONG_TITLE,
     description: 'Published with Agent Artifacts',
@@ -163,8 +165,23 @@ describe('the phone chrome moves the details behind one control', () => {
     expect(ruleFor('.aa-viewer-menu[data-aa-open="false"]')).toContain('display: none');
   });
 
-  it('renders one version picker, not one per arrangement', () => {
-    expect(html.match(/id="aa-version-picker"/g) ?? []).toHaveLength(1);
+  it('renders one version picker for the owner, not one per arrangement', () => {
+    const owner = renderToString(
+      ViewerPage({
+        model: { ...model, isOwner: true, initialContent: { ...content, isOwner: true } },
+      })
+    );
+
+    expect(owner.match(/id="aa-version-picker"/g) ?? []).toHaveLength(1);
+    expect(owner.match(/data-aa-download="true"/g) ?? []).toHaveLength(1);
+  });
+
+  it('gives a visitor who is not the owner no version picker at all', () => {
+    // Not hidden — absent. A control that lists the history is itself a disclosure: it says how
+    // many drafts there were, and invites a reader to try `?v=`.
+    expect(html).not.toContain('aa-version-picker');
+    expect(html).not.toContain('Artifact version');
+    // Download is still theirs.
     expect(html.match(/data-aa-download="true"/g) ?? []).toHaveLength(1);
   });
 
@@ -183,6 +200,49 @@ describe('the phone chrome moves the details behind one control', () => {
     expect(ruleFor('.aa-viewer-chrome__lead')).toContain('flex: 1 1 auto');
     // And it still ellipsises rather than wrapping when a title is genuinely too long.
     expect(ruleFor('.aa-viewer-title')).toContain('text-overflow: ellipsis');
+  });
+
+  it('carries the whole title, which the bar above it has had to cut off', () => {
+    expect(html).toContain('data-aa-menu-title="true"');
+    expect(html).toContain(LONG_TITLE);
+    // Wraps rather than ellipsising: this is the one place on a phone the full title can be read.
+    const title = ruleFor('.aa-viewer-menu__title');
+    expect(title).toContain('overflow-wrap: break-word');
+    expect(title).not.toContain('text-overflow: ellipsis');
+    // And it is not a second copy of the title in the bar on desktop, where `display: contents`
+    // would otherwise lay it out as one more item in the row.
+    const hiddenByDefault = cssRules.find(
+      (rule) =>
+        rule.selector.includes('.aa-viewer-menu__title') &&
+        !rule.media &&
+        rule.block.includes('display: none')
+    );
+    expect(hiddenByDefault, 'the panel title is not hidden outside the phone layout').toBeDefined();
+  });
+
+  it('lays the panel out as controls, not as a stack of full-width slabs', () => {
+    // They were `width: 100%` in a grid — two small controls rendered as two full-bleed bars in a
+    // panel whose whole job is to be compact.
+    const actions = ruleFor('.aa-viewer-menu .aa-viewer-actions');
+    expect(actions).toContain('display: flex');
+    expect(actions).toContain('flex-wrap: wrap');
+
+    expect(ruleFor('.aa-viewer-menu .aa-btn')).toContain('width: auto');
+    expect(ruleFor('.aa-viewer-menu .aa-btn')).not.toContain('width: 100%');
+    expect(ruleFor('.aa-viewer-menu .aa-viewer-version-select')).toContain('width: auto');
+  });
+
+  it('pads the panel equally on both sides', () => {
+    // Stated as one shorthand so the two sides cannot drift apart without somebody meaning it.
+    const panel = cssRules.find(
+      (rule) => rule.selector === '.aa-viewer-menu' && rule.block.includes('position: absolute')
+    );
+    const padding = /(?:^|\s)padding:\s*([^;]+);/.exec(panel?.block ?? '')?.[1]?.trim();
+
+    expect(padding, 'the phone panel sets no single padding value').toBeDefined();
+    // One value = all four edges equal. Two or four values could be asymmetric.
+    expect(padding?.split(/\s+/)).toHaveLength(1);
+    expect(panel?.block).not.toMatch(/padding-(left|right|inline)/);
   });
 
   it('positions the panel over the page, so opening it shifts nothing', () => {

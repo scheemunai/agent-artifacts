@@ -75,11 +75,14 @@ describe('viewer poll requests do not count views', () => {
         viewers: 1,
       });
 
+      // `?v=1` from a visitor who is not the signed-in owner is ignored: they get the latest, and
+      // the response is cached as the latest — `immutable` here would park the current artifact in
+      // their browser under a historical URL.
       const pinned = await ctx.app.request(`/a/${shareId}/content?v=1`, {
         headers: { Cookie: cookie },
       });
       expect(pinned.status).toBe(200);
-      expect(pinned.headers.get('cache-control')).toBe('private, max-age=86400, immutable');
+      expect(pinned.headers.get('cache-control')).toBe('private, max-age=10, must-revalidate');
       expect(shareCounters(ctx, shareId)).toEqual({
         view_count: 1,
         unique_viewer_count: 1,

@@ -39,7 +39,9 @@ describe('viewer live updates, downloads, and OG', () => {
       expect(html).toContain('Live Report v2');
       expect(html).toContain('Version two');
       expect(html).toContain('by R2 · Andrej&#39;s Chief of Staff');
-      expect(html).toContain('id="aa-version-picker"');
+      // No picker for a visitor who is not the owner: it lists how many drafts there were and
+      // invites `?v=`, which the server now refuses them anyway.
+      expect(html).not.toContain('id="aa-version-picker"');
 
       const latest = await ctx.app.request(`/a/${shareId}/content`);
       const latestBody = (await latest.json()) as {
@@ -62,8 +64,10 @@ describe('viewer live updates, downloads, and OG', () => {
       const pinned = await ctx.app.request(`/a/${shareId}?v=1`);
       const pinnedHtml = await pinned.text();
       expect(pinned.status).toBe(200);
-      expect(pinnedHtml).toContain('Live Report v1');
-      expect(pinnedHtml).toContain('Viewing v1');
+      expect(pinnedHtml).toContain('Live Report v2');
+      expect(pinnedHtml).not.toContain('Live Report v1');
+      // And it must not ANNOUNCE a pin it did not honour.
+      expect(pinnedHtml).not.toContain('Viewing v1');
 
       const downloadLatest = await ctx.app.request(`/a/${shareId}/download`);
       const downloadPinned = await ctx.app.request(`/a/${shareId}/download?v=1`);
@@ -73,10 +77,12 @@ describe('viewer live updates, downloads, and OG', () => {
         'attachment; filename="live-report.md"'
       );
       await expect(downloadLatest.text()).resolves.toContain('Version two');
+      // The file that lands in a stranger's downloads folder is the latest artifact, and its name
+      // says so rather than claiming to be v1.
       expect(downloadPinned.headers.get('content-disposition')).toBe(
-        'attachment; filename="live-report-v1.md"'
+        'attachment; filename="live-report.md"'
       );
-      await expect(downloadPinned.text()).resolves.toContain('Version one');
+      await expect(downloadPinned.text()).resolves.toContain('Version two');
 
       const og = await ctx.app.request(`/a/${shareId}/og.png`);
       const ogBytes = new Uint8Array(await og.arrayBuffer());
