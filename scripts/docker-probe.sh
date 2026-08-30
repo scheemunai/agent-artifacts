@@ -115,15 +115,21 @@ else
   exit 1
 fi
 
-share_url="$(curl -fsS -X POST "$BASE/v1/artifacts" \
+# Artifacts are created PRIVATE, so this probe creates and then publishes — the same two calls a
+# real caller makes. The surfaces below are checked anonymously, which is the point: they are the
+# public ones.
+curl -fsS -X POST "$BASE/v1/artifacts" \
   -H "Authorization: Bearer $api_key" -H 'Content-Type: application/json' \
-  -d '{"slug":"docker-probe","type":"markdown","title":"Docker probe","content":"# Docker probe","share":true}' \
+  -d '{"slug":"docker-probe","type":"markdown","title":"Docker probe","content":"# Docker probe"}' \
+  >/dev/null
+share_url="$(curl -fsS -X POST "$BASE/v1/artifacts/docker-probe/share" \
+  -H "Authorization: Bearer $api_key" -H 'Content-Type: application/json' -d '{}' \
   | grep -o '"url":"[^"]*"' | head -1 | sed -E 's/"url":"([^"]*)"/\1/')"
 share_id="${share_url##*/}"
 if [ -n "$share_id" ]; then
   pass "published an artifact with a share ($share_id)."
 else
-  fail "publishing with share:true returned no share url."
+  fail "publishing returned no share url."
   say "RESULT: FAIL"
   exit 1
 fi

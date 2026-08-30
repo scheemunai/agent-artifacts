@@ -57,7 +57,6 @@ export async function publishSharedArtifact(
       type: 'markdown',
       title: 'Clean-room OG probe',
       content: '# Clean-room OG probe\n\nPublished by the runtime-layout suite.',
-      share: true,
     }),
   });
   const payload = await published.text();
@@ -65,10 +64,24 @@ export async function publishSharedArtifact(
     201
   );
 
-  const body = JSON.parse(payload) as { share?: { url?: string } };
-  const shareUrl = body.share?.url;
+  // Creation is private, and the OG card is one of the surfaces a private artifact refuses. This
+  // probe exists to prove the card RENDERS in a released image, so it publishes explicitly — the
+  // same second call a real caller makes.
+  const shared = await request(port, '/v1/artifacts/og-probe/share', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+    body: '{}',
+  });
+  const sharedPayload = await shared.text();
+  expect(
+    [200, 201],
+    `POST /v1/artifacts/og-probe/share responded ${shared.status}: ${sharedPayload}`
+  ).toContain(shared.status);
+
+  const body = JSON.parse(sharedPayload) as { url?: string };
+  const shareUrl = body.url;
   if (!shareUrl) {
-    throw new Error('publishing with share:true should return share.url');
+    throw new Error('publishing should return the share url');
   }
 
   const shareId = new URL(shareUrl).pathname.split('/').filter(Boolean).pop();
