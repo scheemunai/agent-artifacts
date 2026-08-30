@@ -1,6 +1,6 @@
 import {
-  HERO_ARTIFACT_PATH,
-  heroArtifactUrl,
+  DEFAULT_HERO_ARTIFACT_PATH,
+  heroArtifactUrl as deriveHeroArtifactUrl,
   type LiveArtifactMeta,
 } from '../../services/live-artifact-meta.js';
 import { Layout } from '../components/layout.js';
@@ -73,7 +73,7 @@ export const HOME_DEMO_ARTIFACTS = [
     title: 'Agent Skill',
     description: 'A real artifact that explains how agents publish here.',
     slugLabel: 'this-is-artifact',
-    path: HERO_ARTIFACT_PATH,
+    path: DEFAULT_HERO_ARTIFACT_PATH,
   },
 ] as const;
 
@@ -210,6 +210,14 @@ export interface HomePageProps {
    * disappears rather than linking somewhere that 404s.
    */
   githubUrl?: string | undefined;
+  /**
+   * Public URL of this deployment's hero artifact. `null` says the deployment has none, and every
+   * affordance pointing at it disappears — the same discipline `githubUrl` and `examplePath`
+   * follow, for the same reason: the hard-coded share only exists on the instance it was seeded
+   * on, so on any other host this link was a 404 with a friendly label on it. Omitted falls back
+   * to the packaged demo artifact, which is what a stock deployment ships.
+   */
+  heroArtifactUrl?: string | null | undefined;
   /** Live state of the hero artifact. Absent means the meta strip stays silent. */
   liveArtifact?: LiveArtifactMeta | null | undefined;
   now?: number | undefined;
@@ -221,17 +229,19 @@ export function HomePage({
   githubUrl,
   comingSoon = false,
   waitlist,
+  heroArtifactUrl,
 }: HomePageProps) {
+  const agentSkillUrl =
+    heroArtifactUrl === undefined ? deriveHeroArtifactUrl(baseUrl) : heroArtifactUrl;
+
   if (comingSoon) {
     return ComingSoonHome({
-      baseUrl,
       authenticated,
       githubUrl,
+      agentSkillUrl,
       waitlist: waitlist ?? { enabled: false },
     });
   }
-
-  const agentSkillUrl = heroArtifactUrl(baseUrl);
   // Display host for the copy-paste prompt: the agent reads the same /skill.md the footer links to,
   // shown without the scheme so the prompt stays readable ("agentartifact.ai/skill.md").
   const skillPromptUrl = `${baseUrl.replace(/^https?:\/\//, '')}/skill.md`;
@@ -479,19 +489,29 @@ export function HomePage({
             <a href={HOME_CTA_HREF}>Log in</a>
           </>
         )}
-        <span class="aa-marketing-separator" aria-hidden="true">
-          ·
-        </span>
-        <a href={agentSkillUrl}>Live artifact</a>
+        {/*
+          Dropped entirely, separator and all, when the deployment has no hero artifact. A footer
+          link is a promise that the page exists; the hard-coded share only exists on the instance
+          it was seeded on, so everywhere else this was a labelled 404.
+        */}
+        {agentSkillUrl ? (
+          <>
+            <span class="aa-marketing-separator" aria-hidden="true">
+              ·
+            </span>
+            <a href={agentSkillUrl}>Live artifact</a>
+          </>
+        ) : null}
       </MarketingFooter>
     </Layout>
   );
 }
 
 interface ComingSoonHomeProps {
-  baseUrl: string;
   authenticated: boolean;
   githubUrl?: string | undefined;
+  /** Already resolved by `HomePage`; `null` means this deployment has no hero artifact. */
+  agentSkillUrl: string | null;
   waitlist: HomeWaitlist;
 }
 
@@ -509,8 +529,12 @@ interface ComingSoonHomeProps {
  * The app itself is untouched: `/login`, `/dashboard` and the API keep answering. This flag governs
  * the homepage and nothing else, so an early account still works while the front door says soon.
  */
-function ComingSoonHome({ baseUrl, authenticated, githubUrl, waitlist }: ComingSoonHomeProps) {
-  const agentSkillUrl = heroArtifactUrl(baseUrl);
+function ComingSoonHome({
+  authenticated,
+  githubUrl,
+  agentSkillUrl,
+  waitlist,
+}: ComingSoonHomeProps) {
   const joined = waitlist.state === 'joined';
   const contactEmail = waitlist.contactEmail ?? HOME_COMING_SOON_CONTACT_EMAIL;
 
@@ -643,10 +667,19 @@ function ComingSoonHome({ baseUrl, authenticated, githubUrl, waitlist }: ComingS
             <a href={HOME_CTA_HREF}>Log in</a>
           </>
         )}
-        <span class="aa-marketing-separator" aria-hidden="true">
-          ·
-        </span>
-        <a href={agentSkillUrl}>Live artifact</a>
+        {/*
+          Dropped entirely, separator and all, when the deployment has no hero artifact. A footer
+          link is a promise that the page exists; the hard-coded share only exists on the instance
+          it was seeded on, so everywhere else this was a labelled 404.
+        */}
+        {agentSkillUrl ? (
+          <>
+            <span class="aa-marketing-separator" aria-hidden="true">
+              ·
+            </span>
+            <a href={agentSkillUrl}>Live artifact</a>
+          </>
+        ) : null}
       </MarketingFooter>
     </Layout>
   );

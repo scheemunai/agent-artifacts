@@ -13,11 +13,16 @@ import type { Logger } from '../logger.js';
  */
 
 /**
- * The share this hero is built from. It lives here rather than on the page because boot code
- * (`src/index.ts`) has to know which artifact to poll before any page renders, and boot should
- * depend on a service, never on a UI module.
+ * The share the hero is built from when a deployment does not name its own. It lives here rather
+ * than on the page because boot code (`src/index.ts`) has to know which artifact to poll before
+ * any page renders, and boot should depend on a service, never on a UI module.
+ *
+ * It is a DEFAULT, not a constant, because it is an artifact id: a row in one particular database.
+ * Hard-coded, it made every other deployment poll — and link to — a share that only exists on the
+ * instance it was seeded on. `AA_HERO_ARTIFACT_PATH` names the local one; empty means there is no
+ * hero artifact here, and everything downstream is expected to fall silent rather than guess.
  */
-export const HERO_ARTIFACT_PATH = '/a/KbLJ0zvyiGadXLHUs2E5Rb';
+export const DEFAULT_HERO_ARTIFACT_PATH = '/a/KbLJ0zvyiGadXLHUs2E5Rb';
 
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 /** A snapshot older than this is dropped rather than shown: a stale label can lie. */
@@ -76,9 +81,49 @@ export function publicArtifactUrl(baseUrl: string, artifactPath: string): string
   return `${url.origin}${artifactPath}`;
 }
 
-/** Public URL of the artifact the marketing hero card is built from. */
-export function heroArtifactUrl(baseUrl: string): string {
-  return publicArtifactUrl(baseUrl, HERO_ARTIFACT_PATH);
+/**
+ * Public URL of the artifact the marketing hero card is built from, or `null` when this
+ * deployment has none configured. Callers render nothing rather than pointing at a 404.
+ */
+export function heroArtifactUrl(
+  baseUrl: string,
+  heroArtifactPath: string = DEFAULT_HERO_ARTIFACT_PATH
+): string | null {
+  const path = heroArtifactPath.trim();
+  if (!path) {
+    return null;
+  }
+  return publicArtifactUrl(baseUrl, path);
+}
+
+/** The deployment facts that decide whether a hero artifact is worth polling. */
+export interface HeroArtifactPollConfig {
+  deployment: string;
+  comingSoon: boolean;
+  baseUrl: string;
+  heroArtifactPath: string;
+}
+
+/**
+ * The URL boot should poll, or `null` when this deployment must not poll at all.
+ *
+ * Three separate reasons to stay quiet, which is why they are gathered into one answer rather than
+ * left as three conditions at the call site:
+ *
+ *  - Only cloud serves the marketing homepage, so only cloud has a hero.
+ *  - The coming-soon homepage never reads the snapshot, so filling it is pure noise.
+ *  - No configured artifact means there is nothing here to poll.
+ *
+ * Getting this wrong is not free: the poller ran against a hard-coded share that exists on one
+ * instance, so every other deployment spent boot and every 15 minutes after it fetching a 404 and
+ * logging the warning.
+ */
+export function heroArtifactPollUrl(config: HeroArtifactPollConfig): string | null {
+  if (config.deployment !== 'cloud' || config.comingSoon) {
+    return null;
+  }
+
+  return heroArtifactUrl(config.baseUrl, config.heroArtifactPath);
 }
 
 /** The public poll surface for an artifact page URL. `poll=1` never counts a view. */
@@ -91,10 +136,10 @@ export function liveArtifactMetaUrl(artifactUrl: string): string {
  * `null`. Callers render nothing rather than guessing.
  */
 export function getLiveArtifactMeta(
-  artifactUrl: string,
+  artifactUrl: string | null,
   now: number = Date.now()
 ): LiveArtifactMeta | null {
-  if (!cache || cache.artifactUrl !== artifactUrl) {
+  if (!artifactUrl || !cache || cache.artifactUrl !== artifactUrl) {
     return null;
   }
 
@@ -116,9 +161,13 @@ export function resetLiveArtifactMeta(): void {
  * snapshot in place (it ages out on its own) and returns `null`.
  */
 export async function refreshLiveArtifactMeta(
-  artifactUrl: string,
+  artifactUrl: string | null,
   options: LiveArtifactMetaOptions = {}
 ): Promise<LiveArtifactMeta | null> {
+  if (!artifactUrl) {
+    return null;
+  }
+
   if (inFlight) {
     return inFlight;
   }
@@ -182,9 +231,16 @@ export async function refreshLiveArtifactMeta(
  * process open, matching the background scheduler's contract.
  */
 export function startLiveArtifactMetaRefresh(
-  artifactUrl: string,
+  artifactUrl: string | null,
   options: LiveArtifactMetaOptions & { intervalMs?: number } = {}
 ): LiveArtifactMetaRefresher {
+  // No artifact, no timer — not even a first fetch. The guard lives here as well as at the call
+  // site because "there is nothing to poll" is a fact about this module, and a caller that forgets
+  // to ask should get silence rather than a 404 every quarter of an hour.
+  if (!artifactUrl) {
+    return { stop: () => {} };
+  }
+
   void refreshLiveArtifactMeta(artifactUrl, options);
 
   const timer = setInterval(() => {

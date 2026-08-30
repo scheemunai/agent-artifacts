@@ -38,7 +38,9 @@ export function createWebRoute(
   options: WebRouteOptions = {}
 ): Hono<{ Variables: WebVariables }> {
   const web = new Hono<{ Variables: WebVariables }>();
-  const artifactUrl = heroArtifactUrl(config.baseUrl);
+  // Null when this deployment has no hero artifact configured. Both the meta lookup and the page
+  // take that as "say nothing" rather than falling back to a share that lives somewhere else.
+  const artifactUrl = heroArtifactUrl(config.baseUrl, config.heroArtifactPath);
   const waitlist = options.waitlist ?? createWaitlistService(config, logger);
   // Per-address and per-IP, because they fail differently: one address hammered from many hosts is
   // someone trying to get a stranger mailed, and one host submitting many addresses is a bot
@@ -65,8 +67,9 @@ export function createWebRoute(
           config.sessionSecret
         ),
         ...(config.githubUrl ? { githubUrl: config.githubUrl } : {}),
-        // Filled by the boot-time refresher in src/index.ts. Null until then, and the
-        // meta strip stays silent rather than showing a stale claim.
+        heroArtifactUrl: artifactUrl,
+        // Filled by the boot-time refresher in src/index.ts. Null until then, null forever when
+        // nothing is polling, and the meta strip stays silent rather than showing a stale claim.
         liveArtifact: getLiveArtifactMeta(artifactUrl),
       })
     );
@@ -167,6 +170,9 @@ function comingSoonPage(
       config.sessionSecret
     ),
     ...(config.githubUrl ? { githubUrl: config.githubUrl } : {}),
+    // The pre-launch page carries the same footer link, so it needs the same answer: a host with no
+    // hero artifact must not offer one here either.
+    heroArtifactUrl: heroArtifactUrl(config.baseUrl, config.heroArtifactPath),
     waitlist: { enabled: waitlist.enabled, ...state },
   });
 }

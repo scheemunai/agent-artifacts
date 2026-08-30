@@ -2,6 +2,10 @@ import { randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { z } from 'zod';
+// The one place that default is written down. It is imported rather than repeated because the same
+// string is also what the homepage links to and what boot polls; two copies would drift the moment
+// one deployment changed its hero. The module is a leaf here — its only other import is a type.
+import { DEFAULT_HERO_ARTIFACT_PATH } from './services/live-artifact-meta.js';
 
 const DEPLOYMENTS = ['cloud', 'self-hosted'] as const;
 const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const;
@@ -126,6 +130,19 @@ const rawEnvSchema = z.object({
   AA_MAX_CONTENT_BYTES: integerFromEnv(2_097_152, 1),
   AA_ARTIFACT_PURGE_DAYS: integerFromEnv(30, 1),
   AA_GITHUB_URL: z.preprocess(emptyStringToUndefined, z.url().optional()),
+  /**
+   * Share path of the artifact the marketing homepage links to and polls, for example
+   * `/a/KbLJ0zvyiGadXLHUs2E5Rb`. An artifact id is a row in one database, so the default only
+   * exists on the instance it was seeded on: set it per deployment, or set it EMPTY to say this
+   * host has no hero artifact. Empty is a value here, not an absence — it turns the poller and the
+   * "Live artifact" link off rather than falling back to the default.
+   */
+  AA_HERO_ARTIFACT_PATH: z
+    .string()
+    .default(DEFAULT_HERO_ARTIFACT_PATH)
+    .refine((value) => value.trim() === '' || value.trim().startsWith('/'), {
+      message: 'AA_HERO_ARTIFACT_PATH must be a path starting with "/", or empty for none',
+    }),
   AA_ABUSE_EMAIL: z.email().default('abuse@agentartifact.ai'),
   AA_SECURITY_EMAIL: z.email().default('security@agentartifact.ai'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
@@ -184,6 +201,8 @@ export interface AppConfig {
   maxContentBytes: number;
   jsonBodyLimitBytes: number;
   artifactPurgeDays: number;
+  /** Share path of this deployment's hero artifact. Empty means it has none. */
+  heroArtifactPath: string;
   githubUrl?: string;
   abuseEmail: string;
   securityEmail: string;
@@ -253,6 +272,7 @@ export function loadConfig(
     maxContentBytes: raw.AA_MAX_CONTENT_BYTES,
     jsonBodyLimitBytes: raw.AA_MAX_CONTENT_BYTES + 512 * 1024,
     artifactPurgeDays: raw.AA_ARTIFACT_PURGE_DAYS,
+    heroArtifactPath: raw.AA_HERO_ARTIFACT_PATH.trim(),
     ...(raw.AA_GITHUB_URL ? { githubUrl: raw.AA_GITHUB_URL } : {}),
     abuseEmail: raw.AA_ABUSE_EMAIL,
     securityEmail: raw.AA_SECURITY_EMAIL,

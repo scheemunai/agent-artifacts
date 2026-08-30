@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  DEFAULT_HERO_ARTIFACT_PATH,
   formatUpdatedLabel,
   getLiveArtifactMeta,
-  HERO_ARTIFACT_PATH,
   heroArtifactUrl,
   liveArtifactMetaUrl,
   publicArtifactUrl,
@@ -140,13 +140,13 @@ describe('hero artifact identity lives in the service, not the page', () => {
       'https://preview.example.test/a/demo'
     );
     expect(heroArtifactUrl('https://preview-cloud.example.test')).toBe(
-      `https://preview.example.test${HERO_ARTIFACT_PATH}`
+      `https://preview.example.test${DEFAULT_HERO_ARTIFACT_PATH}`
     );
   });
 
   it('is a no-op on a host with no -cloud segment', () => {
     expect(heroArtifactUrl('https://agentartifact.ai')).toBe(
-      `https://agentartifact.ai${HERO_ARTIFACT_PATH}`
+      `https://agentartifact.ai${DEFAULT_HERO_ARTIFACT_PATH}`
     );
   });
 

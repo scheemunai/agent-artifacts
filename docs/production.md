@@ -97,7 +97,14 @@ RESEND_AUDIENCE_ID=...              # the Resend audience signups are written to
 RESEND_AUDIENCE_API_KEY=...         # a Resend key allowed to write contacts
 AA_WAITLIST_FROM=Agent Artifacts <hello@agentartifact.ai>
 AA_WAITLIST_CONFIRMATION=true       # one confirmation email per new signup
+AA_HERO_ARTIFACT_PATH=              # empty: this host has no hero artifact (see below)
 ```
+
+### The hero artifact belongs to one instance
+
+The homepage frames its hero as a real published artifact: it links to that share as "Live artifact" and polls it every fifteen minutes to keep the meta strip honest. The share path is an artifact id, so it only resolves on the instance the artifact was seeded on.
+
+Set `AA_HERO_ARTIFACT_PATH` to a share that exists on **this** deployment, or set it empty. Empty is an explicit statement, not an omission: the homepage renders without the link and boot starts no poller. Leaving it at the default on a host where that artifact does not exist gives you a homepage link that 404s and a background request logging `home.live_artifact_meta.unavailable` at boot and on every refresh.
 
 `RESEND_AUDIENCE_ID` and `RESEND_AUDIENCE_API_KEY` must be set together — half the pair is a fatal boot error, because the alternative is a form that accepts addresses and stores none of them. With neither set, the page shows a mail address instead of a form.
 
