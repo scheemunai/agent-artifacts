@@ -115,7 +115,11 @@ async function seedHeadingFixture(
     type: 'markdown',
     title: 'E2E Dashboard Artifact',
     content,
-    share: true,
+  });
+  // Created private; this fixture reads the artifact from its PUBLIC url, so it publishes.
+  const published = await artifactService.createShare({
+    account: accountToCloudAccount(account),
+    idOrSlug: created.artifact.id,
   });
   const report = ctx.db.sqlite
     .prepare("SELECT id FROM templates WHERE slug = 'report' AND account_id IS NULL")
@@ -126,7 +130,7 @@ async function seedHeadingFixture(
     artifactId: created.artifact.id,
     cookie,
     reportTemplateId: report.id,
-    shareId: created.share?.shareId ?? '',
+    shareId: published.share.shareId,
   };
 }
 

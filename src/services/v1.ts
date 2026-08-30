@@ -16,7 +16,13 @@ import {
   BOT_KEY_PATTERN,
 } from '../lib/schemas/artifacts.js';
 import { caseInsensitiveContainsClause, likeContainsParam } from '../lib/search-query.js';
-import { ArtifactService, type ArtifactSnapshot, type ShareSnapshot } from './artifacts.js';
+import {
+  ArtifactService,
+  type ArtifactSnapshot,
+  SHARE_VISIBILITIES,
+  type ShareSnapshot,
+  type ShareVisibility,
+} from './artifacts.js';
 import { hashPassword } from './auth.js';
 import { hashSecret } from './bots.js';
 import {
@@ -24,6 +30,11 @@ import {
   listTemplatesResponse as listTemplatesResponseFromService,
   mergeTemplate as mergeTemplateFromService,
 } from './templates.js';
+
+/** A share row's visibility, defaulting CLOSED when the value is absent or unrecognised. */
+function shareVisibilityFromRow(value: ShareVisibility | null): ShareVisibility {
+  return value !== null && SHARE_VISIBILITIES.includes(value) ? value : 'private';
+}
 
 export interface AuthPrincipal {
   account: Account;
@@ -69,6 +80,7 @@ export interface VersionRow {
 export interface ShareRow {
   id: string;
   artifact_id: string;
+  visibility: ShareVisibility | null;
   password_hash: string | null;
   password_updated_at: number | null;
   expires_at: number | null;
@@ -226,19 +238,64 @@ export async function publishArtifact(input: {
     ...(input.templateSlug !== undefined ? { templateSlug: input.templateSlug } : {}),
   });
 
+  const body = await formatArtifact(
+    input.db,
+    input.cloudModule,
+    input.auth.account,
+    input.config,
+    result.artifact,
+    {
+      unchanged: result.mode === 'unchanged',
+      includeContent: true,
+    }
+  );
+
   return {
     status: result.mode === 'created' ? 201 : 200,
-    body: await formatArtifact(
-      input.db,
-      input.cloudModule,
-      input.auth.account,
-      input.config,
-      result.artifact,
-      {
-        unchanged: result.mode === 'unchanged',
-        includeContent: true,
-      }
-    ),
+    body: annotatePrivateShare(body, {
+      share: input.share === true,
+      password: input.passwordHash !== undefined && input.passwordHash !== null,
+    }),
+  };
+}
+
+/**
+ * Says, in the response, what publishing this artifact did NOT do.
+ *
+ * New artifacts are private and no request field changes that. An agent that sent `share:true` —
+ * which our own published skill taught it to send — would otherwise get a `share.url` back, hand it
+ * to a human, and discover only from the human that the link does not open. Rejecting the field
+ * with a 400 was the alternative and it breaks every agent already in the field; ignoring it
+ * silently is worse still. So it is accepted, ignored, and *stated*.
+ *
+ * A password sent at creation is dropped rather than stored: a hash with no gate in front of it is
+ * a credential at rest that buys nothing.
+ */
+function annotatePrivateShare(
+  body: Record<string, unknown>,
+  requested: { share: boolean; password: boolean }
+): Record<string, unknown> {
+  const share = body.share;
+  if (!share || typeof share !== 'object') {
+    return body;
+  }
+
+  const ignored = [
+    ...(requested.share ? ['share'] : []),
+    ...(requested.password ? ['password'] : []),
+  ];
+  const visibility = (share as Record<string, unknown>).visibility;
+  if (visibility !== 'private') {
+    return body;
+  }
+
+  return {
+    ...body,
+    share: {
+      ...(share as Record<string, unknown>),
+      note: 'This artifact is private: only you, signed in, can open this URL. Publish it with POST /v1/artifacts/<slug>/share.',
+      ...(ignored.length > 0 ? { ignored_request: ignored } : {}),
+    },
   };
 }
 
@@ -535,7 +592,41 @@ export async function patchShareResponse(input: {
   return formatShare(input.db, share);
 }
 
+/**
+ * DELETE /share — UNPUBLISH. The artifact goes back to private; its URL survives.
+ *
+ * Reversible on purpose: publishing again makes the SAME link live, so an owner who published by
+ * mistake is not forced to reissue a URL they may already have sent. Burning a leaked link is a
+ * different decision with a different cost, and it kept its own endpoint rather than being folded
+ * into this verb — see `revokeShareResponse`.
+ */
 export async function deleteShareResponse(input: {
+  db: DatabaseHandle;
+  cloudModule: CloudModule;
+  config: AppConfig;
+  account: Account;
+  idOrSlug: string;
+}): Promise<Record<string, unknown>> {
+  const share = await artifactService(input).unpublishShare({
+    account: input.account,
+    idOrSlug: input.idOrSlug,
+  });
+
+  return {
+    unpublished: true,
+    visibility: share?.visibility ?? 'private',
+    ...(share ? { share_id: share.shareId, url: share.url } : {}),
+  };
+}
+
+/**
+ * POST /share/revoke — BURN THE LINK. What DELETE used to do, kept as its own operation.
+ *
+ * The URL is dead with a 410 forever and publishing again mints a new id. That is the right answer
+ * when a link has leaked, and it is a promise the contract has made since the first release; it
+ * would have been quietly retired if "unpublish" had simply taken the DELETE verb over.
+ */
+export async function revokeShareResponse(input: {
   db: DatabaseHandle;
   cloudModule: CloudModule;
   config: AppConfig;
@@ -730,6 +821,7 @@ async function formatShare(
     share_id: share.shareId,
     url: share.url,
     artifact_id: share.artifactId,
+    visibility: share.visibility,
     password_protected: share.passwordProtected,
     ...(reused !== undefined ? { reused } : {}),
     views,
@@ -748,6 +840,7 @@ async function formatArtifactShare(
   return {
     share_id: share.id,
     url: `${baseUrl}/a/${share.id}`,
+    visibility: shareVisibilityFromRow(share.visibility),
     password_protected: share.password_hash !== null,
     views: await shareViews(db, share.artifact_id, {
       viewCount: share.view_count,
@@ -762,6 +855,7 @@ function formatReducedShare(share: ShareRow, baseUrl: string): Record<string, un
   return {
     share_id: share.id,
     url: `${baseUrl}/a/${share.id}`,
+    visibility: shareVisibilityFromRow(share.visibility),
     password_protected: share.password_hash !== null,
   };
 }

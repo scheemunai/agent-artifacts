@@ -2,6 +2,7 @@ import type { QueryResult, QueryResultRow } from 'pg';
 import type { DatabaseHandle, PostgresDatabaseHandle } from '../db/client.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { caseInsensitiveContainsClause, likeContainsParam } from '../lib/search-query.js';
+import { SHARE_VISIBILITIES, type ShareVisibility } from './artifacts.js';
 
 export type DashboardArtifactType = 'markdown' | 'html';
 
@@ -12,9 +13,16 @@ export interface DashboardListFilters {
   cursor: string;
 }
 
+/** Closed by default, like every other reader of this column. */
+function shareVisibilityFromRow(value: ShareVisibility | null): ShareVisibility {
+  return value !== null && SHARE_VISIBILITIES.includes(value) ? value : 'private';
+}
+
 export interface DashboardShareViewModel {
   id: string;
   url: string;
+  /** What the owner's own dashboard must say about who can open this. */
+  visibility: ShareVisibility;
   passwordProtected: boolean;
   viewCount: number;
   uniqueViewerCount: number;
@@ -82,6 +90,7 @@ interface ArtifactQueryRow extends QueryResultRow {
   bot_name: string | null;
   bot_byline: string | null;
   share_id: string | null;
+  share_visibility: ShareVisibility | null;
   share_password_hash: string | null;
   share_expires_at: number | null;
   share_revoked_at: number | null;
@@ -292,6 +301,7 @@ export class DashboardReadModelService {
       ? {
           id: row.share_id,
           url: `${this.options.baseUrl}/a/${row.share_id}`,
+          visibility: shareVisibilityFromRow(row.share_visibility),
           passwordProtected: row.share_password_hash !== null,
           viewCount: row.share_view_count ?? 0,
           uniqueViewerCount: row.share_unique_viewer_count ?? 0,
@@ -322,7 +332,7 @@ function artifactSelectSql(where: string, suffix: string): string {
       a.id, a.account_id, a.slug, a.type, a.title, a.content, a.content_hash,
       a.version_num, a.updated_at, a.created_at, a.created_by_bot,
       b.name AS bot_name, b.byline AS bot_byline,
-      s.id AS share_id, s.password_hash AS share_password_hash,
+      s.id AS share_id, s.visibility AS share_visibility, s.password_hash AS share_password_hash,
       s.expires_at AS share_expires_at, s.revoked_at AS share_revoked_at,
       s.view_count AS share_view_count, s.unique_viewer_count AS share_unique_viewer_count,
       s.last_viewed_at AS share_last_viewed_at, s.created_at AS share_created_at

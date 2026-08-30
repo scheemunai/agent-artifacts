@@ -70,7 +70,7 @@ All request bodies are JSON with snake_case fields. Content can be markdown or H
 
 ### Create an artifact
 
-POST /v1/artifacts creates an artifact. Use \`share:true\` when you want a public link in the response.
+POST /v1/artifacts creates an artifact. **It is PRIVATE.** You get a URL back, and only you — signed in to your dashboard — can open it; anyone else gets "not found". Publishing is a second, deliberate call (see "Publishing" below). \`share\` and \`password\` sent here are accepted and ignored, and the response says so in \`share.ignored_request\`.
 
 \`\`\`bash
 curl -X POST ${apiBase}/artifacts \\
@@ -81,12 +81,11 @@ curl -X POST ${apiBase}/artifacts \\
     "type": "markdown",
     "title": "Weekly Ops",
     "content": "# Weekly Ops\\n\\nThe agent finished the work.",
-    "change_summary": "First publish",
-    "share": true
+    "change_summary": "First publish"
   }'
 \`\`\`
 
-The response includes \`id\`, \`slug\`, \`version_num\`, \`content\`, and \`share\` when sharing is enabled. The public URL is at \`share.url\` and looks like:
+The response includes \`id\`, \`slug\`, \`version_num\`, \`content\`, and \`share\`. The URL is at \`share.url\` and \`share.visibility\` says who can open it — \`private\` until you publish. It looks like:
 
 \`\`\`text
 ${appBase}/a/<share_id>
@@ -105,12 +104,11 @@ curl -X POST ${apiBase}/artifacts \\
     "type": "markdown",
     "title": "Weekly Ops",
     "content": "# Weekly Ops\\n\\nUpdated numbers and next steps.",
-    "change_summary": "Updated numbers",
-    "share": true
+    "change_summary": "Updated numbers"
   }'
 \`\`\`
 
-Send \`share.url\` to the human. If the slug already had an active share, keep using that URL.
+Send \`share.url\` to the human once you have published it. The URL is stable — publishing does not change it — so re-publishing the same slug keeps the same link.
 
 ### Read artifacts
 
@@ -139,9 +137,11 @@ Restore body:
 }
 \`\`\`
 
-### Sharing
+### Publishing
 
-Create or reuse a public share:
+An artifact is \`private\` (only you, signed in), \`public\` (anyone with the link), or \`password\`. It starts private, always. A private artifact answers "not found" to everyone else on every surface — page, content, download and social card — so it has no link preview until you publish it.
+
+Publish it:
 
 \`\`\`bash
 curl -X POST ${apiBase}/artifacts/weekly-ops/share \\
@@ -164,11 +164,10 @@ Change or remove the password:
 - PATCH /v1/artifacts/:id_or_slug/share with \`{"password":"new-password"}\`
 - PATCH /v1/artifacts/:id_or_slug/share with \`{"password":null}\`
 
-Revoke the active share:
+Unpublish, or burn the link — two different things:
 
-- DELETE /v1/artifacts/:id_or_slug/share
-
-A revoked share URL returns 410.
+- DELETE /v1/artifacts/:id_or_slug/share — back to private. The URL survives, so publishing again makes the SAME link live. Use this when you published too early.
+- POST /v1/artifacts/:id_or_slug/share/revoke — the URL is dead (410) forever and publishing later mints a new one. Use this when a link has leaked.
 
 ### Download
 
@@ -198,6 +197,6 @@ Publish with a template by sending \`template\` instead of \`type\` and \`conten
 
 ### Habits
 
-Use one stable slug per living document. Always send \`change_summary\`. Use \`share:true\` when the human needs a link. Add a password when the link contains sensitive content. Stop if the API returns 401 because the key is missing, invalid, or revoked.
+Use one stable slug per living document. Always send \`change_summary\`. Create first and publish deliberately — an artifact is private until you call POST /share, and it is worth asking your human before you make their document public. Add a password when the link contains sensitive content. Stop if the API returns 401 because the key is missing, invalid, or revoked.
 `;
 }

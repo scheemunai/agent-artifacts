@@ -59,8 +59,15 @@ async function seed(
     type,
     title: 'Sweep Target',
     content: options.content ?? (type === 'markdown' ? '# One' : '<h1>One</h1>'),
-    share: options.share ?? false,
   });
+  // Creation is private now, so `share: true` in these fixtures means "and publish it" — the same
+  // second call a real owner makes from the share panel.
+  if (options.share) {
+    await artifacts.createShare({
+      account: accountToCloudAccount(account),
+      idOrSlug: created.artifact.id,
+    });
+  }
   for (let index = 1; index < (options.versions ?? 1); index += 1) {
     await artifacts.upsertArtifact({
       account: accountToCloudAccount(account),

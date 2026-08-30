@@ -46,7 +46,9 @@ async function seed(ctx: AuthTestContext): Promise<Seeded> {
 
   const guarded = await make('guarded', true);
   ctx.db.sqlite
-    .prepare("UPDATE shares SET password_hash = 'argon2-placeholder' WHERE id = ?")
+    .prepare(
+      "UPDATE shares SET password_hash = 'argon2-placeholder', visibility = 'password' WHERE id = ?"
+    )
     .run(guarded.share?.shareId);
 
   const revoked = await make('revoked-one', true);

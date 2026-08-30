@@ -86,10 +86,16 @@ export interface ArtifactVersionSnapshot {
   createdAt: number;
 }
 
+/** Who may open a share URL. `private` is the state every artifact is born in. */
+export type ShareVisibility = 'private' | 'public' | 'password';
+
+export const SHARE_VISIBILITIES: readonly ShareVisibility[] = ['private', 'public', 'password'];
+
 export interface ShareSnapshot {
   shareId: string;
   artifactId: string;
   url: string;
+  visibility: ShareVisibility;
   passwordProtected: boolean;
   passwordUpdatedAt: number | null;
   expiresAt: number | null;
@@ -190,6 +196,7 @@ interface ArtifactVersionDbRow {
 interface ShareDbRow {
   id: string;
   artifact_id: string;
+  visibility: ShareVisibility;
   password_hash: string | null;
   password_updated_at: number | null;
   expires_at: number | null;
@@ -438,11 +445,16 @@ export class ArtifactService {
   }
 
   /**
-   * Create a share for an artifact, or reuse the one that is already active.
+   * PUBLISH: the explicit act that takes an artifact from private to readable by anyone.
    *
-   * This is the only supported way to mint a share: it owns the `set_share_password`
-   * quota check, the one-active-share race fallback, and the `share.created` event
-   * required by the CloudModule hook surface (PRD §4.5).
+   * Every artifact already owns a private share row from creation, so the usual path here is an
+   * UPDATE of that row rather than an INSERT — which is what keeps the URL stable across
+   * publishing. The INSERT branch survives for the one case that still needs it: an artifact whose
+   * share was REVOKED, where publishing deliberately mints a fresh id so the burned link stays
+   * dead.
+   *
+   * It also owns the `set_share_password` quota check, the one-active-share race fallback, and the
+   * `share.created` event required by the CloudModule hook surface (PRD §4.5).
    */
   async createShare(input: CreateShareInput): Promise<ShareMutationResult> {
     const artifact = await this.resolveLiveArtifact(input.account.id, input.idOrSlug);
@@ -459,8 +471,28 @@ export class ArtifactService {
       if (input.passwordHash !== undefined) {
         await this.writeSharePassword(existing.id, input.passwordHash, now);
       }
+      const target: ShareVisibility =
+        input.passwordHash != null ||
+        (existing.password_hash !== null && input.passwordHash === undefined)
+          ? 'password'
+          : 'public';
+
+      // ATOMIC, and it has to be. Reading "was it private?" and then writing is two steps, and six
+      // concurrent publishes all read `private` before any of them wrote — so several believed they
+      // had performed the transition and every one of them answered 201. The conditional UPDATE
+      // lets exactly one caller claim it, which is the same guarantee the one-active-share unique
+      // index already gives the INSERT path below.
+      const claimed = await this.claimPublishTransition(existing.id, target);
+      if (!claimed) {
+        // Already published by someone; this call may still be moving public → password.
+        await this.writeShareVisibility(existing.id, target);
+      }
+
       const share = (await this.findActiveShare(artifact.id)) ?? existing;
-      return { share: shareFromRow(share, this.baseUrl), reused: true };
+      if (claimed) {
+        this.emitEvent(shareCreatedEvent(input.account.id, artifact.id, existing.id, now));
+      }
+      return { share: shareFromRow(share, this.baseUrl), reused: !claimed };
     }
 
     const shareId = nanoid(22);
@@ -503,8 +535,82 @@ export class ArtifactService {
 
     await this.enforceQuota(input.account, { type: 'set_share_password' });
     await this.writeSharePassword(share.id, input.passwordHash, this.now());
+    // Setting a password publishes behind the gate; clearing one leaves the artifact public rather
+    // than private, because removing a password is not a request to unpublish. A private artifact
+    // stays private either way — a password on something nobody can reach is not a publish.
+    if (share.visibility !== 'private') {
+      await this.writeShareVisibility(
+        share.id,
+        input.passwordHash === null ? 'public' : 'password'
+      );
+    }
     const updated = (await this.findActiveShare(artifact.id)) ?? share;
     return shareFromRow(updated, this.baseUrl);
+  }
+
+  /**
+   * UNPUBLISH: back to private, with the URL intact.
+   *
+   * Deliberately not revocation. The row and its id survive, so the owner can still open it and a
+   * later publish makes the SAME link live again. Burning a link that leaked is a different
+   * operation with different consequences, and it kept its own endpoint rather than being folded
+   * into this one — see `revokeShare`.
+   */
+  async unpublishShare(input: RevokeShareInput): Promise<ShareSnapshot | null> {
+    const artifact = await this.resolveLiveArtifact(input.account.id, input.idOrSlug);
+    if (!artifact) {
+      throw new ServiceError(404, 'not_found', 'Artifact not found');
+    }
+
+    const share = await this.findActiveShare(artifact.id);
+    if (!share) {
+      return null;
+    }
+
+    // The password comes off with the publication: leaving a stored hash on a private artifact
+    // would silently re-gate it the next time somebody published.
+    await this.writeSharePassword(share.id, null, this.now());
+    await this.writeShareVisibility(share.id, 'private');
+    const updated = (await this.findActiveShare(artifact.id)) ?? share;
+    return shareFromRow(updated, this.baseUrl);
+  }
+
+  /**
+   * Flips a share out of `private`, and reports whether THIS caller is the one that did it.
+   *
+   * One statement, so concurrent publishes cannot all believe they performed the transition.
+   * Exactly one gets `true` (and the 201, and the `share.created` event); the rest get `false`.
+   */
+  private async claimPublishTransition(
+    shareId: string,
+    visibility: ShareVisibility
+  ): Promise<boolean> {
+    if (this.db.dialect === 'sqlite') {
+      const result = this.db.sqlite
+        .prepare("UPDATE shares SET visibility = ? WHERE id = ? AND visibility = 'private'")
+        .run(visibility, shareId);
+      return result.changes === 1;
+    }
+
+    const result = await this.db.pool.query(
+      "UPDATE shares SET visibility = $1 WHERE id = $2 AND visibility = 'private'",
+      [visibility, shareId]
+    );
+    return (result.rowCount ?? 0) === 1;
+  }
+
+  private async writeShareVisibility(shareId: string, visibility: ShareVisibility): Promise<void> {
+    if (this.db.dialect === 'sqlite') {
+      this.db.sqlite
+        .prepare('UPDATE shares SET visibility = ? WHERE id = ?')
+        .run(visibility, shareId);
+      return;
+    }
+
+    await this.db.pool.query('UPDATE shares SET visibility = $1 WHERE id = $2', [
+      visibility,
+      shareId,
+    ]);
   }
 
   /**
@@ -1560,29 +1666,28 @@ export class ArtifactService {
       );
   }
 
+  /**
+   * EVERY ARTIFACT GETS A URL, AND IT IS PRIVATE.
+   *
+   * This used to publish: `share: true` minted a row and the artifact was world-readable from the
+   * moment an agent said so — and the published contract taught exactly that. Now creation always
+   * mints the row and always mints it `private`, so an artifact has a stable URL from birth that
+   * only its signed-in owner can open, and publishing is a separate, deliberate act.
+   *
+   * `share` and `passwordHash` from the request are deliberately NOT consulted. The route reports
+   * them back as ignored; a password sent here is dropped rather than stored, because a hash with
+   * no gate in front of it is a credential at rest that buys nothing.
+   *
+   * The URL never changes when the artifact is later published, which is the reason to mint it now
+   * rather than on first publish: the link an agent hands over is the link that goes live.
+   */
   private ensureSqliteShare(
     handle: SqliteDatabaseHandle,
-    input: UpsertArtifactInput,
+    _input: UpsertArtifactInput,
     artifactId: string,
     now: number
   ): PendingShareEvent | null {
-    if (!input.share && input.passwordHash === undefined) {
-      return null;
-    }
-
-    const existing = this.getSqliteActiveShare(handle, artifactId);
-    if (existing) {
-      if (input.passwordHash !== undefined) {
-        handle.sqlite
-          .prepare(
-            `
-              UPDATE shares
-              SET password_hash = ?, password_updated_at = ?
-              WHERE id = ?
-            `
-          )
-          .run(input.passwordHash, now, existing.id);
-      }
+    if (this.getSqliteActiveShare(handle, artifactId)) {
       return null;
     }
 
@@ -1591,45 +1696,25 @@ export class ArtifactService {
       .prepare(
         `
           INSERT INTO shares (
-            id, artifact_id, password_hash, password_updated_at, expires_at,
+            id, artifact_id, visibility, password_hash, password_updated_at, expires_at,
             revoked_at, view_count, unique_viewer_count, last_viewed_at, created_at
           )
-          VALUES (?, ?, ?, ?, NULL, NULL, 0, 0, NULL, ?)
+          VALUES (?, ?, 'private', NULL, NULL, NULL, NULL, 0, 0, NULL, ?)
         `
       )
-      .run(
-        shareId,
-        artifactId,
-        input.passwordHash ?? null,
-        input.passwordHash === undefined ? null : now,
-        now
-      );
+      .run(shareId, artifactId, now);
 
-    return { accountId: input.account.id, artifactId, shareId };
+    return { accountId: _input.account.id, artifactId, shareId };
   }
 
+  /** The Postgres half of `ensureSqliteShare`; the reasoning is written out there. */
   private async ensurePostgresShare(
     client: PoolClient,
     input: UpsertArtifactInput,
     artifactId: string,
     now: number
   ): Promise<PendingShareEvent | null> {
-    if (!input.share && input.passwordHash === undefined) {
-      return null;
-    }
-
-    const existing = await getPostgresActiveShare(client, artifactId);
-    if (existing) {
-      if (input.passwordHash !== undefined) {
-        await client.query(
-          `
-            UPDATE shares
-            SET password_hash = $1, password_updated_at = $2
-            WHERE id = $3
-          `,
-          [input.passwordHash, now, existing.id]
-        );
-      }
+    if (await getPostgresActiveShare(client, artifactId)) {
       return null;
     }
 
@@ -1637,18 +1722,12 @@ export class ArtifactService {
     await client.query(
       `
         INSERT INTO shares (
-          id, artifact_id, password_hash, password_updated_at, expires_at,
+          id, artifact_id, visibility, password_hash, password_updated_at, expires_at,
           revoked_at, view_count, unique_viewer_count, last_viewed_at, created_at
         )
-        VALUES ($1, $2, $3, $4, NULL, NULL, 0, 0, NULL, $5)
+        VALUES ($1, $2, 'private', NULL, NULL, NULL, NULL, 0, 0, NULL, $3)
       `,
-      [
-        shareId,
-        artifactId,
-        input.passwordHash ?? null,
-        input.passwordHash === undefined ? null : now,
-        now,
-      ]
+      [shareId, artifactId, now]
     );
 
     return { accountId: input.account.id, artifactId, shareId };
@@ -1662,20 +1741,30 @@ export class ArtifactService {
   ): Promise<void> {
     const columns = `
       INSERT INTO shares (
-        id, artifact_id, password_hash, password_updated_at, expires_at,
+        id, artifact_id, visibility, password_hash, password_updated_at, expires_at,
         revoked_at, view_count, unique_viewer_count, last_viewed_at, created_at
       )
     `;
-    const values = [shareId, artifactId, passwordHash, passwordHash === null ? null : now, now];
+    // Reached only from publish, so the row is born readable — `password` when a password came with
+    // the request, `public` otherwise.
+    const visibility: ShareVisibility = passwordHash === null ? 'public' : 'password';
+    const values = [
+      shareId,
+      artifactId,
+      visibility,
+      passwordHash,
+      passwordHash === null ? null : now,
+      now,
+    ];
 
     if (this.db.dialect === 'sqlite') {
       this.db.sqlite
-        .prepare(`${columns} VALUES (?, ?, ?, ?, NULL, NULL, 0, 0, NULL, ?)`)
+        .prepare(`${columns} VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, 0, NULL, ?)`)
         .run(...values);
       return;
     }
 
-    await this.db.pool.query(`${columns} VALUES ($1, $2, $3, $4, NULL, NULL, 0, 0, NULL, $5)`, [
+    await this.db.pool.query(`${columns} VALUES ($1, $2, $3, $4, $5, NULL, NULL, 0, 0, NULL, $6)`, [
       ...values,
     ]);
   }
@@ -1982,6 +2071,9 @@ function shareFromRow(row: ShareDbRow, baseUrl: string): ShareSnapshot {
     shareId: row.id,
     artifactId: row.artifact_id,
     url: `${baseUrl}/a/${row.id}`,
+    // A row written before the visibility column existed cannot reach here — the forward migration
+    // backfills every one — but an unreadable value still resolves to the closed state.
+    visibility: SHARE_VISIBILITIES.includes(row.visibility) ? row.visibility : 'private',
     passwordProtected: row.password_hash !== null,
     passwordUpdatedAt: row.password_updated_at,
     expiresAt: row.expires_at,

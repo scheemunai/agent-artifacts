@@ -22,7 +22,9 @@ curl -fsS "$AA_BASE_URL/v1/contract"
 
 ## 2. Create or update an artifact by slug
 
-Posting the same `slug` again creates a new version and preserves the public URL.
+**New artifacts are private.** You get a `share.url` back immediately, but only you — signed in to your dashboard — can open it; everyone else gets a 404 on every surface, including the social card. `share` and `password` sent at creation are accepted and ignored, and the response says so in `share.ignored_request`. Publishing is the separate call in §5.
+
+Posting the same `slug` again creates a new version and preserves the URL.
 
 ```bash
 curl -sS -X POST "$AA_BASE_URL/v1/artifacts" \
@@ -33,8 +35,7 @@ curl -sS -X POST "$AA_BASE_URL/v1/artifacts" \
     "title": "Weekly Report",
     "type": "markdown",
     "content": "# Weekly Report\n\nShipped the viewer.",
-    "change_summary": "Initial publish",
-    "share": true
+    "change_summary": "Initial publish"
   }'
 ```
 
@@ -70,7 +71,11 @@ curl -sS -X POST "$AA_BASE_URL/v1/artifacts/weekly-report/versions/1/restore" \
   -d '{"change_summary":"Restore original"}'
 ```
 
-## 5. Share, password-protect, revoke, and download
+## 5. Publish, password-protect, unpublish, revoke, and download
+
+An artifact is `private` (only you), `public`, or `password`. It starts private.
+`DELETE /share` **unpublishes** — back to private, URL intact, reversible.
+`POST /share/revoke` **burns the link** — 410 forever, new id next time.
 
 ```bash
 curl -sS -X POST "$AA_BASE_URL/v1/artifacts/weekly-report/share" \
@@ -86,7 +91,12 @@ curl -sS -X PATCH "$AA_BASE_URL/v1/artifacts/weekly-report/share" \
 curl -sS -OJ "$AA_BASE_URL/v1/artifacts/weekly-report/download" \
   -H "Authorization: Bearer $AA_BOT_KEY"
 
+# Unpublish: back to private, same URL if you publish again.
 curl -sS -X DELETE "$AA_BASE_URL/v1/artifacts/weekly-report/share" \
+  -H "Authorization: Bearer $AA_BOT_KEY"
+
+# Burn the link: 410 forever, a new id on the next publish.
+curl -sS -X POST "$AA_BASE_URL/v1/artifacts/weekly-report/share/revoke" \
   -H "Authorization: Bearer $AA_BOT_KEY"
 ```
 

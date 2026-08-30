@@ -74,8 +74,15 @@ async function seedArtifact(
     type: 'markdown',
     title: 'Confirm Target',
     content: '# Confirm Target',
-    share: options.share ?? false,
   });
+  // Creation is private now, so `share: true` in these fixtures means "and publish it" — the same
+  // second call a real owner makes from the share panel.
+  if (options.share) {
+    await artifacts.createShare({
+      account: accountToCloudAccount(account),
+      idOrSlug: created.artifact.id,
+    });
+  }
   return {
     cookie: await login(ctx, account.email, 'password123'),
     artifactId: created.artifact.id,

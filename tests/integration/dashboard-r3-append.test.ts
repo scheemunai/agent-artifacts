@@ -24,22 +24,27 @@ async function seed(
   const auth = new AuthService(ctx.db, ctx.config, ctx.logger);
   const account = await auth.createPasswordAccount('append@example.test', 'password123');
   const { bot } = await auth.createBot(accountToCloudAccount(account), 'Append Bot');
-  const created = await new ArtifactService({
+  const artifacts = new ArtifactService({
     db: ctx.db,
     extension: createDefaultCloudModule(ctx.config),
     baseUrl: ctx.config.baseUrl,
-  }).upsertArtifact({
+  });
+  const created = await artifacts.upsertArtifact({
     account: accountToCloudAccount(account),
     bot: { id: bot.id, name: bot.name, byline: bot.byline },
     slug: 'append-target',
     type: 'markdown',
     title: 'Append Target',
     content: '# Append',
-    share: true,
+  });
+  // Published explicitly: the counter copy under test only renders on a live share panel.
+  const published = await artifacts.createShare({
+    account: accountToCloudAccount(account),
+    idOrSlug: created.artifact.id,
   });
   ctx.db.sqlite
     .prepare('UPDATE shares SET view_count = ?, unique_viewer_count = ? WHERE id = ?')
-    .run(views, views, created.share?.shareId);
+    .run(views, views, published.share.shareId);
   return {
     cookie: await login(ctx, account.email, 'password123'),
     artifactId: created.artifact.id,

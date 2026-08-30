@@ -288,7 +288,12 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
     }
   });
 
-  it('creates a share and stores an argon2 password hash in one publish call', async () => {
+  it('creates privately whatever the caller asks for, and says what it ignored', async () => {
+    // This test used to assert the opposite: that one publish call could mint a world-readable,
+    // password-protected share. Creation cannot publish at all now, so what it pins is that the
+    // request is accepted, the artifact comes back with an owner-only URL, and the response states
+    // plainly which fields were ignored — an agent that sent `share:true` must not learn that only
+    // from a human who cannot open the link.
     const ctx = await createApiTestContext();
 
     try {
@@ -299,14 +304,28 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
       });
       expect(response.status).toBe(201);
       const body = await json(response);
-      const share = body.share as { share_id: string; url: string; password_protected: boolean };
-      expect(share.password_protected).toBe(true);
-      expect(share.url).toBe(`${ctx.config.baseUrl}/a/${share.share_id}`);
+      const share = body.share as {
+        share_id: string;
+        url: string;
+        visibility: string;
+        password_protected: boolean;
+        note: string;
+        ignored_request: string[];
+      };
 
+      expect(share.visibility).toBe('private');
+      expect(share.password_protected).toBe(false);
+      expect(share.url).toBe(`${ctx.config.baseUrl}/a/${share.share_id}`);
+      expect(share.ignored_request).toContain('password');
+      expect(share.note).toContain('private');
+
+      // The password is DROPPED, not stored: a hash with no gate in front of it is a credential at
+      // rest that buys nothing.
       const row = ctx.db.sqlite
-        .prepare('SELECT password_hash FROM shares WHERE id = ?')
-        .get(share.share_id) as { password_hash: string };
-      expect(row.password_hash).toMatch(/^\$argon2id\$/);
+        .prepare('SELECT password_hash, visibility FROM shares WHERE id = ?')
+        .get(share.share_id) as { password_hash: string | null; visibility: string };
+      expect(row.password_hash).toBeNull();
+      expect(row.visibility).toBe('private');
     } finally {
       await ctx.cleanup();
     }
@@ -484,15 +503,39 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
       expect(patchResponse.status).toBe(200);
       expect(await json(patchResponse)).toMatchObject({ password_protected: false });
 
-      const revokeResponse = await ctx.app.request('/v1/artifacts/shareable/share', {
+      // DELETE now UNPUBLISHES: private again, and the URL survives so re-publishing brings the
+      // same link back. That is the difference from revoke, which is asserted below it.
+      const unpublishResponse = await ctx.app.request('/v1/artifacts/shareable/share', {
         method: 'DELETE',
+        headers: ctx.authHeaders,
+      });
+      expect(unpublishResponse.status).toBe(200);
+      expect(await json(unpublishResponse)).toMatchObject({
+        unpublished: true,
+        visibility: 'private',
+        share_id: firstShare.share_id,
+      });
+
+      const rePublishResponse = await ctx.app.request('/v1/artifacts/shareable/share', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({}),
+      });
+      expect(rePublishResponse.status).toBe(201);
+      const rePublished = await json(rePublishResponse);
+      expect(rePublished.share_id, 'unpublish must not burn the URL').toBe(firstShare.share_id);
+      expect(rePublished).toMatchObject({ visibility: 'public' });
+
+      // Revoke is the other operation, and it keeps its old promise: dead forever, new id next time.
+      const revokeResponse = await ctx.app.request('/v1/artifacts/shareable/share/revoke', {
+        method: 'POST',
         headers: ctx.authHeaders,
       });
       expect(revokeResponse.status).toBe(200);
       expect(await json(revokeResponse)).toEqual({ revoked: true });
 
-      const secondRevokeResponse = await ctx.app.request('/v1/artifacts/shareable/share', {
-        method: 'DELETE',
+      const secondRevokeResponse = await ctx.app.request('/v1/artifacts/shareable/share/revoke', {
+        method: 'POST',
         headers: ctx.authHeaders,
       });
       expect(secondRevokeResponse.status).toBe(200);
@@ -505,7 +548,7 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
       });
       expect(reShareResponse.status).toBe(201);
       const reShare = await json(reShareResponse);
-      expect(reShare.share_id).not.toBe(firstShare.share_id);
+      expect(reShare.share_id, 'a revoked URL must never come back').not.toBe(firstShare.share_id);
       expect(reShare).toMatchObject({ views: { previous_shares: 1 } });
     } finally {
       await ctx.cleanup();

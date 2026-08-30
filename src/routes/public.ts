@@ -191,7 +191,9 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         });
       }
 
-      const success = await viewer.verifyPassword(shareId, body.password);
+      const success = await viewer.verifyPassword(shareId, body.password, {
+        requesterAccountId: await requesterAccountId(context),
+      });
       setCookie(context as unknown as PublicContext, 'aa_sa', success.viewerToken, {
         path: `/a/${shareId}`,
         maxAge: 900,
@@ -252,8 +254,16 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       return context.text('Not found', 404);
     }
 
+    // Set BEFORE the lookup so it lands on the refusal. A private artifact's card must never be
+    // cached — least of all by a shared cache, which would keep answering for an hour after the
+    // gate said no. The success path below returns its own Response and keeps `public, max-age`;
+    // only the error path, built by `context.text`, inherits this.
+    context.header('Cache-Control', 'no-store');
+
     return handleBinary(context as unknown as PublicContext, async () => {
-      const og = await viewer.getOgModel(context.req.param('share_id'));
+      const og = await viewer.getOgModel(context.req.param('share_id'), {
+        requesterAccountId: await requesterAccountId(context),
+      });
       const png = await generateCachedOgImage({
         shareId: og.shareId,
         contentHash: og.contentHash,

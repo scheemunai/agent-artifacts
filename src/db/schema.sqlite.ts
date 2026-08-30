@@ -143,6 +143,16 @@ export const shares = sqliteTable(
     artifactId: text('artifact_id')
       .notNull()
       .references(() => artifacts.id, { onDelete: 'cascade' }),
+    /**
+     * Who may open this URL: `private` (the owner, signed in) · `public` · `password`.
+     *
+     * Defaults to `private` at the database level so a row written by any path that forgets to set
+     * it fails CLOSED. The column carries the enum check inline; the cross-column invariant
+     * (`password` implies a stored hash) is enforced by the one writer in ArtifactService, because
+     * SQLite cannot add a table-level CHECK to an existing table without rebuilding it and the two
+     * dialects are kept identical on purpose.
+     */
+    visibility: text('visibility').notNull().default('private'),
     passwordHash: text('password_hash'),
     passwordUpdatedAt: timestampMs('password_updated_at'),
     expiresAt: timestampMs('expires_at'),

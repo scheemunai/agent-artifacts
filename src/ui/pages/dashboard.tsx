@@ -39,6 +39,8 @@ export interface DashboardBotView {
 export interface DashboardShareView {
   id: string;
   url: string;
+  /** `private` | `public` | `password`. Existence of the row no longer implies published. */
+  visibility: string;
   passwordProtected: boolean;
   viewCount: number;
   uniqueViewerCount: number;
@@ -962,7 +964,10 @@ function ShareStateBadge({
 }: {
   artifact: Pick<DashboardArtifactListItem, 'activeShare' | 'previousShareCount'>;
 }) {
-  if (artifact.activeShare) {
+  // Keyed on VISIBILITY, not on "a share row exists". Every artifact owns a share row from the
+  // moment it is created now — that is what gives it a stable URL — so existence stopped being the
+  // question and this badge would have told every owner their private drafts were public.
+  if (artifact.activeShare && artifact.activeShare.visibility !== 'private') {
     if (artifact.activeShare.passwordProtected) {
       return (
         <Badge tone="info">
@@ -973,7 +978,7 @@ function ShareStateBadge({
     }
     return <Badge tone="success">Public</Badge>;
   }
-  if (artifact.previousShareCount > 0) {
+  if (artifact.previousShareCount > 0 && !artifact.activeShare) {
     return <Badge tone="warn">Link revoked</Badge>;
   }
   return <Badge tone="neutral">Private</Badge>;
@@ -998,7 +1003,11 @@ function ExpiresBadge({ expiresAt }: { expiresAt: number }) {
 }
 
 function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
-  const share = artifact.activeShare;
+  // A PUBLISHED share, not merely an existing one. Every artifact owns a share row from creation
+  // now, so the panel keys on visibility — otherwise a private artifact would offer "revoke this
+  // link" for a link nobody can open, and never offer the button that publishes it.
+  const published = artifact.activeShare;
+  const share = published && published.visibility !== 'private' ? published : null;
   return (
     <Card
       title="Share panel"

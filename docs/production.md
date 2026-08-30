@@ -100,6 +100,12 @@ AA_WAITLIST_CONFIRMATION=true       # one confirmation email per new signup
 AA_HERO_ARTIFACT_PATH=              # empty: this host has no hero artifact (see below)
 ```
 
+### Artifact visibility, and the migration that preserves it
+
+Artifacts are **private by default**: created with a stable URL only their signed-in owner can open, published by a separate explicit call. A private artifact answers 404 on the page, the content, the download, the sandboxed frame and the OG card, and is byte-for-byte indistinguishable from a share id that never existed.
+
+**The deploy that ships this runs a forward migration** (`shares.visibility`, applied by `runMigrations` at boot, before the server listens — no separate step). Its backfill writes every EXISTING share row to `public`, or `password` where a hash is set. That is not opting old artifacts in: before this column existed a share row was only ever created by an explicit request, so every row is a link that is already live. Without the backfill, the deploy would take every published link dark.
+
 ### Analytics
 
 `AA_DATAFAST_SITE_ID` turns DataFast on. Unset or empty is off, and off is the default everywhere: no script tag is rendered, and the app-origin CSP keeps `script-src 'self'` / `connect-src 'self'` with no third-party host in it. Setting it does two things together — renders the tag into every app-origin page, and adds `https://datafa.st` to `script-src` **and** `connect-src`. Both directives are needed: allowing only the script produces a page that loads it and then silently drops every event.

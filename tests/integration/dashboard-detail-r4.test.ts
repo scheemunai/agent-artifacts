@@ -36,12 +36,21 @@ async function seed(
     type: 'markdown',
     title: 'Detail Target',
     content: '# Detail Target\n\nFirst.',
-    share: options.share ?? false,
   });
+  // Creation is private now, so `share: true` in these fixtures means "and publish it" — the same
+  // second call a real owner makes from the share panel.
+  if (options.share) {
+    await artifacts.createShare({
+      account: accountToCloudAccount(account),
+      idOrSlug: created.artifact.id,
+    });
+  }
   if (options.password) {
     // The share is protected by a stored hash; upsert does not take a plaintext password.
     ctx.db.sqlite
-      .prepare("UPDATE shares SET password_hash = 'argon2-placeholder' WHERE id = ?")
+      .prepare(
+        "UPDATE shares SET password_hash = 'argon2-placeholder', visibility = 'password' WHERE id = ?"
+      )
       .run(created.share?.shareId);
   }
   for (let index = 1; index < (options.versions ?? 1); index += 1) {

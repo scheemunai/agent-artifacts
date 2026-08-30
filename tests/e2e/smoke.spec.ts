@@ -678,17 +678,41 @@ async function readSeedFile(): Promise<SeedState | null> {
   }
 }
 
+/**
+ * Creates an artifact and, when the seed wants a reachable link, publishes it.
+ *
+ * Creation is private now, so `share: true` and `password` no longer do anything at this endpoint —
+ * they are the seed's way of saying "and then publish it", which is the second call a real caller
+ * has to make.
+ */
 async function publishArtifact(
   request: APIRequestContext,
   apiKey: string,
   body: Record<string, unknown>
 ): Promise<ArtifactResponse> {
+  const { share, password, ...create } = body;
   const response = await request.post('/v1/artifacts', {
     headers: authHeaders(apiKey),
-    data: body,
+    data: create,
   });
   expect([200, 201], `publish ${String(body.slug)} status`).toContain(response.status());
-  return (await response.json()) as ArtifactResponse;
+  const created = (await response.json()) as ArtifactResponse;
+
+  if (!share && password === undefined) {
+    return created;
+  }
+
+  const published = await request.post(`/v1/artifacts/${String(create.slug)}/share`, {
+    headers: authHeaders(apiKey),
+    data: password === undefined ? {} : { password },
+  });
+  expect([200, 201], `share ${String(create.slug)} status`).toContain(published.status());
+
+  const reread = await request.get(`/v1/artifacts/${String(create.slug)}`, {
+    headers: authHeaders(apiKey),
+  });
+  expect(reread.status(), `reread ${String(create.slug)} status`).toBe(200);
+  return (await reread.json()) as ArtifactResponse;
 }
 
 async function updateArtifact(
@@ -705,15 +729,16 @@ async function updateArtifact(
   return (await response.json()) as ArtifactResponse;
 }
 
+/** Burns the link: the seed's revoked fixture asserts a 410, which unpublishing does not produce. */
 async function deleteShare(
   request: APIRequestContext,
   apiKey: string,
   slug: string
 ): Promise<void> {
-  const response = await request.delete(`/v1/artifacts/${slug}/share`, {
+  const response = await request.post(`/v1/artifacts/${slug}/share/revoke`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
-  expect(response.status(), `delete share for ${slug} status`).toBe(200);
+  expect(response.status(), `revoke share for ${slug} status`).toBe(200);
 }
 
 function authHeaders(apiKey: string): Record<string, string> {

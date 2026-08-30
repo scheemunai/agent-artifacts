@@ -36,6 +36,78 @@ export function resolveMigrationsFolder(dialect: DatabaseHandle['dialect']): str
 
 async function applyForwardMigrations(handle: DatabaseHandle, logger: Logger): Promise<void> {
   await ensureTemplateThumbnailUrl(handle, logger);
+  await ensureShareVisibility(handle, logger);
+}
+
+/**
+ * Adds `shares.visibility` and — ON THE ADD, ONCE — records what every existing share already is.
+ *
+ * THE BACKFILL IS THE WHOLE POINT, and it is not "opting old artifacts in". Before this column
+ * existed, a share row was only ever created by an explicit `share:true` or a password, so every
+ * row in the table is a link that is live on the internet RIGHT NOW. Adding the column with its
+ * `private` default and stopping there would take every one of those links dark on the deploy that
+ * shipped it — including the ones people have already sent to other people. The UPDATE writes down
+ * the state each row is in, so nothing changes visibility on deploy.
+ *
+ * It runs only on the branch that adds the column, so a later boot cannot re-run it and re-publish
+ * something the owner has since made private.
+ *
+ * `private` is the column default rather than `public` so that anything which reaches this table by
+ * a path nobody has thought of yet fails CLOSED.
+ */
+async function ensureShareVisibility(handle: DatabaseHandle, logger: Logger): Promise<void> {
+  const backfill = `
+    UPDATE shares
+    SET visibility = CASE WHEN password_hash IS NOT NULL THEN 'password' ELSE 'public' END
+  `;
+
+  if (handle.dialect === 'sqlite') {
+    const columns = handle.sqlite.prepare("PRAGMA table_info('shares')").all() as Array<{
+      name: string;
+    }>;
+    if (columns.some((column) => column.name === 'visibility')) {
+      return;
+    }
+
+    try {
+      handle.sqlite
+        .prepare(
+          `ALTER TABLE shares ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'
+             CHECK (visibility IN ('private', 'public', 'password'))`
+        )
+        .run();
+    } catch (error) {
+      if (!isDuplicateColumnError(error)) {
+        throw error;
+      }
+      return;
+    }
+
+    const updated = handle.sqlite.prepare(backfill).run();
+    logger.info(
+      { dialect: handle.dialect, migration: 'shares.visibility', backfilled: updated.changes },
+      'database.forward_migration.applied'
+    );
+    return;
+  }
+
+  const existing = await handle.pool.query(
+    `SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'shares' AND column_name = 'visibility'`
+  );
+  if ((existing.rowCount ?? 0) > 0) {
+    return;
+  }
+
+  await handle.pool.query(
+    `ALTER TABLE shares ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private'
+       CHECK (visibility IN ('private', 'public', 'password'))`
+  );
+  const updated = await handle.pool.query(backfill);
+  logger.info(
+    { dialect: handle.dialect, migration: 'shares.visibility', backfilled: updated.rowCount ?? 0 },
+    'database.forward_migration.applied'
+  );
 }
 
 async function ensureTemplateThumbnailUrl(handle: DatabaseHandle, logger: Logger): Promise<void> {

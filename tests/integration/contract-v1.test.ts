@@ -41,7 +41,7 @@ describe('V1 contract endpoint', () => {
       expect(text).toContain(`# Agent Artifacts — API Contract (v1)`);
       expect(text).toContain(`Base URL: ${ctx.config.baseUrl}/v1`);
       expect(text).toContain('POST the same slug again = UPDATE');
-      expect(text).toContain('the public URL is exactly at response.share.url');
+      expect(text).toContain('the URL is exactly at response.share.url');
       expect(text).toContain('Agent publishing skill: GET /skill.md');
 
       const llms = await ctx.app.request('/llms.txt');
@@ -313,6 +313,7 @@ describe('V1 contract endpoint', () => {
           '/artifacts/{id_or_slug}',
           '/artifacts/{id_or_slug}/download',
           '/artifacts/{id_or_slug}/share',
+          '/artifacts/{id_or_slug}/share/revoke',
           '/artifacts/{id_or_slug}/versions',
           '/artifacts/{id_or_slug}/versions/{n}',
           '/artifacts/{id_or_slug}/versions/{n}/restore',

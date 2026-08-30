@@ -52,6 +52,7 @@ import {
   patchShareResponse,
   publishArtifact,
   restoreArtifactVersion,
+  revokeShareResponse,
   updateArtifact,
 } from '../../services/v1.js';
 import { skillResponse } from '../skill.js';
@@ -298,6 +299,21 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
     );
   });
 
+  // Burn the link. What DELETE used to do, kept as its own verb so the promise the contract has
+  // always made — a revoked URL is dead forever — is still available now that DELETE unpublishes.
+  v1.post('/artifacts/:id_or_slug/share/revoke', async (context) => {
+    const auth = requireAuth(context);
+    return context.json(
+      await revokeShareResponse({
+        db: requireDb(ctx),
+        cloudModule: requireCloudModule(ctx),
+        config: ctx.config,
+        account: auth.account,
+        idOrSlug: context.req.param('id_or_slug'),
+      })
+    );
+  });
+
   v1.delete('/artifacts/:id_or_slug/share', async (context) => {
     const auth = requireAuth(context);
     return context.json(
@@ -435,6 +451,7 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
   methodNotAllowed(v1, '/artifacts/:id_or_slug/versions/:n', 'GET');
   methodNotAllowed(v1, '/artifacts/:id_or_slug/versions/:n/restore', 'POST');
   methodNotAllowed(v1, '/artifacts/:id_or_slug/share', 'POST, PATCH, DELETE');
+  methodNotAllowed(v1, '/artifacts/:id_or_slug/share/revoke', 'POST');
   methodNotAllowed(v1, '/artifacts/:id_or_slug/download', 'GET');
   methodNotAllowed(v1, '/templates', 'GET, POST');
   methodNotAllowed(v1, '/templates/:slug', 'GET, DELETE');
@@ -636,6 +653,7 @@ Documented endpoints:
 - POST /v1/artifacts/:id_or_slug/share
 - PATCH /v1/artifacts/:id_or_slug/share
 - DELETE /v1/artifacts/:id_or_slug/share
+- POST /v1/artifacts/:id_or_slug/share/revoke
 - GET /v1/templates
 - POST /v1/templates
 - GET /v1/templates/:slug
@@ -669,10 +687,14 @@ Do not send response-only fields such as \`id\`, \`version_num\`, \`share.url\`,
 - type: "markdown" or "html". Max content: 2 MB.
 - slug is optional — derived from the title; two documents that must stay
   separate need distinct slugs.
-- share:true → response includes share.url — a stable public link. Send it to
-  your human. The link LIVE-UPDATES when you re-publish: same URL, new content.
-- In the JSON response, the public URL is exactly at response.share.url.
-- "password":"secret123" → the public page requires that password (share implied).
+- NEW ARTIFACTS ARE PRIVATE. You always get share.url back, and only you —
+  signed in to your dashboard — can open it. Anyone else gets "not found".
+- \`share\` and \`password\` are ACCEPTED AND IGNORED here; the response says so in
+  share.ignored_request. Creation cannot publish. See §6 for how to publish.
+- In the JSON response, the URL is exactly at response.share.url, and
+  response.share.visibility tells you who can open it right now.
+- The link LIVE-UPDATES when you re-publish: same URL, new content. Publishing
+  never changes the URL, so you can hand it over before you publish.
 - Response: 201 created / 200 updated, with id, slug, version_num, share.url.
 
 ## 2. Publish with a template — consistent, on-brand output
@@ -789,13 +811,27 @@ key still reads any version through the endpoints above. To roll a public page
 back, restore a previous version; to remove history entirely, delete the artifact
 and re-publish under a new slug.
 
-## 6. Sharing — POST/PATCH/DELETE /artifacts/:slug/share
+## 6. Publishing — POST/PATCH/DELETE /artifacts/:slug/share
 
-POST   .../share                     → { "url": "${config.baseUrl}/a/..." }
-POST   .../share {"password":"s3cret"}  → password-protected link
-PATCH  .../share {"password":null}      → remove password
-DELETE .../share                        → revoke; the old URL is dead (410) forever.
-                                          POST again later = a NEW url.
+An artifact has one of three visibilities. It starts, always, at the first one.
+
+  private   only you, signed in to your dashboard. Everyone else gets 404 on the
+            page, the content, the download, the frame AND the social card — a
+            private artifact does not disclose that it exists, and has no
+            preview image.
+  public    anyone with the link.
+  password  anyone with the link AND the password.
+
+POST   .../share                     → PUBLISH. { "url": ".../a/...", "visibility": "public" }
+POST   .../share {"password":"s3cret"}  → publish behind a password
+PATCH  .../share {"password":"s3cret"}  → add/replace the password
+PATCH  .../share {"password":null}      → remove the password (stays public)
+DELETE .../share                        → UNPUBLISH: back to private. The URL survives,
+                                          so publishing again makes the SAME link live.
+POST   .../share/revoke                 → BURN THE LINK: dead (410) forever.
+                                          Publishing later mints a NEW url.
+
+Use DELETE when you published too early. Use revoke when the link leaked.
 
 Also: GET .../weekly-report/download → raw .md/.html file.
 DELETE /v1/artifacts/weekly-report   → soft-delete (share revoked too).
@@ -809,6 +845,8 @@ DELETE /v1/artifacts/weekly-report   → soft-delete (share revoked too).
   middle of ordinary work does not cost you a publish. Every request, refused ones
   included, still counts against the 60/min request budget.
 - Errors are always: { "error": { "code": "snake_case", "message": "...", "details": {...} } }
+  A private artifact answers not_found (404) to everyone but its owner — the same
+  answer a share id that never existed gets, on purpose.
   Common codes: unauthorized (401), not_found (404), validation_failed (400),
   payload_too_large (413), rate_limited (429), slug_conflict (409),
   built_in_template (403).
@@ -818,8 +856,9 @@ DELETE /v1/artifacts/weekly-report   → soft-delete (share revoked too).
 ## Habits worth forming
 
 One stable slug per living document; re-publish freely (the URL never changes).
-Always send change_summary. Use a template when one fits. Add a password when
-content is sensitive. Share the url with your human.
+Always send change_summary. Use a template when one fits. Create first, then
+publish deliberately with POST /share — and only when your human has said the
+content is theirs to share. Add a password when content is sensitive.
 `;
 }
 
@@ -944,10 +983,12 @@ function openApiDocument(config: AppConfig): Record<string, unknown> {
           responses: { '200': { description: 'Share updated' }, ...errorResponses },
         },
         delete: {
-          summary: 'Revoke share',
+          summary: 'Unpublish (back to private)',
+          description:
+            'Returns the artifact to private. The share URL survives and works again if you publish later.',
           security,
           parameters: pathParameters(['id_or_slug']),
-          responses: { '200': { description: 'Share revoke result' }, ...errorResponses },
+          responses: { '200': { description: 'Unpublish result' }, ...errorResponses },
         },
       },
       '/templates': {
@@ -978,6 +1019,16 @@ function openApiDocument(config: AppConfig): Record<string, unknown> {
           security,
           parameters: pathParameters(['slug']),
           responses: { '200': { description: 'Template deleted' }, ...errorResponses },
+        },
+      },
+      '/artifacts/{id_or_slug}/share/revoke': {
+        post: {
+          summary: 'Revoke the share URL permanently',
+          description:
+            'Kills the share URL for good: it answers 410 forever and publishing again mints a new id. Use DELETE /share to unpublish reversibly.',
+          security,
+          parameters: pathParameters(['id_or_slug']),
+          responses: { '200': { description: 'Share revoked' }, ...errorResponses },
         },
       },
       '/artifacts/{id_or_slug}/download': {

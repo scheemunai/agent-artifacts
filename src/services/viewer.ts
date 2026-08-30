@@ -8,7 +8,7 @@ import { renderMarkdown } from '../lib/markdown.js';
 import { buildOgDescription } from '../lib/og.js';
 import { hmacHex, timingSafeEqualHex } from '../lib/signed-token.js';
 import type { Logger } from '../logger.js';
-import type { ArtifactType } from './artifacts.js';
+import type { ArtifactType, ShareVisibility } from './artifacts.js';
 import { ServiceError } from './errors.js';
 
 export const SHARE_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
@@ -108,6 +108,7 @@ export interface ViewerRecordViewInput {
 interface ShareContext {
   shareId: string;
   artifactId: string;
+  visibility: ShareVisibility;
   passwordHash: string | null;
   passwordUpdatedAt: number | null;
   shareExpiresAt: number | null;
@@ -145,6 +146,7 @@ interface ContentSource {
 interface ShareResolutionRow {
   share_id: string;
   share_artifact_id: string;
+  visibility: ShareVisibility | null;
   password_hash: string | null;
   password_updated_at: number | null;
   share_expires_at: number | null;
@@ -206,7 +208,7 @@ export class ViewerService {
     shareId: string,
     options: ViewerAccessOptions & { versionNum?: number | undefined } = {}
   ): Promise<ViewerPageModel> {
-    const share = await this.resolveShare(shareId);
+    const share = await this.resolveShare(shareId, options);
     const canonicalUrl = this.shareUrl(shareId);
     const isOwner = this.isOwner(share, options.requesterAccountId);
 
@@ -241,7 +243,7 @@ export class ViewerService {
       viewerToken?: string | null;
     } = {}
   ): Promise<ViewerContentResult> {
-    const share = await this.resolveShare(shareId);
+    const share = await this.resolveShare(shareId, options);
     this.assertShareAccess(share, options.viewerToken ?? null);
     return this.readContentFromShare(
       share,
@@ -293,8 +295,14 @@ export class ViewerService {
     return timingSafeEqualHex(mac, this.versionAccessMac(shareId, versionNum, exp));
   }
 
-  async verifyPassword(shareId: string, password: string): Promise<ViewerPasswordSuccess> {
-    const share = await this.resolveShare(shareId);
+  async verifyPassword(
+    shareId: string,
+    password: string,
+    access: ViewerAccessOptions = {}
+  ): Promise<ViewerPasswordSuccess> {
+    // Through the gate like everything else: a private artifact must not answer this endpoint
+    // differently from one that never existed, or it becomes an oracle for "is this id real".
+    const share = await this.resolveShare(shareId, access);
     if (!share.passwordHash) {
       throw new ServiceError(400, 'validation_failed', 'Share is not password-protected');
     }
@@ -312,13 +320,19 @@ export class ViewerService {
     };
   }
 
-  async getOgModel(shareId: string): Promise<{
+  async getOgModel(
+    shareId: string,
+    access: ViewerAccessOptions = {}
+  ): Promise<{
     shareId: string;
     contentHash: string;
     title: string;
     bot: ViewerBotRef | null;
   }> {
-    const share = await this.resolveShare(shareId);
+    // The card is a title and an author name rendered into an image and cached `public` — the one
+    // surface where a leak would outlive the fix, sitting in a CDN. It resolves through the same
+    // gate as everything else.
+    const share = await this.resolveShare(shareId, access);
 
     if (share.passwordHash) {
       return {
@@ -406,7 +420,23 @@ export class ViewerService {
     return timingSafeEqualHex(mac, expected);
   }
 
-  private async resolveShare(shareId: string): Promise<ShareContext> {
+  /**
+   * THE GATE. Existence, liveness, and — since artifacts became private by default — audience.
+   *
+   * The private check lives HERE rather than in `readContentFromShare` because `getOgModel` never
+   * calls that method: the social card is rendered from the artifact head alone. A gate one level
+   * lower would have left `/og.png` quietly serving a private artifact's title and author to
+   * anyone who asked, and serving it with a `public` cache header so a CDN would keep doing it
+   * after the mistake was noticed. Every one of the five public surfaces passes through here.
+   *
+   * A private artifact answers a stranger with the SAME `not_found` a share id that never existed
+   * answers with — same status, same code, same message. Anything else ("revoked", "forbidden") is
+   * an existence oracle: it tells someone enumerating ids which ones are real.
+   */
+  private async resolveShare(
+    shareId: string,
+    access: ViewerAccessOptions = {}
+  ): Promise<ShareContext> {
     if (!SHARE_ID_PATTERN.test(shareId)) {
       throw new ServiceError(404, 'not_found', 'Not found');
     }
@@ -450,6 +480,11 @@ export class ViewerService {
       throw new ServiceError(410, 'share_disabled', 'This share link is no longer available');
     }
 
+    const visibility: ShareVisibility = shareVisibilityFromRow(row.visibility);
+    if (visibility === 'private' && !this.isOwnerAccount(account.id, access.requesterAccountId)) {
+      throw new ServiceError(404, 'not_found', 'Not found');
+    }
+
     const plan = await this.cloudModule.resolvePlan(account);
     if (this.isArtifactExpired(artifact, plan, now)) {
       // Not `share_revoked`, for the same reason the suspended branch above is not: the owner
@@ -461,6 +496,7 @@ export class ViewerService {
     return {
       shareId: row.share_id,
       artifactId: row.share_artifact_id,
+      visibility,
       passwordHash: row.password_hash,
       passwordUpdatedAt: row.password_updated_at,
       shareExpiresAt: row.share_expires_at,
@@ -537,7 +573,15 @@ export class ViewerService {
 
   /** The artifact's own owner, signed in. Nobody else, and never on an absent account id. */
   private isOwner(share: ShareContext, requesterAccountId: string | null | undefined): boolean {
-    return Boolean(requesterAccountId) && requesterAccountId === share.account.id;
+    return this.isOwnerAccount(share.account.id, requesterAccountId);
+  }
+
+  /** The same predicate, before a ShareContext exists — the gate runs mid-resolution. */
+  private isOwnerAccount(
+    ownerAccountId: string,
+    requesterAccountId: string | null | undefined
+  ): boolean {
+    return Boolean(requesterAccountId) && requesterAccountId === ownerAccountId;
   }
 
   /** The version actually served: the requested one only when the caller is entitled to it. */
@@ -818,6 +862,7 @@ function getSqliteShareResolutionRow(
           SELECT
             s.id AS share_id,
             s.artifact_id AS share_artifact_id,
+            s.visibility,
             s.password_hash,
             s.password_updated_at,
             s.expires_at AS share_expires_at,
@@ -859,6 +904,7 @@ async function getPostgresShareResolutionRow(
       SELECT
         s.id AS share_id,
         s.artifact_id AS share_artifact_id,
+        s.visibility,
         s.password_hash,
         s.password_updated_at,
         s.expires_at AS share_expires_at,
@@ -1035,6 +1081,17 @@ function versionSourceFromRow(row: VersionRow): ContentSource {
     updatedAt: row.created_at,
     bot: botFromParts(row.bot_id, row.bot_name, row.bot_byline),
   };
+}
+
+/**
+ * A row's visibility, defaulting CLOSED.
+ *
+ * The forward migration backfills every existing row, so `null` should be unreachable — which is
+ * exactly why it must resolve to `private` rather than throw or assume `public`: an unexpected
+ * value is the case where guessing wrong publishes somebody's artifact.
+ */
+function shareVisibilityFromRow(value: ShareVisibility | null): ShareVisibility {
+  return value === 'public' || value === 'password' ? value : 'private';
 }
 
 function botFromParts(

@@ -193,7 +193,7 @@ describe('share lifecycle events reach the CloudModule hook', () => {
     expect(recorder.events).toEqual([]);
   });
 
-  it('emits share.revoked exactly once for DELETE /v1 share, and nothing on the second call', async () => {
+  it('emits share.revoked exactly once for the revoke endpoint, and nothing on the second call', async () => {
     const recorder = recordingCloudModule(createDefaultCloudModule({ aaHideFooter: false }));
     const ctx = await makeApiContext(recorder);
 
@@ -211,8 +211,10 @@ describe('share lifecycle events reach the CloudModule hook', () => {
     const shareId = (await json(shared)).share_id as string;
     recorder.drain();
 
-    const revoked = await ctx.app.request('/v1/artifacts/share-events/share', {
-      method: 'DELETE',
+    // DELETE is unpublish now and burns nothing, so the revoked event belongs to the operation
+    // that actually kills the URL.
+    const revoked = await ctx.app.request('/v1/artifacts/share-events/share/revoke', {
+      method: 'POST',
       headers: ctx.authHeaders,
     });
     expect(revoked.status).toBe(200);
@@ -227,8 +229,8 @@ describe('share lifecycle events reach the CloudModule hook', () => {
       },
     ]);
 
-    const revokedAgain = await ctx.app.request('/v1/artifacts/share-events/share', {
-      method: 'DELETE',
+    const revokedAgain = await ctx.app.request('/v1/artifacts/share-events/share/revoke', {
+      method: 'POST',
       headers: ctx.authHeaders,
     });
     expect(revokedAgain.status).toBe(200);
@@ -385,8 +387,10 @@ describe('share lifecycle events reach the CloudModule hook', () => {
     });
     expect(shared.status).toBe(201);
 
-    const revoked = await ctx.app.request('/v1/artifacts/share-events/share', {
-      method: 'DELETE',
+    // DELETE is unpublish now and burns nothing, so the revoked event belongs to the operation
+    // that actually kills the URL.
+    const revoked = await ctx.app.request('/v1/artifacts/share-events/share/revoke', {
+      method: 'POST',
       headers: ctx.authHeaders,
     });
     expect(revoked.status).toBe(200);

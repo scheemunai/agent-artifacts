@@ -182,15 +182,26 @@ export async function publishPostgresArtifact(
     share?: boolean;
   }
 ): Promise<ArtifactWriteResult> {
-  return postgresArtifactService(ctx, input.now).upsertArtifact({
+  const service = postgresArtifactService(ctx, input.now);
+  const result = await service.upsertArtifact({
     account: ctx.account,
     bot: { id: ctx.bot.id, name: ctx.bot.name, byline: ctx.bot.byline },
     slug: input.slug,
     type: input.type ?? 'markdown',
     title: input.title ?? input.slug,
     content: input.content ?? `# ${input.slug}`,
-    share: input.share ?? false,
   });
+
+  // Creation is private now; `share: true` here means "and then publish it".
+  if (input.share) {
+    const published = await service.createShare({
+      account: ctx.account,
+      idOrSlug: result.artifact.id,
+    });
+    return { ...result, share: published.share };
+  }
+
+  return result;
 }
 
 export async function insertPostgresShareViewer(

@@ -229,11 +229,15 @@ describe('Batch C accepted dashboard fixes', () => {
       type: 'markdown',
       title: 'Share Counters',
       content: '# Share Counters',
-      share: true,
+    });
+    // Published explicitly: this fixture is about the counters on a LIVE share panel.
+    const published = await artifactService.createShare({
+      account: accountToCloudAccount(account),
+      idOrSlug: created.artifact.id,
     });
     ctx.db.sqlite
       .prepare('UPDATE shares SET view_count = ?, unique_viewer_count = ? WHERE id = ?')
-      .run(9, 4, created.share?.shareId);
+      .run(9, 4, published.share.shareId);
     const cookie = await login(ctx, account.email, 'password123');
 
     const response = await ctx.app.request(`/dashboard/artifacts/${created.artifact.id}`, {

@@ -111,8 +111,45 @@ export async function publishSharedArtifact(
     type: input.type ?? 'markdown',
     title: input.title ?? 'Weekly Ops Report',
     content: input.content ?? '# Weekly Ops Report\n\nHello from the viewer.',
-    share: true,
+  });
+
+  // Creating an artifact no longer publishes it — that is the whole point of the change — so a
+  // helper whose name promises a SHARED artifact has to say so in a second, explicit call. That
+  // every viewer test used to get a world-readable URL from one boolean is what the default being
+  // private is fixing.
+  const published = await service.createShare({
+    account: ctx.account,
+    idOrSlug: result.artifact.id,
     ...(passwordHash !== undefined ? { passwordHash } : {}),
+  });
+
+  return { ...result, share: published.share, bot };
+}
+
+/** Creates without publishing: the new default, for tests that want a private artifact. */
+export async function publishPrivateArtifact(
+  ctx: ViewerTestContext,
+  input: {
+    slug?: string;
+    type?: ArtifactType;
+    title?: string;
+    content?: string;
+    bot?: CreatedBot | null;
+  } = {}
+): Promise<ArtifactWriteResult & { bot: CreatedBot | null }> {
+  const bot = input.bot === undefined ? await createTestBot(ctx) : input.bot;
+  const service = new ArtifactService({
+    db: ctx.db,
+    extension: ctx.cloudModule,
+    baseUrl: ctx.config.baseUrl,
+  });
+  const result = await service.upsertArtifact({
+    account: ctx.account,
+    bot: bot ? { id: bot.id, name: bot.name, byline: bot.byline } : null,
+    slug: input.slug ?? 'private-report',
+    type: input.type ?? 'markdown',
+    title: input.title ?? 'Private Ops Report',
+    content: input.content ?? '# Private Ops Report\n\nOwner eyes only.',
   });
 
   return { ...result, bot };
@@ -140,7 +177,6 @@ export async function updateArtifact(
     type: input.type ?? 'markdown',
     title: input.title,
     content: input.content,
-    share: true,
   });
 }
 

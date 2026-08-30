@@ -127,15 +127,27 @@ export async function publishArtifact(
     share?: boolean;
   }
 ): Promise<ArtifactWriteResult> {
-  return artifactService(ctx, input.now).upsertArtifact({
+  const service = artifactService(ctx, input.now);
+  const result = await service.upsertArtifact({
     account: ctx.account,
     bot: { id: ctx.bot.id, name: ctx.bot.name, byline: ctx.bot.byline },
     slug: input.slug,
     type: input.type ?? 'markdown',
     title: input.title ?? input.slug,
     content: input.content ?? `# ${input.slug}`,
-    share: input.share ?? false,
   });
+
+  // Artifacts are created private now, so `share: true` here means "and then publish it" — a
+  // second, explicit call, exactly as a real caller has to make.
+  if (input.share) {
+    const published = await service.createShare({
+      account: ctx.account,
+      idOrSlug: result.artifact.id,
+    });
+    return { ...result, share: published.share };
+  }
+
+  return result;
 }
 
 export function artifactService(ctx: IntegrationTestContext, now: number): ArtifactService {

@@ -33,12 +33,17 @@ async function seed(ctx: AuthTestContext): Promise<{ cookie: string; email: stri
     type: 'markdown',
     title: 'Craft Target',
     content: '# Craft',
-    share: true,
+  });
+  // This fixture is about the PUBLISHED share panel — the change-password form only exists once
+  // there is something to change the password on — so it publishes explicitly, as a caller must.
+  const published = await artifacts.createShare({
+    account: accountToCloudAccount(account),
+    idOrSlug: created.artifact.id,
   });
   // Lifetime views aggregate over shares, so the count has to be set where it is counted.
   ctx.db.sqlite
     .prepare('UPDATE shares SET view_count = ? WHERE id = ?')
-    .run(50_000, created.share?.shareId);
+    .run(50_000, published.share.shareId);
   return { cookie: await login(ctx, account.email, 'password123'), email: account.email };
 }
 
