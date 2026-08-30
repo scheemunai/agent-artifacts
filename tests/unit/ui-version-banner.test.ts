@@ -92,18 +92,14 @@ describe('VersionBanner', () => {
 
 describe('viewer page', () => {
   it('shows no banner when the pinned version is the latest version', () => {
-    const html = renderToString(
-      ViewerPage({ model, abuseEmail: 'abuse@example.test', pinnedVersion: 2 })
-    );
+    const html = renderToString(ViewerPage({ model, pinnedVersion: 2 }));
 
     expect(html).not.toContain('Viewing v2 of v2');
     expect(html).toContain('data-aa-pinned="false"');
   });
 
   it('shows the banner when an older version is pinned', () => {
-    const html = renderToString(
-      ViewerPage({ model, abuseEmail: 'abuse@example.test', pinnedVersion: 1 })
-    );
+    const html = renderToString(ViewerPage({ model, pinnedVersion: 1 }));
 
     expect(html).toContain('Viewing v1 of v2');
     expect(html).toContain('data-aa-pinned="true"');

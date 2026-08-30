@@ -1,18 +1,43 @@
+/* THE PAGE PLACES THE FOOTER; ARITHMETIC USED TO, AND GOT IT WRONG.
+   Every region here used to carry a `min-height: calc(100vh - 4rem)` that hard-coded a footer
+   strip, while the HTML frame inside it sized itself against `100dvh`. Those units are not the
+   same number on a phone: `vh` is the LARGE viewport, `dvh` the current one, so with the URL bar
+   showing, the document reserved ~80px more than its contents occupied and the difference rendered
+   as a band of white above the footer — visible until you scrolled the bar away. The 4rem was also
+   a guess about a footer that is 0 tall on a branding-removed artifact.
+   A flex column needs neither number: the regions grow into whatever is left, and the footer is
+   placed by flow at whatever height it actually has — including none at all. */
 .aa-public-page {
-  min-height: 100vh;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
   background: var(--color-aa-bg);
 }
 
-.aa-viewer {
-  min-height: 0;
+/* Every region that can be the body of this page takes the leftover height, in ONE declaration so
+   the two states cannot drift apart the way they did before — `.aa-viewer` wraps the live document,
+   `.aa-viewer-terminal` replaces it, and the gate stands in front of it. That is what puts the
+   footer at the bottom of a short screen instead of leaving it under the content.
+   `flex-shrink: 0` throughout: content taller than the viewport must overflow into scroll, never be
+   squeezed to fit. */
+.aa-viewer,
+.aa-viewer-terminal,
+.aa-viewer-gate,
+.aa-viewer-document,
+.aa-viewer-content {
+  flex: 1 0 auto;
 }
 
-/* The same floor the terminal state uses, for the same reason: the body is block flow, so a short
-   artifact let the footer sit directly under the content with the rest of the viewport empty below
-   it — ~540px of nothing at 1440. `min-height: 0` here was inert, not protective. Reserving the
-   footer's own strip puts "Report abuse" at the bottom of the screen in both states. */
-.aa-viewer-document {
-  min-height: calc(100vh - 4rem);
+/* The chain the frame needs in order to inherit that space: viewer → document → content → frame.
+   `min-width: 0` is load-bearing on a column flex item — its default `auto` refuses to go below the
+   intrinsic width of a wide code block, which would push the reading column sideways. */
+.aa-viewer,
+.aa-viewer-document,
+.aa-viewer-content {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
 }
 
 /* A compact, dark status bar. It reads as the chrome AROUND a published artifact — a live dot and
@@ -104,6 +129,16 @@
   background: transparent;
 }
 
+/* `Button` wraps its children in one plain `<span>`, and the reset renders every `svg` as a block —
+   so a mark beside a word broke the line, putting the icon above "Download" and pushing the label
+   out of the button's own box onto the bar behind it. The wrapper has to be a row for a button that
+   carries both. */
+.aa-viewer-chrome .aa-btn > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-aa-2);
+}
+
 .aa-viewer-chrome .aa-btn:hover {
   color: var(--color-aa-dark-text);
   border-color: var(--color-aa-dark-text);
@@ -116,12 +151,103 @@
   padding-right: var(--spacing-aa-8);
 }
 
-/* On phones the bar keeps the title and the actions; the byline · updated meta and the version
-   picker stand down so the essentials fit on one line. */
+/* The chrome's marks. Sized here rather than on the elements so every icon in the bar is one
+   optical size, and `flex: 0 0 auto` so a button's label cannot squeeze the glyph. */
+.aa-viewer-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 auto;
+}
+
+/* Refresh says it is working by turning. The busy state is already on the button — `viewer.js` sets
+   `aria-busy` for the whole request and clears it in a `finally`, so success and failure both stop
+   the spin — and this is that same state made visible. Before, the only feedback was the button
+   greying out, which on a fast connection is a flicker and on a slow one is indistinguishable from
+   a dead control. */
+@keyframes aa-viewer-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.aa-viewer-refresh[aria-busy="true"] .aa-viewer-icon {
+  animation: aa-viewer-spin 900ms linear infinite;
+  transform-origin: 50% 50%;
+}
+
+/* Desktop: the wrapper is not a box at all. `display: contents` drops it from the layout so the
+   meta and the actions become direct children of the bar's flex row, laid out exactly as they were
+   before the panel existed. */
+.aa-viewer-menu {
+  display: contents;
+}
+
+.aa-viewer-menu-toggle {
+  display: none;
+}
+
+/* The title gets the leftover width. It was `flex: 0 1 auto` — content-sized, so on a phone the
+   Download label and two controls took what they wanted first and the title ellipsised into three
+   words. Moving those into the menu frees the room; this is what lets the title claim it. */
+.aa-viewer-chrome__lead {
+  flex: 1 1 auto;
+}
+
+/* Phones: the meta, the version picker and Download move behind the ⋮ toggle, leaving the bar with
+   a readable title and two 44px controls. */
 @media (max-width: 560px) {
-  .aa-viewer-chrome__meta,
-  .aa-viewer-version-select {
+  .aa-viewer-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + var(--spacing-aa-2));
+    right: var(--spacing-aa-3);
+    display: grid;
+    width: max-content;
+    min-width: 12rem;
+    max-width: calc(100vw - var(--spacing-aa-6));
+    gap: var(--spacing-aa-3);
+    border: 1px solid var(--color-aa-dark-line);
+    border-radius: var(--radius-aa-lg);
+    padding: var(--spacing-aa-3);
+    background: var(--color-aa-dark-card);
+    box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
+  }
+
+  /* Closed is `display: none` here and nowhere else: on desktop this panel is the bar's own
+     contents, and hiding it there would take the version picker and Download off the page. */
+  .aa-viewer-menu[data-aa-open="false"] {
     display: none;
+  }
+
+  .aa-viewer-menu .aa-viewer-chrome__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-aa-1);
+    white-space: normal;
+  }
+
+  /* Stacked, full width: a menu row is a target, not a toolbar button. */
+  .aa-viewer-menu .aa-viewer-actions {
+    display: grid;
+    gap: var(--spacing-aa-2);
+  }
+
+  .aa-viewer-menu .aa-viewer-version-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .aa-viewer-menu .aa-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .aa-viewer-menu-toggle {
+    display: inline-flex;
   }
 }
 
@@ -168,10 +294,6 @@
   padding-block-start: var(--spacing-aa-4);
 }
 
-.aa-viewer-content {
-  min-width: 0;
-}
-
 /* An anchor the sanitizer disarmed is not a link, and must not look like one.
    Hostile markdown reaches this surface, the sanitizer strips the href and keeps the text, and the
    remains inherited `.aa-md a`'s accent colour — so a dead control sat in the product's own link
@@ -186,15 +308,17 @@
   cursor: text;
 }
 
-/* HTML artifacts render full-screen. The frame fills the viewport below the status bar (less the
-   footer strip) at every size, so an app-style artifact is not squeezed into a short box and cut
-   off with the page empty beneath it. It still GROWS past the viewport for taller content — the
-   measured inline height wins whenever it exceeds this floor — so nothing is clipped. */
+/* HTML artifacts render full-screen: the frame fills whatever the chrome, the banner and the footer
+   leave, so an app-style artifact is not squeezed into a short box with the page empty beneath it.
+   That floor used to be spelled `calc(100dvh - 7rem)` — a guess at the height of two other elements,
+   wrong the moment either changed and wrong by a whole footer on a branding-removed artifact.
+   `flex-grow` asks for the same thing without naming a number.
+   It still GROWS past the viewport for taller content: `flex-basis: auto` reads the inline height
+   the measurement handshake sets, and `flex-shrink: 0` means a 3000px measurement stays 3000px. */
 .aa-viewer-frame {
   display: block;
   width: 100%;
-  height: calc(100dvh - 7rem);
-  min-height: calc(100dvh - 7rem);
+  flex: 1 0 auto;
   border: 0;
   background: var(--color-aa-bg);
   transition: height 160ms ease;
@@ -203,7 +327,6 @@
 .aa-viewer-gate,
 .aa-viewer-terminal {
   display: grid;
-  min-height: calc(100vh - 4rem);
   place-items: center;
   padding: var(--spacing-aa-8) var(--spacing-aa-6);
 }
@@ -259,6 +382,11 @@
   text-align: left;
 }
 
+/* One line, and as little of the page as one line needs.
+   The block padding was `--spacing-aa-6` on both edges: 24 + 24 around a 24px link, a 73px band to
+   carry six words of attribution under someone else's document. At `--spacing-aa-3` it is 49px —
+   still an unmistakable strip, a third less of the reader's screen. The inline padding stays
+   generous so the line never touches a phone's edge. */
 .aa-viewer-footer {
   display: flex;
   flex-wrap: wrap;
@@ -266,20 +394,19 @@
   align-items: center;
   justify-content: center;
   border-top: 1px solid var(--color-aa-line);
-  padding: var(--spacing-aa-6);
+  padding: var(--spacing-aa-3) var(--spacing-aa-5);
   color: var(--color-aa-muted);
   font-size: var(--text-aa-sm);
 }
 
-/* These read as captions otherwise — same colour, same weight, no underline as the surrounding
-   "Made with … ·" text. On a paid plan the footer collapses to a single link, and that link is
-   "Report abuse": the only abuse affordance a public page has. It has to look like a link.
+/* This reads as a caption otherwise — same colour, same weight, no underline as the text around it.
+   It is the one link on the page that says where the page came from, so it has to look like a link.
 
    V6-N3 — AND IT HAS TO BE HITTABLE. Nothing here declared a size, so the box was whatever
    line-height arithmetic happened to produce: 22.39px measured, failing a 24px floor by a pixel and
    a half that nobody chose. The floor is WCAG 2.5.8's 24px for STANDALONE TEXT LINKS, not our 44px
-   control floor — deliberately, because a row of tertiary links at 44 each becomes a band of empty
-   space, and 2.5.8's inline exemption does not cover a glyph-separated standalone row like this one.
+   control floor — deliberately, because a tertiary attribution line at 44 becomes a band of empty
+   space, and 2.5.8's inline exemption does not cover a standalone link like this one.
    `24px` rather than `1.5rem` because the success criterion is stated in CSS pixels, and a reader
    who has shrunk their root font is exactly the reader this protects.
    `inline-flex` so the extra height centres the text instead of hanging below it. */
@@ -374,5 +501,11 @@
   .aa-viewer-updated-pill,
   .aa-viewer-frame {
     transition: none;
+  }
+
+  /* The spin is decoration on top of a state that is already announced — `aria-busy` and the
+     "Refreshing artifact" label carry it — so removing the motion removes nothing but the motion. */
+  .aa-viewer-refresh[aria-busy="true"] .aa-viewer-icon {
+    animation: none;
   }
 }

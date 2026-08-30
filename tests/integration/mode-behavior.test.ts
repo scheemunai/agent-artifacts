@@ -208,8 +208,10 @@ describe('deployment mode behavior', () => {
     const html = await response.text();
 
     expect(response.status).toBe(200);
+    // Branding off means no footer ELEMENT, not an empty one: the shell used to render
+    // regardless and left a blank white bar under the artifact.
     expect(html).not.toContain('aa-viewer-footer__brand');
-    expect(html).toContain('Report abuse');
+    expect(html).not.toContain('aa-viewer-footer');
   });
 
   it('uses the cloud plan hook to keep or remove the public footer in cloud mode', async () => {
@@ -228,7 +230,7 @@ describe('deployment mode behavior', () => {
     const proArtifact = await publishSharedArtifact(pro);
     const proHtml = await (await pro.app.request(`/a/${proArtifact.share?.shareId}`)).text();
     expect(proHtml).not.toContain('aa-viewer-footer__brand');
-    expect(proHtml).toContain('Report abuse');
+    expect(proHtml).not.toContain('aa-viewer-footer');
   });
 });
 

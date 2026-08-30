@@ -13,7 +13,6 @@ import { TERMINAL_CAUSE_COPY, type TerminalCause } from '../copy/terminal-copy.j
 
 interface ViewerPageProps {
   model: ViewerPageModel;
-  abuseEmail: string;
   pinnedVersion?: number | undefined;
 }
 
@@ -41,7 +40,7 @@ interface BootContentPayload {
   footer: boolean;
 }
 
-export function ViewerPage({ model, abuseEmail, pinnedVersion }: ViewerPageProps) {
+export function ViewerPage({ model, pinnedVersion }: ViewerPageProps) {
   const boot = {
     shareId: model.shareId,
     contentUrl: `/a/${model.shareId}/content`,
@@ -83,10 +82,7 @@ export function ViewerPage({ model, abuseEmail, pinnedVersion }: ViewerPageProps
           </section>
         </section>
       </main>
-      <ViewerFooter
-        showProductFooter={model.footer}
-        abuseHref={abuseHref(abuseEmail, model.canonicalUrl)}
-      />
+      <ViewerFooter showProductFooter={model.footer} />
       <ClientTerminalTemplates shareUrl={model.canonicalUrl} />
     </ViewerDocument>
   );
@@ -130,9 +126,9 @@ function RefreshStatus() {
  * A screen's header is part of its state, not a constant. When the poll finds the share gone, the
  * client replaces the whole viewer root with one of these — so the chrome that was asserting the
  * previous state (the title, the version picker, Download, refresh) leaves with it, the failure is
- * stated once instead of twice, and `.aa-viewer-terminal`'s full-page min-height has nothing above
- * it, which is what keeps the footer's "Report abuse" on screen. Rendering them here rather than
- * building markup in the script is what makes the server and client one implementation.
+ * stated once instead of twice, and the terminal card is the only thing the page's flex column has
+ * to place. Rendering them here rather than building markup in the script is what makes the server
+ * and client one implementation.
  */
 function ClientTerminalTemplates({ shareUrl }: { shareUrl: string }) {
   return (
@@ -296,9 +292,13 @@ function ViewerChrome({
 
   return (
     // A compact, dark status bar — it reads as the chrome around a published artifact, not as part
-    // of the document. Title + a live dot on the left; details and actions inline on the right on
-    // desktop, and collapsed under a ⋮ menu (a native <details> disclosure, no script) on phones
-    // where they would not all fit on one line.
+    // of the document. Title + a live dot on the left; details and actions on the right.
+    //
+    // ONE DOM, TWO ARRANGEMENTS. The meta and the actions live inside `.aa-viewer-menu` at every
+    // size. On desktop that wrapper is `display: contents`, so its children lay out inline in the
+    // bar exactly as before. On a phone it becomes a panel behind the ⋮ toggle. Rendering the
+    // controls twice was the alternative and is not one: it would duplicate `id="aa-version-picker"`
+    // and leave `viewer.js` updating whichever copy it happened to query first.
     <header class="aa-viewer-chrome" data-aa-chrome="true">
       <div class="aa-viewer-chrome__lead">
         <span class="aa-viewer-chrome__dot" aria-hidden="true"></span>
@@ -315,55 +315,147 @@ function ViewerChrome({
       </div>
 
       <div class="aa-viewer-chrome__end">
-        <span class="aa-viewer-chrome__meta">
-          <span class="aa-viewer-byline" data-aa-byline="true" hidden={hasBot ? undefined : true}>
-            {content?.bot ? formatByline(content.bot) : ''}
+        {/* `data-aa-open`, not `hidden`: the attribute would keep this out of the accessibility
+            tree on desktop, where the panel is not a panel at all but the inline bar contents. */}
+        <div
+          class="aa-viewer-menu"
+          id="aa-viewer-menu"
+          data-aa-menu-panel="true"
+          data-aa-open="false"
+        >
+          <span class="aa-viewer-chrome__meta">
+            <span class="aa-viewer-byline" data-aa-byline="true" hidden={hasBot ? undefined : true}>
+              {content?.bot ? formatByline(content.bot) : ''}
+            </span>
+            <span
+              class="aa-viewer-chrome__sep"
+              aria-hidden="true"
+              hidden={hasBot ? undefined : true}
+            >
+              ·
+            </span>
+            <span class="aa-viewer-updated" data-aa-updated-at="true">
+              {content ? `updated ${formatRelativeTime(content.updatedAt)}` : ''}
+            </span>
           </span>
-          <span class="aa-viewer-chrome__sep" aria-hidden="true" hidden={hasBot ? undefined : true}>
-            ·
-          </span>
-          <span class="aa-viewer-updated" data-aa-updated-at="true">
-            {content ? `updated ${formatRelativeTime(content.updatedAt)}` : ''}
-          </span>
-        </span>
-        <div class="aa-viewer-actions">
-          <label class="sr-only" for="aa-version-picker">
-            Artifact version
-          </label>
-          <select
-            class="aa-control aa-viewer-version-select"
-            id="aa-version-picker"
-            data-aa-version-picker="true"
-            hidden={latestVersion > 1 ? undefined : true}
-          >
-            {Array.from({ length: latestVersion }, (_, index) => index + 1).map((version) => (
-              <option
-                value={String(version)}
-                selected={(pinnedVersion ?? latestVersion) === version}
-              >
-                v{version}
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="secondary"
-            href={downloadHref}
-            dataAttrs={{ 'data-aa-download': 'true' }}
-          >
-            ⭳ Download
-          </Button>
-          <Button
-            variant="secondary"
-            iconOnly
-            ariaLabel="Refresh artifact"
-            title="Refresh artifact"
-            dataAttrs={{ 'data-aa-refresh': 'true' }}
-          >
-            ↻
-          </Button>
+          <div class="aa-viewer-actions">
+            <label class="sr-only" for="aa-version-picker">
+              Artifact version
+            </label>
+            <select
+              class="aa-control aa-viewer-version-select"
+              id="aa-version-picker"
+              data-aa-version-picker="true"
+              hidden={latestVersion > 1 ? undefined : true}
+            >
+              {Array.from({ length: latestVersion }, (_, index) => index + 1).map((version) => (
+                <option
+                  value={String(version)}
+                  selected={(pinnedVersion ?? latestVersion) === version}
+                >
+                  v{version}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="secondary"
+              class="aa-viewer-download"
+              href={downloadHref}
+              dataAttrs={{ 'data-aa-download': 'true' }}
+            >
+              <DownloadIcon />
+              <span class="aa-viewer-download__label">Download</span>
+            </Button>
+          </div>
         </div>
+        {/* Phones only. A real button with `aria-expanded` and `aria-controls`, driven by
+            `viewer.js` — NOT a `<details>`: a closed disclosure hides its content from the
+            accessibility tree and from `querySelector`-driven updates, and browsers refuse to lay
+            out `::details-content` at all when closed, which is how the earlier attempt broke. */}
+        <button
+          type="button"
+          class="aa-btn aa-btn--secondary aa-btn--icon aa-viewer-menu-toggle"
+          aria-expanded="false"
+          aria-controls="aa-viewer-menu"
+          aria-label="Artifact details and actions"
+          title="Artifact details and actions"
+          data-aa-menu-toggle="true"
+        >
+          <KebabIcon />
+        </button>
+        <Button
+          variant="secondary"
+          class="aa-viewer-refresh"
+          iconOnly
+          ariaLabel="Refresh artifact"
+          title="Refresh artifact"
+          dataAttrs={{ 'data-aa-refresh': 'true' }}
+        >
+          <RefreshIcon />
+        </Button>
       </div>
     </header>
+  );
+}
+
+/**
+ * The chrome's three marks, in the product's one icon style: a 24-unit box, no fill, `currentColor`
+ * at 1.75, round joins — the same specification `NoticeIcon` and the password reveal follow.
+ *
+ * They are SVG because they used to be text. `⭳` (U+2B33) and `↻` (U+21BB) are outside the
+ * coverage of the default UI fonts on Android and older iOS, so the two controls a reader is most
+ * likely to want rendered as tofu boxes on exactly the devices most likely to open a shared link.
+ * A glyph is a font dependency; a path is not.
+ */
+function ViewerIcon({ children }: { children: Child }) {
+  return (
+    <svg
+      class="aa-viewer-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      role="presentation"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <ViewerIcon>
+      <path d="M12 3.75v10.5" />
+      <path d="m7.75 10.5 4.25 4.25 4.25-4.25" />
+      <path d="M4.75 15.75v2.5a2 2 0 0 0 2 2h10.5a2 2 0 0 0 2-2v-2.5" />
+    </ViewerIcon>
+  );
+}
+
+function RefreshIcon() {
+  return (
+    <ViewerIcon>
+      {/* The arc runs three quarters of the way round and then curves OUT to meet a corner sitting
+          clear of the circle. An earlier attempt put the corner's arms on the ring itself, where
+          the horizontal arm merged into the arc and what was left read as a power symbol — the one
+          mark on a shared page that must not be mistaken for a switch. */}
+      <path d="M19.5 12a7.5 7.5 0 1 1-7.5-7.5c2.1 0 4.1.83 5.6 2.28L19.5 8.7" />
+      <path d="M19.5 4.5v4.2h-4.2" />
+    </ViewerIcon>
+  );
+}
+
+function KebabIcon() {
+  return (
+    <ViewerIcon>
+      <path d="M12 5.5h.01" />
+      <path d="M12 12h.01" />
+      <path d="M12 18.5h.01" />
+    </ViewerIcon>
   );
 }
 
@@ -388,26 +480,24 @@ function InitialContent({ content }: { content: ViewerContentResult }) {
   return <div class="aa-prose-page" dangerouslySetInnerHTML={{ __html: content.html ?? '' }} />;
 }
 
-export function ViewerFooter({
-  showProductFooter,
-  abuseHref,
-}: {
-  showProductFooter: boolean;
-  abuseHref: string;
-}) {
+/**
+ * The product's own line on a shared artifact — and nothing else.
+ *
+ * NO ELEMENT AT ALL when branding is removed. This used to return the `<footer>` shell regardless
+ * and only drop its contents, so a paid artifact ended on an empty white bar: a strip of chrome
+ * asserting nothing, on the one plan whose whole promise is "no footer but yours". An empty
+ * container is not a smaller footer, it is a defect that looks like padding.
+ */
+export function ViewerFooter({ showProductFooter }: { showProductFooter: boolean }) {
+  if (!showProductFooter) {
+    return null;
+  }
+
   return (
     <footer class="aa-viewer-footer">
-      {showProductFooter ? (
-        <a
-          class="aa-viewer-footer__brand"
-          href="https://agentartifact.ai"
-          rel="noopener noreferrer"
-        >
-          Made with <ProductMark /> Agent Artifacts
-        </a>
-      ) : null}
-      {showProductFooter ? <span aria-hidden="true">·</span> : null}
-      <a href={abuseHref}>Report abuse</a>
+      <a class="aa-viewer-footer__brand" href="https://agentartifact.ai" rel="noopener noreferrer">
+        Made with <ProductMark /> Agent Artifacts
+      </a>
     </footer>
   );
 }
@@ -453,10 +543,6 @@ function formatRelativeTime(timestamp: number): string {
     day: 'numeric',
     year: 'numeric',
   });
-}
-
-export function abuseHref(email: string, shareUrl: string): string {
-  return `mailto:${email}?subject=${encodeURIComponent(`Report abuse: ${shareUrl}`)}`;
 }
 
 export function safeJson(value: unknown): string {

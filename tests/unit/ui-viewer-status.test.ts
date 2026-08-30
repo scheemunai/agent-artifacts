@@ -52,7 +52,7 @@ const model: ViewerPageModel = {
   initialContent: content,
 };
 
-const html = renderToString(ViewerPage({ model, abuseEmail: 'abuse@example.test' }));
+const html = renderToString(ViewerPage({ model }));
 
 describe('refresh failure is visible', () => {
   it('ships both failure states, rendered by the server and parked hidden', () => {
@@ -103,15 +103,23 @@ describe('public footer links look like links', () => {
     expect(declarationValue(rule?.block ?? '', 'text-decoration')).toBe('underline');
   });
 
-  it('matters most where the footer is only one link', () => {
-    // On a paid plan the product footer goes and "Report abuse" is all that remains — the only
-    // abuse affordance a public artifact page has.
-    const paid = renderToString(
-      ViewerFooter({ showProductFooter: false, abuseHref: 'mailto:abuse@example.test' })
-    );
+  it('renders no element at all when branding is removed', () => {
+    // The paid promise is "no footer but yours". This used to return the `<footer>` shell with its
+    // contents dropped, which is not a smaller footer — it is an empty white bar that reads as a
+    // rendering fault. Nothing means nothing.
+    const paid = renderToString(ViewerFooter({ showProductFooter: false }));
 
-    expect(paid).toContain('Report abuse');
-    expect(paid).not.toContain('aa-viewer-footer__brand');
-    expect(paid.match(/<a\b/g) ?? []).toHaveLength(1);
+    expect(paid.trim()).toBe('');
+    expect(paid).not.toContain('aa-viewer-footer');
+  });
+
+  it('is one attribution link on a free artifact, and nothing else', () => {
+    const free = renderToString(ViewerFooter({ showProductFooter: true }));
+
+    expect(free).toContain('aa-viewer-footer__brand');
+    expect(free).toContain('Agent Artifacts');
+    // "Report abuse" was removed from this surface; the separator that punctuated it went with it.
+    expect(free).not.toContain('Report abuse');
+    expect(free.match(/<a\b/g) ?? []).toHaveLength(1);
   });
 });

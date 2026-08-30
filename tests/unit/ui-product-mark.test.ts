@@ -71,9 +71,7 @@ describe('one mark everywhere', () => {
   });
 
   it('uses the component in the viewer footer', () => {
-    const html = renderToString(
-      ViewerFooter({ showProductFooter: true, abuseHref: 'mailto:abuse@example.test' })
-    );
+    const html = renderToString(ViewerFooter({ showProductFooter: true }));
 
     expect(html).toContain('<svg');
     expect(html).toContain('Agent Artifacts');

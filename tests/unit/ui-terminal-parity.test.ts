@@ -21,7 +21,7 @@ import { readClientSource } from '../support/client-assets.js';
  *  3. The footer pushed entirely below the fold. `.aa-viewer-terminal` keeps
  *     `min-height: calc(100vh - 4rem)`, sized for a page where it is the only content — but it now
  *     sat below 76px (1440) / 123px (375) of chrome, so the page ran to 912px against a 900px
- *     viewport. "Report abuse", the only abuse affordance on a public page, disappeared at exactly
+ *     viewport. The footer, and with it the only mark of where the page came from, disappeared at exactly
  *     the moment the page had failed.
  *  4. A ◆ text glyph where the server draws the ProductMark SVG.
  *
@@ -68,7 +68,7 @@ const model: ViewerPageModel = {
   initialContent: content,
 };
 
-const viewerHtml = renderToString(ViewerPage({ model, abuseEmail: 'abuse@example.test' }));
+const viewerHtml = renderToString(ViewerPage({ model }));
 
 function terminalTemplate(status: ClientTerminalStatus): string {
   const match = new RegExp(
@@ -88,7 +88,6 @@ function serverTerminalMain(status: ClientTerminalStatus): string {
       message: copy.message,
       status,
       shareUrl: canonicalUrl,
-      abuseEmail: 'abuse@example.test',
     })
   );
   const main = /<main[\s\S]*?<\/main>/.exec(page)?.[0];
@@ -146,7 +145,7 @@ describe('client-side terminal parity', () => {
   it('leaves the footer outside the terminal, where the server puts it', () => {
     // `.aa-viewer-terminal` is `min-height: calc(100vh - 4rem)`, which only fits the viewport when
     // nothing sits above it. Replacing the root — rather than injecting below the chrome — is what
-    // keeps "Report abuse" on screen.
+    // keeps the footer on screen.
     for (const status of STATUSES) {
       expect(terminalTemplate(status)).not.toContain('aa-viewer-footer');
     }
@@ -188,7 +187,6 @@ describe('terminal actions offer only what can actually work', () => {
         message: 'The owner turned off sharing for this artifact.',
         status,
         shareUrl: canonicalUrl,
-        abuseEmail: 'abuse@example.test',
       })
     );
 

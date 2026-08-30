@@ -1,5 +1,5 @@
 import { ShareTerminalMain, type ShareTerminalStatus } from '../components/share-terminal-main.js';
-import { abuseHref, ViewerDocument, ViewerFooter } from './viewer.js';
+import { ViewerDocument, ViewerFooter } from './viewer.js';
 
 export {
   CLIENT_TERMINAL_COPY,
@@ -13,7 +13,6 @@ interface ShareTerminalPageProps {
   message: string;
   status: ShareTerminalStatus;
   shareUrl: string;
-  abuseEmail: string;
   showProductFooter?: boolean;
 }
 
@@ -22,7 +21,6 @@ export function ShareTerminalPage({
   message,
   status,
   shareUrl,
-  abuseEmail,
   showProductFooter = true,
 }: ShareTerminalPageProps) {
   const pageTitle = status === 404 ? 'Not found' : title;
@@ -39,10 +37,7 @@ export function ShareTerminalPage({
         status={status}
         headingId={`terminal-title-${status}`}
       />
-      <ViewerFooter
-        showProductFooter={showProductFooter}
-        abuseHref={abuseHref(abuseEmail, shareUrl)}
-      />
+      <ViewerFooter showProductFooter={showProductFooter} />
     </ViewerDocument>
   );
 }

@@ -57,15 +57,41 @@ describe('the frame-height handshake', () => {
     expect(Number(floor)).toBeLessThanOrEqual(96);
   });
 
-  it('keeps the full-screen CSS floor that short app-style HTML artifacts use', () => {
-    const framed = parseStylesheet(viewerCss).filter(
-      (rule) => rule.selector.includes('.aa-viewer-frame') && /min-height:/.test(rule.block)
+  it('keeps the full-screen floor that short app-style HTML artifacts use', () => {
+    // The floor is still there; it stopped being a number. `calc(100dvh - 7rem)` was a guess at the
+    // combined height of the chrome and the footer — wrong whenever either changed, and wrong by a
+    // whole footer on a branding-removed artifact, where it reserved a strip nothing occupied.
+    // `flex-grow` asks for the same thing without naming either height.
+    const framed = parseStylesheet(viewerCss).filter((rule) =>
+      rule.selector.includes('.aa-viewer-frame')
     );
 
-    expect(framed.length, 'no min-height rule found for the frame').toBeGreaterThan(0);
+    expect(framed.length, 'no rule found for the frame').toBeGreaterThan(0);
     expect(
-      framed.some((rule) => rule.block.includes('min-height: calc(100dvh - 7rem)')),
-      'HTML artifact frames should keep the viewport floor while measured heights may grow above it'
+      framed.some((rule) => /flex:\s*1 0 auto/.test(rule.block)),
+      'the frame should grow into the space the chrome and footer leave'
     ).toBe(true);
+    // Declarations, not raw source: the reasoning above names the old value, and a comment
+    // explaining a value is not the value.
+    const declared = parseStylesheet(viewerCss).map((rule) => rule.block);
+    expect(
+      declared.some((block) => block.includes('100dvh - 7rem')),
+      'the frame should not re-derive the chrome and footer heights as a literal'
+    ).toBe(false);
+  });
+
+  it('lets a measured height grow the frame, and never shrink it', () => {
+    // `flex-basis: auto` reads the inline height the handshake sets, and `flex-shrink: 0` keeps a
+    // 3000px measurement at 3000px. A floor that could outrank a real measurement is the exact
+    // defect A-25 was about, so it must not come back in flex form either.
+    const framed = parseStylesheet(viewerCss).filter((rule) =>
+      rule.selector.includes('.aa-viewer-frame')
+    );
+
+    for (const rule of framed) {
+      expect(rule.block, 'an unconditional min-height would outrank the measurement').not.toMatch(
+        /min-height:/
+      );
+    }
   });
 });

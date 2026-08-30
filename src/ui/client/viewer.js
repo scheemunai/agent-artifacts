@@ -19,6 +19,8 @@ const versionBannerText = document.querySelector('[data-aa-version-banner-text]'
 const viewLatestLink = document.querySelector('[data-aa-view-latest]');
 const updatedPill = document.querySelector('[data-aa-updated-pill]');
 const statusRegion = document.querySelector('[data-aa-viewer-status-region]');
+const menuToggle = document.querySelector('[data-aa-menu-toggle]');
+const menuPanel = document.querySelector('[data-aa-menu-panel]');
 
 const POLL_INTERVAL_MS = 30_000;
 // A sanity floor against a broken or zero-ish measurement, not a default. It used to sit at the
@@ -46,6 +48,75 @@ if (root) {
   installVersionPicker();
   installLiveRevalidation();
   installFrameHeightBridge();
+  installChromeMenu();
+}
+
+/**
+ * The phone chrome's ⋮ menu.
+ *
+ * A real button with `aria-expanded` driving a `data-aa-open` panel, NOT a `<details>`. A closed
+ * disclosure is not merely invisible: the browser refuses to lay its content out at all, and the
+ * elements inside this one — the version picker, Download — are the same nodes the desktop bar
+ * shows inline and the same nodes `applyContent` updates on every poll. They have to stay in the
+ * document and in the accessibility tree at both sizes, which is exactly what a disclosure will not
+ * do, and is why the earlier attempt broke.
+ *
+ * The panel is only a panel below 560px; above it CSS gives it `display: contents` and this toggle
+ * is not rendered at all. So none of this runs on desktop, and the closed state it writes is the
+ * state the server already rendered.
+ */
+function installChromeMenu() {
+  if (!menuToggle || !menuPanel) {
+    return;
+  }
+
+  const isOpen = () => menuPanel.getAttribute('data-aa-open') === 'true';
+
+  const setOpen = (open) => {
+    menuPanel.setAttribute('data-aa-open', open ? 'true' : 'false');
+    menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  menuToggle.addEventListener('click', (event) => {
+    // Without this the same click reaches the document listener below and closes what it opened.
+    event.stopPropagation();
+    const next = !isOpen();
+    setOpen(next);
+    if (next) {
+      // Focus the first control the reader came here for, so a keyboard or switch user is not
+      // dropped at the top of the page with an open menu behind them.
+      const first = menuPanel.querySelector(
+        'select:not([hidden]), a[href], button:not([disabled])'
+      );
+      if (first instanceof HTMLElement) {
+        first.focus();
+      }
+    }
+  });
+
+  // Outside click and Escape, the two ways every menu in the product closes.
+  document.addEventListener('click', (event) => {
+    if (isOpen() && !menuPanel.contains(event.target) && !menuToggle.contains(event.target)) {
+      setOpen(false);
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && isOpen()) {
+      setOpen(false);
+      // Focus goes back to what opened it; leaving it on a hidden control strands the reader.
+      menuToggle.focus();
+    }
+  });
+
+  // Choosing something is also dismissing the menu. Download navigates away and the picker reloads
+  // the page, but neither is instant, and a menu left standing over the page reads as a no-op.
+  if (downloadLink) {
+    downloadLink.addEventListener('click', () => setOpen(false));
+  }
+  if (versionPicker) {
+    versionPicker.addEventListener('change', () => setOpen(false));
+  }
 }
 
 function installPasswordGate() {
@@ -432,7 +503,8 @@ function setRefreshBusy(isBusy) {
     return;
   }
   // The mark stays put: swapping it for the word "Refreshing…" used to reflow a control that is
-  // now a fixed 44px square. Busy is carried by state and by the accessible name instead.
+  // now a fixed 44px square. Busy is carried by state, by the accessible name, and — since the mark
+  // became an SVG the stylesheet can reach — by the icon turning while `aria-busy` is true.
   refreshButton.disabled = isBusy;
   refreshButton.setAttribute('aria-busy', isBusy ? 'true' : 'false');
   refreshButton.setAttribute('aria-label', isBusy ? 'Refreshing artifact' : 'Refresh artifact');
@@ -458,9 +530,9 @@ function showUpdatedPill() {
  *
  * A screen's header is part of its state, not a constant. Decorating the live page instead — which
  * is what this used to do — left the version picker, Download and refresh live on a dead page, put
- * the failure message on screen twice (chrome title and card heading), and pushed the footer's
- * "Report abuse" below the fold, because `.aa-viewer-terminal` is sized as a full page and was
- * being stacked under 76-123px of chrome. Replacing the root takes all of that with it.
+ * the failure message on screen twice (chrome title and card heading), and pushed the footer below
+ * the fold, because `.aa-viewer-terminal` fills the page on its own and was being stacked under
+ * 76-123px of chrome. Replacing the root takes all of that with it.
  *
  * The markup comes from `<template data-aa-terminal-template>`, rendered by the same component the
  * server page uses, so there is exactly one implementation of this screen. The template is chosen by

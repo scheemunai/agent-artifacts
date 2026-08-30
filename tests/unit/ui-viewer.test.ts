@@ -41,7 +41,7 @@ const model: ViewerPageModel = {
 
 describe('viewer page UI polish', () => {
   it('gives the icon-only refresh control an accessible name and tooltip', () => {
-    const html = renderToString(ViewerPage({ model, abuseEmail: 'abuse@example.test' }));
+    const html = renderToString(ViewerPage({ model }));
 
     expect(html).toContain('data-aa-refresh="true"');
     expect(html).toContain('aria-label="Refresh artifact"');
@@ -58,9 +58,7 @@ describe('viewer page UI polish', () => {
         frameUrl: null,
       },
     };
-    const html = renderToString(
-      ViewerPage({ model: markdownModel, abuseEmail: 'abuse@example.test' })
-    );
+    const html = renderToString(ViewerPage({ model: markdownModel }));
 
     expect(html).toContain('class="aa-viewer-title"');
     expect(html).not.toContain('data-aa-title="true">Short HTML artifact</h1>');
@@ -72,7 +70,7 @@ describe('viewer page UI polish', () => {
   });
 
   it('keeps HTML artifacts sandboxed while enabling safe frame-height handshakes', () => {
-    const html = renderToString(ViewerPage({ model, abuseEmail: 'abuse@example.test' }));
+    const html = renderToString(ViewerPage({ model }));
     const viewerScript = readClientSource('viewer.js');
     const viewerCss = readClientSource('viewer.css');
 
@@ -82,14 +80,11 @@ describe('viewer page UI polish', () => {
     expect(viewerScript).toContain("data.type !== 'aa:frame-height'");
     expect(viewerScript).toContain('candidate.contentWindow === event.source');
     expect(viewerScript).toContain('FRAME_MAX_HEIGHT = 2400');
-    expect(viewerCss).toContain('height: calc(100dvh - 7rem)');
-    expect(viewerCss).toContain('min-height: calc(100dvh - 7rem)');
-    expect(viewerCss).toMatch(/\.aa-viewer\s*{\s*min-height: 0;/);
-    // A-24 changed this deliberately: the document main reserves the footer's strip so the
-    // footer cannot float mid-page on a short artifact. The value lives in
-    // ui-viewer-shell.test.ts, which asserts both viewer states agree on it; this line only
-    // needs the frame's own box to be unaffected by that change.
-    expect(viewerCss).toMatch(/\.aa-viewer-document\s*{[^}]*min-height: calc\(100vh - 4rem\);/);
+    // The frame's box is now placed by the page's flex column rather than by a viewport calc that
+    // re-derived the chrome and footer heights. The mechanism itself lives in
+    // ui-frame-height.test.ts and ui-viewer-shell.test.ts; this line only needs the frame to still
+    // be the thing that takes the leftover space.
+    expect(viewerCss).toMatch(/\.aa-viewer-frame\s*{[^}]*flex: 1 0 auto;/);
   });
 
   it('guards refresh polling while a content request is in flight', () => {
@@ -110,7 +105,6 @@ describe('viewer page UI polish', () => {
         message: 'The owner turned off sharing for this artifact.',
         status: 410,
         shareUrl: 'https://example.test/a/AbCdEfGhIjKlMnOpQrStUv',
-        abuseEmail: 'abuse@example.test',
       })
     );
 

@@ -29,7 +29,6 @@ const html = renderToString(
         protected: false,
       },
     } as never,
-    abuseEmail: 'abuse@example.test',
   })
 );
 

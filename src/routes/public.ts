@@ -199,12 +199,7 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         });
       },
       (serviceError) =>
-        sharePageError(
-          context as unknown as PublicContext,
-          ctx.config,
-          ctx.config.abuseEmail,
-          serviceError
-        )
+        sharePageError(context as unknown as PublicContext, ctx.config, serviceError)
     );
   });
 
@@ -281,12 +276,7 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
 
   app.on(['GET', 'HEAD'], '/a/:share_id', async (context) => {
     if (!viewer) {
-      return sharePageError(
-        context as unknown as PublicContext,
-        ctx.config,
-        ctx.config.abuseEmail,
-        null
-      );
+      return sharePageError(context as unknown as PublicContext, ctx.config, null);
     }
 
     const shareId = context.req.param('share_id');
@@ -294,7 +284,6 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       return sharePageError(
         context as unknown as PublicContext,
         ctx.config,
-        ctx.config.abuseEmail,
         new ServiceError(404, 'not_found', 'Not found')
       );
     }
@@ -305,18 +294,12 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
       return context.html(
         ViewerPage({
           model,
-          abuseEmail: ctx.config.abuseEmail,
           ...(versionNum ? { pinnedVersion: versionNum } : {}),
         }),
         200
       );
     } catch (error) {
-      return sharePageError(
-        context as unknown as PublicContext,
-        ctx.config,
-        ctx.config.abuseEmail,
-        error
-      );
+      return sharePageError(context as unknown as PublicContext, ctx.config, error);
     }
   });
 }
@@ -483,7 +466,6 @@ function etagMatches(header: string | undefined, expected: string): boolean {
 function sharePageError(
   context: PublicContext,
   config: AppConfig,
-  abuseEmail: string,
   error: unknown
 ): Response | Promise<Response> {
   const serviceError = serviceErrorFromUnknown(error);
@@ -495,7 +477,6 @@ function sharePageError(
       message: terminal.message,
       status: terminal.status,
       shareUrl: current,
-      abuseEmail,
     }),
     terminal.status
   );

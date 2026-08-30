@@ -64,7 +64,7 @@ describe('viewer share lifecycle responses', () => {
       // disclose *why* — the recipient is not entitled to the account's moderation state.
       expect(html).not.toContain('The owner turned off sharing for this artifact.');
       expect(html).toContain('This link is no longer available.');
-      expect(html).toContain('Report abuse');
+      expect(html).toContain('aa-viewer-footer__brand');
     } finally {
       await suspendedCtx.cleanup();
     }
@@ -81,7 +81,7 @@ describe('viewer share lifecycle responses', () => {
       const html = await response.text();
       expect(response.status).toBe(410);
       expect(html).toContain('This artifact has expired.');
-      expect(html).toContain('Report abuse');
+      expect(html).toContain('aa-viewer-footer__brand');
 
       // Retention expiry is its own cause and carries its own code. It used to be thrown as
       // `share_revoked` — the code meaning "the owner turned this off" — which was untrue, and

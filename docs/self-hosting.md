@@ -197,7 +197,7 @@ Variables are read once at boot.
 | `AA_TRUST_PROXY` | no | `0` | both | no | Number of trusted proxy hops for client-IP resolution; `0` trusts only the socket address. |
 | `AA_MAX_CONTENT_BYTES` | no | `2097152` | both | no | Max artifact content size. JSON body cap is this plus 512 KiB. |
 | `AA_ARTIFACT_PURGE_DAYS` | no | `30` | both | no | Days before soft-deleted artifacts are purged. |
-| `AA_ABUSE_EMAIL` | no | `abuse@agentartifact.ai` | both | no | Abuse contact shown on public share pages. |
+| `AA_ABUSE_EMAIL` | no | `abuse@agentartifact.ai` | both | no | The deployment's published abuse contact (see [docs/decisions.md](./decisions.md)). Not currently rendered on any page: the public viewer footer carries attribution only. |
 | `AA_SECURITY_EMAIL` | no | `security@agentartifact.ai` | both | no | Security disclosure contact for `SECURITY.md`. |
 | `LOG_LEVEL` | no | `info` | both | no | pino level: `trace`, `debug`, `info`, `warn`, or `error`. |
 

@@ -352,10 +352,12 @@ test('the viewer keeps most of a landscape phone for the artifact', async ({ pag
  *
  * These links had no declared size at all — their height was whatever line-height arithmetic
  * produced, which is how the sibling instances measured 23.80px: failing by two tenths of a pixel,
- * for no reason anybody chose. On this surface it matters more than most, because when the product
- * footer is off, "Report abuse" is the ONLY abuse affordance a public page has.
+ * for no reason anybody chose.
  *
- * Checked at every width because the footer wraps, and wrapping is exactly what changes a box.
+ * The footer is now one link — the attribution — and it is checked at every width because the bar
+ * wraps, and wrapping is exactly what changes a box. The bar also became shorter (24px of block
+ * padding rather than 48), which is precisely the kind of change that can eat into a target, so the
+ * floor is worth more here than it was when there was room to spare.
  */
 test('the viewer footer links are large enough to hit', async ({ page }) => {
   await page.goto(seed.markdownShareUrl);
