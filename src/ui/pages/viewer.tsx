@@ -1,6 +1,7 @@
 import type { Child } from 'hono/jsx';
 import type { ViewerContentResult, ViewerPageModel } from '../../services/viewer.js';
 import { assetHref, stylesheetHref } from '../assets.js';
+import { AnalyticsScript } from '../components/analytics-script.js';
 import { DOCTYPE } from '../components/layout.js';
 import { Button, Notice, PasswordInput, ProductMark } from '../components/primitives.js';
 import {
@@ -211,6 +212,9 @@ export function ViewerDocument({
           <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
           <link rel="stylesheet" href={stylesheetHref()} />
           {viewerStylesheet ? <link rel="stylesheet" href={viewerStylesheet} /> : null}
+          {/* The viewer builds its own head, so it needs the tag mounted explicitly — `Layout`
+              covers the dashboard and marketing pages but never renders this document. */}
+          <AnalyticsScript />
           <title>{pageTitle}</title>
         </head>
         <body class="aa-page aa-public-page">

@@ -131,6 +131,15 @@ const rawEnvSchema = z.object({
   AA_ARTIFACT_PURGE_DAYS: integerFromEnv(30, 1),
   AA_GITHUB_URL: z.preprocess(emptyStringToUndefined, z.url().optional()),
   /**
+   * DataFast site id, for example `dfid_...`. PUBLIC — it is rendered into every visitor's HTML
+   * and identifies the site, not the account; it is not a credential.
+   *
+   * Unset or empty means analytics is OFF, which is what keeps development and self-hosting quiet
+   * by default: nobody's local instance should be reporting to our dashboard, and no self-hoster
+   * should have a third-party script appear in their pages because we shipped ours.
+   */
+  AA_DATAFAST_SITE_ID: optionalString(),
+  /**
    * Share path of the artifact the marketing homepage links to and polls, for example
    * `/a/KbLJ0zvyiGadXLHUs2E5Rb`. An artifact id is a row in one database, so the default only
    * exists on the instance it was seeded on: set it per deployment, or set it EMPTY to say this
@@ -204,6 +213,8 @@ export interface AppConfig {
   /** Share path of this deployment's hero artifact. Empty means it has none. */
   heroArtifactPath: string;
   githubUrl?: string;
+  /** Public DataFast site id. Absent means no analytics script and no analytics host in the CSP. */
+  datafastSiteId?: string;
   abuseEmail: string;
   securityEmail: string;
   logLevel: RawEnv['LOG_LEVEL'];
@@ -274,6 +285,7 @@ export function loadConfig(
     artifactPurgeDays: raw.AA_ARTIFACT_PURGE_DAYS,
     heroArtifactPath: raw.AA_HERO_ARTIFACT_PATH.trim(),
     ...(raw.AA_GITHUB_URL ? { githubUrl: raw.AA_GITHUB_URL } : {}),
+    ...(raw.AA_DATAFAST_SITE_ID ? { datafastSiteId: raw.AA_DATAFAST_SITE_ID } : {}),
     abuseEmail: raw.AA_ABUSE_EMAIL,
     securityEmail: raw.AA_SECURITY_EMAIL,
     logLevel: raw.LOG_LEVEL,

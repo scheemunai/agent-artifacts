@@ -17,6 +17,7 @@ import { registerRobotsAndSandboxGuard } from './routes/robots.js';
 import { registerV1Routes } from './routes/v1/index.js';
 import { createWebRoute } from './routes/web.js';
 import { SESSION_COOKIE_NAME } from './services/sessions.js';
+import { analyticsTag, configureAnalytics } from './ui/analytics.js';
 import { isHashedAssetPath } from './ui/assets.js';
 import { ErrorPage } from './ui/pages/error-page.js';
 
@@ -47,6 +48,8 @@ export function createApp({
   cloudModule,
 }: CreateAppOptions): Hono<{ Variables: AppVariables }> {
   const app = new Hono<{ Variables: AppVariables }>();
+  // Once, at assembly: every page below reads the resolved tag instead of being handed one.
+  configureAnalytics(config);
 
   app.use('*', async (context, next) => {
     const requestId = `req_${nanoid(12)}`;
@@ -82,7 +85,10 @@ export function createApp({
     const contentType = context.res.headers.get('content-type')?.toLowerCase();
     if (contentType?.includes('text/html')) {
       if (!context.res.headers.has('Content-Security-Policy')) {
-        context.header('Content-Security-Policy', appOriginCsp(config.frameOrigin));
+        context.header(
+          'Content-Security-Policy',
+          appOriginCsp(config.frameOrigin, analyticsTag()?.origin)
+        );
       }
       if (!context.res.headers.has('Referrer-Policy')) {
         context.header('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -236,14 +242,30 @@ function requestPrincipalFromContext(
   return undefined;
 }
 
-function appOriginCsp(frameOrigin: string): string {
+/**
+ * The app origin's policy. Widened for the analytics host ONLY while analytics is configured, so a
+ * self-host and a developer's laptop keep the tight policy rather than carrying an allowance for a
+ * third party they never load. The host is read from the same module the tag is, so the two cannot
+ * disagree about which origin is permitted.
+ *
+ * `script-src` for `/js/script.js` and `connect-src` for the beacon it sends back. Both are needed:
+ * allowing only the first produces a page that loads the script and then silently drops every
+ * event, which looks like working analytics and reports nothing.
+ *
+ * The FRAME policies in `src/lib/frame-policy.ts` are deliberately untouched. Sandboxed artifact
+ * content must not be able to reach datafa.st, and nothing of ours runs in there to want to.
+ */
+export function appOriginCsp(frameOrigin: string, analyticsOrigin?: string | undefined): string {
+  const scriptSrc = ["'self'", ...(analyticsOrigin ? [analyticsOrigin] : [])].join(' ');
+  const connectSrc = ["'self'", ...(analyticsOrigin ? [analyticsOrigin] : [])].join(' ');
+
   return [
     "default-src 'self'",
-    "script-src 'self'",
+    `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src ${connectSrc}`,
     `frame-src ${frameOrigin}`,
     "object-src 'none'",
     "base-uri 'none'",

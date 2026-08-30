@@ -1,6 +1,7 @@
 import { raw } from 'hono/html';
 import type { Child } from 'hono/jsx';
 import { type AssetKey, assetHref, stylesheetHref } from '../assets.js';
+import { AnalyticsScript } from './analytics-script.js';
 
 /**
  * Without this, every server-rendered page in the product is served with no doctype, which puts
@@ -37,6 +38,7 @@ export function Layout({ title, description, children, scripts = [] }: LayoutPro
           <title>{title}</title>
           <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
           <link rel="stylesheet" href={stylesheet} />
+          <AnalyticsScript />
         </head>
         <body class="aa-page">
           {children}
