@@ -8,6 +8,7 @@ import { runMigrations } from '../../src/db/migrations.js';
 import { AuthService } from '../../src/services/auth.js';
 import { DashboardReadModelService } from '../../src/services/dashboard-read-models.js';
 import { runBackgroundSweeps } from '../../src/services/scheduler.js';
+import { loadStarterTemplates } from '../../src/services/templates.js';
 import { createShareResponse } from '../../src/services/v1.js';
 import { VIEW_THROTTLE_MS, ViewerService } from '../../src/services/viewer.js';
 import {
@@ -28,6 +29,13 @@ import {
 
 const jsonContent = { 'Content-Type': 'application/json' };
 const logger = pino({ enabled: false });
+/**
+ * Read from the manifest rather than written down. This was `5`, and stayed `5` when three HTML
+ * starters were added — so the Postgres job went red over a number that described the seed set of
+ * a month ago. The seeder and the assertion now read the same source, and adding a starter cannot
+ * break this test again.
+ */
+const STARTER_TEMPLATE_COUNT = loadStarterTemplates().length;
 const describePostgres = process.env.AA_TEST_DATABASE_URL ? describe : describe.skip;
 
 describePostgres('PostgreSQL dialect support', () => {
@@ -58,7 +66,7 @@ describePostgres('PostgreSQL dialect support', () => {
         'shares',
         'templates',
       ]);
-      expect(await postgresCountRows({ db }, 'templates')).toBe(5);
+      expect(await postgresCountRows({ db }, 'templates')).toBe(STARTER_TEMPLATE_COUNT);
 
       const indexes = await db.pool.query<{ indexname: string }>(
         `
@@ -177,7 +185,7 @@ describePostgres('PostgreSQL dialect support', () => {
       expect(templatesResponse.status).toBe(200);
       const templates = await postgresJson(templatesResponse);
       expect(Array.isArray(templates.items)).toBe(true);
-      expect((templates.items as unknown[]).length).toBe(5);
+      expect((templates.items as unknown[]).length).toBe(STARTER_TEMPLATE_COUNT);
     } finally {
       await ctx.cleanup();
     }

@@ -288,14 +288,49 @@ test('public markdown viewer renders chrome, controls, content, and no overflow'
   await expect(page.locator('[data-aa-title="true"]')).toHaveText('E2E Markdown Artifact');
   await expect(page.locator('[data-aa-byline="true"]')).toContainText('E2E Smoke Bot');
   await expect(page.locator('[data-aa-content="true"]')).toContainText('Markdown smoke body');
-  await expect(page.getByRole('link', { name: '⭳ Download' })).toHaveAttribute(
-    'href',
-    /\/download$/
-  );
+  // Reached the way a reader reaches it, which differs by width: inline in the bar on a wide
+  // viewport, behind the ⋮ menu on a phone. Asserting the href on a hidden node would pass at
+  // every width and prove the control is reachable at none of them.
+  await openArtifactActions(page);
+  const download = page.getByRole('link', { name: 'Download' });
+  await expect(download).toBeVisible();
+  await expect(download).toHaveAttribute('href', /\/download$/);
+  await closeArtifactActions(page);
+
   await page.getByRole('button', { name: 'Refresh artifact' }).click();
   await expect(page.locator('[data-aa-content="true"]')).toContainText('Markdown smoke body');
   await expectNoHorizontalOverflow(page);
 });
+
+/**
+ * The viewer chrome has two arrangements, and this suite runs at seven widths across both.
+ *
+ * Above 560px the details and actions sit inline in the bar. At or below it they move behind a ⋮
+ * toggle, so Download is in the document but not on screen until the menu is opened. A test that
+ * only ever looked in the bar was passing on the wide projects and failing on the narrow ones for
+ * a reason that had nothing to do with the defect it was written to catch.
+ */
+async function openArtifactActions(page: Page): Promise<void> {
+  const toggle = page.locator('[data-aa-menu-toggle]');
+  if (!(await toggle.isVisible())) {
+    return;
+  }
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('[data-aa-menu-panel]')).toBeVisible();
+}
+
+/** Leaves the page in the state the rest of the test expects: no panel over the content. */
+async function closeArtifactActions(page: Page): Promise<void> {
+  const toggle = page.locator('[data-aa-menu-toggle]');
+  if (!(await toggle.isVisible())) {
+    return;
+  }
+
+  await page.keyboard.press('Escape');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+}
 
 /**
  * V6-N4: how much of a landscape phone the viewer keeps for the artifact.

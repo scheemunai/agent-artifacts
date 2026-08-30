@@ -52,7 +52,9 @@ describe('starter template manifest seeding', () => {
         )
         .all() as StarterTemplateSeedRow[];
 
-      expect(count.count).toBe(8);
+      // Same source as the seeder, for the same reason the Postgres suite now derives it: a
+      // hard-coded count is a copy of the manifest that nobody updates when the manifest changes.
+      expect(count.count).toBe(loadStarterTemplates().length);
       expect(rows.map((row) => row.slug)).toEqual([
         'briefing',
         'changelog',

@@ -20,4 +20,10 @@ regexes = [
   # docs/self-hosting.md shows what the boot log looks like; the value is visibly elided.
   # The generic-api-key rule's match begins at `token:`, so the anchor starts there too.
   '''token: abcdef123456\.\.\.''',
+  # Two dashboard tests write this into `shares.password_hash` in a throwaway SQLite file, so the
+  # row reads as password-protected without the suite paying for a real argon2 hash. It is not a
+  # credential and could not become one: a genuine hash is `$argon2id$v=19$m=…$…`, and this string
+  # verifies against nothing. Anchored on the literal, so any OTHER value assigned to the same
+  # column on the same line still trips the scan.
+  '''argon2-placeholder''',
 ]
