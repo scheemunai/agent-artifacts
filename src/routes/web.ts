@@ -12,7 +12,7 @@ import {
   type WaitlistService,
 } from '../services/waitlist.js';
 import { HOME_WAITLIST_ACTION, HomePage, type HomeWaitlist } from '../ui/pages/home.js';
-import { LegalPage, legalDocument } from '../ui/pages/legal.js';
+import { LEGAL_SLUGS, LegalPage, legalDocument } from '../ui/pages/legal.js';
 import { LoginPlaceholderPage, SetupPlaceholderPage } from '../ui/pages/placeholder.js';
 import { StyleGuidePage } from '../ui/pages/style-guide.js';
 
@@ -156,7 +156,7 @@ function registerRemainingWebRoutes(web: Hono<{ Variables: WebVariables }>): voi
    * coming-soon flag, and they cannot 404 on a host that happens to be pre-launch. A legal link
    * that 404s at the moment of payment is worse than having no link.
    */
-  for (const slug of ['terms', 'refund-policy', 'privacy']) {
+  for (const slug of LEGAL_SLUGS) {
     web.get(`/${slug}`, (context) => {
       const document = legalDocument(slug);
       return document ? context.html(LegalPage({ document })) : context.notFound();

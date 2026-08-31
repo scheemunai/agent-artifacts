@@ -13,8 +13,10 @@ import type { AppConfig, BillingConfig } from '../../src/config.js';
 import { initializeDatabase, type SqliteDatabaseHandle } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrations.js';
 import type { Logger } from '../../src/logger.js';
+import { createWebRoute } from '../../src/routes/web.js';
 import {
   LEGAL_DOCUMENTS,
+  LEGAL_SLUGS,
   type LegalDocument,
   LegalPage,
   legalDocument,
@@ -47,6 +49,7 @@ const billingConfig: BillingConfig = {
 describe('legal pages', () => {
   it('ships Terms, Refund and Privacy documents', () => {
     expect(Object.keys(LEGAL_DOCUMENTS).sort()).toEqual(['privacy', 'refund-policy', 'terms']);
+    expect(LEGAL_SLUGS.sort()).toEqual(['privacy', 'refund-policy', 'terms']);
   });
 
   it('resolves a known slug and refuses an unknown one', () => {
@@ -54,11 +57,12 @@ describe('legal pages', () => {
     expect(legalDocument('not-a-document')).toBeUndefined();
   });
 
-  it('renders each document with its own footer links back to the other two', () => {
+  it('renders every document with the publish date and cross-links to the other two', () => {
     for (const document of Object.values(LEGAL_DOCUMENTS)) {
       const html = String(LegalPage({ document }));
       // The renderer escapes, so compare against the escaped title ("Refund &amp; Cancellation").
       expect(html).toContain(document.title.replaceAll('&', '&amp;'));
+      expect(html).toContain('30 August 2026');
       expect(html).toContain('href="/terms"');
       expect(html).toContain('href="/refund-policy"');
       expect(html).toContain('href="/privacy"');
@@ -66,23 +70,61 @@ describe('legal pages', () => {
   });
 
   /**
-   * The placeholder text has to SAY it is a placeholder. A page that reads like a finished contract
-   * but was written by neither a lawyer nor the company is a document a customer could rely on.
+   * The operating entity has to appear on the pages that create obligations. A Terms page that
+   * never names the company behind it is not a contract anyone can rely on, and an EU seller must
+   * state its VAT identity.
    */
-  it('states plainly that the current text is a draft', () => {
-    const terms = String(LegalPage({ document: legalDocument('terms') as LegalDocument }));
-    expect(terms).toContain('placeholder pending final legal text');
-    expect(terms).toContain('[Company legal name]');
+  it('names the operating entity and VAT number on every page footer', () => {
+    for (const document of Object.values(LEGAL_DOCUMENTS)) {
+      const html = String(LegalPage({ document }));
+      expect(html).toContain('Zero Point Studio d.o.o.');
+      expect(html).toContain('HR52438945902');
+      expect(html).toContain('Rudeška cesta 179');
+    }
   });
 
-  it('describes cancellation the way the code actually behaves', () => {
+  it('carries no unreplaced content placeholders', () => {
+    for (const document of Object.values(LEGAL_DOCUMENTS)) {
+      const html = String(LegalPage({ document }));
+      expect(html).not.toContain('[PUBLISH DATE]');
+      expect(html).not.toContain('[Company legal name]');
+      expect(html).not.toMatch(/\[[A-Z][a-z]+ [a-z ]+\]/);
+      expect(html).not.toContain('placeholder pending final legal text');
+    }
+  });
+
+  it('renders **bold** as emphasis rather than printing the asterisks', () => {
+    const terms = String(LegalPage({ document: legalDocument('terms') as LegalDocument }));
+    expect(terms).toContain('<strong>Who we are.</strong>');
+    expect(terms).not.toContain('**');
+  });
+
+  it('states the Croatian governing law and the price the product actually charges', () => {
+    const terms = String(LegalPage({ document: legalDocument('terms') as LegalDocument }));
+    expect(terms).toContain('governed by the laws of');
+    expect(terms).toContain('Croatia');
+    // If the pricing card and the Terms disagree about the price, the Terms are the problem.
+    expect(terms).toContain('€9/month or €90/year');
+  });
+
+  /**
+   * The refund policy has to match what the code does. `cancel_at_period_end` keeps access to the
+   * end of the paid period, so a policy claiming immediate termination would be false.
+   */
+  it('describes cancellation the way the billing code actually behaves', () => {
     const refunds = String(
       LegalPage({ document: legalDocument('refund-policy') as LegalDocument })
     );
-    // cancel_at_period_end, and past_due retaining access, are real behaviours — the policy must
-    // not contradict them.
-    expect(refunds).toContain('end of the period you have already paid for');
-    expect(refunds).toContain('Pro features stay active during that window');
+    expect(refunds).toContain('end of your current billing period');
+    expect(refunds).toContain('you keep Pro access until then');
+    expect(refunds).toContain('handled by Stripe');
+  });
+
+  it('privacy policy reflects that card data never reaches our servers', () => {
+    const privacy = String(LegalPage({ document: legalDocument('privacy') as LegalDocument }));
+    expect(privacy).toContain('never full card numbers');
+    expect(privacy).toContain('GDPR');
+    expect(privacy).toContain('AZOP');
   });
 });
 
@@ -246,5 +288,48 @@ describe('checkout session tax parameters', () => {
     // €9 is what the customer pays; VAT is carved out of it. Flipping this is a revenue decision
     // and requires re-running the product setup script, because prices are immutable.
     expect(PRO_TAX_BEHAVIOR).toBe('inclusive');
+  });
+});
+
+describe('legal routes in every deployment mode', () => {
+  /**
+   * There is no "coming-soon middleware" to exempt these from, and that is the point worth pinning
+   * down: `AA_COMING_SOON` only changes what `/` renders. Every other route — legal, health, the
+   * agent contract — is registered exactly as it always is, in `registerRemainingWebRoutes`, which
+   * BOTH branches of `createWebRoute` call.
+   *
+   * The early `return web` for the launched case is the hazard this guards. If someone moved the
+   * legal routes above it, or registered them in only one branch, a pre-launch host would answer
+   * 404 for the very documents Stripe Checkout links to.
+   */
+  const baseConfig = {
+    baseUrl: 'https://agentartifact.ai',
+    deployment: 'cloud',
+    heroArtifactPath: '',
+    rateLimitsDisabled: true,
+    sessionSecret: 'x'.repeat(32),
+    trustProxy: 0,
+    waitlist: { from: 'a@b.test', confirmation: false },
+  } as unknown as AppConfig;
+
+  for (const comingSoon of [false, true]) {
+    it(`serves every legal page with AA_COMING_SOON=${comingSoon}`, async () => {
+      const web = createWebRoute({ ...baseConfig, comingSoon } as AppConfig, silentLogger(), {
+        waitlist: { subscribe: async () => 'subscribed' } as never,
+      });
+
+      for (const slug of LEGAL_SLUGS) {
+        const response = await web.request(`/${slug}`);
+        expect(response.status, `/${slug} with comingSoon=${comingSoon}`).toBe(200);
+        expect(await response.text()).toContain('Zero Point Studio d.o.o.');
+      }
+    });
+  }
+
+  it('still 404s an unknown legal slug rather than rendering an empty document', async () => {
+    const web = createWebRoute({ ...baseConfig, comingSoon: false } as AppConfig, silentLogger(), {
+      waitlist: { subscribe: async () => 'subscribed' } as never,
+    });
+    expect((await web.request('/not-a-legal-page')).status).toBe(404);
   });
 });
