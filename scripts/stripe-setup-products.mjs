@@ -31,6 +31,11 @@ const CURRENCY = 'eur';
 const MONTHLY_CENTS = 900;
 const ANNUAL_CENTS = 9000;
 
+// Must match PRO_TAX_BEHAVIOR in src/billing/plans.ts. 'inclusive' means EUR 9 is the all-in price
+// the customer pays and VAT is carved out of it; 'exclusive' adds VAT on top at checkout. Changing
+// it retires the existing prices and mints replacements, because Stripe prices are immutable.
+const TAX_BEHAVIOR = 'inclusive';
+
 const dryRun = process.argv.includes('--dry-run');
 const secretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -92,6 +97,9 @@ async function ensurePrice(product, { lookupKey, interval, amount }) {
       existing.unit_amount === amount &&
       existing.currency === CURRENCY &&
       existing.recurring?.interval === interval &&
+      // Tax behaviour is immutable on a price, so a change here has to mint a new one. Leaving it
+      // out of this check would silently keep charging under the old VAT treatment.
+      existing.tax_behavior === TAX_BEHAVIOR &&
       // Also check the PRODUCT. A price that carries the right lookup key but hangs off a different
       // (possibly archived) product cannot be checked out, and reusing it would produce a checkout
       // that 400s at the last step.
@@ -118,11 +126,14 @@ async function ensurePrice(product, { lookupKey, interval, amount }) {
     currency: CURRENCY,
     unit_amount: amount,
     recurring: { interval },
+    tax_behavior: TAX_BEHAVIOR,
     lookup_key: lookupKey,
     transfer_lookup_key: true,
     metadata: { plan_id: 'pro' },
   });
-  console.log(`  ${interval.padEnd(9)} CREATED ${price.id}  ${amount / 100} ${CURRENCY}`);
+  console.log(
+    `  ${interval.padEnd(9)} CREATED ${price.id}  ${amount / 100} ${CURRENCY} (${TAX_BEHAVIOR} of VAT)`
+  );
   return price;
 }
 

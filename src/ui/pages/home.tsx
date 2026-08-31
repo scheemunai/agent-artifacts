@@ -15,6 +15,7 @@ import {
   MarketingWorksWith,
 } from '../components/marketing.js';
 import { Button, ProductMark } from '../components/primitives.js';
+import { LegalFooterLinks } from './legal.js';
 
 export const HOME_HERO = 'Let your agent show its work.';
 export const HOME_SUBLINE =
@@ -485,6 +486,12 @@ export function HomePage({
           ·
         </span>
         <a href="/llms.txt">API contract</a>
+        <span class="aa-marketing-separator" aria-hidden="true">
+          ·
+        </span>
+        {/* Shared with the legal pages' own footer so the set cannot drift. Checkout renders a
+            terms-of-service checkbox pointing at /terms, so this link and that one have to agree. */}
+        <LegalFooterLinks />
         {authenticated ? null : (
           <>
             <span class="aa-marketing-separator" aria-hidden="true">
@@ -663,6 +670,12 @@ function ComingSoonHome({
           ·
         </span>
         <a href="/llms.txt">API contract</a>
+        <span class="aa-marketing-separator" aria-hidden="true">
+          ·
+        </span>
+        {/* Shared with the legal pages' own footer so the set cannot drift. Checkout renders a
+            terms-of-service checkbox pointing at /terms, so this link and that one have to agree. */}
+        <LegalFooterLinks />
         {authenticated ? null : (
           <>
             <span class="aa-marketing-separator" aria-hidden="true">

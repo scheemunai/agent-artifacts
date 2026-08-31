@@ -199,6 +199,10 @@ of billing entirely. Enabling it requires the full key set or the process refuse
    prints the two price ids.
 4. Configure the Customer Portal in live mode: payment-method updates, invoice history, switching
    between the two Pro prices, and cancellation via `cancel_at_period_end`.
+4a. Set the **Terms of Service URL** (Settings → Public details) to `https://<app-origin>/terms`, so
+   Checkout can collect terms acceptance. Not settable via the API; see "Legal pages" below.
+4b. Set the **tax head office address** and add **tax registrations** (home country + OSS Union for
+   the EU). Without a registration Stripe computes tax and collects zero — see "Stripe Tax" below.
 5. Enable Smart Retries and automatic card updates (Billing → Revenue Recovery). Both are free.
 6. Create the live webhook endpoint at `https://<app-origin>/stripe/webhook` subscribed to:
    `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`,
@@ -212,6 +216,79 @@ of billing entirely. Enabling it requires the full key set or the process refuse
 
 Because the flag is separate from the deploy, a bad go-live is reverted by flipping one variable and
 reloading — not by rolling back code.
+
+### Stripe Tax and Managed Payments
+
+This account has **Managed Payments** enabled, which changes two things about Checkout:
+
+- **`custom_text` is rejected outright.** The terms checkbox uses Stripe's own wording rather than
+  ours, so the links to `/terms` and `/refund-policy` live in the site footer and on the ToS page.
+- Sessions are otherwise unaffected: `automatic_tax`, `billing_address_collection`,
+  `tax_id_collection`, `customer_update` and `allow_promotion_codes` all work.
+
+Tax is wired as:
+
+| Where | Setting |
+|---|---|
+| Product | `tax_code: txcd_10103001` (digital service) |
+| Price | `tax_behavior: inclusive` — see below |
+| Checkout Session | `automatic_tax.enabled`, `billing_address_collection: 'required'`, `tax_id_collection.enabled`, `customer_update.address: 'auto'` |
+| Subscription | inherits `automatic_tax` from the session, so **renewals are taxed too** |
+| Portal / invoices | inherit Stripe Tax automatically |
+
+**`customer_update` is not optional.** Stripe refuses any session that combines `automatic_tax`
+with a pre-existing `customer` unless the integration explicitly says it may write the address back.
+
+#### Inclusive vs exclusive — a revenue decision
+
+`inclusive` (shipped) means **€9 is what the customer pays**, everywhere, and VAT is carved out of
+it. Measured on a real test-mode charge with a Croatian customer:
+
+```
+total €9.00   VAT €1.80 (25%)   net €7.20
+```
+
+`exclusive` would charge €9 **plus** VAT, so revenue is a flat €9 but the amount charged differs by
+country and no longer matches the pricing page. Inclusive is the conventional EU B2C choice; the
+tradeoff is that net revenue per customer varies with the customer's VAT rate.
+
+To flip: change `PRO_TAX_BEHAVIOR` in `src/billing/plans.ts` **and** `TAX_BEHAVIOR` in
+`scripts/stripe-setup-products.mjs`, then re-run the script. Prices are immutable, so it retires the
+old ones and mints replacements; existing subscribers keep the price they signed up with.
+
+#### Tax registrations decide whether VAT is actually collected
+
+`automatic_tax` computing successfully and collecting **nothing** is a normal, valid state. With no
+registrations Stripe returns `taxability_reason: not_collecting` and zero tax — the integration is
+working, the account simply has no obligation recorded yet. Adding a registration is what turns
+collection on, with no code change.
+
+Two prerequisites, both Dashboard/API and both founder-owned:
+
+1. **Head office address** must be set before any registration can be created
+   (`POST /v1/tax/settings`, or Dashboard → Tax → Settings).
+2. **A registration per jurisdiction** (`POST /v1/tax/registrations`). For an EU seller of digital
+   services the usual shape is the home country plus **OSS Union** for the rest of the EU.
+
+Note `automatic_tax.liability.type` on the resulting invoices. It reads `self`, meaning **the
+merchant is liable for remitting VAT**, not Stripe — worth confirming against what Managed Payments
+is expected to cover before launch.
+
+### Legal pages
+
+`/terms`, `/refund-policy` and `/privacy` are server-rendered from `src/ui/pages/legal.tsx` and
+registered in `registerRemainingWebRoutes`, so they answer in **every** deployment mode including
+coming-soon. That is deliberate: Checkout links to the terms, and a legal link that 404s at the
+moment of payment is worse than no link.
+
+The prose is placeholder and says so on the page. Replacing it is a content edit to
+`LEGAL_DOCUMENTS` — routes, links, layout and checkout wiring do not change.
+
+**To enable the terms checkbox at Checkout**, set a Terms of Service URL in the Stripe Dashboard
+(Settings → Public details) pointing at `https://<app-origin>/terms`. This cannot be set through the
+API on a first-party account. Until it is set, checkout still works: the session is retried without
+consent collection and the gap is logged as
+`billing.checkout.tos_consent_unavailable` at error level. Grep for it after go-live.
 
 ### Nginx and CSP
 

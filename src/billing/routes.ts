@@ -137,26 +137,12 @@ export function registerBillingDashboardRoutes(
         store: ctx.store,
       });
 
-      const session = await ctx.stripe.checkout.sessions.create(
-        {
-          mode: 'subscription',
-          customer: customerId,
-          line_items: [{ price: priceId, quantity: 1 }],
-          // Both directions of the link. `subscription_data.metadata` is the one that matters most:
-          // it puts account_id on the SUBSCRIPTION, so every later customer.subscription.* event can
-          // be resolved even if the customer lookup somehow fails.
-          client_reference_id: account.id,
-          subscription_data: { metadata: { account_id: account.id } },
-          success_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=success`,
-          cancel_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=cancelled`,
-          allow_promotion_codes: true,
-        },
-        {
-          // A double-clicked upgrade button must not create two subscriptions. Scoped to the
-          // account, customer and interval so a genuine later change of plan still works.
-          idempotencyKey: `checkout:${account.id}:${customerId}:${interval}`,
-        }
-      );
+      const session = await createCheckoutSession(ctx, {
+        accountId: account.id,
+        customerId,
+        priceId,
+        interval,
+      });
 
       if (!session.url) {
         throw new Error('Stripe returned a Checkout Session without a URL');
@@ -198,6 +184,94 @@ export function registerBillingDashboardRoutes(
       return context.redirect(`${BILLING_RETURN_PATH}?billing=error`, 303);
     }
   });
+}
+
+/**
+ * Build the Checkout Session, with terms-of-service consent if the account can collect it.
+ *
+ * The two Stripe-account facts this has to survive:
+ *
+ * 1. MANAGED PAYMENTS is on, so `custom_text` is rejected outright ("custom_text cannot be used
+ *    with Managed Payments"). The terms checkbox therefore uses Stripe's own wording pointing at
+ *    the Dashboard-configured URL, rather than our sentence linking to /terms and /refund-policy.
+ *    Those links live in the site footer and on the ToS page instead.
+ *
+ * 2. `consent_collection.terms_of_service` REQUIRES a Terms URL set in the Stripe Dashboard
+ *    (Settings -> Public details), and that setting cannot be written through the API on a
+ *    first-party account — I tried; it answers "you may only use it on connected accounts". So the
+ *    integration cannot guarantee it is present.
+ *
+ * Which makes the fallback the important part. Sending `consent_collection` to an account without
+ * the URL fails the session, and a failed session is a customer who cannot pay. So a miss is caught,
+ * logged LOUDLY, and retried once without consent — checkout keeps working, and the gap is visible
+ * in the logs instead of silently costing sales. It is deliberately not silent: dropping ToS
+ * acceptance without saying so would be its own problem.
+ */
+async function createCheckoutSession(
+  ctx: BillingDashboardContext,
+  input: { accountId: string; customerId: string; priceId: string; interval: BillingInterval }
+): Promise<Stripe.Checkout.Session> {
+  const base: Stripe.Checkout.SessionCreateParams = {
+    mode: 'subscription',
+    customer: input.customerId,
+    line_items: [{ price: input.priceId, quantity: 1 }],
+    // Both directions of the link. `subscription_data.metadata` is the one that matters most: it
+    // puts account_id on the SUBSCRIPTION, so every later customer.subscription.* event can be
+    // resolved even if the customer lookup somehow fails.
+    client_reference_id: input.accountId,
+    subscription_data: { metadata: { account_id: input.accountId } },
+    success_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=success`,
+    cancel_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=cancelled`,
+    allow_promotion_codes: true,
+
+    // --- Stripe Tax ---------------------------------------------------------------------------
+    // Set at session level, which is what carries it onto the subscription Checkout creates — so
+    // every renewal invoice is taxed too, not just the first charge.
+    automatic_tax: { enabled: true },
+    // Tax cannot be computed without a location, so the address is REQUIRED rather than optional.
+    // An EU seller of digital services owes VAT at the CUSTOMER's rate, so a missing address is not
+    // a smaller tax bill — it is an uncomputable one.
+    billing_address_collection: 'required',
+    // B2B: a valid VAT number lets Stripe reverse-charge instead of adding VAT.
+    tax_id_collection: { enabled: true },
+    // REQUIRED when an existing `customer` is passed alongside automatic_tax. Without it Stripe
+    // refuses the session — it will not write an address onto a customer record the integration
+    // did not say it could modify.
+    customer_update: { address: 'auto', name: 'auto' },
+  };
+
+  const idempotencyKey = `checkout:${input.accountId}:${input.customerId}:${input.interval}`;
+
+  try {
+    return await ctx.stripe.checkout.sessions.create(
+      { ...base, consent_collection: { terms_of_service: 'required' } },
+      // A double-clicked upgrade button must not create two subscriptions. Scoped to the account,
+      // customer and interval so a genuine later change of plan still works.
+      { idempotencyKey }
+    );
+  } catch (error) {
+    if (!isMissingTermsUrlError(error)) {
+      throw error;
+    }
+    ctx.logger.error(
+      { account_id: input.accountId },
+      'billing.checkout.tos_consent_unavailable: no Terms of Service URL is set in the Stripe Dashboard (Settings -> Public details), so checkout proceeded WITHOUT recording terms acceptance. Set the URL to /terms and this stops happening.'
+    );
+    return ctx.stripe.checkout.sessions.create(base, {
+      // A different key: the first attempt consumed the original one, and reusing it would replay
+      // the failure rather than creating the session.
+      idempotencyKey: `${idempotencyKey}:no-tos`,
+    });
+  }
+}
+
+/** Stripe reports the missing Dashboard setting as a plain invalid_request, so match on the text. */
+function isMissingTermsUrlError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /terms of service/i.test(error.message) &&
+    /url is set|url in the stripe dashboard/i.test(error.message)
+  );
 }
 
 /**

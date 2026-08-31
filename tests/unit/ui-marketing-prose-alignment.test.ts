@@ -61,6 +61,11 @@ const CENTRED_BY_ARGUMENT: Record<string, string> = {
     'a list of agent names, not a sentence — 3 lines at 375 and 2 at desktop, each line whole items',
   'aa-marketing-api__caption':
     'two lines at every measured width, 375 through 1440 — a caption taken in at once, not prose',
+  // Same argument as aa-marketing-works above: a row of short links separated by interpuncts, not a
+  // sentence. It crossed the length threshold when the legal links were added, and it wraps as whole
+  // items — no link is ever split, so there is no ragged left edge for the eye to return to.
+  'aa-marketing-footer__links':
+    'a row of short link labels, not a sentence — wraps as whole items at every width',
 };
 
 interface TextBlock {

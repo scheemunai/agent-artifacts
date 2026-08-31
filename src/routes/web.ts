@@ -12,6 +12,7 @@ import {
   type WaitlistService,
 } from '../services/waitlist.js';
 import { HOME_WAITLIST_ACTION, HomePage, type HomeWaitlist } from '../ui/pages/home.js';
+import { LegalPage, legalDocument } from '../ui/pages/legal.js';
 import { LoginPlaceholderPage, SetupPlaceholderPage } from '../ui/pages/placeholder.js';
 import { StyleGuidePage } from '../ui/pages/style-guide.js';
 
@@ -147,6 +148,21 @@ export function createWebRoute(
  * build where turning the flag off also takes the style guide with it.
  */
 function registerRemainingWebRoutes(web: Hono<{ Variables: WebVariables }>): void {
+  /**
+   * The legal pages, served by BOTH faces of this module and in every deployment mode.
+   *
+   * Unconditional on purpose. Stripe Checkout renders a terms-of-service checkbox linking here, and
+   * a customer has to be able to open that link before paying — so these cannot be behind the
+   * coming-soon flag, and they cannot 404 on a host that happens to be pre-launch. A legal link
+   * that 404s at the moment of payment is worse than having no link.
+   */
+  for (const slug of ['terms', 'refund-policy', 'privacy']) {
+    web.get(`/${slug}`, (context) => {
+      const document = legalDocument(slug);
+      return document ? context.html(LegalPage({ document })) : context.notFound();
+    });
+  }
+
   web.get('/style-guide', (context) => context.html(StyleGuidePage()));
   web.get('/setup', (context) => context.html(SetupPlaceholderPage()));
   web.get('/login', (context) => context.html(LoginPlaceholderPage()));

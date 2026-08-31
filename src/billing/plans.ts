@@ -69,6 +69,25 @@ export const PRO_PRICE_MONTHLY_CENTS = 900;
 /** Twelve months for the price of ten. */
 export const PRO_PRICE_ANNUAL_CENTS = 9000;
 
+/**
+ * Whether the advertised amount already contains VAT. A REVENUE DECISION, not a technical one.
+ *
+ * `inclusive` — €9 is what the customer pays, everywhere. Clean EU B2C pricing: the price on the
+ * card is the price on the card statement, in every country. The merchant nets €9 minus the
+ * customer's local VAT, so revenue per customer varies by their country (a Croatian customer at 25%
+ * VAT nets ~€7.20; a Luxembourg one at 17% nets ~€7.69).
+ *
+ * `exclusive` — €9 plus VAT, added at checkout. Revenue per customer is a flat €9, but the amount
+ * charged differs by country and no longer matches the pricing page, which is a worse consumer
+ * experience and is unusual for EU-facing B2C SaaS.
+ *
+ * Shipping `inclusive`. To flip: change this constant AND re-run
+ * `scripts/stripe-setup-products.mjs`, which will retire the old prices and mint replacements —
+ * Stripe prices are immutable, so tax behaviour cannot be edited in place. Existing subscribers
+ * stay on the price they signed up with.
+ */
+export const PRO_TAX_BEHAVIOR: 'inclusive' | 'exclusive' = 'inclusive';
+
 export function formatPrice(cents: number, currency: string = PRO_CURRENCY): string {
   const symbol = currency === 'eur' ? '€' : currency === 'usd' ? '$' : `${currency.toUpperCase()} `;
   const whole = cents / 100;
