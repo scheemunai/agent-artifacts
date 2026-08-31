@@ -36,6 +36,18 @@ const ANNUAL_CENTS = 9000;
 // it retires the existing prices and mints replacements, because Stripe prices are immutable.
 const TAX_BEHAVIOR = 'inclusive';
 
+/**
+ * Tax category for the Product.
+ *
+ * "General - Electronically Supplied Services" rather than one of the SaaS codes, because Stripe
+ * splits those into PERSONAL USE and BUSINESS USE and this product is sold self-serve to individual
+ * developers as well as to small teams. Picking either SaaS variant would assert a buyer type the
+ * checkout does not actually know, baked into a tax determination. The general
+ * electronically-supplied-services code is the category EU VAT on digital services genuinely turns
+ * on, and it covers B2C and B2B alike.
+ */
+const TAX_CODE = 'txcd_10000000';
+
 const dryRun = process.argv.includes('--dry-run');
 const secretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -59,6 +71,15 @@ async function ensureProduct() {
   try {
     const existing = await stripe.products.retrieve(PRODUCT_LOOKUP);
     if (!existing.deleted) {
+      // Reuse is not the same as agreeing. Unlike a Price amount, a Product's tax_code IS mutable,
+      // so a re-run reconciles it — otherwise changing the category in this file would never reach
+      // Stripe and every invoice would keep being taxed under the old one.
+      if (existing.tax_code !== TAX_CODE) {
+        console.log(`  product   RETAX   ${existing.tax_code ?? 'none'} -> ${TAX_CODE}`);
+        if (!dryRun) {
+          await stripe.products.update(existing.id, { tax_code: TAX_CODE });
+        }
+      }
       console.log(`  product   reuse   ${existing.id}  (${existing.name})`);
       return existing;
     }
@@ -81,8 +102,7 @@ async function ensureProduct() {
     // Read back only as a sanity signal — entitlement is derived from the PRICE id, which is why the
     // price ids are configuration rather than constants.
     metadata: { lookup_key: PRODUCT_LOOKUP, plan_id: 'pro' },
-    // Digital service. Drives Stripe Tax's rate selection if tax is ever switched on.
-    tax_code: 'txcd_10103001',
+    tax_code: TAX_CODE,
   });
   console.log(`  product   CREATED ${product.id}`);
   return product;
