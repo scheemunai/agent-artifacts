@@ -70,7 +70,9 @@ async function seed(ctx: AuthTestContext): Promise<Seeded> {
 function rowFor(html: string, slug: string): string {
   return (
     html
-      .split('<li class="aa-dashboard-card aa-dashboard-card--linked">')
+      // Modifiers left open: a card composes `--linked`, `--with-actions` and whatever comes
+      // next, and this helper only needs to find rows.
+      .split(/<li class="aa-dashboard-card\b[^"]*">/)
       .slice(1)
       .find((row) => row.includes(`<code>${slug}</code>`)) ?? ''
   );

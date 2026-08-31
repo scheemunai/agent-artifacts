@@ -523,14 +523,54 @@ test('authenticated dashboard list to detail preserves history and share control
   // viewport. The row is not inside a horizontally scrolling container, so this cannot flatter the
   // result the way scrolling a scroll region would.
   await dashboardRow.scrollIntoViewIfNeeded();
-  const hitAtFarEdge = await dashboardRow.evaluate((row) => {
+  /*
+   * TWO PRESSES, ASKED OF THE BROWSER, because the row now has two targets and they are separated
+   * only by paint order.
+   *
+   * The stretched link covers the card at `z-index: auto`; `.aa-dashboard-card__actions` sits at
+   * `z-index: 1`. That is a rendered property — the markup is identical whether the rule holds or
+   * has been deleted — so the integration suite can assert that Open lives in the actions slot and
+   * still not know whether a reader can press it. This is the question that settles it: at each
+   * point, which element receives the press?
+   *
+   * The first probe moved from the row's vertical middle to its title line. Same claim, asked
+   * where it is unambiguous: the middle drifts toward the footer as the card's height changes with
+   * viewport, and a probe that lands on the action slot would report the overlay is broken when it
+   * is merely being asked about the wrong pixel.
+   */
+  const hits = await dashboardRow.evaluate((row) => {
     const box = row.getBoundingClientRect();
-    const hit = document.elementFromPoint(box.right - 8, box.top + box.height / 2);
-    return hit instanceof Element ? hit.className : 'nothing-in-the-viewport';
+    const describe = (x: number, y: number) => {
+      const hit = document.elementFromPoint(x, y);
+      if (!(hit instanceof Element)) {
+        return 'nothing-in-the-viewport';
+      }
+      const open = row.querySelector('[data-aa-open-artifact="true"]');
+      return open?.contains(hit) ? 'the-open-control' : hit.className || hit.tagName;
+    };
+    const open = row.querySelector('[data-aa-open-artifact="true"]');
+    const openBox = open?.getBoundingClientRect();
+    return {
+      farEdgeOfTitleLine: describe(box.right - 8, box.top + 12),
+      centreOfOpen: openBox
+        ? describe(openBox.left + openBox.width / 2, openBox.top + openBox.height / 2)
+        : 'the row rendered no Open control',
+    };
   });
-  expect(hitAtFarEdge, 'the far side of the row is not the link').toContain(
+  expect(hits.farEdgeOfTitleLine, 'the far side of the row is not the link').toContain(
     'aa-dashboard-card__link'
   );
+  // The half that cannot be proven from markup: the overlay does NOT swallow the second target.
+  expect(
+    hits.centreOfOpen,
+    'the stretched-link overlay is taking the press meant for Open — the actions slot has lost its layer'
+  ).toBe('the-open-control');
+
+  // And it goes where it says: the public page, in a new tab.
+  const openControl = dashboardRow.locator('[data-aa-open-artifact="true"]');
+  await expect(openControl).toHaveAttribute('href', seed.dashboardShareUrl);
+  await expect(openControl).toHaveAttribute('target', '_blank');
+  await expect(openControl).toHaveAttribute('rel', 'noopener noreferrer');
 
   await page.getByRole('link', { name: seed.dashboardArtifactTitle }).click();
 

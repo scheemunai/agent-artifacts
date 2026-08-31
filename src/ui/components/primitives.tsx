@@ -57,6 +57,15 @@ interface ButtonProps {
    */
   iconOnly?: boolean | undefined;
   href?: string | undefined;
+  /**
+   * Open this link in a new tab.
+   *
+   * One flag, not two, because `target="_blank"` without `rel="noopener"` hands the opened page a
+   * `window.opener` handle to navigate the tab it came from. Exposing `target` and `rel` as
+   * separate props would make the unsafe pair expressible; this makes it unrepresentable. Ignored
+   * without `href`, since a `<button>` has nowhere to go.
+   */
+  newTab?: boolean | undefined;
   class?: string | undefined;
   id?: string | undefined;
   ariaLabel?: string | undefined;
@@ -76,6 +85,7 @@ export function Button({
   form,
   iconOnly = false,
   href,
+  newTab = false,
   class: className,
   id,
   ariaLabel,
@@ -104,6 +114,7 @@ export function Button({
         id={id}
         class={classes}
         href={isDisabled ? undefined : href}
+        {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
         aria-disabled={isDisabled ? 'true' : undefined}
         aria-label={ariaLabel}
         title={title}
@@ -1199,9 +1210,15 @@ interface CopyBlockProps {
    * where wrapping is what you want.
    */
   variant?: CopyBlockVariant | undefined;
+  /**
+   * An extra control beside Copy — "Open" for a URL block, for instance. It sits in the header row
+   * the block already owns, so a second affordance costs no new layout and cannot drift out of
+   * alignment with the first.
+   */
+  action?: Child | undefined;
 }
 
-export function CopyBlock({ id, label, value, variant = 'text' }: CopyBlockProps) {
+export function CopyBlock({ id, label, value, variant = 'text', action }: CopyBlockProps) {
   const hintId = `${id}-hint`;
   const labelId = `${id}-label`;
   // Two axes, two ways of knowing.
@@ -1252,6 +1269,7 @@ export function CopyBlock({ id, label, value, variant = 'text' }: CopyBlockProps
           >
             Copy
           </Button>
+          {action}
         </ButtonRow>
       </header>
       <pre

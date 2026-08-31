@@ -401,6 +401,18 @@ export function StyleGuidePage() {
                 label="Install prompt excerpt"
                 value={installPromptExample}
               />
+              {/* The optional trailing action, and the only supported way to open a link in a new
+                  tab: `newTab` sets `target` and `rel` together, so the pair cannot be split. */}
+              <CopyBlock
+                id="copy-block-with-action-example"
+                label="URL with a trailing action"
+                value="https://example.test/a/ShareIdGoesHere00"
+                action={
+                  <Button variant="secondary" size="sm" href="#copy-paste" newTab>
+                    Open
+                  </Button>
+                }
+              />
             </div>
           </StyleGuideSection>
 

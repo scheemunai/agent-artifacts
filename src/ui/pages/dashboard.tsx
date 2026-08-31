@@ -1035,6 +1035,29 @@ export function DashboardCard({
   );
 }
 
+/**
+ * "Open the public page" — the same control in the share panel and in every list row.
+ *
+ * It is the owner's own view of the artifact as a reader sees it, which is why it exists at both
+ * levels: from the list without stepping into the detail page first, and from the panel beside the
+ * URL it opens. A PRIVATE artifact opens too — the viewer serves the owner-gated page to a
+ * signed-in owner — so this is not a "published only" affordance and is deliberately not gated on
+ * visibility. It is absent only when there is no URL at all, which now means the link was revoked.
+ */
+function OpenArtifactButton({ url }: { url: string }) {
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      href={url}
+      newTab
+      dataAttrs={{ 'data-aa-open-artifact': 'true' }}
+    >
+      Open
+    </Button>
+  );
+}
+
 function ArtifactCard({ artifact }: { artifact: DashboardArtifactListItem }) {
   return (
     <DashboardCard
@@ -1058,6 +1081,7 @@ function ArtifactCard({ artifact }: { artifact: DashboardArtifactListItem }) {
           {countOf(artifact.lifetimeViews, 'view')}
         </>
       }
+      actions={artifact.activeShare ? <OpenArtifactButton url={artifact.activeShare.url} /> : null}
     />
   );
 }
@@ -1139,7 +1163,12 @@ function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
       <div class="aa-stack" id="share-panel">
         {share ? (
           <>
-            <CopyBlock id="share-url" label="Public URL" value={share.url} />
+            <CopyBlock
+              id="share-url"
+              label="Public URL"
+              value={share.url}
+              action={<OpenArtifactButton url={share.url} />}
+            />
             <p class="aa-section-note">
               {countOf(share.viewCount, 'view')} on this share ·{' '}
               {countOf(share.uniqueViewerCount, 'unique viewer')} ·{' '}
