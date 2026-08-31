@@ -37,6 +37,183 @@ export function resolveMigrationsFolder(dialect: DatabaseHandle['dialect']): str
 async function applyForwardMigrations(handle: DatabaseHandle, logger: Logger): Promise<void> {
   await ensureTemplateThumbnailUrl(handle, logger);
   await ensureShareVisibility(handle, logger);
+  await ensureBillingColumns(handle, logger);
+  await ensureStripeEventsTable(handle, logger);
+}
+
+/**
+ * Billing columns on `accounts`, plus THE GRANDFATHER STAMP, which is the part that matters.
+ *
+ * `plan` defaults to `free`, so the column add alone is harmless: every existing row becomes a free
+ * account, which is what they all already were. That is the opposite of `ensureShareVisibility`
+ * below, where the default would have changed live behaviour and a backfill was mandatory.
+ *
+ * The DANGER here is one step further out. Before billing, every plan returned
+ * `artifact_retention_days: null`, so the retention sweep in `services/scheduler.ts` never deleted
+ * anything — it was inert. Giving the free tier a 7-day window ARMS it, and the next sweep would
+ * soft-delete every free artifact older than a week and revoke its share links. People who signed up
+ * under "artifacts live forever" would watch links they had already sent to other people go dark.
+ *
+ * So this stamps `grandfathered_at` on every account that exists RIGHT NOW. `BillingModule`
+ * gives those accounts unlimited retention forever, even on free. New accounts created after this
+ * migration get NULL and are subject to the published 7-day policy.
+ *
+ * It runs only on the branch that adds the column, so a later boot cannot re-stamp accounts that
+ * have since signed up under the new terms.
+ */
+async function ensureBillingColumns(handle: DatabaseHandle, logger: Logger): Promise<void> {
+  const columns: Array<[string, string]> = [
+    ['stripe_customer_id', 'TEXT'],
+    ['stripe_subscription_id', 'TEXT'],
+    ['plan', "TEXT NOT NULL DEFAULT 'free'"],
+    ['comp_plan', 'TEXT'],
+    ['grandfathered_at', 'BIGINT'],
+    ['subscription_status', 'TEXT'],
+    ['current_period_end', 'BIGINT'],
+    ['cancel_at_period_end', 'BOOLEAN NOT NULL DEFAULT FALSE'],
+    ['billing_updated_at', 'BIGINT'],
+  ];
+  const now = Date.now();
+
+  if (handle.dialect === 'sqlite') {
+    const existing = handle.sqlite.prepare("PRAGMA table_info('accounts')").all() as Array<{
+      name: string;
+    }>;
+    if (existing.some((column) => column.name === 'plan')) {
+      return;
+    }
+
+    // SQLite has no BOOLEAN and stores it as INTEGER; BIGINT is an INTEGER affinity alias. Spelling
+    // the types per dialect keeps the two schema files describing the same shape.
+    const sqliteTypes: Record<string, string> = {
+      'BOOLEAN NOT NULL DEFAULT FALSE': 'INTEGER NOT NULL DEFAULT 0',
+      BIGINT: 'INTEGER',
+    };
+
+    for (const [name, type] of columns) {
+      try {
+        handle.sqlite
+          .prepare(`ALTER TABLE accounts ADD COLUMN ${name} ${sqliteTypes[type] ?? type}`)
+          .run();
+      } catch (error) {
+        if (!isDuplicateColumnError(error)) {
+          throw error;
+        }
+      }
+    }
+
+    handle.sqlite
+      .prepare(
+        `CREATE UNIQUE INDEX IF NOT EXISTS uq_accounts_stripe_customer
+           ON accounts (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL`
+      )
+      .run();
+
+    const stamped = handle.sqlite
+      .prepare('UPDATE accounts SET grandfathered_at = ? WHERE grandfathered_at IS NULL')
+      .run(now);
+    logger.info(
+      {
+        dialect: handle.dialect,
+        migration: 'accounts.billing',
+        grandfathered_accounts: stamped.changes,
+      },
+      'database.forward_migration.applied'
+    );
+    return;
+  }
+
+  const existing = await handle.pool.query(
+    `SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'accounts' AND column_name = 'plan'`
+  );
+  if ((existing.rowCount ?? 0) > 0) {
+    return;
+  }
+
+  for (const [name, type] of columns) {
+    await handle.pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS ${name} ${type}`);
+  }
+
+  await handle.pool.query(
+    `ALTER TABLE accounts ADD CONSTRAINT ck_accounts_plan CHECK (plan IN ('free', 'pro'))`
+  );
+  await handle.pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS uq_accounts_stripe_customer
+       ON accounts (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL`
+  );
+
+  const stamped = await handle.pool.query(
+    'UPDATE accounts SET grandfathered_at = $1 WHERE grandfathered_at IS NULL',
+    [now]
+  );
+  logger.info(
+    {
+      dialect: handle.dialect,
+      migration: 'accounts.billing',
+      grandfathered_accounts: stamped.rowCount ?? 0,
+    },
+    'database.forward_migration.applied'
+  );
+}
+
+/**
+ * The webhook ledger. Created here rather than through `db:generate` because this repo keeps a
+ * single `0000_init` drizzle snapshot and puts every subsequent change in a forward migration —
+ * regenerating the snapshot would rewrite a migration that deployed databases have already applied.
+ *
+ * The primary key on Stripe's own `evt_...` is the idempotency mechanism, so the table has to exist
+ * before the first webhook can be trusted.
+ */
+async function ensureStripeEventsTable(handle: DatabaseHandle, logger: Logger): Promise<void> {
+  if (handle.dialect === 'sqlite') {
+    handle.sqlite
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS stripe_events (
+           id TEXT PRIMARY KEY,
+           type TEXT NOT NULL,
+           account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+           stripe_created INTEGER NOT NULL,
+           processed_at INTEGER,
+           payload TEXT,
+           created_at INTEGER NOT NULL
+         )`
+      )
+      .run();
+    handle.sqlite
+      .prepare('CREATE INDEX IF NOT EXISTS idx_stripe_events_account ON stripe_events (account_id)')
+      .run();
+    handle.sqlite
+      .prepare('CREATE INDEX IF NOT EXISTS idx_stripe_events_created ON stripe_events (created_at)')
+      .run();
+    logger.info(
+      { dialect: handle.dialect, migration: 'stripe_events' },
+      'database.forward_migration.applied'
+    );
+    return;
+  }
+
+  await handle.pool.query(
+    `CREATE TABLE IF NOT EXISTS stripe_events (
+       id TEXT PRIMARY KEY,
+       type TEXT NOT NULL,
+       account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+       stripe_created BIGINT NOT NULL,
+       processed_at BIGINT,
+       payload TEXT,
+       created_at BIGINT NOT NULL
+     )`
+  );
+  await handle.pool.query(
+    'CREATE INDEX IF NOT EXISTS idx_stripe_events_account ON stripe_events (account_id)'
+  );
+  await handle.pool.query(
+    'CREATE INDEX IF NOT EXISTS idx_stripe_events_created ON stripe_events (created_at)'
+  );
+  logger.info(
+    { dialect: handle.dialect, migration: 'stripe_events' },
+    'database.forward_migration.applied'
+  );
 }
 
 /**

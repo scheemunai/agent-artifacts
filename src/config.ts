@@ -14,6 +14,15 @@ const MAIL_TRANSPORTS = ['smtp', 'resend', 'log'] as const;
 /** The product's own verified sender. Overridden per deployment with `AA_WAITLIST_FROM`. */
 const DEFAULT_WAITLIST_FROM = 'Agent Artifacts <hello@agentartifact.ai>';
 
+/**
+ * The free tier's retention window, in days, matching the published pricing card
+ * ("Artifacts live 7 days, then fade").
+ *
+ * This is only ever HANDED OUT to accounts that are on free, not grandfathered, and not comped —
+ * and it only bites when `AA_RETENTION_ENFORCEMENT_ENABLED` is on. See `BillingModule.resolvePlan`.
+ */
+export const FREE_RETENTION_DAYS = 7;
+
 export class ConfigError extends Error {
   constructor(readonly issues: string[]) {
     super(`Invalid configuration: ${issues.join(', ')}`);
@@ -106,6 +115,38 @@ const rawEnvSchema = z.object({
    * unset, so a pre-launch host and a normal host run identical code.
    */
   AA_COMING_SOON: booleanFromEnv(false),
+  /**
+   * Master switch for paid billing. OFF by default, deliberately: a self-hoster and a developer's
+   * laptop must never render an upgrade button, never create a Stripe customer, and never mount the
+   * webhook route. Same philosophy as `AA_DATAFAST_SITE_ID` — a hosted-only concern stays inert
+   * unless the operator turns it on.
+   *
+   * Turning it on requires the full Stripe key set; see `validateModeRequirements`. Half-configured
+   * billing fails at boot rather than showing a Pro button that 500s.
+   */
+  AA_BILLING_ENABLED: booleanFromEnv(false),
+  /**
+   * Arms the DESTRUCTIVE half of the plan-retention sweep. OFF by default and separate from
+   * `AA_BILLING_ENABLED` on purpose.
+   *
+   * Before billing existed, every plan returned `artifact_retention_days: null`, so the retention
+   * sweep in `services/scheduler.ts` never soft-deleted anything — it was inert code. Giving the
+   * free plan a 7-day window is what ARMS it, and the first sweep after that would soft-delete every
+   * free-tier artifact older than a week and revoke its share links, on one boot, with no warning.
+   *
+   * So the window and the enforcement are two separate switches. With this off the sweep still runs
+   * and still logs exactly what it WOULD have removed (`retention.dry_run`), which is how an
+   * operator measures the blast radius before accepting it. Off means nothing is ever deleted.
+   */
+  AA_RETENTION_ENFORCEMENT_ENABLED: booleanFromEnv(false),
+  STRIPE_SECRET_KEY: optionalString(),
+  /** Publishable `pk_...`. Safe to render; unused by the hosted-Checkout flow but kept for parity. */
+  STRIPE_PUBLISHABLE_KEY: optionalString(),
+  /** `whsec_...`. Differs per endpoint — the `stripe listen` value is NOT the deployed one. */
+  STRIPE_WEBHOOK_SECRET: optionalString(),
+  /** Price ids are per-mode: a test `price_...` does not exist in live. Config, never constants. */
+  STRIPE_PRICE_PRO_MONTHLY: optionalString(),
+  STRIPE_PRICE_PRO_ANNUAL: optionalString(),
   RESEND_AUDIENCE_ID: optionalString(),
   /**
    * A Resend key with CONTACT scope — deliberately separate from `RESEND_API_KEY`, which stays the
@@ -187,6 +228,23 @@ export interface WaitlistConfig {
   confirmation: boolean;
 }
 
+/**
+ * Stripe wiring. Present only when billing is enabled — `AppConfig.billing` is `undefined`
+ * otherwise, so "is billing on?" is a type-level question rather than a string comparison scattered
+ * through the call sites.
+ */
+export interface BillingConfig {
+  secretKey: string;
+  publishableKey?: string;
+  webhookSecret: string;
+  priceProMonthly: string;
+  priceProAnnual: string;
+  /** Free-tier artifact retention. `null` = unlimited. */
+  freeRetentionDays: number | null;
+  /** Arms the destructive retention sweep. False keeps it in dry-run. */
+  retentionEnforcementEnabled: boolean;
+}
+
 export interface AppConfig {
   deployment: RawEnv['DEPLOYMENT'];
   port: number;
@@ -199,6 +257,8 @@ export interface AppConfig {
   aaCloudModule?: string;
   aaHideFooter: boolean;
   comingSoon: boolean;
+  /** Absent when `AA_BILLING_ENABLED` is off. Absence is the "no paid plans here" signal. */
+  billing?: BillingConfig;
   waitlist: WaitlistConfig;
   sandboxOrigin?: string;
   frameOrigin: string;
@@ -259,6 +319,21 @@ export function loadConfig(
     ...(raw.AA_CLOUD_MODULE ? { aaCloudModule: raw.AA_CLOUD_MODULE } : {}),
     aaHideFooter: raw.AA_HIDE_FOOTER,
     comingSoon: raw.AA_COMING_SOON,
+    ...(raw.AA_BILLING_ENABLED
+      ? {
+          billing: {
+            // Non-null assertions are safe: validateModeRequirements ran above and refuses to boot
+            // with billing on and any of these missing.
+            secretKey: raw.STRIPE_SECRET_KEY as string,
+            ...(raw.STRIPE_PUBLISHABLE_KEY ? { publishableKey: raw.STRIPE_PUBLISHABLE_KEY } : {}),
+            webhookSecret: raw.STRIPE_WEBHOOK_SECRET as string,
+            priceProMonthly: raw.STRIPE_PRICE_PRO_MONTHLY as string,
+            priceProAnnual: raw.STRIPE_PRICE_PRO_ANNUAL as string,
+            freeRetentionDays: FREE_RETENTION_DAYS,
+            retentionEnforcementEnabled: raw.AA_RETENTION_ENFORCEMENT_ENABLED,
+          },
+        }
+      : {}),
     waitlist: {
       ...(raw.RESEND_AUDIENCE_ID ? { audienceId: raw.RESEND_AUDIENCE_ID } : {}),
       ...(raw.RESEND_AUDIENCE_API_KEY ? { apiKey: raw.RESEND_AUDIENCE_API_KEY } : {}),
@@ -342,6 +417,8 @@ function validateModeRequirements(raw: RawEnv): string[] {
     issues.push('RESEND_AUDIENCE_ID and RESEND_AUDIENCE_API_KEY must be set together');
   }
 
+  issues.push(...validateBillingRequirements(raw));
+
   if (raw.DEPLOYMENT === 'cloud') {
     if (!raw.SANDBOX_ORIGIN) {
       issues.push('SANDBOX_ORIGIN is required when DEPLOYMENT=cloud');
@@ -355,6 +432,80 @@ function validateModeRequirements(raw: RawEnv): string[] {
   }
 
   return issues;
+}
+
+/**
+ * Billing is all-or-nothing, and the mode of the key has to match the mode of the deployment.
+ *
+ * The first rule follows the waitlist precedent above: a half-configured integration boots an
+ * instance whose upgrade button leads somewhere broken, and a payment flow is the worst possible
+ * place to discover a missing variable at runtime. So every piece is required together.
+ *
+ * The second rule is the cheap defence against the classic incident in both directions — a test key
+ * left in production takes real money nowhere, and a live key on a staging box takes real money from
+ * real cards during a test run. `BASE_URL` being https is the same signal the app already uses to
+ * decide on secure cookies, so production-ness is not a new concept here.
+ */
+function validateBillingRequirements(raw: RawEnv): string[] {
+  if (!raw.AA_BILLING_ENABLED) {
+    // Nothing to check. A deployment with keys present but billing off is a valid, common state:
+    // the secrets are staged for a go-live that has not been flipped yet.
+    return [];
+  }
+
+  const issues: string[] = [];
+  const required: Array<[string, string | undefined]> = [
+    ['STRIPE_SECRET_KEY', raw.STRIPE_SECRET_KEY],
+    ['STRIPE_WEBHOOK_SECRET', raw.STRIPE_WEBHOOK_SECRET],
+    ['STRIPE_PRICE_PRO_MONTHLY', raw.STRIPE_PRICE_PRO_MONTHLY],
+    ['STRIPE_PRICE_PRO_ANNUAL', raw.STRIPE_PRICE_PRO_ANNUAL],
+  ];
+
+  for (const [name, value] of required) {
+    if (!value) {
+      issues.push(`${name} is required when AA_BILLING_ENABLED=true`);
+    }
+  }
+
+  const secretKey = raw.STRIPE_SECRET_KEY;
+  if (secretKey) {
+    const isTestKey = secretKey.startsWith('sk_test_');
+    const isLiveKey = secretKey.startsWith('sk_live_');
+
+    if (!isTestKey && !isLiveKey) {
+      issues.push('STRIPE_SECRET_KEY must start with sk_test_ or sk_live_');
+    }
+
+    // "Production" here is the same signal secureCookies uses: an https canonical origin.
+    const looksProduction = raw.BASE_URL.startsWith('https://') && !isLocalHost(raw.BASE_URL);
+
+    if (isTestKey && looksProduction) {
+      issues.push(
+        'STRIPE_SECRET_KEY is a TEST key but BASE_URL looks like production: refusing to boot so a live deployment cannot silently take no money'
+      );
+    }
+
+    if (isLiveKey && !looksProduction) {
+      issues.push(
+        'STRIPE_SECRET_KEY is a LIVE key but BASE_URL is not a production https origin: refusing to boot so a test run cannot charge real cards'
+      );
+    }
+
+    if (isLiveKey && raw.STRIPE_WEBHOOK_SECRET && !raw.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) {
+      issues.push('STRIPE_WEBHOOK_SECRET must start with whsec_');
+    }
+  }
+
+  return issues;
+}
+
+function isLocalHost(baseUrl: string): boolean {
+  try {
+    const { hostname } = new URL(baseUrl);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local');
+  } catch {
+    return false;
+  }
 }
 
 function formatZodIssues(error: z.ZodError): string[] {

@@ -84,6 +84,7 @@ const expectedTables = [
   'sessions',
   'share_viewers',
   'shares',
+  'stripe_events',
   'templates',
 ];
 

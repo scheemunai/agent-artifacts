@@ -21,7 +21,7 @@ export interface BackgroundSweepCounts {
 
 export interface RunBackgroundSweepsOptions {
   db: DatabaseHandle;
-  config: Pick<AppConfig, 'artifactPurgeDays' | 'baseUrl'>;
+  config: Pick<AppConfig, 'artifactPurgeDays' | 'baseUrl' | 'billing'>;
   cloudModule: CloudModule;
   logger: Logger;
   now?: Clock;
@@ -219,6 +219,31 @@ async function softDeleteArtifactsPastPlanRetention(
   let retentionArtifactsSoftDeleted = 0;
   let retentionSharesRevoked = 0;
 
+  /**
+   * THE SAFETY INTERLOCK.
+   *
+   * Until paid plans existed, every plan returned `artifact_retention_days: null` and this sweep
+   * removed nothing — it was inert code. Publishing a 7-day free tier is what ARMS it, and the very
+   * first sweep afterwards would soft-delete every free artifact older than a week and revoke its
+   * share links, in one pass, on one boot. People would watch links they had already sent to other
+   * people go dark.
+   *
+   * So enforcement is a SEPARATE switch from the window, and it is off by default. With it off the
+   * sweep still does all of its work and logs exactly what it WOULD have removed, per account and in
+   * total. That is how an operator measures the blast radius from real data before accepting it.
+   * Nothing is deleted until someone reads those numbers and turns this on deliberately.
+   *
+   * Scoped to billing deliberately. A deployment with no paid plans — a self-host, or one running an
+   * external `AA_CLOUD_MODULE` that sets its own retention — keeps the original behaviour and
+   * enforces immediately, because nothing about its retention policy just changed. The interlock
+   * governs only the window this change introduces.
+   */
+  const enforcing = options.config.billing
+    ? options.config.billing.retentionEnforcementEnabled
+    : true;
+  let dryRunArtifacts = 0;
+  const dryRunAccounts = new Set<string>();
+
   for (const candidate of candidates) {
     let retentionDays = accountPlanCache.get(candidate.account.id);
     if (retentionDays === undefined) {
@@ -235,6 +260,12 @@ async function softDeleteArtifactsPastPlanRetention(
       continue;
     }
 
+    if (!enforcing) {
+      dryRunArtifacts += 1;
+      dryRunAccounts.add(candidate.account.id);
+      continue;
+    }
+
     const result = await service.softDeleteArtifact({
       account: candidate.account,
       artifactId: candidate.artifactId,
@@ -243,6 +274,18 @@ async function softDeleteArtifactsPastPlanRetention(
       retentionArtifactsSoftDeleted += 1;
       retentionSharesRevoked += result.revokedShareCount;
     }
+  }
+
+  if (!enforcing && dryRunArtifacts > 0) {
+    options.logger.warn(
+      {
+        job: 'artifact_plan_retention',
+        would_soft_delete: dryRunArtifacts,
+        accounts_affected: dryRunAccounts.size,
+        hint: 'set AA_RETENTION_ENFORCEMENT_ENABLED=true to apply; nothing was deleted',
+      },
+      'billing.retention.dry_run'
+    );
   }
 
   return { retentionArtifactsSoftDeleted, retentionSharesRevoked };

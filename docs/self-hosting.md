@@ -177,6 +177,13 @@ Variables are read once at boot.
 | `SESSION_SECRET` | cloud: yes; self-host: no | auto-generated | both | yes | HMAC key for sessions and share viewer tokens. In self-host, generated into `<datadir>/.session-secret` with mode 0600 when unset. |
 | `AA_CLOUD_MODULE` | no | unset | cloud | no | Module specifier for `@agentartifact/cloud`; load failure is fatal. Not needed for self-host. |
 | `AA_HIDE_FOOTER` | no | `false` | self-host | no | `true` removes the public-page "Made with ◆ Agent Artifacts" footer in self-host mode. |
+| `AA_BILLING_ENABLED` | no | `false` | cloud | no | Master switch for paid Pro plans (Stripe). OFF by default: a self-host renders no pricing CTA, mounts no webhook, and creates no Stripe objects. Turning it on REQUIRES the four `STRIPE_*` variables below or the process refuses to boot. |
+| `AA_RETENTION_ENFORCEMENT_ENABLED` | no | `false` | cloud | no | Arms the DESTRUCTIVE half of the free-tier retention sweep. OFF means the sweep still runs and logs what it *would* remove (`billing.retention.dry_run`) but deletes nothing. Read those numbers before turning this on. |
+| `STRIPE_SECRET_KEY` | if billing on | unset | cloud | **yes** | `sk_test_...` or `sk_live_...`. Server-side only; never rendered. Boot fails if a test key is paired with a production `BASE_URL`, or a live key with a non-production one. |
+| `STRIPE_PUBLISHABLE_KEY` | no | unset | cloud | no | `pk_...`. Public by design and currently unused — the hosted-Checkout flow needs no Stripe JS. Kept for parity. |
+| `STRIPE_WEBHOOK_SECRET` | if billing on | unset | cloud | **yes** | `whsec_...` for `POST /stripe/webhook`. Differs per endpoint: the value printed by `stripe listen` is for local development only and is NOT the deployed endpoint's secret. |
+| `STRIPE_PRICE_PRO_MONTHLY` | if billing on | unset | cloud | no | `price_...` for Pro monthly. Price ids differ between test and live mode, so this is configuration rather than a constant. |
+| `STRIPE_PRICE_PRO_ANNUAL` | if billing on | unset | cloud | no | `price_...` for Pro annual. |
 | `SANDBOX_ORIGIN` | cloud: yes; self-host: no | unset | both | no | Origin for sandboxed HTML artifact frames. Unset self-host uses same-host sandboxed iframes. |
 | `SMTP_HOST` | no | unset | both | no | SMTP server for magic links and notifications. Unset self-host uses password auth only. |
 | `SMTP_PORT` | no | `587` | both | no | SMTP port, usually STARTTLS. |

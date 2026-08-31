@@ -64,6 +64,7 @@ describePostgres('PostgreSQL dialect support', () => {
         'sessions',
         'share_viewers',
         'shares',
+        'stripe_events',
         'templates',
       ]);
       expect(await postgresCountRows({ db }, 'templates')).toBe(STARTER_TEMPLATE_COUNT);

@@ -1,6 +1,15 @@
 import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { nanoid } from 'nanoid';
+import type { BillingModule } from '../billing/module.js';
+import { effectivePlan } from '../billing/module.js';
+import {
+  formatPrice,
+  isPaymentAttentionStatus,
+  PRO_PRICE_ANNUAL_CENTS,
+  PRO_PRICE_MONTHLY_CENTS,
+} from '../billing/plans.js';
+import { registerBillingDashboardRoutes } from '../billing/routes.js';
 import type { AppConfig } from '../config.js';
 import type { DatabaseHandle } from '../db/client.js';
 import type { Account, CloudModule, QuotaAction } from '../extension/cloud-module.js';
@@ -35,6 +44,7 @@ import {
 import { promoteArtifactToTemplate } from '../services/templates.js';
 import {
   DashboardArtifactPage,
+  type DashboardBillingView,
   DashboardBotsPage,
   type DashboardBotsPageProps,
   DashboardHomePage,
@@ -316,6 +326,24 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
   if (context.config.deployment === 'self-hosted') {
     void services.auth.ensureSetupToken().catch((error) => {
       context.logger.error({ err: error }, 'setup.token_init_failed');
+    });
+  }
+
+  // The two session-authenticated billing endpoints, registered here so they reuse the dashboard's
+  // own session validation rather than reimplementing it. They also land under `/dashboard/api/*`,
+  // which means the CSRF origin check registered below covers them for free.
+  const billingModule = asBillingModule(cloudModule);
+  if (context.config.billing && billingModule) {
+    registerBillingDashboardRoutes(app as never, {
+      config: context.config,
+      billing: context.config.billing,
+      store: billingModule.billingStore,
+      stripe: billingModule.stripeClient,
+      logger: context.logger,
+      resolveAccount: async (routeContext) => {
+        const session = await services.sessions.validateContext(routeContext);
+        return session ? { id: session.account.id, email: session.account.email } : null;
+      },
     });
   }
 
@@ -615,12 +643,14 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     if (session instanceof Response) {
       return session;
     }
+    const billing = await billingView(services, session.account.id);
     return routeContext.html(
       DashboardSettingsPage({
         account: accountView(session.account),
         deployment: services.config.deployment,
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
+        ...(billing ? { billing } : {}),
       })
     );
   });
@@ -1206,6 +1236,52 @@ function dashboardNavItems(
   account: AuthenticatedSession['account']
 ): DashboardNavItem[] {
   return services.cloudModule.navItems?.(accountToCloudAccount(account)) ?? [];
+}
+
+/**
+ * The billing card's data, or `undefined` when this deployment does not sell anything.
+ *
+ * Returning `undefined` rather than a "free, no billing" view is what keeps the settings page
+ * completely free of billing UI on a self-host: there is no upgrade button to click and no endpoint
+ * behind it, so the two agree.
+ */
+async function billingView(
+  services: HumanServices,
+  accountId: string
+): Promise<DashboardBillingView | undefined> {
+  const module = asBillingModule(services.cloudModule);
+  if (!services.config.billing || !module) {
+    return undefined;
+  }
+
+  const state = await module.billingStore.findByAccountId(accountId);
+  if (!state) {
+    return undefined;
+  }
+
+  const plan = effectivePlan(state);
+  return {
+    plan,
+    comped: state.compPlan !== null,
+    status: state.subscriptionStatus,
+    currentPeriodEnd: state.currentPeriodEnd,
+    cancelAtPeriodEnd: state.cancelAtPeriodEnd,
+    hasCustomer: state.stripeCustomerId !== null,
+    paymentAttention: isPaymentAttentionStatus(state.subscriptionStatus),
+    priceMonthly: formatPrice(PRO_PRICE_MONTHLY_CENTS),
+    priceAnnual: formatPrice(PRO_PRICE_ANNUAL_CENTS),
+  };
+}
+
+/**
+ * Narrow the extension seam back to the billing implementation.
+ *
+ * Duck-typed rather than `instanceof` so the module stays swappable: an external
+ * `AA_CLOUD_MODULE` that exposes the same store would light the card up too, and the settings page
+ * has no reason to care which implementation it got.
+ */
+function asBillingModule(module: CloudModule): BillingModule | null {
+  return 'billingStore' in module ? (module as BillingModule) : null;
 }
 
 function accountView(account: AuthenticatedSession['account']) {

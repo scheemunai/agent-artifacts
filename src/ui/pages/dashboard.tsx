@@ -462,11 +462,128 @@ export function DashboardTemplatesPage({
   );
 }
 
+/**
+ * What the settings page needs to render the billing card.
+ *
+ * Absent entirely when billing is off, which is how a self-host and a developer's laptop render no
+ * billing UI at all rather than an upgrade button that leads nowhere.
+ */
+export interface DashboardBillingView {
+  plan: 'free' | 'pro';
+  /** True when an operator granted the plan rather than Stripe. Changes the copy, not the access. */
+  comped: boolean;
+  status: string | null;
+  /** Epoch ms. Renders as the renewal date, or the access-ends date when cancelling. */
+  currentPeriodEnd: number | null;
+  cancelAtPeriodEnd: boolean;
+  /** True once the account has a Stripe customer — i.e. the portal has something to manage. */
+  hasCustomer: boolean;
+  /** Payment needs attention: past_due, unpaid, or incomplete. */
+  paymentAttention: boolean;
+  priceMonthly: string;
+  priceAnnual: string;
+}
+
 export interface DashboardSettingsPageProps {
   account: DashboardAccountView;
   deployment: 'self-hosted' | 'cloud';
   extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
+  billing?: DashboardBillingView | undefined;
+}
+
+function formatPeriodDate(value: number | null): string {
+  if (!value) {
+    return 'unknown';
+  }
+  return new Date(value).toLocaleDateString('en-GB', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+/**
+ * The billing card.
+ *
+ * Deliberately renders no payment form of its own: every state either points at Stripe Checkout
+ * (upgrade) or the Stripe Customer Portal (everything else). The app never handles card details, so
+ * the CSP never has to admit Stripe's scripts.
+ */
+function BillingCard({ billing }: { billing: DashboardBillingView }) {
+  const isPro = billing.plan === 'pro';
+
+  return (
+    <Card
+      title="Billing"
+      description={
+        isPro
+          ? 'You are on Pro — artifacts live forever, no footer, password-protected shares.'
+          : 'You are on Free — artifacts live 7 days, and public pages carry our footer.'
+      }
+    >
+      <div class="aa-stack">
+        <p class="aa-hint">
+          <strong>Plan:</strong> {isPro ? 'Pro' : 'Free'}
+          {billing.comped ? ' (complimentary)' : ''}
+        </p>
+
+        {billing.paymentAttention ? (
+          // Access is NOT revoked here — Stripe's Smart Retries are still working the payment, and
+          // most of these recover on their own. The banner asks; it does not punish.
+          <p class="aa-hint aa-hint--warning">
+            Your last payment did not go through. Your Pro features are still active while we retry
+            — update your payment method to avoid interruption.
+          </p>
+        ) : null}
+
+        {isPro && billing.cancelAtPeriodEnd ? (
+          <p class="aa-hint">
+            Your subscription is set to cancel. Pro stays active until{' '}
+            <strong>{formatPeriodDate(billing.currentPeriodEnd)}</strong>.
+          </p>
+        ) : null}
+
+        {isPro && !billing.cancelAtPeriodEnd && billing.currentPeriodEnd ? (
+          <p class="aa-hint">
+            Renews on <strong>{formatPeriodDate(billing.currentPeriodEnd)}</strong>.
+          </p>
+        ) : null}
+
+        {!isPro ? (
+          <>
+            {/* Posts to our own endpoint, never to Stripe: the app's CSP sets `form-action 'self'`,
+                and the price is resolved server-side from this interval so a tampered form cannot
+                choose its own price. */}
+            <form class="aa-stack" method="post" action="/dashboard/api/billing/checkout">
+              <input type="hidden" name="interval" value="monthly" />
+              <Button variant="primary" type="submit">
+                Upgrade to Pro — {billing.priceMonthly}/month
+              </Button>
+            </form>
+            <form class="aa-stack" method="post" action="/dashboard/api/billing/checkout">
+              <input type="hidden" name="interval" value="annual" />
+              <Button variant="secondary" type="submit">
+                Upgrade yearly — {billing.priceAnnual}/year (2 months free)
+              </Button>
+            </form>
+          </>
+        ) : null}
+
+        {billing.hasCustomer ? (
+          <form class="aa-stack" method="post" action="/dashboard/api/billing/portal">
+            <Button variant="secondary" type="submit">
+              Manage billing
+            </Button>
+            <p class="aa-hint">
+              Update your payment method, switch between monthly and yearly, download invoices, or
+              cancel.
+            </p>
+          </form>
+        ) : null}
+      </div>
+    </Card>
+  );
 }
 
 export function DashboardSettingsPage({
@@ -474,6 +591,7 @@ export function DashboardSettingsPage({
   deployment,
   extensionNavItems,
   notice,
+  billing,
 }: DashboardSettingsPageProps) {
   const isCloud = deployment === 'cloud';
   return (
@@ -496,6 +614,7 @@ export function DashboardSettingsPage({
             </p>
           </header>
         </section>
+        {billing ? <BillingCard billing={billing} /> : null}
         <div class="aa-grid aa-grid--2">
           <Card
             title="Email"

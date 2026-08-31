@@ -31,9 +31,7 @@ export async function loadCloudModule(
   config: AppConfig,
   ctx?: { db: DatabaseHandle; logger: Logger }
 ): Promise<CloudModule> {
-  const cloudModule = config.aaCloudModule
-    ? await importConfiguredModule(config.aaCloudModule)
-    : createDefaultCloudModule(config);
+  const cloudModule = await selectModule(config, ctx);
 
   const parsed = cloudModuleSchema.safeParse(cloudModule);
   if (!parsed.success) {
@@ -47,6 +45,40 @@ export async function loadCloudModule(
   }
 
   return cloudModule;
+}
+
+/**
+ * Which implementation of the plan/quota seam this deployment runs.
+ *
+ * Precedence, most specific first:
+ *  1. `AA_CLOUD_MODULE` — an explicitly configured external module is the operator's override and
+ *     wins outright, so the private cloud package can replace billing wholesale later.
+ *  2. `AA_BILLING_ENABLED` — the in-core Stripe implementation.
+ *  3. The default free/self-host module, which is what every OSS install gets.
+ *
+ * Billing needs a database, so an instance without one falls through to the default rather than
+ * constructing a module that cannot read the plan column.
+ */
+async function selectModule(
+  config: AppConfig,
+  ctx?: { db: DatabaseHandle; logger: Logger }
+): Promise<CloudModule> {
+  if (config.aaCloudModule) {
+    return importConfiguredModule(config.aaCloudModule);
+  }
+
+  if (config.billing && ctx?.db) {
+    // Imported lazily so that an OSS build with billing off never pulls the Stripe SDK into the
+    // module graph at boot.
+    const { BillingModule } = await import('../billing/module.js');
+    ctx.logger.info(
+      { retention_enforcement: config.billing.retentionEnforcementEnabled },
+      'billing.module.enabled'
+    );
+    return new BillingModule({ db: ctx.db, config: config.billing, logger: ctx.logger });
+  }
+
+  return createDefaultCloudModule(config);
 }
 
 async function importConfiguredModule(specifier: string): Promise<CloudModule> {

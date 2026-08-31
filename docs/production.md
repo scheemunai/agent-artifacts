@@ -165,6 +165,105 @@ Rotating `SESSION_SECRET` is safe but disruptive. Say this plainly before doing 
 
 If rotation is planned, announce a brief maintenance window, deploy the new secret, and verify login/share-password flows immediately after.
 
+### Stripe keys
+
+Three secrets, all server-side, none ever rendered into a page:
+
+| Variable | Notes |
+|---|---|
+| `STRIPE_SECRET_KEY` | `sk_live_...` in production. Boot REFUSES a test key on a production `BASE_URL` and a live key anywhere else, so the classic wrong-mode incident cannot start. |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...`, **per endpoint**. The value `stripe listen` prints locally is a different secret from the deployed endpoint's. Mixing them up produces a webhook that 400s every real event. |
+| `STRIPE_PUBLISHABLE_KEY` | Public, optional, currently unused — hosted Checkout needs no Stripe JS in the page. |
+
+They live in the `agent-artifacts-cloud` app's `env:` block in `ecosystem.config.cjs`, which is
+gitignored and untracked, alongside `SESSION_SECRET` and the Resend key. **The self-hosted app on
+:4600 gets no Stripe variables at all.** Reload with `pm2 reload agent-artifacts-cloud`.
+
+> When running the Stripe CLI on a shared host, pass the key as `STRIPE_API_KEY` in the environment
+> rather than `--api-key`. A CLI argument is visible to every user in the process table for as long
+> as the command runs.
+
+## 3a. Billing
+
+Off unless `AA_BILLING_ENABLED=true`, which is what keeps self-hosts and development instances free
+of billing entirely. Enabling it requires the full key set or the process refuses to boot.
+
+### Going live
+
+1. Activate the Stripe account — business details, tax info, payout bank account. Until then
+   `charges_enabled` is false and nothing can be charged.
+2. Set branding (Dashboard → Settings → Branding). It applies to Checkout, the Customer Portal and
+   invoices at once.
+3. Create the live Product and Prices by re-running the same script against the live key:
+   `STRIPE_SECRET_KEY=sk_live_... node scripts/stripe-setup-products.mjs`. It is idempotent and
+   prints the two price ids.
+4. Configure the Customer Portal in live mode: payment-method updates, invoice history, switching
+   between the two Pro prices, and cancellation via `cancel_at_period_end`.
+5. Enable Smart Retries and automatic card updates (Billing → Revenue Recovery). Both are free.
+6. Create the live webhook endpoint at `https://<app-origin>/stripe/webhook` subscribed to:
+   `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`,
+   `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `customer.deleted`.
+   Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+7. `pm2 reload agent-artifacts-cloud`, then **send a test event from the Stripe Dashboard and
+   confirm a 200 before enabling the UI**. An upgrade that charges a card while webhooks 404 is the
+   worst possible first-customer experience.
+8. Set `AA_BILLING_ENABLED=true` and reload. Buy Pro once with a real card, confirm the plan flips
+   and the footer disappears, then refund it.
+
+Because the flag is separate from the deploy, a bad go-live is reverted by flipping one variable and
+reloading — not by rolling back code.
+
+### Nginx and CSP
+
+No proxy change is needed: the app origin already proxies `location / → 127.0.0.1:4601`. Two things
+must stay true:
+
+- **The webhook must never be reachable on the usercontent origin.** That server block is
+  allow-list based (`/a/:share_id/frame` and `/robots.txt` only) and the app's host guard 404s
+  anything else. Leave both alone.
+- **The webhook must not be rate limited.** Rate limiting is registered inside `registerV1Routes`
+  and scoped to `/v1/*`, so `/stripe/*` is exempt by construction. Throttling Stripe's retries would
+  silently drop billing events.
+
+The CSP in `src/app.ts` is deliberately untouched by billing. Hosted Checkout is a top-level
+redirect, so it needs no `script-src`, `connect-src` or `frame-src` allowance for Stripe. Note that
+`form-action 'self'` means the upgrade form must POST to our own endpoint — a form targeting
+`checkout.stripe.com` directly would be blocked by the browser.
+
+### Free-tier retention — read before arming
+
+`AA_RETENTION_ENFORCEMENT_ENABLED` is a **separate** switch from the 7-day window, and it is off by
+default.
+
+Before paid plans existed, every plan returned unlimited retention and the sweep in
+`services/scheduler.ts` deleted nothing. Publishing a 7-day free tier is what arms it. The first
+sweep after that would soft-delete every free-tier artifact older than a week and revoke its share
+links, in a single pass on a single boot.
+
+Two protections are permanent and require no configuration:
+
+- **Grandfathering.** The migration stamps `accounts.grandfathered_at` on every account that existed
+  when billing landed. Those accounts keep unlimited retention forever, even on free. They signed up
+  under "artifacts live forever" and a pricing change does not reach backwards.
+- **Comp grants.** `accounts.comp_plan` overrides the Stripe-derived plan and is never written by a
+  webhook, so an operator grant survives every subscription event including cancellation.
+
+To measure the blast radius before accepting it, leave enforcement off and read the sweep's log:
+
+```
+grep billing.retention.dry_run <logfile>
+# {"job":"artifact_plan_retention","would_soft_delete":N,"accounts_affected":M,
+#  "hint":"set AA_RETENTION_ENFORCEMENT_ENABLED=true to apply; nothing was deleted"}
+```
+
+Only turn it on once `N` is a number you are willing to delete.
+
+To comp an account (for example the founder's, which holds the public demo artifacts):
+
+```sql
+UPDATE accounts SET comp_plan = 'pro' WHERE email = 'someone@example.com';
+```
+
 ## 4. Deployment topology
 
 The hosted product uses two public origins backed by the same application code:

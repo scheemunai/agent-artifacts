@@ -433,15 +433,19 @@ export function HomePage({
                 <header class="aa-marketing-plan__head">
                   <h3 class="aa-marketing-plan__name">Pro</h3>
                   <p class="aa-marketing-plan__price">
-                    <span class="aa-marketing-plan__amount">$9</span>
+                    <span class="aa-marketing-plan__amount">€9</span>
                     <span class="aa-marketing-plan__period">/mo</span>
                   </p>
-                  <p class="aa-marketing-plan__note">For work that sticks around.</p>
+                  <p class="aa-marketing-plan__note">
+                    or €90/year — two months free. For work that sticks around.
+                  </p>
                 </header>
                 <ul class="aa-marketing-plan__features">
                   <li>Everything in Free</li>
                   <li>Artifacts live forever</li>
-                  <li>Your own subdomain</li>
+                  {/* Not built. Labelled so the card can carry the roadmap without the checkout
+                      implying it is included today. */}
+                  <li>Your own subdomain (coming soon)</li>
                   <li>No footer but yours</li>
                   <li>Password-protected shares</li>
                 </ul>
