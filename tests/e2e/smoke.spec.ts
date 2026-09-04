@@ -44,6 +44,7 @@ interface SeedState {
   dashboardShareUrl: string;
   markdownShareUrl: string;
   htmlShareUrl: string;
+  tallHtmlShareUrl: string;
   protectedShareUrl: string;
   protectedPassword: string;
   revokedShareUrl: string;
@@ -433,6 +434,60 @@ test('public HTML viewer renders sandboxed frame content and no overflow', async
   await expectNoHorizontalOverflow(page);
 });
 
+test('a whole HTML document reports its height and is not left in a nested scrollbar', async ({
+  page,
+}) => {
+  // THE MEASUREMENT, IN A REAL BROWSER, ACROSS THE REAL ORIGIN BOUNDARY.
+  //
+  // The unit tests can prove the sender is in the bytes; only this can prove it runs, that the
+  // message crosses to the embedder, and that the embedder resizes the frame. Before the fix this
+  // frame settled at viewport height — measured on the shipped product, the recap template rendered
+  // 746px of a 5271px document on a phone — with the rest behind a scrollbar inside a page that did
+  // not itself scroll.
+  await page.goto(seed.tallHtmlShareUrl);
+
+  const frame = page.locator('[data-aa-frame="true"]');
+  await expect(frame).toBeVisible();
+  await expect(page.frameLocator('[data-aa-frame="true"]').locator('#e2e-tall-end')).toHaveText(
+    'End of the tall document.'
+  );
+
+  // The state attribute flips only when a real measurement arrives.
+  await expect(frame).toHaveAttribute('data-aa-frame-height', 'measured', { timeout: 10_000 });
+
+  // Polled, because the handshake CONVERGES rather than arriving correct: the first measurement is
+  // taken while the frame is still viewport-height, and resizing the frame changes the answer to
+  // the question the frame is being asked. The ResizeObserver re-measures and posts again until the
+  // two agree. What matters to a reader is the value it settles on.
+  await expect
+    .poll(
+      async () => {
+        const box = await frame.evaluate((element) =>
+          Math.round(element.getBoundingClientRect().height)
+        );
+        const content = await page
+          .frameLocator('[data-aa-frame="true"]')
+          .locator('body')
+          .evaluate(() => document.documentElement.scrollHeight);
+        return Math.abs(box - content);
+      },
+      { message: 'the frame never settled at the height of its own document', timeout: 10_000 }
+    )
+    .toBeLessThan(4);
+
+  const measured = await frame.evaluate((element) =>
+    Math.round(element.getBoundingClientRect().height)
+  );
+  const viewport = page.viewportSize()?.height ?? 0;
+
+  // The whole point: the frame is as tall as its content, so the reader scrolls the PAGE and never
+  // meets a scrollbar inside a page that does not itself scroll.
+  expect(measured, 'the frame never grew past the viewport it was poured into').toBeGreaterThan(
+    viewport
+  );
+  await expectNoHorizontalOverflow(page);
+});
+
 test('password gate unlocks a protected markdown artifact', async ({ page }) => {
   await page.goto(seed.protectedShareUrl);
 
@@ -691,6 +746,23 @@ async function ensureSeeded(request: APIRequestContext): Promise<SeedState> {
     ].join(''),
     share: true,
   });
+  // A WHOLE document, deliberately taller than any viewport, because that is the shape the frame
+  // could not measure: `FrameDocument` wraps a fragment and used to return a full document
+  // untouched, so the sender never reached the artifacts most likely to need it — every HTML
+  // template this product ships is a full document.
+  const tallHtml = await publishArtifact(request, apiKey, {
+    slug: 'e2e-html-tall',
+    type: 'html',
+    title: 'E2E Tall HTML Artifact',
+    content: [
+      '<!doctype html><html><head><meta charset="utf-8"><title>E2E Tall Frame</title></head>',
+      '<body style="margin:0"><h1>E2E Tall Frame</h1>',
+      '<div id="e2e-tall-body" style="height:4000px"></div>',
+      '<p id="e2e-tall-end">End of the tall document.</p>',
+      '</body></html>',
+    ].join(''),
+    share: true,
+  });
   const protectedArtifact = await publishArtifact(request, apiKey, {
     slug: 'e2e-protected',
     type: 'markdown',
@@ -727,6 +799,7 @@ async function ensureSeeded(request: APIRequestContext): Promise<SeedState> {
     dashboardShareUrl: requiredShare(dashboardFirst).url,
     markdownShareUrl: requiredShare(markdown).url,
     htmlShareUrl: requiredShare(html).url,
+    tallHtmlShareUrl: requiredShare(tallHtml).url,
     protectedShareUrl: requiredShare(protectedArtifact).url,
     protectedPassword,
     revokedShareUrl: requiredShare(revoked).url,

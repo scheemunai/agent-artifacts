@@ -81,7 +81,12 @@ describe('viewer page UI polish', () => {
     expect(html).toContain('data-aa-frame-height="default"');
     expect(viewerScript).toContain("data.type !== 'aa:frame-height'");
     expect(viewerScript).toContain('candidate.contentWindow === event.source');
-    expect(viewerScript).toContain('FRAME_MAX_HEIGHT = 2400');
+    // The clamp, not the number. This pinned `FRAME_MAX_HEIGHT = 2400` as a literal, so raising a
+    // ceiling that was firing on the product's own output failed a test about SANDBOXING. What
+    // matters here is that a measurement arriving from the frame is still bounded before it is
+    // written to the DOM; what the bound should be is argued in `ui-frame-height.test.ts`.
+    expect(viewerScript).toMatch(/const FRAME_MAX_HEIGHT = [\d_]+;/);
+    expect(viewerScript).toContain('FRAME_MAX_HEIGHT');
     // The frame's box is now placed by the page's flex column rather than by a viewport calc that
     // re-derived the chrome and footer heights. The mechanism itself lives in
     // ui-frame-height.test.ts and ui-viewer-shell.test.ts; this line only needs the frame to still

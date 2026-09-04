@@ -9,9 +9,15 @@
  *
  * Three constraints shape everything here:
  *
- * 1. **The shell wraps; it never rewrites.** `content` is concatenated, never parsed, never
- *    transformed. The frame is the product's security boundary and its sanitising posture lives
- *    upstream; this module must not become a second, weaker opinion about the same bytes.
+ * 1. **The shell concatenates; it never parses or rewrites.** `content` is joined with fixed
+ *    strings and is otherwise untouched — never parsed, never transformed, never inspected beyond
+ *    the first sixty-four characters it takes to tell a document from a fragment. The frame is the
+ *    product's security boundary and its sanitising posture lives upstream; this module must not
+ *    become a second, weaker opinion about the same bytes.
+ *
+ *    That constraint used to be spelled "the shell wraps", and the difference matters: wrapping is
+ *    something only a fragment can receive, so the rule quietly excluded whole documents from
+ *    everything this module does — including the one thing every framed document needs.
  * 2. **It is self-contained.** The frame is served from the sandbox origin, which cannot load the
  *    app stylesheet, and its CSP is `default-src 'none'`. So: one inline `<style>`, no `<link>`,
  *    no font file, no request of any kind — and no script beyond the audited height sender
@@ -107,17 +113,26 @@ const FRAME_HEIGHT_SENDER = [
   'if(window.parent===window)return;',
   'var last=0;',
   'function send(){',
-  // `documentElement.scrollHeight` is the initial containing block: it can never report less than
-  // the frame's own viewport, so the frame's CSS height was the smallest number it could ever send
-  // and a two-line fragment measured 432px. The body's box is the only thing here that can be
-  // shorter than the viewport. Taking the smaller of the two keeps the tall path exact — for long
-  // content both agree — while letting short content tell the truth.
-  'var d=document.documentElement,b=document.body;',
-  'var outer=Math.ceil(d.scrollHeight);',
-  'var rect=b?b.getBoundingClientRect():null;',
-  'var below=b?parseFloat(getComputedStyle(b).marginBottom)||0:0;',
-  'var inner=rect?Math.ceil(rect.bottom+below+(window.pageYOffset||0)):outer;',
-  'var h=Math.max(1,Math.min(outer,inner));',
+  // ONE MEASUREMENT, AND IT IS THE ONLY ONE THAT IS RIGHT IN BOTH DIRECTIONS.
+  //
+  // This was `Math.min(documentElement.scrollHeight, body.bottom + body.marginBottom)`, two numbers
+  // each wrong about the case the other covers. `scrollHeight` is floored at the frame's own
+  // viewport, so short content could never report less than the box it was poured into — that was
+  // A-25. The body's border box is not floored, but a trailing margin collapses out of it, so tall
+  // content came back short: measured, a document ending in a paragraph reported 4114 for a 4130px
+  // document, and those 16px went behind a scrollbar.
+  //
+  // The root element's border box is neither. Measured against the same two documents at five
+  // viewports: tall reads 4130 everywhere, short reads 114 while `scrollHeight` reads 802 at 1440
+  // and 714 at 375 and the body's box reads 98. It includes the trailing margin and it is not
+  // floored, so there is nothing left to choose between and nothing to compare against the current
+  // box — which matters, because the current box is this script's own last answer, and a
+  // measurement that reads its own output oscillates. It did: 4130, 4114, 4130.
+  'var d=document.documentElement;',
+  'var h=Math.ceil(d.getBoundingClientRect().height);',
+  // A document that declares `html{height:100%}` measures the viewport here and means to; the
+  // fallback is only for a root box that reports nothing at all.
+  'if(!(h>0))h=Math.ceil(d.scrollHeight);',
   'if(!isFinite(h)||h<=0||h===last)return;',
   'last=h;',
   "window.parent.postMessage({type:'aa:frame-height',height:h},'*');",
@@ -175,10 +190,38 @@ function stripLeadingNoise(content: string): string {
   }
 }
 
-/** Wraps an agent HTML fragment in a minimal, self-contained document. */
+/**
+ * THE HEIGHT SENDER GOES ON EVERY FRAMED DOCUMENT, NOT ONLY THE ONES THIS SHELL BUILT.
+ *
+ * A full document used to be returned byte-for-byte, on the reasoning that it had already made
+ * every decision this shell would make. That reasoning is right about the doctype, the charset, the
+ * viewport and the stylesheet — and wrong about the height, because the height is not a decision
+ * the DOCUMENT makes. It is a measurement only the document can take and only the embedder can act
+ * on, and the frame is cross-origin by construction (`sandbox allow-scripts`, no
+ * `allow-same-origin`), so the embedder cannot take it itself. Without a sender there is no
+ * measurement, and `.aa-viewer-frame` settles at whatever the flex row leaves it.
+ *
+ * Measured on the shipped product, publishing each built-in HTML template through the real API and
+ * opening the real share link:
+ *
+ *   recap              1440 → 802px frame holding 2854px · 390 → 746px holding 5271px
+ *   metrics-dashboard  1440 → 802px frame holding 1329px · 390 → 746px holding 2676px
+ *   report-html        1440 → 802px frame holding 3344px · 390 → 746px holding 4972px
+ *
+ * On a phone the recap showed 14% of itself inside a nested scrollbar, on a page that did not
+ * itself scroll. All three built-ins are full documents, and so is anything an agent produces by
+ * rehashing one — which is what the template flow asks it to do.
+ *
+ * The append is still concatenation: the string is joined to the end of the agent's bytes, and
+ * nothing looks inside them. Content after `</html>` is not an error the parser rejects — the spec
+ * puts the parser in "after after body" and processes a `<script>` token there with the rules for
+ * "in body", so it lands in the body and runs, which is the same treatment it gets in the wrapped
+ * fragment below. What this module must never do is find a place *inside* the agent's markup to put
+ * something, and it still does not.
+ */
 export function FrameDocument({ content, title }: FrameDocumentInput): string {
   if (isFullHtmlDocument(content)) {
-    return content;
+    return `${content}<script>${FRAME_HEIGHT_SENDER}</script>`;
   }
 
   return [
