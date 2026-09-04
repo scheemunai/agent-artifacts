@@ -531,10 +531,19 @@ function BillingCard({ billing }: { billing: DashboardBillingView }) {
         {billing.paymentAttention ? (
           // Access is NOT revoked here — Stripe's Smart Retries are still working the payment, and
           // most of these recover on their own. The banner asks; it does not punish.
-          <p class="aa-hint aa-hint--warning">
-            Your last payment did not go through. Your Pro features are still active while we retry
-            — update your payment method to avoid interruption.
-          </p>
+          //
+          // A `Notice`, not a hint with a tone class bolted on. `aa-hint--warning` was emitted here
+          // and defined in no stylesheet, so the one message in this product that costs the owner
+          // money rendered in exactly the muted grey `.aa-hint` gives a form caption. That is the
+          // same defect `viewer.css` already records against `.aa-error` — "the single most
+          // security-relevant public error in the product rendered in the same muted grey as helper
+          // text" — so the fix is to stop inventing tone modifiers on a caption class and use the
+          // component that exists for a toned, announced message. `Notice` at `warn` carries
+          // `role="alert"` and an icon, so the warning is not colour alone either.
+          <Notice tone="warn" title="Your last payment did not go through">
+            Your Pro features are still active while we retry — update your payment method to avoid
+            interruption.
+          </Notice>
         ) : null}
 
         {isPro && billing.cancelAtPeriodEnd ? (

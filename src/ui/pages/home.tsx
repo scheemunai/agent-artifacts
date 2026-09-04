@@ -9,6 +9,7 @@ import {
   MarketingExampleCard,
   MarketingFeatureLine,
   MarketingFooter,
+  MarketingHeader,
   MarketingOriginNote,
   MarketingSection,
   MarketingWaitlist,
@@ -251,19 +252,14 @@ export function HomePage({
 
   return (
     <Layout title="Agent Artifacts" description={HOME_SUBLINE}>
-      <header class="aa-app-header">
-        <div class="aa-shell aa-marketing-shell aa-app-nav">
-          <a class="aa-brand" href="/" aria-label="Agent Artifacts home">
-            <ProductMark />
-            <span>Agent Artifacts</span>
-          </a>
-          {/*
-            The header carries one action per state below 560px. The authenticated state already
-            did (Dashboard) and renders cleanly on one row; the anonymous state carried three, which
-            is what forced the brand to break mid-name and the CTA to collide with the header rule.
-            The secondary actions stand down on a phone rather than wrapping, and the footer keeps
-            them reachable.
-          */}
+      {/*
+        The header carries one action per state below 560px. The authenticated state already did
+        (Dashboard) and renders cleanly on one row; the anonymous state carried three, which is what
+        forced the brand to break mid-name and the CTA to collide with the header rule. The secondary
+        actions stand down on a phone rather than wrapping, and the footer keeps them reachable.
+      */}
+      <MarketingHeader
+        actions={
           <nav class="aa-button-row aa-home-actions" aria-label="Primary">
             {githubUrl ? (
               <Button variant="ghost" size="xs" href={githubUrl} class="aa-btn--compact-hide">
@@ -285,8 +281,8 @@ export function HomePage({
               </>
             )}
           </nav>
-        </div>
-      </header>
+        }
+      />
 
       <main class="aa-main aa-marketing-main">
         <div class="aa-shell aa-marketing-shell">
@@ -303,9 +299,7 @@ export function HomePage({
                 {/* published + visibility form the right-hand cluster; the whole group stands down
                     on phones (the visibility control needs room the meta bar does not have there). */}
                 <span class="aa-marketing-hero-card__meta-end">
-                  <span class="aa-marketing-artifact__updated aa-marketing-hero-card__published">
-                    published 3h ago
-                  </span>
+                  <span class="aa-marketing-artifact__updated">published 3h ago</span>
                   <span class="aa-marketing-visibility">
                     <label class="sr-only" for="home-visibility">
                       Artifact visibility
@@ -370,8 +364,7 @@ export function HomePage({
             <div class="aa-marketing-features">
               {HOME_FEATURES.map((feature) => (
                 <MarketingFeatureLine>
-                  <strong class="aa-marketing-feature__label">{feature.label}:</strong>{' '}
-                  {feature.body}
+                  <strong>{feature.label}:</strong> {feature.body}
                 </MarketingFeatureLine>
               ))}
             </div>
@@ -551,17 +544,13 @@ function ComingSoonHome({
 
   return (
     <Layout title="Agent Artifacts — coming soon" description={HOME_COMING_SOON_SUBLINE}>
-      <header class="aa-app-header">
-        <div class="aa-shell aa-marketing-shell aa-app-nav">
-          <a class="aa-brand" href="/" aria-label="Agent Artifacts home">
-            <ProductMark />
-            <span>Agent Artifacts</span>
-          </a>
-          {/* No "Get started" here, and that is the flag doing its job: the header of a page that
-              says "soon" must not carry an action that contradicts it. Someone who already has an
-              account still gets their door — the dashboard button — because the app is live even
-              though the launch is not. */}
-          {authenticated || githubUrl ? (
+      {/* No "Get started" here, and that is the flag doing its job: the header of a page that says
+          "soon" must not carry an action that contradicts it. Someone who already has an account
+          still gets their door — the dashboard button — because the app is live even though the
+          launch is not. */}
+      <MarketingHeader
+        actions={
+          authenticated || githubUrl ? (
             <nav class="aa-button-row aa-home-actions" aria-label="Primary">
               {githubUrl ? (
                 <Button variant="ghost" size="xs" href={githubUrl} class="aa-btn--compact-hide">
@@ -574,9 +563,9 @@ function ComingSoonHome({
                 </Button>
               ) : null}
             </nav>
-          ) : null}
-        </div>
-      </header>
+          ) : null
+        }
+      />
 
       <main class="aa-main aa-marketing-main">
         <div class="aa-shell aa-marketing-shell">
@@ -587,9 +576,7 @@ function ComingSoonHome({
                 <span class="aa-marketing-artifact__agent">agent-artifacts</span>
                 <span class="aa-marketing-chip">soon</span>
                 <span class="aa-marketing-hero-card__meta-end">
-                  <span class="aa-marketing-artifact__updated aa-marketing-hero-card__published">
-                    waitlist open
-                  </span>
+                  <span class="aa-marketing-artifact__updated">waitlist open</span>
                 </span>
               </header>
 
@@ -624,8 +611,7 @@ function ComingSoonHome({
             <div class="aa-marketing-features">
               {HOME_FEATURES.map((feature) => (
                 <MarketingFeatureLine>
-                  <strong class="aa-marketing-feature__label">{feature.label}:</strong>{' '}
-                  {feature.body}
+                  <strong>{feature.label}:</strong> {feature.body}
                 </MarketingFeatureLine>
               ))}
             </div>

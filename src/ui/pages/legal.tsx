@@ -1,6 +1,6 @@
 import type { Child } from 'hono/jsx';
 import { Layout } from '../components/layout.js';
-import { ProductMark } from '../components/primitives.js';
+import { MarketingHeader } from '../components/marketing.js';
 
 /**
  * The legal pages: Terms, Refund & Cancellation, Privacy.
@@ -261,51 +261,48 @@ function inline(text: string): Child[] {
 export function LegalPage({ document }: { document: LegalDocument }) {
   return (
     <Layout title={`${document.title} · Agent Artifacts`} description={document.summary}>
-      <div class="aa-page-shell">
-        <header class="aa-marketing-header">
-          <a class="aa-marketing-brand" href="/" aria-label="Agent Artifacts home">
-            <ProductMark />
-          </a>
-        </header>
+      <MarketingHeader />
 
-        <main class="aa-shell aa-legal">
-          <article class="aa-stack">
-            <header class="aa-section-header">
-              <p class="aa-page-kicker">Legal</p>
-              <h1 class="aa-section-title">{document.title}</h1>
-              <p class="aa-section-note">{document.summary}</p>
-              <p class="aa-hint">Last updated: {LEGAL_UPDATED}</p>
-            </header>
+      <main class="aa-main aa-shell aa-legal">
+        {/* A reading column, not a stack. `.aa-stack`'s uniform 2rem gap put the same distance
+            between a heading and its own first paragraph as between two sections, so nothing read
+            as belonging to anything; prose needs more space before a heading than after it. */}
+        <article class="aa-legal__doc">
+          <header class="aa-section-header">
+            <p class="aa-page-kicker">Legal</p>
+            <h1 class="aa-section-title">{document.title}</h1>
+            <p class="aa-section-note">{document.summary}</p>
+            <p class="aa-hint">Last updated: {LEGAL_UPDATED}</p>
+          </header>
 
-            {document.sections.map((section) => (
-              <section class="aa-stack">
-                {section.heading ? <h2 class="aa-legal__heading">{section.heading}</h2> : null}
-                {(section.body ?? []).map((paragraph) => (
-                  <p>{inline(paragraph)}</p>
-                ))}
-                {section.bullets ? (
-                  <ul>
-                    {section.bullets.map((bullet) => (
-                      <li>{inline(bullet)}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </section>
-            ))}
-          </article>
-        </main>
+          {document.sections.map((section) => (
+            <section class="aa-legal__section">
+              {section.heading ? <h2 class="aa-legal__heading">{section.heading}</h2> : null}
+              {(section.body ?? []).map((paragraph) => (
+                <p>{inline(paragraph)}</p>
+              ))}
+              {section.bullets ? (
+                <ul class="aa-legal__list">
+                  {section.bullets.map((bullet) => (
+                    <li>{inline(bullet)}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ))}
+        </article>
+      </main>
 
-        <footer class="aa-marketing-footer">
-          <div class="aa-shell aa-marketing-shell">
-            <p class="aa-marketing-footer__line">
-              {LEGAL_ENTITY.name} · {LEGAL_ENTITY.address} · VAT {LEGAL_ENTITY.vat}
-            </p>
-            <p class="aa-marketing-footer__links">
-              <LegalFooterLinks />
-            </p>
-          </div>
-        </footer>
-      </div>
+      <footer class="aa-marketing-footer">
+        <div class="aa-shell aa-marketing-shell">
+          <p class="aa-marketing-footer__line">
+            {LEGAL_ENTITY.name} · {LEGAL_ENTITY.address} · VAT {LEGAL_ENTITY.vat}
+          </p>
+          <p class="aa-marketing-footer__links">
+            <LegalFooterLinks />
+          </p>
+        </div>
+      </footer>
     </Layout>
   );
 }

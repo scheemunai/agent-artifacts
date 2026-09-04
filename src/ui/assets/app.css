@@ -1468,6 +1468,10 @@
     font-weight: 650;
   }
 
+  .aa-notice__actions {
+    margin-top: var(--spacing-aa-3);
+  }
+
   .aa-notice__message {
     margin: 0;
     color: var(--color-aa-muted);
@@ -2113,13 +2117,6 @@
     font-weight: 650;
   }
 
-  .aa-marketing-api-wrap {
-    display: grid;
-    width: min(100%, var(--width-aa-measure));
-    gap: var(--spacing-aa-5);
-    justify-items: center;
-  }
-
   .aa-marketing-api {
     width: 100%;
     overflow: hidden;
@@ -2221,31 +2218,6 @@
   .aa-marketing-api .aa-marketing-api__code code {
     display: block;
     min-width: max-content;
-  }
-
-  .aa-marketing-api__key {
-    color: var(--color-aa-dark-key);
-  }
-
-  .aa-marketing-api__string {
-    color: var(--color-aa-dark-string);
-  }
-
-  .aa-marketing-api__url {
-    color: var(--color-aa-accent-ink);
-    text-decoration: underline;
-    text-decoration-color: var(--color-aa-dark-muted);
-    text-underline-offset: 0.18em;
-  }
-
-  .aa-marketing-api__caption {
-    max-width: 34rem;
-    margin: 0;
-    color: var(--color-aa-ink);
-    font-size: var(--text-aa-md);
-    font-weight: 650;
-    line-height: 1.45;
-    text-align: center;
   }
 
   .aa-marketing-features {
@@ -3403,168 +3375,6 @@
     }
   }
 
-  /* The list row: one aligned grid for title, badge and meta.
-     `.aa-list` owns the columns and each row borrows them with `subgrid`, so the badge and meta
-     columns line up down the whole list instead of each row sizing itself. Independent per-row
-     `auto` columns look aligned in a specimen and drift the moment real titles differ in length,
-     which is the failure this replaces.
-     Titles are ink, not accent: a list where every title is coloured has no emphasis left for the
-     one the reader is pointing at, so accent is spent on hover and focus only. */
-  .aa-list {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    /* Column gutter only. A row gap would separate the rows, and the rows are meant to sit flush
-       with a rule between them. Declared here as well as on the row because a subgridded axis
-       takes its gutters from the parent unless it sets its own: stating the same value in both
-       places keeps the subgrid and the no-subgrid fallback measuring identically. */
-    column-gap: var(--spacing-aa-3);
-  }
-
-  .aa-list-row {
-    position: relative;
-    display: grid;
-    grid-column: 1 / -1;
-    /* Fallback first, enhancement second: a browser without subgrid gets its own matching template
-       and rows that align whenever their content is similar, rather than a broken single column. */
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: var(--spacing-aa-1) var(--spacing-aa-3);
-    border-bottom: 1px solid var(--color-aa-line);
-    padding: var(--spacing-aa-3) var(--spacing-aa-4);
-  }
-
-  @supports (grid-template-columns: subgrid) {
-    .aa-list-row {
-      grid-template-columns: subgrid;
-    }
-  }
-
-  .aa-list-row__title {
-    min-width: 0;
-    color: var(--color-aa-ink);
-    font-weight: 600;
-    overflow-wrap: anywhere;
-  }
-
-  .aa-list-row__meta {
-    color: var(--color-aa-muted);
-    font-size: var(--text-aa-sm);
-    white-space: nowrap;
-  }
-
-  /* Stretched link: the whole row is the target, so the hit area matches what looks clickable
-     instead of being the title's text box. The row is the visible focus surface, so the link's own
-     ring is suppressed and `:focus-within` draws it — otherwise focus lands on a zero-size overlay
-     and the ring appears in the wrong place, or nowhere.
-     The cost, stated so the next author does not have to find it: the overlay is a positioned
-     descendant, so it paints above the row's ordinary content. A second control in a row — a menu
-     button, a checkbox — has to be positioned to sit above it, or it is unclickable. A row that
-     needs several targets is not this pattern. */
-  .aa-list-row__link {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .aa-list-row__link::after {
-    position: absolute;
-    inset: 0;
-    content: "";
-  }
-
-  .aa-list-row:last-child {
-    border-bottom: 0;
-  }
-
-  .aa-list-row:hover,
-  .aa-list-row[data-aa-state="hover"] {
-    background: var(--color-aa-surface);
-  }
-
-  .aa-list-row:hover .aa-list-row__title,
-  .aa-list-row:focus-within .aa-list-row__title,
-  .aa-list-row[data-aa-state="hover"] .aa-list-row__title,
-  .aa-list-row[data-aa-state="focus"] .aa-list-row__title {
-    color: var(--color-aa-accent);
-  }
-
-  /* Inset ring, and the halo explicitly off. Rows sit flush against each other, so the base
-     `--shadow-aa-focus` glow would spread 3px onto the neighbouring row and read as that row
-     lighting up too. Stating `box-shadow: none` rather than leaving it unset also keeps the
-     specimen honest: `[data-aa-state="focus"]` matches the base focus rule as well, so without
-     this the style guide would paint a halo the real `:focus-within` path never draws — a guide
-     showing a state the product cannot produce. Colour still comes from `--color-aa-focus`, so a
-     retoned surface retones this ring with it. */
-  .aa-list-row:focus-within,
-  .aa-list-row[data-aa-state="focus"] {
-    outline: 2px solid var(--color-aa-focus);
-    outline-offset: -2px;
-    box-shadow: none;
-  }
-
-  .aa-list-row__link:focus-visible {
-    outline: none;
-    box-shadow: none;
-  }
-
-  /* Below 760 the three columns cannot share a line. The meta is `nowrap` and the badges are pills,
-     so they take everything and leave the title about forty pixels — which `overflow-wrap: anywhere`
-     then shreds one character at a time. The columns exist to align rows against each other, and at
-     these widths there is nothing to align: a narrow screen reads one row at a time. So the title,
-     the badges and the meta each take their own line.
-
-     This is the failure the desktop rule above warns about, arriving from the other direction: a
-     specimen at 1280 says the pattern works, and only a narrow viewport disagrees.
-
-     760 IS NOT A NEW NUMBER — it is the boundary `@media (min-width: 760px)` already draws for the
-     app shell, where the desktop nav appears and the drawer trigger stands down. The list now
-     collapses on the same line the chrome does, so "compact" means one thing in this sheet instead
-     of two. The threshold used to be 480, and the 280px between them was V4-N2: the SAME greedy
-     `auto` starving the same `minmax(0, 1fr)` as V4-N1, one breakpoint up, where three columns were
-     still nominally in force but no longer fit. Measured on the rich b-list shape, on the shipped
-     stylesheet, before this change:
-       481–600px · title track 0px · tallest row 2047px · list 5474px
-       660px · title 40px · row 639px      720px · title 100px · row 230px
-       768px · title 148px · row 204px — the first width where it merely reads badly
-     Titles were being shredded one character per line for 280px of viewport that nobody photographs,
-     which is exactly why two rounds of screenshots at 375 and 1440 came back clean.
-
-     WHY NOT FLOOR THE TITLE INSTEAD, e.g. `minmax(10rem, 1fr) auto auto` — it was measured, and it
-     passes every number while producing a worse row: at 481 the badge track is squeezed to 29px and
-     the pills stack into an 88px vertical column. No pan, no shred, no overflow, and a layout no one
-     would ship. Numbers alone could not reject it; that is worth remembering next time a candidate
-     satisfies the invariant.
-
-     The cost, stated rather than discovered later: the band 481–759 goes from three columns to
-     stacked rows — list of four, 543px against 5474px at 560. Above 760 nothing changes at all. */
-  @media (max-width: 759px) {
-    .aa-list {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    /* ONE column, not two. The previous `auto minmax(0, 1fr)` kept the badges and the meta sharing
-       a line, and that pairing is what made this rule pan the page for two rounds (V4-N1, latent
-       since r3): an `auto` track is greedy and takes its max-content, while `minmax(0, 1fr)` may
-       collapse to zero — but `.aa-list-row__meta` is `white-space: nowrap`, so its CONTENT cannot
-       collapse with its track. A track that reaches 0 holding 204px of unbreakable text does not
-       wrap and does not clip; it overhangs, and the document grows.
-       Measured on the rich b-list shape at 375 (three badges + slug line), worst row:
-         badges 299px · meta track 0px · meta content 204px · document 547px · page pans 172px
-       The obvious fix is not the fix. Dropping `nowrap` here leaves the badges greedy and the
-       meta's own min-content beside them — measured 26px of pan, not 0. So does relaxing the badge
-       track to `minmax(0, auto)`. Only taking the two off the same line reaches zero, because the
-       row then has nothing to divide: min-content is the widest single child, not their sum.
-       This is the collapse above finishing its own argument. It already says the columns exist to
-       align rows against each other and that at this width there is nothing to align — and then
-       kept two of them. Now the title, the badges and the meta each take a line.
-       The cost, stated rather than discovered later: about 30px per row (list of four, 509 → 628).
-       That is what not panning costs, and a row that must be dragged sideways to be read is not
-       cheaper. */
-    .aa-list-row {
-      grid-template-columns: minmax(0, 1fr);
-      row-gap: var(--spacing-aa-2);
-    }
-  }
-
   .aa-token-card {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -3663,6 +3473,68 @@
     font-size: var(--text-aa-sm);
   }
 
+  /* THE LEGAL PAGES ARE PROSE, AND THEY WERE NOT BEING TREATED AS ANY KIND OF DOCUMENT.
+     `legal.tsx` emitted `.aa-legal` and `.aa-legal__heading` and this sheet defined neither, so the
+     compiled preflight's `h1..h6 { font-size: inherit; font-weight: inherit }` was the last word:
+     every section heading rendered at 16px weight 400, identical to the paragraph under it —
+     fourteen of them on Terms, ten on Privacy. The `<ul>`s took the preflight's `list-style: none`
+     for the same reason the artifact lists did, which is how the Refund policy's four bullets and
+     the Privacy policy's five arrived with no markers.
+     These are the three pages a customer reads immediately before paying. They were checked for
+     text being PRESENT and never for it being legible.
+
+     Rhythm, not a stack. The sections were `.aa-stack`, whose uniform 2rem gap spaces a heading
+     from its own first paragraph exactly as far as it spaces two sections apart — so even a sized
+     heading would not have looked attached to anything. Prose needs a rhythm where the gap before a
+     heading is larger than the gap after it, which is what a stack cannot express. */
+  .aa-legal__doc {
+    width: min(100%, var(--width-aa-measure));
+  }
+
+  .aa-legal__section {
+    margin-top: var(--spacing-aa-10);
+  }
+
+  /* One rung below `.aa-section-title` (24px) and one clearly above body (16px), so the page has a
+     ladder rather than two weights of the same line. */
+  .aa-legal__heading {
+    margin: 0 0 var(--spacing-aa-3);
+    font-size: var(--text-aa-xl);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+
+  .aa-legal p {
+    margin: 0 0 var(--spacing-aa-4);
+  }
+
+  .aa-legal :last-child {
+    margin-bottom: 0;
+  }
+
+  .aa-legal__list {
+    margin: 0 0 var(--spacing-aa-4);
+    padding-left: 1.45em;
+  }
+
+  .aa-legal__list li {
+    padding-inline-start: 0.4em;
+  }
+
+  .aa-legal__list li + li {
+    margin-top: var(--spacing-aa-2);
+  }
+
+  /* Same reasoning as the artifact scope: at 2.36:1 against body ink the accent cannot be the only
+     thing telling a reader that the contact address in a legal document is a link. */
+  .aa-legal a {
+    color: var(--color-aa-accent);
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.16em;
+  }
+
   /* Prose scope only. `renderMarkdown()` stamps this class onto every piece of rendered markdown
      in the product, including previews that live inside an already-padded card, so it must carry
      type and nothing else. Page geometry — the reading column, its margins and its insets — is
@@ -3742,6 +3614,36 @@
     line-height: 1.45;
   }
 
+  /* THE LADDER HAS SIX RUNGS BECAUSE MARKDOWN HAS SIX.
+     The compiled preflight sets `h1..h6 { font-size: inherit; font-weight: inherit }`, and this
+     scope restored h1–h4 and stopped. Measured on the shipped page, an h5 and an h6 were 17px at
+     weight 400 — byte-identical to a paragraph, so `##### Heading` was not a heading at all and a
+     deeply structured document silently flattened at its two deepest levels.
+     The damning part is that this WAS noticed: `[data-aa-dashboard-preview] .aa-md h5` exists,
+     because the preview renders at headingOffset 1 and the card looked wrong. It was fixed for the
+     little preview card and never for the page the reader opens.
+     h5 goes down rather than up — smaller and heavier than the body, the way a UA sets it — because
+     h4 is already at body size and a fifth rung distinguished only by weight is not a rung. h6 is a
+     label: uppercase, tracked, subtle. That gives six steps nobody has to count indents to tell
+     apart: 30/650 · 24/650 · 20/600 · 17/600 · 14/700 · 12/700-uppercase. */
+  .aa-md h5 {
+    margin: 1.8em 0 0.5em;
+    font-size: var(--text-aa-sm);
+    font-weight: 700;
+    letter-spacing: 0.005em;
+    line-height: 1.5;
+  }
+
+  .aa-md h6 {
+    margin: 1.8em 0 0.5em;
+    color: var(--color-aa-subtle);
+    font-size: var(--text-aa-xs);
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    line-height: 1.5;
+    text-transform: uppercase;
+  }
+
   /* B-P3, visual half. The owner preview renders the document with `headingOffset: 1`, so its h1
      becomes an h2, its h2 an h3, and so on — a deliberate invariant (one h1 per page) that PA-1
      measured into refutation as a structural defect, and it is not one. But the TYPE RAMP did not
@@ -3804,24 +3706,66 @@
     line-height: 1.45;
   }
 
+  /* The offset shifted the tags; the ramp has to follow it all the way down. A document h5 arrives
+     here as an h6, so this must say what `.aa-md h5` says on the page.
+     Stated limit: `offsetHeadings` clamps at 6, so a document h6 ALSO arrives as an h6 and the
+     preview cannot distinguish the last two levels. That is a property of the offset, not of this
+     ramp — the preview shows the deeper of the two, which is the one more likely to be a section
+     heading rather than a label. */
+  [data-aa-dashboard-preview] .aa-md h6 {
+    margin: 1.8em 0 0.5em;
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-sm);
+    font-weight: 700;
+    letter-spacing: 0.005em;
+    line-height: 1.5;
+    text-transform: none;
+  }
+
   .aa-md p,
   .aa-md ul,
   .aa-md ol,
   .aa-md blockquote,
   .aa-md pre,
   .aa-md .aa-table-wrap,
+  .aa-md dl,
   .aa-md figure,
   .aa-md details {
     margin-bottom: 1.15em;
   }
 
+  /* A LINK IN PROSE CANNOT BE COLOUR ALONE, AND THIS ONE WAS.
+     The accent measures 2.36:1 against body ink — WCAG 1.4.1 asks for 3:1 before colour may be the
+     only cue — and the preflight had already removed the UA underline that used to carry the rest
+     of the signal. Hover was the only thing that restored it, which is no help to a reader deciding
+     whether a word is clickable before they point at it, and none at all on a touch screen.
+     The global `a` rule two thousand lines up sets `text-underline-offset` and
+     `text-decoration-thickness` and never sets `text-decoration-line`, so the intent was already
+     written down; only the declaration that makes it visible was missing. */
   .aa-md a {
     color: var(--color-aa-accent);
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.16em;
   }
 
   .aa-md a:hover {
     color: var(--color-aa-accent-hover);
-    text-decoration: underline;
+    text-decoration-thickness: 0.12em;
+  }
+
+  /* An anchor the sanitizer disarmed is not a link and must not look like one — now doubly so,
+     because it would otherwise inherit the underline as well as the colour and become
+     indistinguishable from a live link.
+     This existed in `viewer.css`, scoped to `.aa-viewer-content`, with the reasoning that prose in a
+     dashboard card was not the same defect. Colour alone, that was arguable. With an underline it
+     is not: the preview would show a dead control wearing the full costume. So it moves here, to
+     the scope that owns prose, and covers every place prose is read. */
+  .aa-md a:not([href]),
+  .aa-md a:not([href]):hover {
+    color: inherit;
+    cursor: text;
+    text-decoration: none;
   }
 
   .aa-md ul,
@@ -3839,7 +3783,8 @@
      for app chrome — nav rails, card lists, the dashboard's own lists are all built on it — so a
      global restore would put a disc on every one of them. The scope that got it wrong is the scope
      that pays for it. */
-  .aa-md ul {
+  .aa-md ul,
+  .aa-legal__list {
     list-style-type: disc;
   }
 
@@ -3867,7 +3812,8 @@
 
   /* The marker orients; the text carries. Same relationship the rest of this scope uses between
      structure and content, rather than a marker competing with the sentence beside it. */
-  .aa-md li::marker {
+  .aa-md li::marker,
+  .aa-legal__list li::marker {
     color: var(--color-aa-subtle);
   }
 
@@ -4022,10 +3968,62 @@
     border-bottom: 0;
   }
 
+  /* A ROW OF BADGES IS A ROW.
+     The preflight sets `img { display: block }` — reasonable for an app, wrong for prose — and this
+     rule restored the sizing without restoring the flow, so three inline badges written on one line
+     rendered on three lines, each at the left margin. Measured before the fix: tops 466 / 494 / 522
+     for images that share a source line.
+     `inline-block` rather than `inline` so `max-width` still bites; the lone-image case below keeps
+     a picture that is its own paragraph behaving like a figure rather than like a very large word
+     sitting on a text baseline. */
   .aa-md img {
+    display: inline-block;
     max-width: 100%;
     height: auto;
     border-radius: var(--radius-aa-md);
+    vertical-align: middle;
+  }
+
+  .aa-md p > img:only-child,
+  .aa-md figure > img {
+    display: block;
+  }
+
+  /* `mark` is on the sanitizer's allow list, so it arrives on this surface whether or not anything
+     themes it — and nothing did, so it rendered the UA's pure yellow on black inside a Fresh Air
+     document and read as a rendering fault rather than as emphasis. The amber step is the one this
+     palette already uses for attention; the ink stays the document's own so the highlight marks the
+     text without recolouring it. */
+  .aa-md mark {
+    border-radius: var(--radius-aa-xs);
+    padding: 0.1em 0.25em;
+    color: var(--color-aa-ink);
+    background: var(--color-aa-warn-line);
+  }
+
+  /* A definition list is a two-level structure and the preflight flattens it: `dd`'s 40px indent
+     goes with every other margin, so term and definition rendered as two identical lines. The
+     indent matches the list scope's own `padding-left` so the page has one indent, not two. */
+  .aa-md dt {
+    margin-top: 0.8em;
+    font-weight: 650;
+  }
+
+  .aa-md dd {
+    margin-inline-start: 1.45em;
+  }
+
+  .aa-md dl > dt:first-child {
+    margin-top: 0;
+  }
+
+  /* A caption is not a paragraph. Without this it took body size, body weight and body colour, so
+     the line under a figure read as stray prose that happened to follow an image. */
+  .aa-md figcaption {
+    margin-top: var(--spacing-aa-2);
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+    line-height: 1.5;
   }
 
   .aa-md hr {

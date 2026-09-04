@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import * as primitives from '../../src/ui/components/primitives.js';
@@ -25,11 +26,22 @@ import * as primitives from '../../src/ui/components/primitives.js';
  */
 const primitivesSource = readFileSync('src/ui/components/primitives.tsx', 'utf8');
 const appCss = readFileSync('src/ui/assets/app.css', 'utf8');
+const viewerCss = readFileSync('src/ui/assets/viewer.css', 'utf8');
 
 /** Every class the stylesheet defines, from its selectors. */
 const defined = new Set(
   Array.from(appCss.matchAll(/\.(-?[A-Za-z_][\w-]*)/g), (match) => String(match[1]))
 );
+
+/**
+ * Both sheets, for the walk below. The rendering walk above only ever sees primitives, and every
+ * primitive is styled by `app.css`; a page is not so lucky — the viewer's chrome lives in
+ * `viewer.css`, and a walk that read one sheet would report every `aa-viewer-*` class as an orphan.
+ */
+const definedAnywhere = new Set([
+  ...defined,
+  ...Array.from(viewerCss.matchAll(/\.(-?[A-Za-z_][\w-]*)/g), (match) => String(match[1])),
+]);
 
 /** The members of an exported string union, read from the source it is declared in. */
 function unionMembers(typeName: string): string[] {
@@ -190,5 +202,94 @@ describe('every class the product emits is a class the stylesheet defines', () =
       unionMembers('NoticeTone').every((tone) => defined.has(`aa-notice--${tone}`)),
       'NoticeTone offers a tone the stylesheet cannot render'
     ).toBe(true);
+  });
+});
+
+/**
+ * THE SAME WALK, WITH THE FRAME TAKEN OFF.
+ *
+ * The walk above renders components across their declared unions, which is the strongest form of
+ * this check and the narrowest: it can only see `primitives.tsx`, because only a primitive can be
+ * rendered from its own type. Pages need props, so pages were never walked — and pages are where
+ * the classes are.
+ *
+ * An audit of the whole of `src/ui` found ELEVEN `aa-` classes reaching the browser with no rule
+ * behind them, and ten of them were outside this file's frame. The worst was `.aa-legal__heading`:
+ * emitted on every legal page, defined nowhere, so the compiled preflight's
+ * `h1..h6 { font-size: inherit; font-weight: inherit }` was the last word and fourteen section
+ * headings on the Terms page rendered at body size and body weight — on the pages a customer reads
+ * immediately before paying. `.aa-hint--warning` was the same defect with money attached: the
+ * failed-payment banner, in the grey of a form caption.
+ *
+ * This walk is static rather than rendered, and that trade is deliberate and stated: it reads class
+ * literals out of the source instead of executing components, so it cannot see a class built at
+ * runtime from a prop — the rendered walk above covers that case for the primitives, which is where
+ * that pattern lives. What it CAN see is every literal in every page and component, which is
+ * exactly the population that was invisible.
+ */
+function uiSourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) {
+      return uiSourceFiles(path);
+    }
+    return /\.(tsx?|js)$/.test(path) ? [path] : [];
+  });
+}
+
+/** Every `aa-` class written as a literal anywhere under `src/ui`, with the file that writes it. */
+function emittedLiterals(): Map<string, Set<string>> {
+  const found = new Map<string, Set<string>>();
+  const record = (className: string, file: string): void => {
+    if (!className.startsWith('aa-')) {
+      return;
+    }
+    const files = found.get(className) ?? new Set<string>();
+    files.add(file);
+    found.set(className, files);
+  };
+
+  for (const file of uiSourceFiles('src/ui')) {
+    const source = readFileSync(file, 'utf8');
+    // `class="a b"` — the plain form, in JSX and in template strings alike.
+    for (const attribute of source.matchAll(/class(?:Name)?="([^"{}]+)"/g)) {
+      for (const className of String(attribute[1]).split(/\s+/).filter(Boolean)) {
+        record(className, file);
+      }
+    }
+    // `cx('a', flag && 'b')` — the conditional form. Only the literals; a template is runtime.
+    for (const call of source.matchAll(/\bcx\(([^)]*)\)/g)) {
+      for (const literal of String(call[1]).matchAll(/'([a-zA-Z][\w\- ]*)'/g)) {
+        for (const className of String(literal[1]).split(/\s+/).filter(Boolean)) {
+          record(className, file);
+        }
+      }
+    }
+  }
+  return found;
+}
+
+describe('every class any page emits is a class some stylesheet defines', () => {
+  const emitted = emittedLiterals();
+
+  it('walks the whole of src/ui rather than one module', () => {
+    // Vacuity guard, and a floor that fails if the scan stops finding pages.
+    expect(emitted.size).toBeGreaterThan(150);
+    expect(emitted.get('aa-legal__heading')?.size ?? 0).toBe(1);
+    expect(definedAnywhere.has('aa-viewer-chrome')).toBe(true);
+  });
+
+  it('emits no aa- class that no rule in either stylesheet matches', () => {
+    const orphans = [...emitted]
+      .filter(([className]) => !definedAnywhere.has(className))
+      .map(([className, files]) => `${className} (${[...files].sort().join(', ')})`)
+      .sort();
+
+    expect(
+      orphans,
+      'these classes reach the browser and match no rule in app.css or viewer.css. Define them or ' +
+        'stop emitting them — a class with no rules looks like styling to everyone who reads the ' +
+        'markup, and the element it is on silently takes whatever the preflight left behind.'
+    ).toEqual([]);
   });
 });

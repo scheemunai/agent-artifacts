@@ -38,9 +38,29 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-const sources = sourceFiles('src').map((path) => readFileSync(path, 'utf8'));
+const STYLE_GUIDE = 'src/ui/pages/style-guide.tsx';
+const sourcePaths = sourceFiles('src');
+const sources = sourcePaths.map((path) => readFileSync(path, 'utf8'));
 /** Every source file at once. Which file uses a class is not this guard's question. */
 const consumers = sources.join('\n');
+/**
+ * The same corpus with the style guide taken out — and that omission is the whole of the second
+ * assertion below.
+ *
+ * This guard asks every defined class for a consumer, by text search, over all of `src`. The style
+ * guide is in `src`, so a class the guide hand-writes a specimen for counts as consumed, and the
+ * guard reports nothing. That is not a hypothetical hole: `.task-list-item` sat in it for the life
+ * of the product (the renderer emits no such class; the guide's specimen was its only wearer) and
+ * `.aa-md-table-scroll` sat beside it, described in the guide as an optional wrapper and applied by
+ * nothing. Both were real defects — the first put a bullet nowhere, the second left every markdown
+ * table drawing its border at the column width — and this file passed cleanly through all of it.
+ *
+ * A specimen is a promise that the product renders something. When it is the only consumer, the
+ * promise is the only thing that exists.
+ */
+const nonGuideConsumers = sourcePaths
+  .map((path, index) => (path === STYLE_GUIDE ? '' : (sources[index] ?? '')))
+  .join('\n');
 
 /** Every class the stylesheet defines, from selectors only — comments are already stripped. */
 const declared = [
@@ -80,9 +100,9 @@ const ARGUED_FOR: Array<{ className: string; reason: string }> = [
  * buy is that a whole family going dead is still caught, and a standalone class — which is what
  * `.aa-app-nav__account` was — has nowhere to hide.
  */
-function hasConsumer(className: string): boolean {
+function hasConsumer(className: string, corpus: string = consumers): boolean {
   // Bounded, so `aa-btn` is not counted as used by the text `aa-btn--primary`.
-  if (new RegExp(`(?<![\\w-])${className}(?![\\w-])`).test(consumers)) {
+  if (new RegExp(`(?<![\\w-])${className}(?![\\w-])`).test(corpus)) {
     return true;
   }
   const family = className.replace(/(__|--)[\w-]+$/, '');
@@ -90,7 +110,50 @@ function hasConsumer(className: string): boolean {
     return false;
   }
   const separator = className.slice(family.length, family.length + 2);
-  return consumers.includes(`${family}${separator}\${`);
+  return corpus.includes(`${family}${separator}\${`);
+}
+
+/**
+ * Classes the style guide is the component FOR, rather than the specimen of.
+ *
+ * The swatches, the token cards and the usage notes exist to draw the guide itself; there is no
+ * product page they are missing from, and asking for one would be asking the wrong question. Every
+ * entry carries the argument, exactly as `ARGUED_FOR` does, because the moment this becomes a
+ * pattern match it stops being a decision anyone has to defend.
+ */
+const GUIDE_FURNITURE: Array<{ prefix: string; reason: string }> = [
+  {
+    prefix: 'aa-swatch',
+    reason:
+      'The colour chips the guide paints its palette with. Built as `aa-swatch--${token}` from the ' +
+      'token list, so the family is generated rather than written, and no product surface shows a ' +
+      'palette — the guide IS the consumer, not a stand-in for one.',
+  },
+  {
+    prefix: 'aa-token-',
+    reason:
+      'The token table rows: name, value and the sentence saying what the token is for. This is ' +
+      'documentation furniture with no product equivalent; a page that needed to render a design ' +
+      'token would be a page that had lost the argument about where tokens live.',
+  },
+  {
+    prefix: 'aa-usage',
+    reason:
+      'The "when to use this" note above each specimen. It exists so a component section can carry ' +
+      'its own guidance next to the thing it describes, which is a property of the guide as a ' +
+      'document and not of any component the guide documents.',
+  },
+  {
+    prefix: 'aa-grid--3',
+    reason:
+      'One step of the layout scale. `aa-grid--2` is used by the dashboard, and the scale is the ' +
+      'unit here: deleting the three-column step because no page needs three columns today would ' +
+      'leave the system with a gap that the next author fills with a one-off grid.',
+  },
+];
+
+function isGuideFurniture(className: string): boolean {
+  return GUIDE_FURNITURE.some((entry) => className.startsWith(entry.prefix));
 }
 
 describe('css placement', () => {
@@ -115,6 +178,47 @@ describe('css placement', () => {
         'delete them, or add them to ARGUED_FOR with the reason they stay — an unconsumed class ' +
         'has to be argued for, not merely unlisted.'
     ).toEqual([]);
+  });
+
+  it('lets no product class rely on the style guide as its only consumer', () => {
+    // The hole this closes, in one sentence: a specimen is a promise that the product renders
+    // something, and when the specimen is the only consumer the promise is all there is.
+    // `.task-list-item` and `.aa-md-table-scroll` both lived here — styled, documented, specimened,
+    // and applied by nothing — until the markdown renderer was fixed to emit them. `.aa-list*` was
+    // still here: a five-class row component with its own cascade test that no page had ever
+    // rendered. It was deleted rather than adopted.
+    const argued = new Set(ARGUED_FOR.map((entry) => entry.className));
+    const guideOnly = declared.filter(
+      (className) =>
+        !argued.has(className) &&
+        !isGuideFurniture(className) &&
+        hasConsumer(className) &&
+        !hasConsumer(className, nonGuideConsumers)
+    );
+
+    expect(
+      guideOnly,
+      `defined in app.css and consumed only by the style guide: ${guideOnly.join(', ')}. Either a ` +
+        'page renders it, or it is furniture the guide itself owns and belongs in GUIDE_FURNITURE ' +
+        'with the argument, or it is dead and goes.'
+    ).toEqual([]);
+  });
+
+  it('keeps the furniture argued for, and only where it is still unused', () => {
+    for (const { prefix, reason } of GUIDE_FURNITURE) {
+      expect(reason.length, `${prefix} is allow-listed without a real argument`).toBeGreaterThan(
+        80
+      );
+      const covered = declared.filter((className) => className.startsWith(prefix));
+      expect(covered.length, `${prefix} covers nothing in the stylesheet any more`).toBeGreaterThan(
+        0
+      );
+      expect(
+        covered.some((className) => hasConsumer(className, nonGuideConsumers)),
+        `${prefix} is claimed as guide furniture but a product page now renders it — take it out ` +
+          'of GUIDE_FURNITURE so this list keeps meaning what it says'
+      ).toBe(false);
+    }
   });
 
   it('keeps every exception arguable, and lets none outlive its argument', () => {

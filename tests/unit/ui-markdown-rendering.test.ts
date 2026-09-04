@@ -1,9 +1,10 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { renderToString } from 'hono/jsx/dom/server';
 import { describe, expect, it } from 'vitest';
 import { renderMarkdownUncached } from '../../src/lib/markdown.js';
 import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
 import { readClientSource } from '../support/client-assets.js';
+import { compiledAppRules } from '../support/compiled-stylesheet.js';
 import {
   type ElementSpec,
   parseStylesheet,
@@ -11,39 +12,7 @@ import {
   winningDeclaration,
 } from '../support/css-cascade.js';
 
-/**
- * THE BYTES THAT ARE SERVED, NOT THE BYTES THAT ARE WRITTEN.
- *
- * Every other stylesheet test in this suite reads `src/ui/assets/app.css`, and that is why two
- * defects lived in the markdown scope for the whole life of the product without a single test
- * going red.
- *
- * `app.css` is Tailwind *source*. The compiled sheet begins with a preflight the source never
- * mentions, and one of its lines is `ol,ul,menu{list-style:none}`. `.aa-md` never restored it, so
- * every bullet list and every numbered list in every published markdown artifact rendered with no
- * marker at all — a numbered "Next steps" arriving as three unlabelled indented lines. A test
- * reading the source cannot see that rule, cannot see the conflict, and passes.
- *
- * So this file reads the built artefact through the same manifest the pages resolve their href
- * from. It is the only stylesheet test that can answer "what does a reader actually get".
- */
-function compiledStylesheet(): string {
-  const manifestPath = 'public/assets/manifest.json';
-  expect(
-    existsSync(manifestPath),
-    'public/assets/manifest.json is missing — run `pnpm run build:assets` before this suite'
-  ).toBe(true);
-
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<string, string>;
-  const href = manifest['app.css'];
-  expect(href, 'the asset manifest names no compiled app.css').toBeDefined();
-
-  const path = `public${href}`;
-  expect(existsSync(path), `${href} is in the manifest but not on disk`).toBe(true);
-  return readFileSync(path, 'utf8');
-}
-
-const compiledRules = parseStylesheet(compiledStylesheet());
+const compiledRules = compiledAppRules();
 const sourceRules = parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8'));
 const foundationScript = readClientSource('ui-foundation.js');
 const viewerScript = readClientSource('viewer.js');
