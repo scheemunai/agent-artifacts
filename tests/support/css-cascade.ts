@@ -301,14 +301,58 @@ function matchesCompound(compound: string, element: ElementSpec): boolean {
     return false;
   }
 
+  // A PSEUDO-ELEMENT IS NOT THIS ELEMENT.
+  //
+  // `p::before` styles a generated box, not the `p`, and an `ElementSpec` models no such box — so a
+  // rule whose subject is a pseudo-element must match nothing here. Stripping it and carrying on
+  // was worse than wrong: `::-webkit-datetime-edit { display: inline-flex }` reduced to an EMPTY
+  // compound, and an empty compound matched every element at specificity (0,0,1). It then beat the
+  // preflight's `img { display: block }` on source order, so `winningDeclaration(…, 'display')` for
+  // an image answered `inline-flex` — and an assertion that images are not `display: block` PASSED
+  // ON A BUILD WHERE EVERY INLINE IMAGE WAS STACKING.
+  //
+  // Legacy one-colon spellings are included because they mean the same thing and would leave the
+  // same residue.
+  if (/::[a-z-]+/i.test(rest) || /:(?:before|after|first-line|first-letter)\b/i.test(rest)) {
+    return false;
+  }
+
   const notGroups: string[] = [];
   rest = rest.replace(/:not\(([^)]*)\)/gi, (_match, inner: string) => {
     notGroups.push(inner);
     return '';
   });
-  rest = rest.replace(/:where\(([^)]*)\)/gi, '');
-  rest = rest.replace(/::[a-z-]+/gi, '');
+
+  // `:where()` IS A MATCHER, AND IT WAS BEING READ AS A DELETION.
+  //
+  // It was stripped outright, which is right for specificity — that is the whole point of `:where`
+  // — and wrong for matching, because throwing it away throws away the only condition the compound
+  // has. `.aa-app-nav__account :where(span, a, p)` therefore matched every descendant of the
+  // account slot, a BUTTON included, and the button is exactly what the rule beside it exists to
+  // keep out of the elide set. The assertion covering that passed because a `span` happened to be
+  // what it asked about; it would have passed identically had the sheet said `:where(h1, table)`.
+  //
+  // Captured and tested rather than dropped: the group matches if any alternative does, and
+  // `specificity()` still ignores it, so zero-specificity behaviour is unchanged.
+  const whereGroups: string[] = [];
+  rest = rest.replace(/:(?:where|is|matches)\(([^)]*)\)/gi, (_match, inner: string) => {
+    whereGroups.push(inner);
+    return '';
+  });
   rest = rest.replace(/:(?:first-child|last-child|only-child|root)\b/gi, '');
+
+  // The more important half of the pseudo-element fix above, stated generally: whatever this
+  // function learns to strip next, a compound reduced to nothing must never become the universal
+  // selector. Only a compound that carried no matching information AT ALL is caught — one whose
+  // conditions were captured into `:not()` or `:where()` above still has them, and is tested below.
+  if (
+    rest.trim() === '' &&
+    compound.trim() !== '*' &&
+    notGroups.length === 0 &&
+    whereGroups.length === 0
+  ) {
+    return false;
+  }
 
   const tagMatch = /^([a-z][\w-]*|\*)/i.exec(rest);
   if (tagMatch?.[1] && tagMatch[1] !== '*' && element.tag !== tagMatch[1]) {
@@ -341,6 +385,12 @@ function matchesCompound(compound: string, element: ElementSpec): boolean {
       if (matchesCompound(inner, element)) {
         return false;
       }
+    }
+  }
+
+  for (const group of whereGroups) {
+    if (!splitTopLevel(group).some((inner) => matchesCompound(inner, element))) {
+      return false;
     }
   }
 

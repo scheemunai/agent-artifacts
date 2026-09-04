@@ -488,6 +488,111 @@ test('a whole HTML document reports its height and is not left in a nested scrol
   await expectNoHorizontalOverflow(page);
 });
 
+/**
+ * THE THREE PAGES A CUSTOMER READS IMMEDIATELY BEFORE PAYING, AND NOTHING EVER OPENED THEM.
+ *
+ * `aa-legal__heading` was emitted by the legal page and defined in no stylesheet, so the compiled
+ * preflight's `h1..h6 { font-size: inherit; font-weight: inherit }` was the last word: fourteen
+ * section headings on Terms and ten on Privacy rendered at the paragraph's own size and weight, and
+ * the bare `<ul>`s took `list-style: none` from the same preflight. It shipped, and the reason
+ * nothing caught it is that this suite had never visited /terms, /refund-policy or /privacy.
+ *
+ * Everything below is a COMPUTED style in a real browser, because that is the only place the
+ * compiled preflight exists. In particular the heading assertions reject `inherit` explicitly: it
+ * is a real declaration, so "a font-size is set" is true of a heading that is not a heading, and
+ * two earlier attempts at this check passed on a build where the bug was live.
+ */
+const LEGAL_PAGES = ['terms', 'refund-policy', 'privacy'] as const;
+
+for (const slug of LEGAL_PAGES) {
+  test(`/${slug} reads as a document, not a wall of text`, async ({ page }) => {
+    const response = await page.goto(`/${slug}`);
+    expect(response?.status(), `/${slug} must be reachable without an account`).toBe(200);
+
+    const body = await page.evaluate(() => {
+      const paragraph = [...document.querySelectorAll('.aa-legal p')].find(
+        (element) => !element.className
+      );
+      const computed = paragraph ? getComputedStyle(paragraph) : null;
+      return {
+        fontSize: computed?.fontSize ?? null,
+        fontWeight: computed?.fontWeight ?? null,
+        count: document.querySelectorAll('.aa-legal p').length,
+      };
+    });
+    expect(body.count, 'the page has no prose to compare headings against').toBeGreaterThan(0);
+    expect(body.fontSize).not.toBe('');
+
+    // Every section heading, not a sample: the defect was uniform, so one heading proves nothing
+    // the others do not, and a page where only the first heading is styled is still broken.
+    const headings = await page.evaluate(() => {
+      return [...document.querySelectorAll('.aa-legal__heading')].map((element) => {
+        const computed = getComputedStyle(element);
+        return {
+          tag: element.tagName,
+          text: (element.textContent ?? '').trim().slice(0, 40),
+          fontSize: computed.fontSize,
+          fontWeight: computed.fontWeight,
+        };
+      });
+    });
+
+    for (const heading of headings) {
+      expect(heading.tag, `${heading.text} is not a heading element`).toMatch(/^H[1-6]$/);
+      // `inherit` is the trap. It is a declaration, so a naive "is a size set" check passes while
+      // the heading renders at body size — which is exactly what shipped.
+      expect(heading.fontSize, `${heading.text} takes the preflight's inherit`).not.toBe('inherit');
+      expect(
+        `${heading.fontSize}/${heading.fontWeight}`,
+        `${heading.text} renders at the paragraph's size AND weight, so it is not a heading`
+      ).not.toBe(`${body.fontSize}/${body.fontWeight}`);
+    }
+
+    // The page title is a heading in its own right, and above the section headings.
+    const title = await page.evaluate(() => {
+      const element = document.querySelector('.aa-section-title');
+      if (!element) {
+        return null;
+      }
+      const computed = getComputedStyle(element);
+      return { tag: element.tagName, fontSize: computed.fontSize, fontWeight: computed.fontWeight };
+    });
+    expect(title, 'no page title').not.toBeNull();
+    expect(title?.tag).toBe('H1');
+    expect(title?.fontSize).not.toBe('inherit');
+    expect(parseFloat(title?.fontSize ?? '0')).toBeGreaterThan(parseFloat(body.fontSize ?? '0'));
+
+    // Bullets. The Refund policy's four and the Privacy policy's five were unmarked; Terms has
+    // none, so the assertion is over whatever the page actually renders rather than a fixed count.
+    const items = await page.evaluate(() =>
+      [...document.querySelectorAll('.aa-legal li')].map((element) => ({
+        marker: getComputedStyle(element).listStyleType,
+        inList: element.parentElement?.tagName ?? '',
+      }))
+    );
+    for (const item of items) {
+      expect(item.inList, 'a list item outside a list').toMatch(/^(UL|OL)$/);
+      expect(item.marker, 'the preflight reset is still winning here').not.toBe('none');
+    }
+
+    // The entity a customer is contracting with, on every page that could be the one they read.
+    await expect(page.locator('.aa-marketing-footer')).toContainText('Zero Point Studio d.o.o.');
+    await expect(page.locator('.aa-marketing-footer')).toContainText('HR52438945902');
+
+    await expectNoHorizontalOverflow(page);
+  });
+}
+
+test('every legal page is reachable from the footer of the others', async ({ page }) => {
+  // A legal link that 404s at the moment of payment is worse than having no link — the route
+  // comment says so, and nothing checked it.
+  await page.goto('/terms');
+  for (const slug of LEGAL_PAGES) {
+    const link = page.locator(`.aa-marketing-footer a[href="/${slug}"]`).first();
+    await expect(link, `/terms does not link to /${slug}`).toHaveCount(1);
+  }
+});
+
 test('password gate unlocks a protected markdown artifact', async ({ page }) => {
   await page.goto(seed.protectedShareUrl);
 
