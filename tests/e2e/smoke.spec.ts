@@ -247,8 +247,11 @@ test('/style-guide exercises primitives without mobile overflow', async ({ page 
   await expect(page.getByRole('heading', { name: 'Design tokens' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Fresh Air marketing components' })).toBeVisible();
   await expect(page.getByText('this-is-artifact').first()).toBeVisible();
+  // The specimen shows what `home.tsx` actually passes into `MarketingApiBlock`. It used to show a
+  // hand-written, syntax-coloured API call that no page has ever rendered — a guide that flatters
+  // is worse than no guide, because it is the reference somebody checks against.
   await expect(page.locator('#style-guide-marketing-api')).toContainText(
-    'POST agentartifact.ai/v1/artifacts'
+    'Create a skill so you can publish to Agent Artifacts.'
   );
   // Both artifact-embed meta states are registered: live meta known, and live meta unknown.
   await expect(page.locator('.aa-marketing-artifact__updated')).toHaveCount(1);

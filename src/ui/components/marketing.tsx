@@ -250,6 +250,31 @@ export function MarketingFinalCta({ href, label, note }: MarketingFinalCtaProps)
   );
 }
 
+/**
+ * The marketing header band: the brand lockup, and whatever actions the page has.
+ *
+ * Extracted because the legal pages did not have it. They rendered their own header out of three
+ * class names — `aa-page-shell`, `aa-marketing-header`, `aa-marketing-brand` — that this stylesheet
+ * has never defined, so the band had no layout and the product mark sat unstyled in the corner of
+ * the three pages a customer reads immediately before paying. The home page had the real thing
+ * eight lines away under different names.
+ *
+ * One implementation, so the two cannot describe the same band differently again.
+ */
+export function MarketingHeader({ actions }: { actions?: Child | undefined }) {
+  return (
+    <header class="aa-app-header">
+      <div class="aa-shell aa-marketing-shell aa-app-nav">
+        <a class="aa-brand" href="/" aria-label="Agent Artifacts home">
+          <ProductMark />
+          <span>Agent Artifacts</span>
+        </a>
+        {actions ?? null}
+      </div>
+    </header>
+  );
+}
+
 export function MarketingFooter({ children }: { children: Child }) {
   return (
     <footer class="aa-marketing-footer">

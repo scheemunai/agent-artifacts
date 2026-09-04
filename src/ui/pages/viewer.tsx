@@ -388,12 +388,11 @@ function ViewerChrome({
             ) : null}
             <Button
               variant="secondary"
-              class="aa-viewer-download"
               href={downloadHref}
               dataAttrs={{ 'data-aa-download': 'true' }}
             >
               <DownloadIcon />
-              <span class="aa-viewer-download__label">Download</span>
+              <span>Download</span>
             </Button>
           </div>
         </div>

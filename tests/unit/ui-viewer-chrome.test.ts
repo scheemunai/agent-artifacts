@@ -87,8 +87,10 @@ describe('viewer chrome marks are drawn, not typed', () => {
   });
 
   it('keeps the download label beside its mark on desktop', () => {
-    expect(html).toContain('aa-viewer-download');
-    expect(html).toContain('>Download</span>');
+    // Asserted on the label, not on a class name. This used to require `aa-viewer-download`, which
+    // the button emitted and no stylesheet defined — so the assertion was pinning the presence of a
+    // class that did nothing, and a guard that walks emissions for definitions now refuses it.
+    expect(html).toMatch(/<svg[\s\S]*?<\/svg>\s*<span>Download<\/span>/);
   });
 
   it('lays a mark and its label out as a row, because the reset makes every svg a block', () => {
