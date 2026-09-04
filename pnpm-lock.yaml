@@ -42,8 +42,8 @@ importers:
         specifier: 6.0.1
         version: 6.0.1
       nodemailer:
-        specifier: 9.0.5
-        version: 9.0.5
+        specifier: 9.0.6
+        version: 9.0.6
       pg:
         specifier: 8.23.0
         version: 8.23.0
@@ -1769,8 +1769,8 @@ packages:
     resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
     hasBin: true
 
-  nodemailer@9.0.5:
-    resolution: {integrity: sha512-wvjiKvjczmsN7U/8006JOdXubgBk2XFAbioDMbT+sM7cPs0QrhJTa6KBRX7P5REGGkDcLUz/EarWidb8G8C1jQ==}
+  nodemailer@9.0.6:
+    resolution: {integrity: sha512-IQUGFdhdGwI9+AWX+FpUt4DLmvFaOjTMEoneTIWX/RXxuy1TdenPwWrvFMSfLkPKl+HQEXWuSAxEMMbPYXtBmg==}
     engines: {node: '>=6.0.0'}
 
   obug@2.1.4:
@@ -3329,7 +3329,7 @@ snapshots:
 
   node-gyp-build@4.8.4: {}
 
-  nodemailer@9.0.5: {}
+  nodemailer@9.0.6: {}
 
   obug@2.1.4: {}
 
