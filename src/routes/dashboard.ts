@@ -18,6 +18,7 @@ import { AppError } from '../lib/errors.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { ownerPreviewFrameUrl, previewContentDigest } from '../lib/preview-token.js';
 import type { Logger } from '../logger.js';
+import { AnalyticsReadModelService, parseStatsRange } from '../services/analytics-read-models.js';
 import { ArtifactService, type TemplatePreview } from '../services/artifacts.js';
 import {
   AuthError,
@@ -44,13 +45,14 @@ import {
 import { promoteArtifactToTemplate } from '../services/templates.js';
 import {
   DashboardArtifactPage,
+  DashboardArtifactsPage,
   type DashboardBillingView,
   DashboardBotsPage,
   type DashboardBotsPageProps,
-  DashboardHomePage,
   type DashboardNavItem,
   type DashboardNotice,
   DashboardSettingsPage,
+  DashboardStatsPage,
   DashboardTemplatesPage,
 } from '../ui/pages/dashboard.js';
 import {
@@ -87,6 +89,7 @@ interface HumanServices {
   mail: MailService;
   artifacts: ArtifactService;
   dashboardReads: DashboardReadModelService;
+  analyticsReads: AnalyticsReadModelService;
 }
 
 interface KeyReveal {
@@ -321,6 +324,7 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       logger: context.logger,
     }),
     dashboardReads: new DashboardReadModelService(context.db, { baseUrl: context.config.baseUrl }),
+    analyticsReads: new AnalyticsReadModelService(context.db),
   };
 
   if (context.config.deployment === 'self-hosted') {
@@ -462,7 +466,44 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     );
   });
 
+  /*
+   * THE FRONT DOOR IS NOW THE NUMBERS.
+   *
+   * The artifacts list moved to `/dashboard/artifacts` — same component, same filters, same
+   * `/dashboard/artifacts/:id` detail URLs, one nav click away and still first in the nav after
+   * Overview. Nothing was removed; a different question was put first, and it is the one whose
+   * answer changes daily.
+   */
   app.get('/dashboard', async (routeContext) => {
+    const session = await requirePageSession(routeContext, services);
+    if (session instanceof Response) {
+      return session;
+    }
+
+    const range = parseStatsRange(routeContext.req.query('range'));
+    const stats = await services.analyticsReads.accountStats(session.account.id, range);
+    // The same read model the listing uses, unfiltered and truncated: "recently updated" is the
+    // top of that list, so it should not be a second query that could disagree with it.
+    const { artifacts } = await services.dashboardReads.listDashboardArtifacts({
+      accountId: session.account.id,
+      filters: { q: '', botId: '', type: '', cursor: '' },
+      retentionDays: (
+        await services.cloudModule.resolvePlan(accountToCloudAccount(session.account))
+      ).artifact_retention_days,
+    });
+
+    return routeContext.html(
+      DashboardStatsPage({
+        account: accountView(session.account),
+        stats,
+        recent: artifacts.slice(0, 3),
+        extensionNavItems: dashboardNavItems(services, session.account),
+        notice: noticeFromQuery(routeContext.req.query('notice')),
+      })
+    );
+  });
+
+  app.get('/dashboard/artifacts', async (routeContext) => {
     const session = await requirePageSession(routeContext, services);
     if (session instanceof Response) {
       return session;
@@ -492,10 +533,10 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         params.set('type', filters.type);
       }
       params.set('notice', 'cursor_expired');
-      return routeContext.redirect(`/dashboard?${params.toString()}`, 303);
+      return routeContext.redirect(`/dashboard/artifacts?${params.toString()}`, 303);
     }
     return routeContext.html(
-      DashboardHomePage({
+      DashboardArtifactsPage({
         account: accountView(session.account),
         artifacts,
         bots,
@@ -525,12 +566,15 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
     }
     const versions = await services.dashboardReads.listDashboardArtifactVersions(artifactId);
     const diff = resolveDiff(routeContext.req.query(), versions);
+    const range = parseStatsRange(routeContext.req.query('range'));
+    const stats = await services.analyticsReads.artifactStats(artifact.id, range);
     return routeContext.html(
       DashboardArtifactPage({
         account: accountView(session.account),
         artifact,
         versions,
         diff,
+        stats,
         // Minted on the page that already passed the session gate, spent on the sandbox host that
         // cannot see the session. Markdown renders inline and needs no frame, so it gets no token.
         previewUrl:

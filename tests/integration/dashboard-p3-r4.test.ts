@@ -46,7 +46,9 @@ describe('B-C7 · a filtered list that found things still says it is filtered', 
     const { cookie } = await seed(ctx);
 
     const filtered = await (
-      await ctx.app.request('/dashboard?q=dash&type=markdown', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts?q=dash&type=markdown', {
+        headers: { Cookie: cookie },
+      })
     ).text();
 
     // The zero-result case got a Clear in round 3. A filter that still matches things is the
@@ -62,7 +64,7 @@ describe('B-C7 · a filtered list that found things still says it is filtered', 
     const { cookie } = await seed(ctx);
 
     const plain = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
     expect(plain).not.toContain('Filtered by');
     expect(plain).not.toContain('Clear filters');

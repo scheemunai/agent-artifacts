@@ -3208,6 +3208,198 @@
     justify-content: flex-end;
   }
 
+  /* ── Charts ───────────────────────────────────────────────────────────────────────────────
+     Server-rendered SVG, so everything here styles markup rather than a canvas. The data hue is
+     the product accent: it is the one colour this system spends on emphasis, an artifact's own
+     readership is exactly that, and the four status tones stay reserved for state. It clears 3:1
+     on the raised white surface, which is the bar a chart mark has to meet to be a mark. */
+
+  .aa-sparkline {
+    display: grid;
+    min-width: 0;
+    margin: 0;
+    gap: var(--spacing-aa-2);
+  }
+
+  .aa-sparkline__plot {
+    display: block;
+    width: 100%;
+    /* A FIXED height with a stretched viewBox, not an aspect-ratio box. Scaling the plot uniformly
+       made the hero chart as tall as it was wide on a desktop — a vast empty rectangle with a line
+       along the bottom of it. The stroke opts out of the stretch, so nothing distorts visibly. */
+    height: 10rem;
+    overflow: visible;
+  }
+
+  .aa-sparkline--sm .aa-sparkline__plot {
+    height: 3.5rem;
+  }
+
+  .aa-sparkline__area {
+    stroke: none;
+  }
+
+  .aa-sparkline__fill-top {
+    stop-color: var(--color-aa-accent);
+    stop-opacity: 0.22;
+  }
+
+  .aa-sparkline__fill-bottom {
+    stop-color: var(--color-aa-accent);
+    stop-opacity: 0;
+  }
+
+  .aa-sparkline__line {
+    fill: none;
+    stroke: var(--color-aa-accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    /* The plot scales with its container; the stroke must not, or a wide card draws a thick line
+       and a narrow one draws a hairline. */
+    vector-effect: non-scaling-stroke;
+  }
+
+  .aa-sparkline__dot {
+    fill: var(--color-aa-accent);
+  }
+
+  /* One invisible column per bucket, carrying a native <title>. The browser draws the tooltip and
+     the screen reader announces it, so hover costs no script. */
+  .aa-sparkline__band {
+    fill: transparent;
+  }
+
+  .aa-sparkline__band:hover {
+    fill: var(--color-aa-accent-soft);
+  }
+
+  /* ── Stat cards ───────────────────────────────────────────────────────────────────────────── */
+
+  .aa-stat {
+    display: grid;
+    min-width: 0;
+    align-content: start;
+    gap: var(--spacing-aa-1);
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-lg);
+    padding: var(--spacing-aa-5);
+    background: var(--color-aa-surface-raised);
+    box-shadow: var(--shadow-aa-card);
+  }
+
+  .aa-stat__label {
+    margin: 0;
+    color: var(--color-aa-subtle);
+    font-size: var(--text-aa-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .aa-stat__value {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--spacing-aa-2);
+    margin: 0;
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-3xl);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  /* The one figure a screen leads with. */
+  .aa-stat--hero .aa-stat__value {
+    font-size: var(--text-aa-hero);
+  }
+
+  .aa-stat__change {
+    font-size: var(--text-aa-sm);
+    font-weight: 600;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .aa-stat__change--up {
+    color: var(--color-aa-success);
+  }
+
+  /* Down is not failure — an artifact read less this week than last is information, not an alarm —
+     so this is the muted ink rather than the danger tone. */
+  .aa-stat__change--down {
+    color: var(--color-aa-muted);
+  }
+
+  .aa-stat__hint {
+    margin: 0;
+    color: var(--color-aa-subtle);
+    font-size: var(--text-aa-xs);
+  }
+
+  .aa-stat__chart {
+    min-width: 0;
+    margin-top: var(--spacing-aa-2);
+  }
+
+  /* ── Ranked bar list ──────────────────────────────────────────────────────────────────────── */
+
+  .aa-barlist {
+    display: grid;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    gap: var(--spacing-aa-1);
+    list-style: none;
+  }
+
+  .aa-barlist__row {
+    min-width: 0;
+  }
+
+  /* The bar IS the row's background rather than a column of its own, so the label keeps the full
+     width at 390px instead of competing with a track that has nothing to give it. */
+  .aa-barlist__link {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--spacing-aa-3);
+    overflow: hidden;
+    border-radius: var(--radius-aa-sm);
+    padding: var(--spacing-aa-2) var(--spacing-aa-3);
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-sm);
+    text-decoration: none;
+  }
+
+  a.aa-barlist__link:hover {
+    background: var(--color-aa-surface);
+  }
+
+  .aa-barlist__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: var(--radius-aa-sm);
+    background: var(--color-aa-accent-soft);
+  }
+
+  .aa-barlist__label {
+    position: relative;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .aa-barlist__value {
+    position: relative;
+    color: var(--color-aa-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
   /* The templates listing, which is a picture grid rather than a list of rows.
      It rides on `.aa-dashboard-card-list` — same list reset, same square corners under
      `.aa-dashboard` — and only re-columns it. `min(17.5rem, 100%)` rather than a bare `17.5rem`

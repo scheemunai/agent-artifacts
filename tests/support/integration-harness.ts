@@ -42,6 +42,10 @@ export interface CreateIntegrationTestContextOptions {
   rateLimitsDisabled?: boolean;
   artifactPurgeDays?: number;
   baseUrl?: string;
+  /** Hops to trust in `x-forwarded-for`, so a test can present more than one reader. */
+  trustProxy?: number;
+  /** So a test can exercise how an address is greeted. */
+  accountEmail?: string;
 }
 
 export async function createIntegrationTestContext(
@@ -60,6 +64,9 @@ export async function createIntegrationTestContext(
         ? { AA_ARTIFACT_PURGE_DAYS: String(options.artifactPurgeDays) }
         : {}),
       LOG_LEVEL: 'error',
+      // Off by default: `AA_TRUST_PROXY=0` is the shipped default and other suites assert that
+      // spoofed forwarding headers are ignored under it.
+      AA_TRUST_PROXY: String(options.trustProxy ?? 0),
     },
     { cwd }
   );
@@ -70,7 +77,7 @@ export async function createIntegrationTestContext(
   const cloudModule = options.cloudModule ?? createDefaultCloudModule(config);
   const account: Account = {
     id: `acc_${nanoid(21)}`,
-    email: `tester-${nanoid(8)}@example.test`,
+    email: options.accountEmail ?? `tester-${nanoid(8)}@example.test`,
     suspendedAt: null,
   };
   insertAccount(db, account, TEST_NOW);

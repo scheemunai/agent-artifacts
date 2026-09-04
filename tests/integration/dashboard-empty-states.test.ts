@@ -61,7 +61,7 @@ describe('B-A1 · no filter form for a list that has nothing to filter', () => {
     const cookie = await signIn(ctx);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     // At 375 this three-control form filled the whole first viewport and pushed the one piece of
@@ -75,7 +75,7 @@ describe('B-A1 · no filter form for a list that has nothing to filter', () => {
     const cookie = await signIn(ctx, { artifact: true });
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
     expect(html).toContain('aa-dashboard-filter-bar');
   });
@@ -85,7 +85,9 @@ describe('B-A1 · no filter form for a list that has nothing to filter', () => {
     const cookie = await signIn(ctx, { artifact: true });
 
     const html = await (
-      await ctx.app.request('/dashboard?q=nothing-matches-this', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts?q=nothing-matches-this', {
+        headers: { Cookie: cookie },
+      })
     ).text();
 
     // Removing the controls here would leave no way back to the full list.
@@ -101,7 +103,7 @@ describe('B-A3 · the empty state acts, the install prompt is content', () => {
     const cookie = await signIn(ctx, { bot: true });
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     expect(html).toContain('Install prompt');

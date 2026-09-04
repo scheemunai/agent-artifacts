@@ -53,7 +53,7 @@ async function seed(
 }
 
 describe('V2-N8 · counts of one read as one', () => {
-  it('does not say "1 views on this share · 1 unique viewers · 1 lifetime views"', async () => {
+  it('does not say "1 views on this share · 1 readers · 1 lifetime views"', async () => {
     const ctx = await makeContext();
     const { cookie, artifactId } = await seed(ctx, 1);
 
@@ -62,9 +62,9 @@ describe('V2-N8 · counts of one read as one', () => {
     ).text();
 
     expect(html).not.toContain('1 views');
-    expect(html).not.toContain('1 unique viewers');
+    expect(html).not.toContain('1 readers');
     expect(html).toContain('1 view on this share');
-    expect(html).toContain('1 unique viewer');
+    expect(html).toContain('1 reader');
     expect(html).toContain('1 lifetime view ');
   });
 
@@ -77,7 +77,7 @@ describe('V2-N8 · counts of one read as one', () => {
     ).text();
 
     expect(html).toContain('4 views on this share');
-    expect(html).toContain('4 unique viewers');
+    expect(html).toContain('4 readers');
     expect(html).toContain('4 lifetime views');
   });
 
@@ -86,7 +86,7 @@ describe('V2-N8 · counts of one read as one', () => {
     const { cookie } = await seed(ctx, 1);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
     expect(html).toContain('1 view');
     expect(html).not.toContain('1 views');
@@ -132,7 +132,7 @@ describe('B-G3 / V2-N7 · the account block is mounted by the chrome, and lives 
     const { cookie } = await seed(ctx, 1);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     // The cost of the component owning the invariant: the content really is in the DOM twice, so
@@ -148,7 +148,7 @@ describe('B-G3 / V2-N7 · the account block is mounted by the chrome, and lives 
     const { cookie } = await seed(ctx, 1);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
     expect(html).not.toContain('<footer class="aa-drawer__footer"></footer>');
   });

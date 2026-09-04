@@ -45,7 +45,7 @@ describe('B-C9 · a cursor that no longer decodes says so', () => {
     const ctx = await makeContext();
     const { cookie } = await seed(ctx);
 
-    const response = await ctx.app.request('/dashboard?cursor=notarealcursor', {
+    const response = await ctx.app.request('/dashboard/artifacts?cursor=notarealcursor', {
       headers: { Cookie: cookie },
     });
 
@@ -64,9 +64,12 @@ describe('B-C9 · a cursor that no longer decodes says so', () => {
     const ctx = await makeContext();
     const { cookie } = await seed(ctx);
 
-    const response = await ctx.app.request('/dashboard?q=cursor&type=markdown&cursor=bogus', {
-      headers: { Cookie: cookie },
-    });
+    const response = await ctx.app.request(
+      '/dashboard/artifacts?q=cursor&type=markdown&cursor=bogus',
+      {
+        headers: { Cookie: cookie },
+      }
+    );
 
     const location = response.headers.get('location') ?? '';
     // Throwing the reader back to an unfiltered list would be a second, larger surprise than the
@@ -83,7 +86,7 @@ describe('B-C9 · a cursor that no longer decodes says so', () => {
     const valid = Buffer.from(JSON.stringify({ updatedAt: Date.now(), id: 'art_x' })).toString(
       'base64url'
     );
-    const response = await ctx.app.request(`/dashboard?cursor=${valid}`, {
+    const response = await ctx.app.request(`/dashboard/artifacts?cursor=${valid}`, {
       headers: { Cookie: cookie },
     });
     expect(response.status).toBe(200);
@@ -94,12 +97,14 @@ describe('B-C9 · a cursor that no longer decodes says so', () => {
     const { cookie } = await seed(ctx);
 
     const html = await (
-      await ctx.app.request('/dashboard?notice=cursor_expired', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts?notice=cursor_expired', {
+        headers: { Cookie: cookie },
+      })
     ).text();
     expect(html).toContain('first page');
     // The closed-vocabulary rule: an unknown code renders nothing at all.
     const injected = await (
-      await ctx.app.request('/dashboard?notice=your+account+is+suspended', {
+      await ctx.app.request('/dashboard/artifacts?notice=your+account+is+suspended', {
         headers: { Cookie: cookie },
       })
     ).text();

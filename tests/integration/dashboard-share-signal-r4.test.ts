@@ -84,7 +84,7 @@ describe('B-B2 · one share state, one rendering, wherever it appears', () => {
     const { cookie, protectedId } = await seed(ctx);
 
     const list = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
     const detail = await (
       await ctx.app.request(`/dashboard/artifacts/${protectedId}`, { headers: { Cookie: cookie } })
@@ -104,7 +104,7 @@ describe('B-B4 · a revoked link is not the same thing as never having shared', 
     const { cookie } = await seed(ctx);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     // Both rendered a neutral "private" pill, so an artifact whose public link was pulled looked
@@ -121,7 +121,7 @@ describe('V3-N1 · the end-of-list count says which count it is', () => {
     const { cookie } = await seed(ctx);
 
     const firstPage = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
     // No cursor and no next page: this really is everything, so the plain claim is true.
     expect(firstPage).toContain('3 artifacts · end of list');
@@ -136,7 +136,9 @@ describe('V3-N1 · the end-of-list count says which count it is', () => {
       JSON.stringify({ updatedAt: Date.now() + 60_000, id: 'art_beforeeverything' })
     ).toString('base64url');
     const later = await (
-      await ctx.app.request(`/dashboard?cursor=${cursor}`, { headers: { Cookie: cookie } })
+      await ctx.app.request(`/dashboard/artifacts?cursor=${cursor}`, {
+        headers: { Cookie: cookie },
+      })
     ).text();
     expect(later).not.toContain('3 artifacts · end of list');
     expect(later).toContain('3 on this page · end of list');
@@ -167,7 +169,7 @@ describe('V3-N1 · the end-of-list count says which count it is', () => {
     const cookie = await login(ctx, account.email, 'password123');
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     // The third branch of the summary, and the one a large account sees on every page but the

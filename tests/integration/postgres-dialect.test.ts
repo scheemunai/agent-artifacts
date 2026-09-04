@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { initializeDatabase, type PostgresDatabaseHandle } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrations.js';
 import { AnalyticsRecorder, type ViewRequestFacts } from '../../src/services/analytics.js';
+import { AnalyticsReadModelService } from '../../src/services/analytics-read-models.js';
 import { AuthService } from '../../src/services/auth.js';
 import { DashboardReadModelService } from '../../src/services/dashboard-read-models.js';
 import { runBackgroundSweeps } from '../../src/services/scheduler.js';
@@ -310,6 +311,65 @@ describePostgres('PostgreSQL dialect support', () => {
       expect(
         await postgresCountRows(ctx, 'shares', 'artifact_id = $1', [artifact.artifact.id])
       ).toBe(2);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('buckets a chart the same way SQLite does', async () => {
+    const ctx = await createPostgresTestContext();
+
+    try {
+      const created = await publishPostgresArtifact(ctx, {
+        slug: 'pg-buckets',
+        now: POSTGRES_TEST_NOW,
+        share: true,
+      });
+      const shareId = created.share?.shareId as string;
+      const HOUR = 60 * 60 * 1000;
+
+      /*
+       * THE DIALECT TRAP THIS EXISTS FOR.
+       *
+       * The bucket is `FLOOR((at - start) / width)`. Bare division looked like integer division and
+       * was not — SQLite handed back `3.3333…`, so every point on the chart read zero while the
+       * total printed beside it read 280. The obvious repair, `CAST(… AS INTEGER)`, fixes SQLite
+       * and silently breaks this dialect: Postgres ROUNDS on cast where SQLite truncates. Asserting
+       * the arithmetic on both engines is the only thing that keeps it fixed.
+       */
+      for (const [offset, hash] of [
+        [3 * HOUR, 'a'],
+        [3 * HOUR, 'b'],
+        [1 * HOUR, 'a'],
+      ] as const) {
+        const at = POSTGRES_TEST_NOW - offset;
+        const date = new Date(at);
+        const day =
+          date.getUTCFullYear() * 10000 + (date.getUTCMonth() + 1) * 100 + date.getUTCDate();
+        await ctx.db.pool.query(
+          `INSERT INTO view_events
+             (share_id, artifact_id, account_id, at, day, visitor_hash, version_num, referrer_host, device, js_confirmed)
+           VALUES ($1, $2, $3, $4, $5, $6, 1, 'news.ycombinator.com', 'desktop', FALSE)`,
+          [shareId, created.artifact.id, ctx.account.id, at, day, hash.repeat(32)]
+        );
+      }
+
+      const reads = new AnalyticsReadModelService(ctx.db, () => POSTGRES_TEST_NOW);
+      const stats = await reads.accountStats(ctx.account.id, '24h');
+
+      expect(stats.series).toHaveLength(24);
+      expect(stats.totals).toEqual({ views: 3, readers: 2 });
+      // The chart must add up to the headline printed beside it.
+      expect(stats.series.reduce((sum, point) => sum + point.views, 0)).toBe(3);
+      expect(stats.series.filter((point) => point.views > 0).map((point) => point.views)).toEqual([
+        2, 1,
+      ]);
+
+      const one = await reads.artifactStats(created.artifact.id, '7d');
+      expect(one.totals.views).toBe(3);
+      expect(one.referrers).toEqual([{ label: 'news.ycombinator.com', views: 3 }]);
+      // `pg` returns aggregates as strings; a missed coercion shows up as "33" for 3 + 3.
+      expect(typeof one.totals.views).toBe('number');
     } finally {
       await ctx.cleanup();
     }
