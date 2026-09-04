@@ -165,9 +165,16 @@ export function DashboardStatsPage({
       extensionNavItems={extensionNavItems}
       {...(notice ? { notice } : {})}
     >
-      <header class="aa-page-header">
-        <p class="aa-kicker">Overview</p>
-        <h1>{greeting(account.email, stats)}</h1>
+      {/* The names the rest of the dashboard already uses. This header shipped as
+          `aa-page-header` + `aa-kicker` — two classes no stylesheet defines — around a bare `<h1>`,
+          and the compiled preflight sets `h1..h6 { font-size: inherit; font-weight: inherit }`, so
+          the first heading a signed-in reader sees rendered at body size and body weight while
+          every other page in this file gave its h1 `aa-section-title`. Caught by the emissions
+          walk in `ui-emitted-class-definitions`, which is exactly the population it was widened to
+          cover. */}
+      <header class="aa-section-header">
+        <p class="aa-page-kicker">Overview</p>
+        <h1 class="aa-section-title">{greeting(account.email, stats)}</h1>
         <RangePicker range={stats.range} />
       </header>
 
@@ -289,7 +296,9 @@ function RangePicker({ range }: { range: StatsRange }) {
  * numbers, and would be gone by the time anyone wondered.
  */
 function CountingNote() {
-  return <p class="aa-section-note aa-counting-note">{COUNTING_NOTE}</p>;
+  // `aa-counting-note` was a modifier with no rule behind it; `aa-section-note` carries the whole
+  // appearance, so the second name was only ever a hook nobody wired.
+  return <p class="aa-section-note">{COUNTING_NOTE}</p>;
 }
 
 const RANGE_LABELS: Record<StatsRange, string> = {
