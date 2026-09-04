@@ -4001,7 +4001,7 @@
   .aa-md ol,
   .aa-md blockquote,
   .aa-md pre,
-  .aa-md .aa-md-table-scroll,
+  .aa-md .aa-table-wrap,
   .aa-md figure,
   .aa-md details {
     margin-bottom: 1.15em;
@@ -4021,8 +4021,66 @@
     padding-left: 1.45em;
   }
 
+  /* THE MARKERS COME BACK HERE, AND ONLY HERE.
+     Tailwind's preflight sets `ol, ul, menu { list-style: none }` in the COMPILED sheet — a line
+     that appears nowhere in this file — and `.aa-md` never restored it. So every bullet list and
+     every numbered list in every markdown artifact this product has ever published rendered with
+     no marker: a numbered "Next steps" arrived as three unlabelled indented lines, and the reader
+     had no way to tell an ordered list from a stack of paragraphs.
+     Restoring globally was the other way to fix it and is the wrong one: the reset is load-bearing
+     for app chrome — nav rails, card lists, the dashboard's own lists are all built on it — so a
+     global restore would put a disc on every one of them. The scope that got it wrong is the scope
+     that pays for it. */
+  .aa-md ul {
+    list-style-type: disc;
+  }
+
+  .aa-md ol {
+    list-style-type: decimal;
+  }
+
+  /* Depth has to be readable without counting indents, which is the whole reason a document nests
+     a list. Three levels is what prose uses; past that the marker stops being the problem. */
+  .aa-md ul ul {
+    list-style-type: circle;
+  }
+
+  .aa-md ul ul ul {
+    list-style-type: square;
+  }
+
+  .aa-md ol ol {
+    list-style-type: lower-alpha;
+  }
+
+  .aa-md ol ol ol {
+    list-style-type: lower-roman;
+  }
+
+  /* The marker orients; the text carries. Same relationship the rest of this scope uses between
+     structure and content, rather than a marker competing with the sentence beside it. */
+  .aa-md li::marker {
+    color: var(--color-aa-subtle);
+  }
+
+  /* `::marker` takes no margin, and the gap the browser leaves after an `outside` marker is sized
+     for the glyph rather than for reading: a disc gets air, `1.` and `a.` end up touching the
+     first word. Padding the item moves the text without moving the marker, which is the only
+     lever there is, and it gives every level the same optical gap. */
+  .aa-md li {
+    padding-inline-start: 0.4em;
+  }
+
   .aa-md li + li {
     margin-top: 0.35em;
+  }
+
+  /* A nested list is part of its parent item, not a new block after it. Without this it inherited
+     the 1.15em block margin above and opened a paragraph-sized hole mid-item. */
+  .aa-md li > ul,
+  .aa-md li > ol {
+    margin-top: 0.35em;
+    margin-bottom: 0;
   }
 
   .aa-md blockquote {
@@ -4075,56 +4133,64 @@
     white-space: pre;
   }
 
+  /* THE WRAPPER SCROLLS; THE TABLE IS A TABLE.
+     `.aa-md table` used to be `display: block; width: 100%; overflow-x: auto` — the table made
+     into its own scroll container. It scrolled, but a block box at 100% with table layout inside
+     it draws its border at the column width while the cells stop at their content width, so every
+     markdown table in the product carried a wide empty band inside its own border on the right.
+     The wrapper this sheet already described was never applied to anything: `renderMarkdown()` did
+     not emit it, and the style guide's hand-written specimen was its only consumer. It is emitted
+     now, so the two jobs finally sit on two elements. */
   .aa-md .aa-md-table-scroll {
+    display: block;
     max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     border: 1px solid var(--color-aa-line);
     border-radius: var(--radius-aa-md);
     scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface);
-    scrollbar-gutter: stable;
     scrollbar-width: thin;
   }
 
+  /* The affordance, not the scroll, is what was missing — the same finding `.aa-table-scroll`
+     records, reached again one scope over. Both states are driven by `ui-foundation`'s
+     measurement, so a table that fits is never masked and a table scrolled to its end stops being
+     masked. `scrollbar-gutter` is deliberately absent: it reserved a permanent 10px strip inside
+     the border on every table, including the ones that never scroll. */
+  .aa-md .aa-md-table-scroll[data-aa-overflow="true"] {
+    mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
+  }
+
+  .aa-md .aa-md-table-scroll[data-aa-overflow="true"][data-aa-scroll-end="true"] {
+    mask-image: none;
+  }
+
+  /* `width: max-content` with `min-width: 100%` — the pattern `.aa-md pre code` above already
+     uses. A narrow table stretches to fill the column instead of sitting in a wider bordered box;
+     a wide one keeps its natural width and lets the wrapper scroll, rather than being squeezed
+     until "p95 latency" wraps onto two lines in a 60px column. Neither can widen the page: both
+     values resolve against the wrapper, which is capped at 100%.
+     The 36rem floor this replaces did the opposite job — it forced a two-column table to 576px and
+     made it scroll on a phone for no reason. */
   .aa-md table {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    border: 1px solid var(--color-aa-line);
-    border-radius: var(--radius-aa-md);
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
     font-size: var(--text-aa-sm);
-    scrollbar-color: var(--color-aa-line-strong) var(--color-aa-surface);
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
-  }
-
-  .aa-md .aa-md-table-scroll table {
-    display: table;
-    min-width: 36rem;
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
   }
 
   .aa-md pre::-webkit-scrollbar,
-  .aa-md table::-webkit-scrollbar,
   .aa-md .aa-md-table-scroll::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
 
   .aa-md pre::-webkit-scrollbar-track,
-  .aa-md table::-webkit-scrollbar-track,
   .aa-md .aa-md-table-scroll::-webkit-scrollbar-track {
     background: var(--color-aa-surface);
   }
 
   .aa-md pre::-webkit-scrollbar-thumb,
-  .aa-md table::-webkit-scrollbar-thumb,
   .aa-md .aa-md-table-scroll::-webkit-scrollbar-thumb {
     border: 2px solid var(--color-aa-surface);
     border-radius: var(--radius-aa-full);
