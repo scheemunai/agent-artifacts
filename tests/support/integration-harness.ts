@@ -44,6 +44,8 @@ export interface CreateIntegrationTestContextOptions {
   baseUrl?: string;
   /** Hops to trust in `x-forwarded-for`, so a test can present more than one reader. */
   trustProxy?: number;
+  /** So a test can exercise how an address is greeted. */
+  accountEmail?: string;
 }
 
 export async function createIntegrationTestContext(
@@ -75,7 +77,7 @@ export async function createIntegrationTestContext(
   const cloudModule = options.cloudModule ?? createDefaultCloudModule(config);
   const account: Account = {
     id: `acc_${nanoid(21)}`,
-    email: `tester-${nanoid(8)}@example.test`,
+    email: options.accountEmail ?? `tester-${nanoid(8)}@example.test`,
     suspendedAt: null,
   };
   insertAccount(db, account, TEST_NOW);

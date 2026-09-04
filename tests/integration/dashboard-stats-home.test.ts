@@ -157,6 +157,31 @@ describe('the dashboard leads with readership', () => {
   });
 });
 
+describe('the greeting', () => {
+  it('uses a first name, but never greets a shared mailbox by one', async () => {
+    // "Hey Info" and "Hey Hello" are the tell of a product that guessed. `no-reply@` is the one
+    // worth naming: splitting on punctuation first would reduce it to "no" and greet that.
+    for (const [email, expected] of [
+      ['andrej@example.test', 'Hey Andrej'],
+      ['andrej.novak@example.test', 'Hey Andrej'],
+      ['info@example.test', 'Hey there'],
+      ['hello@example.test', 'Hey there'],
+      ['no-reply@example.test', 'Hey there'],
+      ['Support@example.test', 'Hey there'],
+    ] as const) {
+      const ctx = await createIntegrationTestContext({ accountEmail: email });
+      try {
+        const html = await (
+          await ctx.app.request('/dashboard', { headers: { Cookie: await ownerCookie(ctx) } })
+        ).text();
+        expect(html, email).toContain(expected);
+      } finally {
+        await ctx.cleanup();
+      }
+    }
+  });
+});
+
 describe('the relabel', () => {
   it('never says "unique viewer" anywhere an owner can see', async () => {
     const ctx = await createIntegrationTestContext({ trustProxy: 1 });

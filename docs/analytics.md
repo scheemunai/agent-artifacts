@@ -91,6 +91,45 @@ statement of where the filter's blind spot is.
 No IP address or user agent is ever written to disk. They exist in memory for at most one flush
 interval and are reduced to a salted hash before anything is stored.
 
+## Decisions on record
+
+Three things were considered and deliberately left as they are. Each has a trigger, so the next
+person meets a decision rather than a surprise.
+
+### The lifetime total on the share panel mixes two counting methods
+
+The per-share `readers` figure spans the cutover: cookie-uniques before it, daily readers after. The
+dated note explains it, and the alternative — freezing the legacy number and showing only
+range-scoped readers — is a product decision rather than a relabel.
+
+Left mixed because, pre-launch, those legacy figures are almost entirely our own test traffic and
+bot inflation, and real readers will swamp them within weeks of launch.
+
+**Trigger to revisit:** the mixed total is still confusing once there is real reader data behind it.
+
+### Ranges stop at 30 days
+
+The dashboard offers 24h / 7d / 30d and nothing longer, because raw events are kept for 90 days —
+so every range sits inside retention and every figure is counted from raw rows. No rollup table, no
+reconciliation job, and no class of bug where the chart and the total beside it disagree.
+
+**Trigger to revisit:** wanting a 12-month view. That is what forces the rollup table
+(`view_rollup_daily`), and it is not a small addition — visitors cannot be summed across days, so
+range-level readers past retention becomes an explicitly-labelled approximation. Do not treat
+"just add a 12m option" as a one-line change.
+
+### `/dashboard` runs three queries per load
+
+The overview issues one query for the current window, one for the preceding window (the change
+indicator), and one for the recent-artifacts list. All are indexed on `(account_id, at)`.
+
+Accepted at current volume and unmeasured against real traffic, which matters because this is the
+page every owner lands on after signing in.
+
+**Trigger to revisit:** re-measure once there is real traffic. If p95 on this page climbs, the
+cheapest wins in order are collapsing the two window queries into one grouped query, then the rollup
+table above.
+
 ## What "readers" means
 
 Identity rotates daily, so a reader is recognisable only within one UTC day on one artifact:

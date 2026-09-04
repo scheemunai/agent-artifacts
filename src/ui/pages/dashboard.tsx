@@ -299,10 +299,34 @@ const RANGE_LABELS: Record<StatsRange, string> = {
 };
 
 /** "Hey Andrej" from an email, because an email address is not how a person is greeted. */
+/**
+ * A shared mailbox is not a person, and greeting one by name is the tell of a product that guessed.
+ *
+ * Both forms are checked, because splitting first would defeat the check on the interesting ones:
+ * `no-reply@` splits to `no` and would have produced "Hey No". A proper display name belongs in
+ * settings — this is only the half that costs nothing and stops the worst of it at launch.
+ */
+const ROLE_LOCAL_PARTS = new Set([
+  'admin',
+  'billing',
+  'contact',
+  'hello',
+  'info',
+  'mail',
+  'no-reply',
+  'noreply',
+  'sales',
+  'support',
+  'team',
+]);
+
 function greetingName(email: string): string {
-  const local = email.split('@')[0] ?? '';
+  const local = (email.split('@')[0] ?? '').toLowerCase();
   const word = local.split(/[._+-]/)[0] ?? '';
-  return word ? word.charAt(0).toUpperCase() + word.slice(1) : 'there';
+  if (!word || ROLE_LOCAL_PARTS.has(local) || ROLE_LOCAL_PARTS.has(word)) {
+    return 'there';
+  }
+  return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
 function greeting(email: string, stats: AccountStats): string {
