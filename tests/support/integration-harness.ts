@@ -42,6 +42,8 @@ export interface CreateIntegrationTestContextOptions {
   rateLimitsDisabled?: boolean;
   artifactPurgeDays?: number;
   baseUrl?: string;
+  /** Hops to trust in `x-forwarded-for`, so a test can present more than one reader. */
+  trustProxy?: number;
 }
 
 export async function createIntegrationTestContext(
@@ -60,6 +62,9 @@ export async function createIntegrationTestContext(
         ? { AA_ARTIFACT_PURGE_DAYS: String(options.artifactPurgeDays) }
         : {}),
       LOG_LEVEL: 'error',
+      // Off by default: `AA_TRUST_PROXY=0` is the shipped default and other suites assert that
+      // spoofed forwarding headers are ignored under it.
+      AA_TRUST_PROXY: String(options.trustProxy ?? 0),
     },
     { cwd }
   );

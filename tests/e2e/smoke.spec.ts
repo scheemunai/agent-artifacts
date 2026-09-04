@@ -468,6 +468,30 @@ test('authenticated dashboard list to detail preserves history and share control
 }) => {
   await loginToDashboard(page);
 
+  /*
+   * SIGNING IN NOW LANDS ON THE NUMBERS, not on the list. The list kept everything — its filters,
+   * its nav entry, its `/dashboard/artifacts/:id` detail URLs — and moved one click sideways; only
+   * the front door changed. Both halves are asserted here because the swap is the whole point of
+   * the change and the regression it invites is a nav entry that goes nowhere.
+   */
+  await expect(page.getByRole('heading', { level: 1, name: /Hey / })).toBeVisible();
+  await expect(page.getByRole('link', { name: '24 hours' })).toBeVisible();
+
+  // The entry exists at every width; below 760 it lives in the drawer, which the block further
+  // down opens on its own terms. Asserted by target rather than by click so this says the same
+  // thing at all seven viewports: the nav points at the list.
+  // A DOM locator, not `getByRole`: below 760 the entry lives in a closed drawer, which the browser
+  // declines to lay out at all, so it is absent from the accessibility tree and a role query finds
+  // nothing. The question here is "does the nav point at the list", which is true either way.
+  const artifactsNav = page.locator('nav a', { hasText: /^Artifacts$/ });
+  expect(await artifactsNav.count()).toBeGreaterThan(0);
+  for (const href of await artifactsNav.evaluateAll((links) =>
+    links.map((link) => link.getAttribute('href'))
+  )) {
+    expect(href).toBe('/dashboard/artifacts');
+  }
+
+  await page.goto('/dashboard/artifacts');
   await expect(page.getByRole('heading', { name: "Your agent's published work" })).toBeVisible();
 
   // V2-N7: identity is chrome now, and NavShell mounts it twice on purpose — header and drawer

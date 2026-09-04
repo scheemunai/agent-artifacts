@@ -53,7 +53,7 @@ describe('B-B1 · status tones stop being spent on taxonomy', () => {
     const { cookie } = await seed(ctx);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     // Green means "good" and blue means "informational"; neither means "markdown". Spending them
@@ -95,7 +95,7 @@ describe('B-N5 / B-N6 · numbers and bylines read like a product', () => {
     const { cookie } = await seed(ctx);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
     expect(html).toContain('50,000 views');
     expect(html).not.toContain('50000 views');
@@ -126,7 +126,7 @@ describe('B-N4 · the list footer is one component in both of its states', () =>
     const { cookie } = await seed(ctx);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
     expect(html).toContain('aa-pagination');
     expect(html).not.toMatch(/<span class="aa-badge[^"]*">End of list<\/span>/);

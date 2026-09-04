@@ -212,7 +212,7 @@ describe('Batch C accepted dashboard fixes', () => {
     expect(body).toContain('{{next_steps}}');
   });
 
-  it('dashboard share panel includes the unique-viewer count next to other counters', async () => {
+  it('dashboard share panel includes the reader count next to other counters', async () => {
     const ctx = await makeAuthContext();
     const auth = new AuthService(ctx.db, ctx.config, ctx.logger);
     const account = await auth.createPasswordAccount('share-counters@example.test', 'password123');
@@ -246,7 +246,10 @@ describe('Batch C accepted dashboard fixes', () => {
     const body = await response.text();
     expect(response.status).toBe(200);
     expect(body).toContain('9 views on this share');
-    expect(body).toContain('4 unique viewers');
+    // Relabelled: identity rotates daily now, so "unique viewers" claimed a headcount the
+    // number stopped being. `readers`, with its definition beside it, is true at every range.
+    expect(body).toContain('4 readers');
+    expect(body).toContain('counted once per artifact per day');
   });
 
   it('structured request logs include dashboard and bot principals', async () => {
@@ -255,14 +258,14 @@ describe('Batch C accepted dashboard fixes', () => {
     const session = await new SessionService(ctx.db, ctx.config).createSession(ctx.account.id);
     const cookie = `${SESSION_COOKIE_NAME}=${session.cookieValue}`;
 
-    await ctx.app.request('/dashboard', { headers: { Cookie: cookie } });
+    await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } });
     await ctx.app.request('/v1/artifacts', { headers: ctx.authHeaders });
 
     const requestLogs = capture.entries().filter((entry) => entry.msg === 'request.complete');
     expect(requestLogs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          path: '/dashboard',
+          path: '/dashboard/artifacts',
           principal: { kind: 'dashboard', account_id: ctx.account.id },
         }),
         expect.objectContaining({

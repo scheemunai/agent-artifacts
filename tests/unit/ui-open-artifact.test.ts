@@ -5,7 +5,7 @@ import type {
   DashboardArtifactListItem,
   DashboardShareView,
 } from '../../src/ui/pages/dashboard.js';
-import { DashboardArtifactPage, DashboardHomePage } from '../../src/ui/pages/dashboard.js';
+import { DashboardArtifactPage, DashboardArtifactsPage } from '../../src/ui/pages/dashboard.js';
 
 /**
  * The owner's own artifact, opened as a reader sees it, in one click.
@@ -63,7 +63,7 @@ function detail(share: DashboardShareView | null): DashboardArtifactDetail {
 
 function listHtml(artifacts: DashboardArtifactListItem[]): string {
   return renderToString(
-    DashboardHomePage({
+    DashboardArtifactsPage({
       account,
       artifacts,
       bots: [],

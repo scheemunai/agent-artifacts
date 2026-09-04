@@ -1,7 +1,17 @@
 import type { Child } from 'hono/jsx';
+import {
+  type AccountStats,
+  type ArtifactStats,
+  percentChange,
+  RANGE_SHAPES,
+  STATS_RANGES,
+  type StatsPoint,
+  type StatsRange,
+} from '../../services/analytics-read-models.js';
 import { Layout } from '../components/layout.js';
 import {
   Badge,
+  BarList,
   Button,
   ButtonRow,
   Card,
@@ -14,11 +24,20 @@ import {
   Pagination,
   ProductMark,
   Select,
+  Sparkline,
+  type SparklinePoint,
+  StatCard,
   Table,
   Textarea,
 } from '../components/primitives.js';
+import {
+  COUNTING_NOTE,
+  READER_LABEL,
+  READERS_DEFINITION,
+  READERS_LABEL,
+} from '../copy/analytics-copy.js';
 
-export type DashboardSection = 'artifacts' | 'bots' | 'templates' | 'settings';
+export type DashboardSection = 'overview' | 'artifacts' | 'bots' | 'templates' | 'settings';
 export type ArtifactType = 'markdown' | 'html';
 
 export interface DashboardAccountView {
@@ -110,7 +129,213 @@ export interface DashboardNavItem {
   href: string;
 }
 
-export interface DashboardHomePageProps {
+export interface DashboardStatsPageProps {
+  account: DashboardAccountView;
+  stats: AccountStats;
+  recent: DashboardArtifactListItem[];
+  extensionNavItems?: DashboardNavItem[] | undefined;
+  notice?: DashboardNotice | undefined;
+}
+
+/**
+ * The first thing an owner sees after signing in: how their work is being read.
+ *
+ * The artifacts list moved one click sideways to `/dashboard/artifacts` and keeps its own nav
+ * entry, its filters and its URLs — including every `/dashboard/artifacts/:id` a person may have
+ * bookmarked. Nothing was taken away; a different question was put first. "How many artifacts do I
+ * have" is answerable by looking, and the answer rarely changes. "Is anyone reading them" changes
+ * daily and was previously unanswerable at all.
+ */
+export function DashboardStatsPage({
+  account,
+  stats,
+  recent,
+  extensionNavItems = [],
+  notice,
+}: DashboardStatsPageProps) {
+  const shape = RANGE_SHAPES[stats.range];
+  const readerChange = percentChange(stats.totals.readers, stats.previous.readers);
+  const viewChange = percentChange(stats.totals.views, stats.previous.views);
+
+  return (
+    <DashboardChrome
+      title="Overview"
+      account={account}
+      active="overview"
+      extensionNavItems={extensionNavItems}
+      {...(notice ? { notice } : {})}
+    >
+      <header class="aa-page-header">
+        <p class="aa-kicker">Overview</p>
+        <h1>{greeting(account.email, stats)}</h1>
+        <RangePicker range={stats.range} />
+      </header>
+
+      {stats.everRecorded ? (
+        <>
+          <StatCard
+            hero
+            label={`Readers · ${shape.label.toLowerCase()}`}
+            value={formatCount(stats.totals.readers)}
+            change={readerChange}
+            hint={READERS_DEFINITION}
+            chart={
+              <Sparkline
+                id="aa-stats-readers"
+                measure="Readers"
+                points={seriesPoints(stats.series, stats.range, 'readers')}
+              />
+            }
+          />
+          <div class="aa-grid aa-grid--2">
+            <StatCard
+              label="Views"
+              value={formatCount(stats.totals.views)}
+              change={viewChange}
+              hint="every time an artifact was opened"
+              chart={
+                <Sparkline
+                  id="aa-stats-views"
+                  measure="Views"
+                  size="sm"
+                  points={seriesPoints(stats.series, stats.range, 'views')}
+                />
+              }
+            />
+            <Card title="Most read" description={`By views, ${shape.label.toLowerCase()}.`}>
+              {stats.mostVisited.length > 0 ? (
+                <BarList
+                  measure="Views by artifact"
+                  items={stats.mostVisited.map((artifact) => ({
+                    label: artifact.title,
+                    value: artifact.views,
+                    display: `${countOf(artifact.views, 'view')} · ${formatCount(artifact.readers)} ${READERS_LABEL}`,
+                    href: `/dashboard/artifacts/${artifact.artifactId}`,
+                  }))}
+                />
+              ) : (
+                <p class="aa-section-note">Nothing was read in this range.</p>
+              )}
+            </Card>
+          </div>
+        </>
+      ) : (
+        <EmptyState
+          title="No reads yet"
+          description="Once somebody opens one of your shared artifacts, their reads show up here. Publish something and share the link."
+          action={
+            <Button variant="primary" href="/dashboard/artifacts">
+              Your artifacts
+            </Button>
+          }
+        />
+      )}
+
+      <section class="aa-section" aria-labelledby="aa-recent-title">
+        <header class="aa-section-header">
+          <h2 class="aa-section-title" id="aa-recent-title">
+            Recently updated
+          </h2>
+          <p class="aa-section-note">
+            The last few artifacts your agents touched.{' '}
+            <a href="/dashboard/artifacts">See all artifacts</a>.
+          </p>
+        </header>
+        {recent.length > 0 ? (
+          <DashboardCardList label="Recently updated artifacts">
+            {recent.map((artifact) => (
+              <ArtifactCard artifact={artifact} key={artifact.id} />
+            ))}
+          </DashboardCardList>
+        ) : (
+          <p class="aa-section-note">Nothing published yet.</p>
+        )}
+      </section>
+
+      <CountingNote />
+    </DashboardChrome>
+  );
+}
+
+/**
+ * The range control: three links, no script, no new component.
+ *
+ * `Button` with an `href` is already a link that looks like a control, and `ButtonRow` already lays
+ * a set of them out — so a segmented control here would be a new pattern with new CSS to do what
+ * two existing primitives do. The current range is `secondary` against `ghost` neighbours, and
+ * `aria-current` carries the same fact for anyone not looking at the colour.
+ */
+function RangePicker({ range }: { range: StatsRange }) {
+  return (
+    <ButtonRow>
+      {STATS_RANGES.map((option) => (
+        <Button
+          key={option}
+          size="sm"
+          variant={option === range ? 'secondary' : 'ghost'}
+          href={`/dashboard?range=${option}`}
+          {...(option === range ? { dataAttrs: { 'aria-current': 'page' } } : {})}
+        >
+          {RANGE_LABELS[option]}
+        </Button>
+      ))}
+    </ButtonRow>
+  );
+}
+
+/**
+ * Quiet and factual, and NOT a banner. Totals move across the cutover in both directions, so this
+ * has to be present — but a dismissible alert would shout about a correction that improved the
+ * numbers, and would be gone by the time anyone wondered.
+ */
+function CountingNote() {
+  return <p class="aa-section-note aa-counting-note">{COUNTING_NOTE}</p>;
+}
+
+const RANGE_LABELS: Record<StatsRange, string> = {
+  '24h': '24 hours',
+  '7d': '7 days',
+  '30d': '30 days',
+};
+
+/** "Hey Andrej" from an email, because an email address is not how a person is greeted. */
+function greetingName(email: string): string {
+  const local = email.split('@')[0] ?? '';
+  const word = local.split(/[._+-]/)[0] ?? '';
+  return word ? word.charAt(0).toUpperCase() + word.slice(1) : 'there';
+}
+
+function greeting(email: string, stats: AccountStats): string {
+  const name = greetingName(email);
+  const window = RANGE_SHAPES[stats.range].label.toLowerCase();
+  if (!stats.everRecorded) {
+    return `Hey ${name} — nothing has been read yet.`;
+  }
+  if (stats.totals.readers === 0) {
+    return `Hey ${name} — no reads in the ${window.replace('last ', '')}.`;
+  }
+  return `Hey ${name}, you got ${formatCount(stats.totals.readers)} ${
+    stats.totals.readers === 1 ? 'reader' : READERS_LABEL
+  } in the ${window.replace('last ', 'last ')}.`;
+}
+
+/** Bucket starts become the labels a tooltip and the table row actually show. */
+function seriesPoints(
+  series: StatsPoint[],
+  range: StatsRange,
+  measure: 'views' | 'readers'
+): SparklinePoint[] {
+  const hourly = range === '24h';
+  return series.map((point) => ({
+    label: new Date(point.at).toLocaleString('en-GB', {
+      timeZone: 'UTC',
+      ...(hourly ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short' }),
+    }),
+    value: point[measure],
+  }));
+}
+
+export interface DashboardArtifactsPageProps {
   account: DashboardAccountView;
   artifacts: DashboardArtifactListItem[];
   bots: DashboardBotView[];
@@ -127,7 +352,7 @@ export interface DashboardHomePageProps {
   notice?: DashboardNotice | undefined;
 }
 
-export function DashboardHomePage({
+export function DashboardArtifactsPage({
   account,
   artifacts,
   bots,
@@ -136,7 +361,7 @@ export function DashboardHomePage({
   extensionNavItems,
   filters,
   notice,
-}: DashboardHomePageProps) {
+}: DashboardArtifactsPageProps) {
   return (
     <DashboardChrome
       title="Artifacts"
@@ -162,7 +387,7 @@ export function DashboardHomePage({
             {filters.q ? <Badge tone="neutral">q: {filters.q}</Badge> : null}
             {filters.botId ? <Badge tone="neutral">bot</Badge> : null}
             {filters.type ? <Badge tone="neutral">type: {filters.type}</Badge> : null}
-            <Button size="sm" variant="secondary" href="/dashboard">
+            <Button size="sm" variant="secondary" href="/dashboard/artifacts">
               Clear filters
             </Button>
           </ButtonRow>
@@ -174,7 +399,7 @@ export function DashboardHomePage({
               title="No artifacts match those filters."
               description="Widen the search, or clear the filters to see everything this account has published."
               action={
-                <Button variant="secondary" href="/dashboard">
+                <Button variant="secondary" href="/dashboard/artifacts">
                   Clear filters
                 </Button>
               }
@@ -197,7 +422,7 @@ export function DashboardHomePage({
               pageDescription={pageDescription(artifacts.length, filters)}
               previousDisabled={!filters.cursor}
               nextDisabled={!filters.nextCursor}
-              previousHref="/dashboard"
+              previousHref="/dashboard/artifacts"
               {...(filters.nextCursor
                 ? { nextHref: dashboardListHref({ ...filters, cursor: filters.nextCursor }) }
                 : {})}
@@ -219,6 +444,8 @@ export interface DashboardArtifactPageProps {
   extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
   promoteError?: string | null | undefined;
+  /** Null when the deployment has no analytics store — self-hosted before the migration runs. */
+  stats?: ArtifactStats | null | undefined;
 }
 
 export function DashboardArtifactPage({
@@ -230,6 +457,7 @@ export function DashboardArtifactPage({
   extensionNavItems,
   notice,
   promoteError,
+  stats,
 }: DashboardArtifactPageProps) {
   return (
     <DashboardChrome
@@ -293,6 +521,7 @@ export function DashboardArtifactPage({
             ) : null}
           </Card>
           <SharePanel artifact={artifact} />
+          {stats ? <ArtifactAudience artifact={artifact} stats={stats} /> : null}
         </div>
 
         <VersionHistory artifact={artifact} versions={versions} />
@@ -451,7 +680,7 @@ export function DashboardTemplatesPage({
           emptyTitle="No templates of your own yet."
           empty="Any artifact you have published — HTML or markdown — can become one: choose Promote on its detail page, and your agent can rehash it into new work."
           emptyAction={
-            <Button variant="primary" href="/dashboard">
+            <Button variant="primary" href="/dashboard/artifacts">
               Pick an artifact to promote →
             </Button>
           }
@@ -807,7 +1036,8 @@ function DashboardChrome({
         class="aa-dashboard"
         account={<AccountMenu email={account.email} />}
         items={[
-          { label: 'Artifacts', href: '/dashboard', current: active === 'artifacts' },
+          { label: 'Overview', href: '/dashboard', current: active === 'overview' },
+          { label: 'Artifacts', href: '/dashboard/artifacts', current: active === 'artifacts' },
           { label: 'Bots', href: '/dashboard/bots', current: active === 'bots' },
           { label: 'Templates', href: '/dashboard/templates', current: active === 'templates' },
           { label: 'Settings', href: '/dashboard/settings', current: active === 'settings' },
@@ -859,10 +1089,10 @@ function ArtifactFilters({
   filters,
 }: {
   bots: DashboardBotView[];
-  filters: DashboardHomePageProps['filters'];
+  filters: DashboardArtifactsPageProps['filters'];
 }) {
   return (
-    <form method="get" action="/dashboard" class="aa-dashboard-filter-bar">
+    <form method="get" action="/dashboard/artifacts" class="aa-dashboard-filter-bar">
       <Input id="q" name="q" label="Search" value={filters.q} placeholder="title or slug" />
       <Select
         id="bot"
@@ -950,6 +1180,101 @@ function ArtifactEmptyState({
         />
       </Card>
     </>
+  );
+}
+
+/**
+ * One artifact's readership: the same three questions the overview answers, asked of one thing.
+ *
+ * Referrers and devices live here rather than on the overview because they are only actionable at
+ * this scale — "somebody posted this to Hacker News" is a fact about an artifact, not about an
+ * account.
+ */
+function ArtifactAudience({
+  artifact,
+  stats,
+}: {
+  artifact: DashboardArtifactDetail;
+  stats: ArtifactStats;
+}) {
+  const shape = RANGE_SHAPES[stats.range];
+  return (
+    <section class="aa-section" aria-labelledby="aa-audience-title">
+      <header class="aa-section-header">
+        <h2 class="aa-section-title" id="aa-audience-title">
+          Audience
+        </h2>
+        <ButtonRow>
+          {STATS_RANGES.map((option) => (
+            <Button
+              key={option}
+              size="sm"
+              variant={option === stats.range ? 'secondary' : 'ghost'}
+              href={`/dashboard/artifacts/${artifact.id}?range=${option}`}
+              {...(option === stats.range ? { dataAttrs: { 'aria-current': 'page' } } : {})}
+            >
+              {RANGE_LABELS[option]}
+            </Button>
+          ))}
+        </ButtonRow>
+      </header>
+
+      {stats.everRecorded ? (
+        <>
+          <div class="aa-grid aa-grid--2">
+            <StatCard
+              label={`Readers · ${shape.label.toLowerCase()}`}
+              value={formatCount(stats.totals.readers)}
+              change={percentChange(stats.totals.readers, stats.previous.readers)}
+              hint={READERS_DEFINITION}
+            />
+            <StatCard
+              label={`Views · ${shape.label.toLowerCase()}`}
+              value={formatCount(stats.totals.views)}
+              change={percentChange(stats.totals.views, stats.previous.views)}
+              hint={
+                stats.lastReadAt ? `last read ${formatRelativeTime(stats.lastReadAt)}` : undefined
+              }
+            />
+          </div>
+          <Card title="Reads over time" description={shape.label}>
+            <Sparkline
+              id="aa-artifact-reads"
+              measure="Views"
+              points={seriesPoints(stats.series, stats.range, 'views')}
+            />
+          </Card>
+          <div class="aa-grid aa-grid--2">
+            <Card title="Where readers came from" description="By referring site.">
+              {stats.referrers.length > 0 ? (
+                <BarList
+                  measure="Views by referrer"
+                  items={stats.referrers.map((row) => ({ label: row.label, value: row.views }))}
+                />
+              ) : (
+                <p class="aa-section-note">Nothing in this range.</p>
+              )}
+            </Card>
+            <Card title="What they read it on" description="By device type.">
+              {stats.devices.length > 0 ? (
+                <BarList
+                  measure="Views by device"
+                  items={stats.devices.map((row) => ({ label: row.label, value: row.views }))}
+                />
+              ) : (
+                <p class="aa-section-note">Nothing in this range.</p>
+              )}
+            </Card>
+          </div>
+        </>
+      ) : (
+        <EmptyState
+          title="Not read yet"
+          description="Nobody has opened this artifact since counting began. Share the link and its readers will show up here."
+        />
+      )}
+      <CountingNote />
+    </section>
   );
 }
 
@@ -1171,12 +1496,17 @@ function SharePanel({ artifact }: { artifact: DashboardArtifactDetail }) {
             />
             <p class="aa-section-note">
               {countOf(share.viewCount, 'view')} on this share ·{' '}
-              {countOf(share.uniqueViewerCount, 'unique viewer')} ·{' '}
+              {countOf(share.uniqueViewerCount, READER_LABEL)} ·{' '}
               {countOf(artifact.lifetimeViews, 'lifetime view')} ·{' '}
               {share.lastViewedAt
                 ? `last viewed ${formatRelativeTime(share.lastViewedAt)}`
                 : 'never viewed'}
             </p>
+            {/* The definition travels with the number, because the number changed meaning: it used
+                to be distinct cookies for as long as they lasted, and is now distinct readers per
+                day. Without this line the label is a smaller lie than "unique viewers" was, but
+                still a lie. */}
+            <p class="aa-hint">Readers are {READERS_DEFINITION}.</p>
             {artifact.previousShareCount > 0 ? (
               <p class="aa-hint">
                 Previously shared — {countOf(artifact.lifetimeViews, 'lifetime view')} across{' '}
@@ -1849,7 +2179,7 @@ function TemplateCoverPlaceholder() {
  * to be counting the whole set; past a cursor the count is of this page and says so. A true
  * running total would need a count the list query does not currently make.
  */
-function pageDescription(shown: number, filters: DashboardHomePageProps['filters']): string {
+function pageDescription(shown: number, filters: DashboardArtifactsPageProps['filters']): string {
   if (filters.nextCursor) {
     return `${formatCount(shown)} shown so far`;
   }
@@ -1859,11 +2189,11 @@ function pageDescription(shown: number, filters: DashboardHomePageProps['filters
 }
 
 /** Whether the reader narrowed the list themselves. `cursor` is paging, not filtering. */
-function filtersApplied(filters: DashboardHomePageProps['filters']): boolean {
+function filtersApplied(filters: DashboardArtifactsPageProps['filters']): boolean {
   return Boolean(filters.q || filters.botId || filters.type);
 }
 
-function dashboardListHref(filters: DashboardHomePageProps['filters']): string {
+function dashboardListHref(filters: DashboardArtifactsPageProps['filters']): string {
   const params = new URLSearchParams();
   if (filters.q) {
     params.set('q', filters.q);
@@ -1878,7 +2208,7 @@ function dashboardListHref(filters: DashboardHomePageProps['filters']): string {
     params.set('cursor', filters.cursor);
   }
   const query = params.toString();
-  return query ? `/dashboard?${query}` : '/dashboard';
+  return query ? `/dashboard/artifacts?${query}` : '/dashboard/artifacts';
 }
 
 function formatByline(artifact: Pick<DashboardArtifactListItem, 'botName' | 'botByline'>): string {

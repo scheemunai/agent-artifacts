@@ -64,7 +64,7 @@ describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the dashboard card list
     const { cookie } = await seed(ctx, ['Alpha report', 'Beta report', 'Gamma report']);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     expect(html).toContain('<ul class="aa-dashboard-card-list" aria-label="Artifacts">');
@@ -81,7 +81,7 @@ describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the dashboard card list
     const { cookie } = await seed(ctx, ['Alpha report']);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     expect(html).toMatch(
@@ -95,7 +95,7 @@ describe('B-N1 / B-N2 / B-N3 · the artifact list adopts the dashboard card list
     const { cookie } = await seed(ctx, ['Same title', 'Same title']);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     // Two artifacts can share a title; the slug is what tells them apart, and it sat at 14px grey
@@ -114,7 +114,7 @@ describe("the pattern's own constraint, held where it is consumed", () => {
     const { cookie } = await seed(ctx, ['Alpha report', 'Beta report']);
 
     const html = await (
-      await ctx.app.request('/dashboard', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/artifacts', { headers: { Cookie: cookie } })
     ).text();
 
     /*

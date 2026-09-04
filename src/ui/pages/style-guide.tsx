@@ -14,6 +14,7 @@ import {
   Avatar,
   Badge,
   type BadgeTone,
+  BarList,
   Button,
   ButtonRow,
   type ButtonVariant,
@@ -32,7 +33,9 @@ import {
   ProductMark,
   Select,
   Skeleton,
+  Sparkline,
   Spinner,
+  StatCard,
   StatusHeading,
   Table,
   Tabs,
@@ -417,6 +420,105 @@ export function StyleGuidePage() {
           </StyleGuideSection>
 
           <StyleGuideSection
+            id="charts"
+            title="Charts and statistics"
+            note="Server-rendered SVG. No chart library, no script, no CSP change — and the states a real account actually starts in are specimens here rather than accidents in production."
+          >
+            <div class="aa-usage">
+              <strong>The data hue is the product accent.</strong> It is the one colour this system
+              spends on emphasis, and an artifact&rsquo;s readership is exactly that. The four
+              status tones stay reserved for state, so a chart never borrows a colour that means
+              something — and the accent clears 3:1 on the raised surface, which is the bar a mark
+              has to meet to be a mark.
+            </div>
+            <div class="aa-grid aa-grid--3">
+              <StatCard
+                label="Readers"
+                value="208"
+                change={12}
+                hint="counted once per artifact per day"
+                chart={
+                  <Sparkline
+                    id="sg-stat-readers"
+                    measure="Readers"
+                    size="sm"
+                    points={risingPoints}
+                  />
+                }
+              />
+              <StatCard label="Views" value="341" change={-6} />
+              <StatCard label="Shared artifacts" value="12" hint="of 27 in total" />
+            </div>
+            <StatCard
+              hero
+              label="Readers · last 24 hours"
+              value="208"
+              change={12}
+              hint="counted once per artifact per day"
+              chart={<Sparkline id="sg-stat-hero" measure="Readers" points={risingPoints} />}
+            />
+
+            <div class="aa-usage">
+              <strong>Zero, one and two points are designed states.</strong> A curve fitted through
+              one reading is a fiction, and a y-axis scaled to a single value implies a trend that
+              has not happened. One point draws a level; an all-zero range rests on the baseline;
+              nothing at all draws the baseline alone. Each reads as &ldquo;so far, this&rdquo;
+              rather than as a broken widget — which is what a new account sees first.
+            </div>
+            <div class="aa-grid aa-grid--2">
+              <Card title="No data at all" description="Nothing recorded yet.">
+                <Sparkline id="sg-spark-empty" measure="Readers" size="sm" points={[]} />
+              </Card>
+              <Card title="One point" description="A level, not a trend.">
+                <Sparkline
+                  id="sg-spark-one"
+                  measure="Readers"
+                  size="sm"
+                  points={[{ label: 'Today', value: 4 }]}
+                />
+              </Card>
+              <Card title="Two points" description="The straight segment it should be.">
+                <Sparkline
+                  id="sg-spark-two"
+                  measure="Readers"
+                  size="sm"
+                  points={[
+                    { label: 'Yesterday', value: 2 },
+                    { label: 'Today', value: 9 },
+                  ]}
+                />
+              </Card>
+              <Card title="A quiet range" description="Recorded, but nothing in this window.">
+                <Sparkline
+                  id="sg-spark-zero"
+                  measure="Readers"
+                  size="sm"
+                  points={[
+                    { label: 'Mon', value: 0 },
+                    { label: 'Tue', value: 0 },
+                    { label: 'Wed', value: 0 },
+                    { label: 'Thu', value: 0 },
+                  ]}
+                />
+              </Card>
+            </div>
+
+            <Card
+              title="Ranked list"
+              description="The bar is the row's own background, so the label keeps full width on a phone."
+            >
+              <BarList
+                measure="Views by artifact"
+                items={[
+                  { label: 'Quarterly recap', value: 142, href: '#charts' },
+                  { label: 'Deploy runbook', value: 67, href: '#charts' },
+                  { label: 'API notes', value: 31, href: '#charts' },
+                ]}
+              />
+            </Card>
+          </StyleGuideSection>
+
+          <StyleGuideSection
             id="markdown"
             title="Markdown artifact theme"
             note="Scoped to .aa-md so public artifact typography cannot leak into app chrome or be affected by it."
@@ -435,6 +537,11 @@ export function StyleGuidePage() {
     </Layout>
   );
 }
+
+/** Specimen data. A shape to look at, not a claim about any real account. */
+const risingPoints = [4, 6, 5, 9, 8, 12, 11, 15, 13, 18, 16, 22, 19, 26, 24, 31, 28, 35].map(
+  (value, index) => ({ label: `Hour ${index + 1}`, value })
+);
 
 function StyleGuideSection({
   id,

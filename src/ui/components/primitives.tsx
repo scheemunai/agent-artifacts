@@ -1628,3 +1628,289 @@ function initials(name: string): string {
   const second = parts.length > 1 ? parts[parts.length - 1]?.[0] : parts[0]?.[1];
   return `${first}${second ?? ''}`.toUpperCase();
 }
+
+/**
+ * ── THE CHART PRIMITIVES ──────────────────────────────────────────────────────────────────────
+ *
+ * SERVER-RENDERED SVG, NO SCRIPT. The app-origin CSP is `script-src 'self'` with no nonce and no
+ * hash mechanism, and a test asserts the product ships zero inline scripts — so a chart library is
+ * not merely discouraged here, it is unreachable without widening the policy. Inline SVG is markup:
+ * `img-src` never engages, `style-src 'unsafe-inline'` already permits the attributes, and the
+ * whole thing costs zero bytes of JavaScript.
+ *
+ * Which is fitting rather than merely convenient. This feature exists because the previous counting
+ * mechanism could only see readers who ran our JavaScript; presenting its results in a chart that
+ * needs JavaScript would be a poor joke.
+ *
+ * Interaction without script: an invisible `<rect>` per bucket carrying a native `<title>`, which
+ * the browser renders as a tooltip and a screen reader announces. Plus a `.sr-only` table of the
+ * same numbers, so the data is readable, selectable and copyable rather than trapped in a picture.
+ */
+
+export interface SparklinePoint {
+  /** Rendered into the hover tooltip and the table — already formatted, never a raw timestamp. */
+  label: string;
+  value: number;
+}
+
+export interface SparklineProps {
+  id: string;
+  points: SparklinePoint[];
+  /** Names the measure in the accessible summary and the table header. */
+  measure: string;
+  /** Shorter charts for a stat tile, taller for the headline. */
+  size?: 'sm' | 'lg';
+}
+
+const SPARKLINE_VIEWBOX = { sm: { width: 320, height: 64 }, lg: { width: 640, height: 168 } };
+const SPARKLINE_PAD = 3;
+
+/**
+ * An area sparkline that stays legible at every size a real account produces — including the three
+ * that a launch actually starts with.
+ *
+ * NO DATA, ONE POINT AND TWO POINTS ARE DESIGNED STATES, not accidents of the maths. A curve fitted
+ * through one reading is a fiction; a y-axis scaled to a single value implies a trend that has not
+ * happened yet. So one point draws a level, an all-zero series draws a resting baseline rather than
+ * a jagged nothing, and an empty series draws the baseline alone. Every one of them reads as
+ * "so far, this" instead of as a broken widget — which matters, because it is the state this ships
+ * in and the first thing every new account will see.
+ */
+export function Sparkline({ id, points, measure, size = 'lg' }: SparklineProps) {
+  const box = SPARKLINE_VIEWBOX[size];
+  const geometry = sparklineGeometry(points, box);
+  const total = points.reduce((sum, point) => sum + point.value, 0);
+  const peak = points.reduce((max, point) => Math.max(max, point.value), 0);
+  const summary =
+    points.length === 0
+      ? `No ${measure} recorded yet.`
+      : `${measure}: ${total} across ${points.length} points, peaking at ${peak}.`;
+
+  return (
+    <figure class={cx('aa-sparkline', size === 'sm' && 'aa-sparkline--sm')} id={id}>
+      <svg
+        class="aa-sparkline__plot"
+        viewBox={`0 0 ${box.width} ${box.height}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={summary}
+      >
+        <defs>
+          <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
+            <stop class="aa-sparkline__fill-top" offset="0%" />
+            <stop class="aa-sparkline__fill-bottom" offset="100%" />
+          </linearGradient>
+        </defs>
+        {geometry.area ? (
+          <path class="aa-sparkline__area" d={geometry.area} fill={`url(#${id}-fill)`} />
+        ) : null}
+        <path class="aa-sparkline__line" d={geometry.line} />
+        {geometry.dot ? (
+          <circle class="aa-sparkline__dot" cx={geometry.dot.x} cy={geometry.dot.y} r="4" />
+        ) : null}
+        {geometry.bands.map((band) => (
+          <rect
+            class="aa-sparkline__band"
+            key={band.label}
+            x={band.x}
+            y="0"
+            width={band.width}
+            height={box.height}
+          >
+            <title>{band.label}</title>
+          </rect>
+        ))}
+      </svg>
+      <table class="sr-only">
+        <caption>{summary}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Period</th>
+            <th scope="col">{measure}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {points.map((point) => (
+            <tr key={point.label}>
+              <th scope="row">{point.label}</th>
+              <td>{point.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
+  );
+}
+
+interface SparklineGeometry {
+  line: string;
+  area: string | null;
+  dot: { x: number; y: number } | null;
+  bands: Array<{ x: number; width: number; label: string }>;
+}
+
+function sparklineGeometry(
+  points: SparklinePoint[],
+  box: { width: number; height: number }
+): SparklineGeometry {
+  const top = SPARKLINE_PAD;
+  const bottom = box.height - SPARKLINE_PAD;
+  const left = SPARKLINE_PAD;
+  const right = box.width - SPARKLINE_PAD;
+
+  // Nothing to draw. A baseline says "this axis exists and is empty", which is a statement; an
+  // absent chart is just a hole in the layout.
+  if (points.length === 0) {
+    return { line: `M ${left} ${bottom} L ${right} ${bottom}`, area: null, dot: null, bands: [] };
+  }
+
+  const peak = points.reduce((max, point) => Math.max(max, point.value), 0);
+  // A flat zero series is a resting baseline. Scaling it to fill the box would draw a full-height
+  // shape out of nothing at all.
+  const scale = (value: number): number =>
+    peak === 0 ? bottom : bottom - (value / peak) * (bottom - top);
+
+  if (points.length === 1) {
+    const y = scale(points[0]?.value ?? 0);
+    return {
+      line: `M ${left} ${y} L ${right} ${y}`,
+      area:
+        peak === 0
+          ? null
+          : `M ${left} ${y} L ${right} ${y} L ${right} ${bottom} L ${left} ${bottom} Z`,
+      // One reading is a level, not a trend — the dot says where the single measurement sits.
+      dot: { x: (left + right) / 2, y },
+      bands: [{ x: left, width: right - left, label: bandLabel(points[0]) }],
+    };
+  }
+
+  const step = (right - left) / (points.length - 1);
+  const coords = points.map((point, index) => [left + index * step, scale(point.value)] as const);
+
+  // Catmull-Rom through the points, converted to cubic béziers. Two points degenerate to the
+  // straight segment they should be, which is why there is no special case for it.
+  let line = `M ${round(coords[0]?.[0])} ${round(coords[0]?.[1])}`;
+  for (let index = 0; index < coords.length - 1; index += 1) {
+    const p0 = coords[index - 1] ?? coords[index];
+    const p1 = coords[index];
+    const p2 = coords[index + 1];
+    const p3 = coords[index + 2] ?? coords[index + 1];
+    if (!(p0 && p1 && p2 && p3)) {
+      continue;
+    }
+    line += ` C ${round(p1[0] + (p2[0] - p0[0]) / 6)} ${round(p1[1] + (p2[1] - p0[1]) / 6)}, ${round(
+      p2[0] - (p3[0] - p1[0]) / 6
+    )} ${round(p2[1] - (p3[1] - p1[1]) / 6)}, ${round(p2[0])} ${round(p2[1])}`;
+  }
+
+  const bandWidth = (right - left) / points.length;
+  return {
+    line,
+    area: peak === 0 ? null : `${line} L ${round(right)} ${bottom} L ${round(left)} ${bottom} Z`,
+    dot: null,
+    bands: points.map((point, index) => ({
+      x: left + index * bandWidth,
+      width: bandWidth,
+      label: bandLabel(point),
+    })),
+  };
+}
+
+function bandLabel(point: SparklinePoint | undefined): string {
+  return point ? `${point.label}: ${point.value}` : '';
+}
+
+function round(value: number | undefined): string {
+  return (value ?? 0).toFixed(1);
+}
+
+export interface StatCardProps {
+  label: string;
+  value: string;
+  /** Percent change against the preceding window. Null when there is nothing to compare against. */
+  change?: number | null | undefined;
+  /** The definition the number carries with it — "counted once per artifact per day". */
+  hint?: string | undefined;
+  chart?: Child | undefined;
+  /** The one figure a view leads with. Exactly one per screen. */
+  hero?: boolean | undefined;
+}
+
+export function StatCard({ label, value, change, hint, chart, hero = false }: StatCardProps) {
+  const delta = change === null || change === undefined || change === 0 ? null : change;
+  const direction = delta === null ? null : delta > 0;
+
+  return (
+    <section class={cx('aa-stat', hero && 'aa-stat--hero')}>
+      <p class="aa-stat__label">{label}</p>
+      <p class="aa-stat__value">
+        {value}
+        {delta === null || direction === null ? null : (
+          <span
+            class={cx(
+              'aa-stat__change',
+              direction ? 'aa-stat__change--up' : 'aa-stat__change--down'
+            )}
+          >
+            {/* The arrow is decorative; the sign in the text carries the meaning, so the two
+                never have to be read together to be understood. */}
+            <span aria-hidden="true">{direction ? '▲' : '▼'}</span>
+            {` ${delta > 0 ? '+' : ''}${delta}%`}
+          </span>
+        )}
+      </p>
+      {hint ? <p class="aa-stat__hint">{hint}</p> : null}
+      {chart ? <div class="aa-stat__chart">{chart}</div> : null}
+    </section>
+  );
+}
+
+export interface BarListItem {
+  label: Child;
+  /** Sorted and scaled against the largest value in the list. */
+  value: number;
+  /** Printed at the end of the row; defaults to the value. */
+  display?: string | undefined;
+  href?: string | undefined;
+}
+
+export interface BarListProps {
+  items: BarListItem[];
+  /** Names the measure for screen readers, since the bars themselves carry no label. */
+  measure: string;
+}
+
+/**
+ * A ranked list where the bar is the row's own background rather than a separate column — so the
+ * label stays left-aligned and readable at 390px, where a real bar column would have nothing left
+ * to give it.
+ */
+export function BarList({ items, measure }: BarListProps) {
+  const peak = items.reduce((max, item) => Math.max(max, item.value), 0);
+
+  return (
+    <ol class="aa-barlist" aria-label={measure}>
+      {items.map((item, index) => {
+        const width = peak === 0 ? 0 : Math.max(2, Math.round((item.value / peak) * 100));
+        const body = (
+          <>
+            <span class="aa-barlist__fill" style={`width:${width}%`} aria-hidden="true" />
+            <span class="aa-barlist__label">{item.label}</span>
+            <span class="aa-barlist__value">{item.display ?? String(item.value)}</span>
+          </>
+        );
+        return (
+          <li class="aa-barlist__row" key={`${index}-${item.value}`}>
+            {item.href ? (
+              <a class="aa-barlist__link" href={item.href}>
+                {body}
+              </a>
+            ) : (
+              <span class="aa-barlist__link">{body}</span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
