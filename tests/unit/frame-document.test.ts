@@ -17,6 +17,12 @@ import {
  */
 const appCss = readFileSync('src/ui/assets/app.css', 'utf8').toLowerCase();
 
+/** The sender as the fragment shell emits it, so both paths are asserted against one string. */
+function heightSender(_html: string): string {
+  const fragmentShell = FrameDocument({ content: '<p>x</p>', title: 't' });
+  return /<script>([\s\S]*?)<\/script>/.exec(fragmentShell)?.[1] ?? '';
+}
+
 describe('full-document detection', () => {
   it('recognises content that already declares its own document', () => {
     for (const content of [
@@ -96,13 +102,35 @@ describe('FrameDocument', () => {
     }
   });
 
-  it('injects nothing at all into a document the agent wrote whole', () => {
-    // The ruling draws the line here: a full document has made every decision this shell would
-    // make, so it stays byte-identical and keeps the 432px clamp as an accepted limit.
+  it('gives a document the agent wrote whole the height sender, and nothing else', () => {
+    // THE ASSERTION THIS REPLACES IS THE DEFECT, WRITTEN DOWN.
+    //
+    // It required a full document to come back byte-identical, "keeping the 432px clamp as an
+    // accepted limit" — and every HTML artifact this product publishes from a template is a full
+    // document, because the templates are. Measured on the shipped product: the recap rendered in a
+    // 746px frame holding 5271px on a phone, so a reader saw 14% of it inside a nested scrollbar on
+    // a page that did not itself scroll.
+    //
+    // The height is not a decision the document makes. It is a measurement only the document can
+    // take and only the embedder can act on, across an origin boundary neither can reach through.
     const full =
       '<!doctype html><html><head><title>Whole</title></head><body><p>Mine</p></body></html>';
+    const html = FrameDocument({ content: full, title: 'ignored' });
 
-    expect(FrameDocument({ content: full, title: 'ignored' })).toBe(full);
+    expect(html.startsWith(full), 'the agent bytes must still lead, unaltered').toBe(true);
+    expect(html.slice(full.length)).toBe(`<script>${heightSender(html)}</script>`);
+    expect(html).toContain("type:'aa:frame-height'");
+    // Exactly one script is added, and it is the audited one. A second would be a new capability.
+    expect(html.slice(full.length).match(/<script/g) ?? []).toHaveLength(1);
+  });
+
+  it('adds nothing to a whole document but the sender — no shell, no style, no request', () => {
+    const full = '<!doctype html><html><head><title>Whole</title></head><body>x</body></html>';
+    const appended = FrameDocument({ content: full, title: 'ignored' }).slice(full.length);
+
+    for (const forbidden of ['<style', '<link', '<meta', 'http://', 'https://']) {
+      expect(appended, `the append reaches for ${forbidden}`).not.toContain(forbidden);
+    }
   });
 
   it('introduces no cross-origin request of its own', () => {
@@ -118,10 +146,16 @@ describe('FrameDocument', () => {
     expect(html).toContain('<style>');
   });
 
-  it('passes a full document straight through, byte for byte', () => {
+  it('leaves the agent bytes of a full document exactly as written', () => {
+    // The half of the old assertion that was always right: this module may append, and may never
+    // reach inside. Nothing is parsed, nothing is rewritten, and the document the agent published
+    // is a literal prefix of what the frame serves.
     const document = '<!doctype html><html lang="en"><body><h1>Mine</h1></body></html>';
+    const html = FrameDocument({ content: document, title: 'Mine' });
 
-    expect(FrameDocument({ content: document, title: 'Mine' })).toBe(document);
+    expect(html.startsWith(document)).toBe(true);
+    expect(html.indexOf(document)).toBe(0);
+    expect(html.replace(/<script>[\s\S]*<\/script>$/, '')).toBe(document);
   });
 
   it('escapes the title without touching the body', () => {

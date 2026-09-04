@@ -368,10 +368,11 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         throw new ServiceError(404, 'not_found', 'Not found');
       }
 
-      // `content.content` is passed through untouched — FrameDocument only supplies the document
-      // shell an agent fragment cannot supply for itself (doctype, charset, viewport, a baseline
-      // that any agent style overrides), and returns a whole document unchanged. Header policy is
-      // exactly what it was.
+      // `content.content` is passed through untouched — FrameDocument supplies the document shell
+      // an agent fragment cannot supply for itself (doctype, charset, viewport, a baseline that any
+      // agent style overrides), and appends the height sender to a whole document rather than
+      // building a shell around it. The agent's bytes are a prefix of the response either way.
+      // Header policy is exactly what it was.
       return context.body(
         FrameDocument({ content: content.content, title: content.title }),
         200,

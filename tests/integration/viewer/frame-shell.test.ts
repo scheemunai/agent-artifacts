@@ -59,7 +59,7 @@ describe('sandboxed artifact frame shell', () => {
     }
   });
 
-  it('leaves an artifact that ships its own document completely alone', async () => {
+  it('appends the height sender to an artifact that ships its own document, and nothing else', async () => {
     const ctx = await createViewerTestContext();
     try {
       const own =
@@ -75,7 +75,18 @@ describe('sandboxed artifact frame shell', () => {
       const response = await ctx.app.request(`/a/${shareId}/frame`);
 
       expect(response.status).toBe(200);
-      expect(await response.text()).toBe(own);
+      const served = await response.text();
+
+      // The agent's bytes lead, unaltered — that half of the old assertion was always right and is
+      // the invariant this module actually owes. What it does not owe is silence about height: the
+      // frame is cross-origin by construction, so without this script the embedder has no way to
+      // learn how tall the document is, and every HTML template this product ships is a whole
+      // document. Measured before the fix: a 5271px recap in a 746px frame on a phone.
+      expect(served.startsWith(own), 'the agent document is no longer a prefix of the frame').toBe(
+        true
+      );
+      expect(served.slice(own.length)).toMatch(/^<script>.*aa:frame-height.*<\/script>$/s);
+      expect(served.slice(own.length).match(/<script/g) ?? []).toHaveLength(1);
     } finally {
       await ctx.cleanup();
     }

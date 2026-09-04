@@ -15,7 +15,7 @@ import {
   MarketingWaitlist,
   MarketingWorksWith,
 } from '../components/marketing.js';
-import { Button, ProductMark } from '../components/primitives.js';
+import { Button } from '../components/primitives.js';
 import { LegalFooterLinks } from './legal.js';
 
 export const HOME_HERO = 'Let your agent show its work.';

@@ -125,9 +125,9 @@ const GUIDE_FURNITURE: Array<{ prefix: string; reason: string }> = [
   {
     prefix: 'aa-swatch',
     reason:
-      'The colour chips the guide paints its palette with. Built as `aa-swatch--${token}` from the ' +
-      'token list, so the family is generated rather than written, and no product surface shows a ' +
-      'palette — the guide IS the consumer, not a stand-in for one.',
+      'The colour chips the guide paints its palette with. The modifier is built from the token ' +
+      'name at render time, so the family is generated rather than written, and no product surface ' +
+      'shows a palette — the guide IS the consumer, not a stand-in for one.',
   },
   {
     prefix: 'aa-token-',

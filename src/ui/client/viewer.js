@@ -28,7 +28,33 @@ const POLL_INTERVAL_MS = 30_000;
 // frame's own CSS height, which meant an honest short answer — a two-line fragment measuring 60px —
 // was silently clamped back up to the box it was trying to shrink.
 const FRAME_MIN_HEIGHT = 48;
-const FRAME_MAX_HEIGHT = 2400;
+/*
+ * THE CEILING IS A CIRCUIT BREAKER, NOT AN OPINION ABOUT DOCUMENT LENGTH.
+ *
+ * What it is for: the number arriving here is computed by a script running on an opaque sandbox
+ * origin, inside content this product did not write. A broken layout can report a height that grows
+ * on every ResizeObserver pass, and a hostile one can simply post `1e9`. Either way the embedder
+ * would set that as an inline pixel height on a real element in the reader's browser and try to lay
+ * it out. The cap is the point past which we stop believing the frame about itself.
+ *
+ * What it is NOT for: deciding how long a document may be. At 2400 it was doing both jobs, and it
+ * was doing the second one badly — the shipped `report-html` measures 3344px at 1440 and 4972px at
+ * 390, and both were clamped into a nested scrollbar the reader had to discover. A cap that fires
+ * on ordinary product output is not a circuit breaker, it is a layout constraint wearing one's
+ * clothes.
+ *
+ * 12000 is chosen to sit far above real documents and far below anything that hurts: a 12000px
+ * iframe is an ordinary long page to lay out and paint, because painting is viewport-bound and
+ * scrolls are virtualised, while the runaway cases this guards against are orders of magnitude
+ * past it. Our own templates carry a tighter design budget of ~3000px, which is a rule about
+ * making good pages and is enforced by nobody but the person writing one.
+ *
+ * Above the cap the old behaviour is exactly what should happen, and it is now the rare case
+ * rather than the normal one: the frame is clamped to 12000px and the document scrolls inside it.
+ * Nothing is hidden and nothing is truncated — the reader scrolls the frame instead of the page for
+ * the remainder. That degradation is deliberate; the alternative is trusting an unbounded number.
+ */
+const FRAME_MAX_HEIGHT = 12_000;
 let contentHash = boot.initialContent?.content_hash || null;
 let contentRequestInFlight = false;
 let stopped = false;
