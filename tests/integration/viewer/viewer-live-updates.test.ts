@@ -3,6 +3,7 @@ import { readClientSource } from '../../support/client-assets.js';
 import {
   createViewerTestContext,
   publishSharedArtifact,
+  readPage,
   shareCounters,
   updateArtifact,
 } from './viewer-test-utils.js';
@@ -25,7 +26,9 @@ describe('viewer live updates, downloads, and OG', () => {
         bot: created.bot,
       });
 
-      const page = await ctx.app.request(`/a/${shareId}`);
+      // Counted here, and only here: the page is where a read now happens, whether or not the
+      // reader's browser will run a line of our JavaScript.
+      const page = await readPage(ctx, shareId);
       const html = await page.text();
       expect(page.status).toBe(200);
       expect(page.headers.get('content-security-policy')).toBe(
@@ -52,6 +55,9 @@ describe('viewer live updates, downloads, and OG', () => {
       expect(latest.status).toBe(200);
       expect(latestBody.version_num).toBe(2);
       expect(latestBody.html).toContain('Version two');
+      // The content endpoint no longer counts: the page already did, and counting here as well
+      // would double every reader whose browser runs the boot script.
+      await ctx.analytics.flush();
       expect(shareCounters(ctx, shareId).view_count).toBe(1);
 
       const unchanged = await ctx.app.request(`/a/${shareId}/content?poll=1`, {
@@ -59,6 +65,7 @@ describe('viewer live updates, downloads, and OG', () => {
       });
       expect(unchanged.status).toBe(304);
       expect(await unchanged.text()).toBe('');
+      await ctx.analytics.flush();
       expect(shareCounters(ctx, shareId).view_count).toBe(1);
 
       const pinned = await ctx.app.request(`/a/${shareId}?v=1`);
@@ -90,6 +97,9 @@ describe('viewer live updates, downloads, and OG', () => {
       expect(og.headers.get('content-type')).toBe('image/png');
       expect(og.headers.get('cache-control')).toBe('public, max-age=3600');
       expect(Array.from(ogBytes.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+      // Downloads and OG cards are not reads of the artifact, and the pinned page re-read is the
+      // same person seconds later. One reader, one view.
+      await ctx.analytics.flush();
       expect(shareCounters(ctx, shareId).view_count).toBe(1);
     } finally {
       await ctx.cleanup();

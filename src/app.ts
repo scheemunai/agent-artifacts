@@ -16,6 +16,7 @@ import { registerPublicRoutes } from './routes/public.js';
 import { registerRobotsAndSandboxGuard } from './routes/robots.js';
 import { registerV1Routes } from './routes/v1/index.js';
 import { createWebRoute } from './routes/web.js';
+import type { AnalyticsRecorder } from './services/analytics.js';
 import { SESSION_COOKIE_NAME } from './services/sessions.js';
 import { analyticsTag, configureAnalytics } from './ui/analytics.js';
 import { isHashedAssetPath } from './ui/assets.js';
@@ -39,6 +40,11 @@ export interface CreateAppOptions {
   logger: Logger;
   db?: DatabaseHandle;
   cloudModule?: CloudModule;
+  /**
+   * Passed in by the server so shutdown can drain it, and by tests so a flush can be awaited.
+   * Omitted, the public routes build their own — no caller is obliged to know it exists.
+   */
+  analytics?: AnalyticsRecorder;
 }
 
 export function createApp({
@@ -46,6 +52,7 @@ export function createApp({
   logger,
   db,
   cloudModule,
+  analytics,
 }: CreateAppOptions): Hono<{ Variables: AppVariables }> {
   const app = new Hono<{ Variables: AppVariables }>();
   // Once, at assembly: every page below reads the resolved tag instead of being handed one.
@@ -128,6 +135,7 @@ export function createApp({
     logger,
     ...(db ? { db } : {}),
     ...(cloudModule ? { cloudModule } : {}),
+    ...(analytics ? { analytics } : {}),
   };
   registerV1Routes(app, routesContext);
   registerPublicRoutes(app, routesContext);

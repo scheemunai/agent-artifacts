@@ -11,6 +11,7 @@ import { runMigrations } from '../../src/db/migrations.js';
 import type { Account, CloudModule } from '../../src/extension/cloud-module.js';
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
 import { skillText } from '../../src/routes/skill.js';
+import { AnalyticsRecorder } from '../../src/services/analytics.js';
 import { HOME_HERO, HOME_REPO_URL, HOME_SUBLINE } from '../../src/ui/pages/home.js';
 import { insertAccount } from '../unit/db-test-utils.js';
 import {
@@ -280,12 +281,19 @@ async function createModeContext({
   }
 
   const resolvedCloudModule = cloudModule ?? createDefaultCloudModule(config);
-  const app = createApp({ config, logger, db, cloudModule: resolvedCloudModule });
+  const analytics = new AnalyticsRecorder({
+    db,
+    baseUrl: config.baseUrl as string,
+    logger,
+    flushIntervalMs: 60_000,
+  });
+  const app = createApp({ config, logger, db, cloudModule: resolvedCloudModule, analytics });
   const ctx: ViewerTestContext = {
     cwd,
     config: config as AppConfig,
     db,
     app,
+    analytics,
     account,
     cloudModule: resolvedCloudModule,
     cleanup: async () => {

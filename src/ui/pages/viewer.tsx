@@ -50,6 +50,7 @@ export function ViewerPage({ model, pinnedVersion }: ViewerPageProps) {
   const boot = {
     shareId: model.shareId,
     contentUrl: `/a/${model.shareId}/content`,
+    pulseUrl: `/a/${model.shareId}/pulse`,
     verifyUrl: `/a/${model.shareId}/verify-password`,
     downloadUrl: `/a/${model.shareId}/download`,
     canonicalUrl: model.canonicalUrl,

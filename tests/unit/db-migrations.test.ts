@@ -4,15 +4,18 @@ import { createMigratedSqliteContext, tableNames } from './db-test-utils.js';
 const expectedTables = [
   '__drizzle_migrations',
   'accounts',
+  'analytics_salts',
   'artifact_versions',
   'artifacts',
   'bots',
   'magic_link_tokens',
   'sessions',
   'share_viewers',
+  'share_visitor_days',
   'shares',
   'stripe_events',
   'templates',
+  'view_events',
 ];
 
 describe('SQLite migrations', () => {

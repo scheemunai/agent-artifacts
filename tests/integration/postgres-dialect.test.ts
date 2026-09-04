@@ -5,12 +5,12 @@ import pino from 'pino';
 import { describe, expect, it } from 'vitest';
 import { initializeDatabase, type PostgresDatabaseHandle } from '../../src/db/client.js';
 import { runMigrations } from '../../src/db/migrations.js';
+import { AnalyticsRecorder, type ViewRequestFacts } from '../../src/services/analytics.js';
 import { AuthService } from '../../src/services/auth.js';
 import { DashboardReadModelService } from '../../src/services/dashboard-read-models.js';
 import { runBackgroundSweeps } from '../../src/services/scheduler.js';
 import { loadStarterTemplates } from '../../src/services/templates.js';
 import { createShareResponse } from '../../src/services/v1.js';
-import { VIEW_THROTTLE_MS, ViewerService } from '../../src/services/viewer.js';
 import {
   createPostgresTestContext,
   insertPostgresShareViewer,
@@ -57,15 +57,18 @@ describePostgres('PostgreSQL dialect support', () => {
       );
       expect(tables.rows.map((row) => row.table_name)).toEqual([
         'accounts',
+        'analytics_salts',
         'artifact_versions',
         'artifacts',
         'bots',
         'magic_link_tokens',
         'sessions',
         'share_viewers',
+        'share_visitor_days',
         'shares',
         'stripe_events',
         'templates',
+        'view_events',
       ]);
       expect(await postgresCountRows({ db }, 'templates')).toBe(STARTER_TEMPLATE_COUNT);
 
@@ -312,7 +315,7 @@ describePostgres('PostgreSQL dialect support', () => {
     }
   });
 
-  it('records racing first views on PostgreSQL without a duplicate-key failure', async () => {
+  it("counts one visitor when replicas race the same reader's first view", async () => {
     const ctx = await createPostgresTestContext();
 
     try {
@@ -322,74 +325,81 @@ describePostgres('PostgreSQL dialect support', () => {
         share: true,
       });
       const shareId = created.share?.shareId as string;
-      const viewerId = '00000000-0000-4000-8000-000000000512';
-      const recordView = (): Promise<boolean> =>
-        // A fresh service per racer, so the in-process throttle cannot mask the database
-        // race that PRD §7.2.8's upsert exists to survive.
-        new ViewerService({
+      const facts: ViewRequestFacts = {
+        method: 'GET',
+        ip: '198.51.100.7',
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/141.0 Safari/537.36',
+        referer: null,
+        secPurpose: null,
+        purpose: null,
+        xMoz: null,
+        secFetchDest: 'document',
+      };
+      const recorderAt = (now: number): AnalyticsRecorder =>
+        // A recorder per racer, standing in for a replica: the in-process throttle is per instance,
+        // so nothing here can mask the database race the visitor-day key exists to survive.
+        new AnalyticsRecorder({
           db: ctx.db,
-          config: ctx.config,
-          cloudModule: ctx.cloudModule,
+          baseUrl: ctx.config.baseUrl,
           logger,
-          now: () => POSTGRES_TEST_NOW,
-        }).recordView({
-          shareId,
-          artifactId: created.artifact.id,
-          accountId: ctx.account.id,
-          viewerId,
+          now: () => now,
         });
 
-      const counted = await Promise.all(Array.from({ length: 8 }, recordView));
-
-      expect(counted.filter(Boolean)).toHaveLength(1);
-      expect(await postgresCountRows(ctx, 'share_viewers', 'share_id = $1', [shareId])).toBe(1);
-      expect(await postgresShareCounters(ctx, shareId)).toEqual({
-        view_count: 1,
-        unique_viewer_count: 1,
-      });
-
-      const ledger = await ctx.db.pool.query<{ view_count: number; last_viewed_at: number }>(
-        'SELECT view_count, last_viewed_at FROM share_viewers WHERE share_id = $1 AND viewer_id = $2',
-        [shareId, viewerId]
-      );
-      expect(ledger.rows[0]).toEqual({ view_count: 1, last_viewed_at: POSTGRES_TEST_NOW });
-
-      // The same viewer past the throttle window counts again without a second ledger row.
-      const laterViewer = new ViewerService({
-        db: ctx.db,
-        config: ctx.config,
-        cloudModule: ctx.cloudModule,
-        logger,
-        now: () => POSTGRES_TEST_NOW + VIEW_THROTTLE_MS,
-      });
-      expect(
-        await laterViewer.recordView({
+      const racers = Array.from({ length: 8 }, () => recorderAt(POSTGRES_TEST_NOW));
+      for (const racer of racers) {
+        racer.capture({
           shareId,
           artifactId: created.artifact.id,
           accountId: ctx.account.id,
-          viewerId,
-        })
-      ).toBe(true);
-      expect(await postgresCountRows(ctx, 'share_viewers', 'share_id = $1', [shareId])).toBe(1);
+          versionNum: 1,
+          isOwner: false,
+          surface: 'page',
+          facts,
+        });
+      }
+      await Promise.all(racers.map((racer) => racer.flush()));
+
+      // Eight page renders really did happen, so eight reads are correct. One PERSON read them.
+      expect(await postgresCountRows(ctx, 'view_events', 'share_id = $1', [shareId])).toBe(8);
+      expect(await postgresCountRows(ctx, 'share_visitor_days', 'share_id = $1', [shareId])).toBe(
+        1
+      );
       expect(await postgresShareCounters(ctx, shareId)).toEqual({
-        view_count: 2,
+        view_count: 8,
         unique_viewer_count: 1,
       });
 
-      // The public reader stays a 200 under the same concurrency.
+      // The next day the same reader is a new visitor: yesterday's salt is gone, so yesterday's
+      // hash cannot be recognised even in principle. That is the privacy property, priced honestly.
+      const tomorrow = recorderAt(POSTGRES_TEST_NOW + POSTGRES_DAY_MS);
+      tomorrow.capture({
+        shareId,
+        artifactId: created.artifact.id,
+        accountId: ctx.account.id,
+        versionNum: 1,
+        isOwner: false,
+        surface: 'page',
+        facts,
+      });
+      await tomorrow.flush();
+
+      expect(await postgresCountRows(ctx, 'share_visitor_days', 'share_id = $1', [shareId])).toBe(
+        2
+      );
+      expect(await postgresShareCounters(ctx, shareId)).toEqual({
+        view_count: 9,
+        unique_viewer_count: 2,
+      });
+
+      // And the public page stays a 200 under the same concurrency, counting through the app.
       const responses = await Promise.all(
         Array.from({ length: 6 }, () =>
-          ctx.app.request(`/a/${shareId}/content`, {
-            headers: { Cookie: 'aa_viewer=00000000-0000-4000-8000-000000000513' },
+          ctx.app.request(`/a/${shareId}`, {
+            headers: { 'user-agent': facts.userAgent, 'x-forwarded-for': '203.0.113.9' },
           })
         )
       );
       expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200, 200, 200]);
-      expect(await postgresCountRows(ctx, 'share_viewers', 'share_id = $1', [shareId])).toBe(2);
-      expect(await postgresShareCounters(ctx, shareId)).toEqual({
-        view_count: 3,
-        unique_viewer_count: 2,
-      });
     } finally {
       await ctx.cleanup();
     }

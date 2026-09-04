@@ -8,9 +8,11 @@ import { initializeDatabase, type SqliteDatabaseHandle } from '../../src/db/clie
 import { runMigrations } from '../../src/db/migrations.js';
 import type { CloudModule } from '../../src/extension/cloud-module.js';
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
+import { AnalyticsRecorder } from '../../src/services/analytics.js';
 
 export interface AuthTestContext {
   app: ReturnType<typeof createApp>;
+  analytics: AnalyticsRecorder;
   config: AppConfig;
   db: SqliteDatabaseHandle;
   logger: Logger;
@@ -48,10 +50,17 @@ export async function createAuthTestContext(
   const db = (await initializeDatabase(config, logger)) as SqliteDatabaseHandle;
   await runMigrations(db, logger);
   const cloudModule = options.cloudModule ?? createDefaultCloudModule(config);
-  const app = createApp({ config, logger, db, cloudModule });
+  const analytics = new AnalyticsRecorder({
+    db,
+    baseUrl: config.baseUrl,
+    logger: logger,
+    flushIntervalMs: 60_000,
+  });
+  const app = createApp({ config, logger, db, cloudModule, analytics });
 
   return {
     app,
+    analytics,
     config,
     db,
     logger,

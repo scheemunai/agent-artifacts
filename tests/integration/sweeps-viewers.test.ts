@@ -89,20 +89,38 @@ describe('share viewer sweep harness', () => {
         last_viewed_at: TEST_NOW - 364 * DAY_MS,
       });
 
-      const returningViewer = await ctx.app.request(`/a/${shareId}/content`, {
-        headers: { Cookie: `aa_viewer=${oldViewer}` },
+      /*
+       * The ledger is RETIRED IN PLACE, not deleted, and this is what that means in practice.
+       *
+       * `share_viewers` and its 365-day sweep stay exactly as they were so the rows that already
+       * exist age out on the schedule they were written under. Nothing writes to it any more: a
+       * read now goes to `view_events` under a salted hash, and the counters on `shares` carry
+       * straight on from the totals the old mechanism left behind. That continuity is the point —
+       * the numbers an owner already saw must not reset.
+       */
+      const read = await ctx.app.request(`/a/${shareId}`, {
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/141.0 Safari/537.36',
+          'x-forwarded-for': '198.51.100.77',
+        },
       });
-      expect(returningViewer.status).toBe(200);
+      expect(read.status).toBe(200);
+      await ctx.analytics.flush();
+
+      // Counted onward from the grandfathered baseline of 4, never restarted from zero.
       expect(getShareRow(ctx, shareId as string)).toMatchObject({
         view_count: 5,
         unique_viewer_count: 4,
       });
+      // And the retired ledger gained nothing: the reader was never given an identity to store.
       expect(
         countRowsWithParams(ctx, 'share_viewers', 'share_id = ? AND viewer_id = ?', [
           shareId,
           oldViewer,
         ])
-      ).toBe(1);
+      ).toBe(0);
+      expect(countRowsWithParams(ctx, 'view_events', 'share_id = ?', [shareId])).toBe(1);
     } finally {
       await ctx.cleanup();
     }

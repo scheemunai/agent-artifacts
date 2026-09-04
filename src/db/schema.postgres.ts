@@ -254,6 +254,87 @@ export const shareViewers = pgTable(
   (table) => [primaryKey({ columns: [table.shareId, table.viewerId] })]
 );
 
+/**
+ * The raw read log — one row per counted read of a shared artifact.
+ *
+ * NO PRIMARY KEY, deliberately. This is an append-only log: a generated id would cost a nanoid per
+ * write and buy nothing, since nothing ever addresses a single row. Reads are ranged scans and the
+ * purge is `WHERE day < ?`.
+ *
+ * NOTHING HERE IDENTIFIES A PERSON. `visitor_hash` is a salted digest whose salt is destroyed
+ * within 48 hours (see `analytics_salts`), so two days of rows cannot be joined and no row can be
+ * reversed to an IP. That is the property that makes the privacy policy's "cookieless" claim true.
+ */
+export const viewEvents = pgTable(
+  'view_events',
+  {
+    shareId: text('share_id')
+      .notNull()
+      .references(() => shares.id, { onDelete: 'cascade' }),
+    artifactId: text('artifact_id').notNull(),
+    accountId: text('account_id').notNull(),
+    at: timestampMs('at').notNull(),
+    /** UTC YYYYMMDD. Grouping and retention both key on it, and neither wants date arithmetic. */
+    day: integer('day').notNull(),
+    visitorHash: text('visitor_hash').notNull(),
+    versionNum: integer('version_num').notNull(),
+    /** Host only, never a path or query string. NULL means direct, or our own page. */
+    referrerHost: text('referrer_host'),
+    device: text('device'),
+    /** Quality signal only: the reader ran our script. It never creates or removes a view. */
+    jsConfirmed: boolean('js_confirmed').notNull().default(false),
+  },
+  (table) => [
+    index('idx_view_events_account_at').on(table.accountId, table.at),
+    index('idx_view_events_artifact_at').on(table.artifactId, table.at),
+    index('idx_view_events_day').on(table.day),
+  ]
+);
+
+/**
+ * One row the first time a hash reads a share on a day — the thing that makes "visitors" countable
+ * without a SELECT-then-INSERT race.
+ *
+ * Two replicas flushing the same reader's first view would both find no row and both increment the
+ * counter. A primary key plus `ON CONFLICT DO NOTHING` makes the question atomic instead: whoever
+ * inserts the row counted the visitor, and the loser's insert is a no-op rather than an error. This
+ * is the same conflict-free shape the cookie ledger it replaces used, minus the cookie.
+ *
+ * Purged on the same 90-day sweep as the events, so it can never outlive the salt that made it.
+ */
+export const shareVisitorDays = pgTable(
+  'share_visitor_days',
+  {
+    shareId: text('share_id')
+      .notNull()
+      .references(() => shares.id, { onDelete: 'cascade' }),
+    day: integer('day').notNull(),
+    visitorHash: text('visitor_hash').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.shareId, table.day, table.visitorHash] }),
+    index('idx_share_visitor_days_day').on(table.day),
+  ]
+);
+
+/**
+ * One secret per UTC day, shared by every process so replicas derive the same hash for the same
+ * reader. Swept at 48 hours by the background scheduler, which is what makes yesterday's hashes
+ * permanently unlinkable to today's.
+ */
+export const analyticsSalts = pgTable(
+  'analytics_salts',
+  {
+    day: integer('day').notNull(),
+    salt: text('salt').notNull(),
+    createdAt: timestampMs('created_at').notNull(),
+  },
+  // A TABLE-level key, not `.primaryKey()` on the column: in SQLite `INTEGER PRIMARY KEY` is an
+  // alias for the rowid and auto-assigns, which is the opposite of what this column is — the day
+  // is supplied, never generated. The constraint form keeps both dialects describing one thing.
+  (table) => [primaryKey({ columns: [table.day] })]
+);
+
 export const templates = pgTable(
   'templates',
   {
@@ -292,5 +373,8 @@ export const postgresSchema = {
   artifactVersions,
   shares,
   shareViewers,
+  viewEvents,
+  shareVisitorDays,
+  analyticsSalts,
   templates,
 };

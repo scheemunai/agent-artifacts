@@ -1,9 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import argon2 from 'argon2';
 import type { Pool, PoolClient } from 'pg';
 import type { AppConfig } from '../config.js';
-import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } from '../db/client.js';
-import type { Account, ArtifactEvent, CloudModule, Plan } from '../extension/cloud-module.js';
+import type { DatabaseHandle, SqliteDatabaseHandle } from '../db/client.js';
+import type { Account, CloudModule, Plan } from '../extension/cloud-module.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { buildOgDescription } from '../lib/og.js';
 import { hmacHex, timingSafeEqualHex } from '../lib/signed-token.js';
@@ -12,11 +11,7 @@ import type { ArtifactType, ShareVisibility } from './artifacts.js';
 import { ServiceError } from './errors.js';
 
 export const SHARE_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
-export const VIEWER_ID_PATTERN = /^[0-9a-f-]{16,50}$/i;
 export const SHARE_ACCESS_TTL_MS = 15 * 60 * 1000;
-export const VIEWER_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
-export const VIEW_THROTTLE_MS = 10 * 1000;
-export const SHARE_VIEWER_UNIQUE_CAP = 50_000;
 
 export interface ViewerServiceOptions {
   db: DatabaseHandle;
@@ -98,13 +93,6 @@ export interface ViewerPasswordSuccess {
   expiresAt: number;
 }
 
-export interface ViewerRecordViewInput {
-  shareId: string;
-  artifactId: string;
-  accountId: string;
-  viewerId: string;
-}
-
 interface ShareContext {
   shareId: string;
   artifactId: string;
@@ -182,17 +170,12 @@ interface VersionRow {
   bot_byline: string | null;
 }
 
-interface ShareViewerRow {
-  last_viewed_at: number;
-}
-
 export class ViewerService {
   private readonly db: DatabaseHandle;
   private readonly config: AppConfig;
   private readonly cloudModule: CloudModule;
   private readonly logger?: Logger;
   private readonly now: () => number;
-  private readonly recentViews = new Map<string, number>();
 
   constructor(options: ViewerServiceOptions) {
     this.db = options.db;
@@ -349,42 +332,6 @@ export class ViewerService {
       title: share.artifact.title,
       bot: share.bot,
     };
-  }
-
-  async recordView(input: ViewerRecordViewInput): Promise<boolean> {
-    const now = this.now();
-    const throttleKey = `${input.shareId}\0${input.viewerId}`;
-    const lastSeen = this.recentViews.get(throttleKey);
-    if (lastSeen !== undefined && now - lastSeen < VIEW_THROTTLE_MS) {
-      return false;
-    }
-
-    const counted =
-      this.db.dialect === 'sqlite'
-        ? this.recordSqliteView(input, now)
-        : await this.recordPostgresView(input, now);
-
-    if (counted) {
-      this.recentViews.set(throttleKey, now);
-      this.pruneRecentViews(now);
-      this.emitEvent({
-        type: 'share.viewed',
-        accountId: input.accountId,
-        artifactId: input.artifactId,
-        shareId: input.shareId,
-        at: new Date(now).toISOString(),
-      });
-    }
-
-    return counted;
-  }
-
-  mintViewerId(): string {
-    return randomUUID();
-  }
-
-  isValidViewerId(value: string | undefined): value is string {
-    return Boolean(value && VIEWER_ID_PATTERN.test(value));
   }
 
   signShareAccessToken(
@@ -639,134 +586,6 @@ export class ViewerService {
     return getPostgresVersionSource(this.db.pool, artifactId, versionNum);
   }
 
-  /**
-   * PRD §7.2.8 write path. Both dialects run the same three conflict-free steps so a
-   * concurrent first view can never raise a duplicate-key error on the public reader:
-   *
-   *   1. Throttled UPDATE — counts a repeat view only when the ledger row is older than
-   *      the throttle window. Matching zero rows means "absent or throttled".
-   *   2. Capped INSERT with `ON CONFLICT DO NOTHING` — adds the ledger row when the share
-   *      is under the unique-viewer cap. A racing writer that already inserted the row
-   *      makes this a no-op instead of a `23505`.
-   *   3. Existence probe — the only way to tell the two zero-row outcomes apart. A row
-   *      means step 1 was throttled (not counted); no row means the share is at the
-   *      unique-viewer cap, which still counts a view but never a new unique viewer.
-   */
-  private recordSqliteView(input: ViewerRecordViewInput, now: number): boolean {
-    const handle = this.db as SqliteDatabaseHandle;
-    const countableBefore = now - VIEW_THROTTLE_MS;
-
-    const transaction = handle.sqlite.transaction(() => {
-      const touched = handle.sqlite
-        .prepare(
-          `
-            UPDATE share_viewers
-            SET view_count = view_count + 1, last_viewed_at = ?
-            WHERE share_id = ? AND viewer_id = ? AND last_viewed_at <= ?
-          `
-        )
-        .run(now, input.shareId, input.viewerId, countableBefore);
-
-      if (touched.changes > 0) {
-        incrementSqliteShareView(handle, input.shareId, now, false);
-        return true;
-      }
-
-      const inserted = handle.sqlite
-        .prepare(
-          `
-            INSERT INTO share_viewers (
-              share_id, viewer_id, first_viewed_at, last_viewed_at, view_count
-            )
-            SELECT ?, ?, ?, ?, 1
-            WHERE (SELECT COUNT(*) FROM share_viewers WHERE share_id = ?) < ?
-            ON CONFLICT (share_id, viewer_id) DO NOTHING
-          `
-        )
-        .run(input.shareId, input.viewerId, now, now, input.shareId, SHARE_VIEWER_UNIQUE_CAP);
-
-      if (inserted.changes > 0) {
-        incrementSqliteShareView(handle, input.shareId, now, true);
-        return true;
-      }
-
-      const existing = handle.sqlite
-        .prepare('SELECT last_viewed_at FROM share_viewers WHERE share_id = ? AND viewer_id = ?')
-        .get(input.shareId, input.viewerId) as ShareViewerRow | undefined;
-
-      if (existing) {
-        return false;
-      }
-
-      incrementSqliteShareView(handle, input.shareId, now, false);
-      return true;
-    });
-
-    return transaction.immediate();
-  }
-
-  private async recordPostgresView(input: ViewerRecordViewInput, now: number): Promise<boolean> {
-    const handle = this.db as PostgresDatabaseHandle;
-    const countableBefore = now - VIEW_THROTTLE_MS;
-    const client = await handle.pool.connect();
-
-    try {
-      await client.query('BEGIN');
-
-      const touched = await client.query(
-        `
-          UPDATE share_viewers
-          SET view_count = view_count + 1, last_viewed_at = $1
-          WHERE share_id = $2 AND viewer_id = $3 AND last_viewed_at <= $4
-        `,
-        [now, input.shareId, input.viewerId, countableBefore]
-      );
-
-      if ((touched.rowCount ?? 0) > 0) {
-        await incrementPostgresShareView(client, input.shareId, now, false);
-        await client.query('COMMIT');
-        return true;
-      }
-
-      const inserted = await client.query(
-        `
-          INSERT INTO share_viewers (
-            share_id, viewer_id, first_viewed_at, last_viewed_at, view_count
-          )
-          SELECT $1::text, $2::text, $3::bigint, $3::bigint, 1
-          WHERE (SELECT COUNT(*) FROM share_viewers WHERE share_id = $1) < $4
-          ON CONFLICT (share_id, viewer_id) DO NOTHING
-        `,
-        [input.shareId, input.viewerId, now, SHARE_VIEWER_UNIQUE_CAP]
-      );
-
-      if ((inserted.rowCount ?? 0) > 0) {
-        await incrementPostgresShareView(client, input.shareId, now, true);
-        await client.query('COMMIT');
-        return true;
-      }
-
-      const existing = await client.query<ShareViewerRow>(
-        'SELECT last_viewed_at FROM share_viewers WHERE share_id = $1 AND viewer_id = $2',
-        [input.shareId, input.viewerId]
-      );
-
-      if ((existing.rowCount ?? 0) > 0) {
-        await client.query('COMMIT');
-        return false;
-      }
-
-      await incrementPostgresShareView(client, input.shareId, now, false);
-      await client.query('COMMIT');
-      return true;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
   private shareAccessMac(
     shareId: string,
     passwordUpdatedAt: number | null,
@@ -828,26 +647,6 @@ export class ViewerService {
 
     const retentionMs = plan.artifact_retention_days * 24 * 60 * 60 * 1000;
     return artifact.updatedAt + retentionMs <= now;
-  }
-
-  private pruneRecentViews(now: number): void {
-    if (this.recentViews.size < 10_000) {
-      return;
-    }
-
-    for (const [key, lastSeen] of this.recentViews) {
-      if (now - lastSeen >= VIEW_THROTTLE_MS) {
-        this.recentViews.delete(key);
-      }
-    }
-  }
-
-  private emitEvent(event: ArtifactEvent): void {
-    try {
-      this.cloudModule.onArtifactEvent?.(event);
-    } catch (error) {
-      this.logger?.warn({ err: error, event_type: event.type }, 'extension.artifact_event_failed');
-    }
   }
 }
 
@@ -990,43 +789,6 @@ async function getPostgresVersionSource(
   );
   const row = result.rows[0];
   return row ? versionSourceFromRow(row) : null;
-}
-
-function incrementSqliteShareView(
-  handle: SqliteDatabaseHandle,
-  shareId: string,
-  now: number,
-  incrementUnique: boolean
-): void {
-  handle.sqlite
-    .prepare(
-      `
-        UPDATE shares
-        SET view_count = view_count + 1,
-            unique_viewer_count = unique_viewer_count + ?,
-            last_viewed_at = ?
-        WHERE id = ?
-      `
-    )
-    .run(incrementUnique ? 1 : 0, now, shareId);
-}
-
-async function incrementPostgresShareView(
-  client: PoolClient,
-  shareId: string,
-  now: number,
-  incrementUnique: boolean
-): Promise<void> {
-  await client.query(
-    `
-      UPDATE shares
-      SET view_count = view_count + 1,
-          unique_viewer_count = unique_viewer_count + $1,
-          last_viewed_at = $2
-      WHERE id = $3
-    `,
-    [incrementUnique ? 1 : 0, now, shareId]
-  );
 }
 
 function artifactFromResolutionRow(row: ShareResolutionRow): ArtifactHead {
