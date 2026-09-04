@@ -333,33 +333,80 @@ function updateScrollRegion(region) {
   }
 }
 
-function bindScrollRegions() {
-  const regions = Array.from(document.querySelectorAll('[data-aa-scroll-region]'));
-  if (regions.length === 0) {
+/**
+ * IT HAS TO REACH CONTENT THAT ARRIVES LATER, WHICH IS THE SAME LESSON `bindDialogs` RECORDS.
+ *
+ * This collected `querySelectorAll` once and stopped, which was correct for the surfaces that
+ * existed when it was written — every table, copy block and API sample is server-rendered at load.
+ * Markdown tables are not: the viewer replaces the whole prose column on every live update, so a
+ * table that arrived from a poll had a scroll container, a fade rule and a hint, and nothing
+ * measuring any of them. The reader would have got a clipped table with no fade and no way to know
+ * it scrolled — the exact defect the affordance exists to prevent, reappearing an update later.
+ *
+ * `bound` is the guard that makes rescanning free: a region already wired is skipped, so the
+ * observer can be as eager as it likes without stacking listeners on the same element.
+ */
+const boundScrollRegions = new WeakSet();
+let scrollRegionResizeObserver = null;
+
+function bindScrollRegion(region) {
+  if (boundScrollRegions.has(region)) {
     return;
   }
+  boundScrollRegions.add(region);
 
-  for (const region of regions) {
-    updateScrollRegion(region);
-    region.addEventListener('scroll', () => updateScrollRegion(region), { passive: true });
-  }
+  updateScrollRegion(region);
+  region.addEventListener('scroll', () => updateScrollRegion(region), { passive: true });
 
   // Rotating a phone, opening the drawer or loading a webfont all change the answer.
+  if (scrollRegionResizeObserver) {
+    scrollRegionResizeObserver.observe(region);
+  }
+}
+
+function scanScrollRegions(root) {
+  const scope = root instanceof Element ? root : document;
+  if (scope instanceof Element && scope.matches('[data-aa-scroll-region]')) {
+    bindScrollRegion(scope);
+  }
+  for (const region of scope.querySelectorAll('[data-aa-scroll-region]')) {
+    bindScrollRegion(region);
+  }
+}
+
+function bindScrollRegions() {
   if (typeof ResizeObserver === 'function') {
-    const observer = new ResizeObserver(() => {
-      for (const region of regions) {
-        updateScrollRegion(region);
+    scrollRegionResizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        updateScrollRegion(entry.target);
       }
     });
-    for (const region of regions) {
-      observer.observe(region);
-    }
   } else {
+    // No ResizeObserver: `scanScrollRegions` only wires regions it has not seen, so remeasuring
+    // the ones it has is a separate pass rather than a side effect of scanning.
     window.addEventListener('resize', () => {
-      for (const region of regions) {
+      for (const region of document.querySelectorAll('[data-aa-scroll-region]')) {
         updateScrollRegion(region);
       }
+      scanScrollRegions(document);
     });
+  }
+
+  scanScrollRegions(document);
+
+  // The delegated equivalent for a thing that cannot be delegated: `scroll` does not bubble and a
+  // region has to be measured before it is touched, so the listener cannot wait for an event on
+  // it. Watching for the element instead is the same contract every other behaviour here gets.
+  if (typeof MutationObserver === 'function') {
+    new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node instanceof Element) {
+            scanScrollRegions(node);
+          }
+        }
+      }
+    }).observe(document.documentElement, { childList: true, subtree: true });
   }
 }
 
