@@ -273,7 +273,6 @@ describe('A-31 · the marketing page runs on three measures, not four', () => {
       [
         'aa-marketing-shell',
         'aa-marketing-artifact',
-        'aa-marketing-api-wrap',
         'aa-marketing-features',
         'aa-marketing-origin',
         'aa-marketing-terms',
@@ -289,11 +288,7 @@ describe('A-31 · the marketing page runs on three measures, not four', () => {
     expect(marketingRule('aa-marketing-artifact')).toBe('--width-aa-panel');
     expect(marketingRule('aa-marketing-terms')).toBe('--width-aa-panel');
 
-    for (const reading of [
-      'aa-marketing-api-wrap',
-      'aa-marketing-features',
-      'aa-marketing-origin',
-    ]) {
+    for (const reading of ['aa-marketing-features', 'aa-marketing-origin']) {
       expect(marketingRule(reading)).toBe('--width-aa-measure');
     }
   });

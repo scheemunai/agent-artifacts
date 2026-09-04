@@ -319,7 +319,6 @@ export function StyleGuidePage() {
             {noticeSection()}
             {destructiveSection()}
             {cardTableSection()}
-            {listRowSection()}
             {dangerCardSection()}
             {feedbackSection()}
             {appShellSection()}
@@ -643,24 +642,15 @@ function marketingComponentsSection() {
           </MarketingExampleCard>
         </div>
 
-        <div class="aa-marketing-api-wrap">
-          <MarketingApiBlock id="style-guide-marketing-api" label="The whole API">
-            POST agentartifact.ai/v1/artifacts{`\n`}
-            {'{ '}
-            <span class="aa-marketing-api__key">"title"</span>:{' '}
-            <span class="aa-marketing-api__string">"Weekly Ops Report"</span>,{' '}
-            <span class="aa-marketing-api__key">"content"</span>:{' '}
-            <span class="aa-marketing-api__string">"# Monday..."</span>
-            {' }'}
-            {`\n`}
-            <span class="aa-marketing-api__url">
-              returns https://agentartifact.ai/a/x7Kd2mQpLbfE3nWvY8tRZA
-            </span>
-          </MarketingApiBlock>
-          <p class="aa-marketing-api__caption">
-            That's the whole API. Your agent already knows how to use it.
-          </p>
-        </div>
+        {/* Plain text, because that is what `home.tsx` passes. This specimen used to hand-write
+            syntax-coloured spans and a caption wrapper that no page has ever rendered, so the guide
+            showed a prettier API block than the product ships — and the five classes behind it were
+            defined in the stylesheet and consumed only here. A specimen that flatters is worse than
+            no specimen: it is the reference somebody checks against. */}
+        <MarketingApiBlock id="style-guide-marketing-api" label="Prompt">
+          {`Create a skill so you can publish to Agent Artifacts.\n`}
+          {`Read https://agentartifact.ai/skill.md and set it up.`}
+        </MarketingApiBlock>
 
         <div class="aa-marketing-features">
           <MarketingFeatureLine>
@@ -1034,106 +1024,6 @@ function badgeSection() {
     </Card>
   );
 }
-
-/**
- * The specimen carries the product's RICHEST row, not its politest one.
- *
- * It used to show a single "Shared" badge and a bare title. The artifacts list renders a slug and
- * byline under the title and up to three badges beside it — type, share state, and an expiry — and
- * that difference is not cosmetic: the wide badge set is the whole mechanism of V4-N1, so for two
- * rounds the guide demonstrated a row that could not exhibit the defect the real one had. A
- * specimen thinner than production is a contract for a component nobody ships.
- */
-function listRowSection() {
-  const rows: Array<{
-    state: string;
-    title: string;
-    slug: string;
-    byline: string;
-    badges: Array<[BadgeTone, string]>;
-    meta: string;
-  }> = [
-    {
-      state: 'default',
-      title: 'Weekly Ops Report',
-      slug: 'weekly-ops-report',
-      byline: 'by Atlas',
-      badges: [
-        ['neutral', 'md'],
-        ['accent', 'Shared · password'],
-        ['warn', 'expires in 3d'],
-      ],
-      meta: 'updated {relative} · 128 views',
-    },
-    {
-      state: 'hover',
-      title: 'Q3 revenue breakdown',
-      slug: 'q3-revenue-breakdown',
-      byline: 'by Atlas',
-      badges: [
-        ['neutral', 'html'],
-        ['warn', 'Link revoked'],
-      ],
-      meta: 'updated {relative} · 3 views',
-    },
-    {
-      state: 'focus',
-      title: 'Customer interview notes',
-      slug: 'customer-interview-notes',
-      byline: 'by Atlas',
-      badges: [
-        ['neutral', 'md'],
-        ['neutral', 'private'],
-      ],
-      meta: 'updated {relative} · 0 views',
-    },
-  ];
-
-  return (
-    <Card
-      title="List row"
-      description="The row pattern for every list of artifacts: aligned columns, one target, accent spent only on the row being pointed at."
-    >
-      <div class="aa-list">
-        {rows.map((row) => (
-          <div class="aa-list-row" data-aa-state={row.state === 'default' ? undefined : row.state}>
-            <span class="aa-list-row__title">
-              <a class="aa-list-row__link" href="/style-guide#components">
-                {row.title}
-              </a>
-              <br />
-              <span class="aa-hint">
-                <code>{row.slug}</code> · {row.byline}
-              </span>
-            </span>
-            <ButtonRow>
-              {row.badges.map(([tone, label]) => (
-                <Badge tone={tone}>{label}</Badge>
-              ))}
-            </ButtonRow>
-            <span class="aa-list-row__meta">{row.meta}</span>
-          </div>
-        ))}
-      </div>
-      <p class="aa-hint">
-        <code>.aa-list</code> owns the columns and each <code>.aa-list-row</code> borrows them with{' '}
-        <code>subgrid</code>, so badges and meta line up down the whole list instead of every row
-        sizing itself. Below 760px — the same width where the desktop nav gives way to the drawer,
-        so the list and the chrome agree on what compact means — the row becomes a single column and
-        the title, the badges and the meta each take a line. Anything sharing a line was the defect,
-        twice: the badge track takes its max-content while the other track may collapse to nothing,
-        and <code>.aa-list-row__meta</code> is <code>white-space: nowrap</code>, so its text could
-        not shrink with the track it was given and overhung the page instead. When the title was the
-        starved one it did shrink — and <code>overflow-wrap: anywhere</code> shredded it a character
-        per line. Alignment buys nothing when the row cannot fit the things being aligned. Titles
-        are ink: a list where every title is coloured has no emphasis left for the one under the
-        cursor, so accent is spent on hover and focus only. The whole row is the click target via a
-        stretched link, and the row — not the invisible overlay — is what shows the focus ring.
-      </p>
-    </Card>
-  );
-}
-
 function dangerCardSection() {
   return (
     <Card
@@ -1765,9 +1655,26 @@ function MarkdownSample() {
       <h3 id="markdown-sample-title">Weekly Ops Report</h3>
       <p>
         This is the public artifact theme: a centered content column, readable rhythm, and focused
-        typographic hierarchy. Links use the <a href="/style-guide">single accent</a> and underline
-        on hover.
+        typographic hierarchy. Links carry the <a href="/style-guide">single accent</a> and a
+        persistent underline — the accent alone measures 2.36:1 against body ink, under WCAG 1.4.1's
+        3:1 floor for colour used as the only cue.
       </p>
+      {/* The full ladder, because markdown has six levels and this scope used to style four. An h5
+          and an h6 were 17px at weight 400 — the same as the paragraph above them. */}
+      <h4>Heading level four</h4>
+      <h5>Heading level five</h5>
+      <h6>Heading level six</h6>
+      <p>
+        Body text after the sixth level, so every rung can be compared against the one below it. A
+        highlight reads as <mark>emphasis in the palette</mark> rather than as the browser's yellow,
+        and a caption is not a paragraph.
+      </p>
+      <dl>
+        <dt>Artifact</dt>
+        <dd>A published, versioned page an agent hands to a human.</dd>
+        <dt>Template</dt>
+        <dd>An example an agent rewrites, or a slotted document it fills in.</dd>
+      </dl>
       <h2>Highlights</h2>
       <ul>
         <li>Shipped the setup wizard placeholder and style guide contract.</li>
