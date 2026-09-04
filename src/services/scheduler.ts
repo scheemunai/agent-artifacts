@@ -2,11 +2,23 @@ import type { AppConfig } from '../config.js';
 import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } from '../db/client.js';
 import type { Account, CloudModule } from '../extension/cloud-module.js';
 import type { Logger } from '../logger.js';
+import { dayOf } from './analytics.js';
 import { ArtifactService } from './artifacts.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_SWEEP_INTERVAL_MS = DAY_MS;
 const SHARE_VIEWER_RETENTION_MS = 365 * DAY_MS;
+/**
+ * How long a raw read stays readable. Ninety days is what the ranges the dashboard offers need
+ * (24h / 7d / 30d all sit inside it), which is what lets every figure be counted from raw rows
+ * instead of reconciled against a rollup.
+ */
+const VIEW_EVENT_RETENTION_DAYS = 90;
+/**
+ * A salt outlives its day only long enough to bridge the rotation boundary. Two days is the
+ * ceiling on how far back any hash could be re-derived, and it is the whole privacy claim.
+ */
+const ANALYTICS_SALT_RETENTION_DAYS = 2;
 
 export type Clock = () => number;
 
@@ -15,6 +27,8 @@ export interface BackgroundSweepCounts {
   expiredSessionsDeleted: number;
   magicLinkTokensDeleted: number;
   shareViewersPruned: number;
+  viewEventsPurged: number;
+  analyticsSaltsPurged: number;
   retentionArtifactsSoftDeleted: number;
   retentionSharesRevoked: number;
 }
@@ -128,6 +142,10 @@ export async function runBackgroundSweeps(
   const shareViewersPruned = await pruneShareViewers(options.db, shareViewerCutoff);
   logSweepJob(options.logger, 'share_viewers_retention', shareViewersPruned);
 
+  const analytics = await purgeAnalytics(options.db, now);
+  logSweepJob(options.logger, 'view_events_retention', analytics.viewEventsPurged);
+  logSweepJob(options.logger, 'analytics_salts_retention', analytics.analyticsSaltsPurged);
+
   const retention = await softDeleteArtifactsPastPlanRetention(options, now);
   options.logger.info(
     {
@@ -143,7 +161,41 @@ export async function runBackgroundSweeps(
     expiredSessionsDeleted,
     magicLinkTokensDeleted,
     shareViewersPruned,
+    ...analytics,
     ...retention,
+  };
+}
+
+/**
+ * Drops raw reads past retention and every salt old enough to be unnecessary.
+ *
+ * The visitor-day ledger goes on the same cutoff as the events, deliberately: it exists only to
+ * answer "was this reader new that day", and a row whose day has been purged can no longer be
+ * asked about. Leaving it would keep a hash alive past the events it describes.
+ */
+async function purgeAnalytics(
+  db: DatabaseHandle,
+  now: number
+): Promise<{ viewEventsPurged: number; analyticsSaltsPurged: number }> {
+  const eventCutoff = dayOf(now - VIEW_EVENT_RETENTION_DAYS * DAY_MS);
+  const saltCutoff = dayOf(now - ANALYTICS_SALT_RETENTION_DAYS * DAY_MS);
+
+  if (db.dialect === 'sqlite') {
+    const events = db.sqlite.prepare('DELETE FROM view_events WHERE day < ?').run(eventCutoff);
+    db.sqlite.prepare('DELETE FROM share_visitor_days WHERE day < ?').run(eventCutoff);
+    const salts = db.sqlite.prepare('DELETE FROM analytics_salts WHERE day < ?').run(saltCutoff);
+    return {
+      viewEventsPurged: Number(events.changes),
+      analyticsSaltsPurged: Number(salts.changes),
+    };
+  }
+
+  const events = await db.pool.query('DELETE FROM view_events WHERE day < $1', [eventCutoff]);
+  await db.pool.query('DELETE FROM share_visitor_days WHERE day < $1', [eventCutoff]);
+  const salts = await db.pool.query('DELETE FROM analytics_salts WHERE day < $1', [saltCutoff]);
+  return {
+    viewEventsPurged: events.rowCount ?? 0,
+    analyticsSaltsPurged: salts.rowCount ?? 0,
   };
 }
 

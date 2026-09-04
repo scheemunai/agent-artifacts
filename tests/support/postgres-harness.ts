@@ -15,6 +15,7 @@ import type { Account, CloudModule, Plan } from '../../src/extension/cloud-modul
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
 import { globalRateLimitStore } from '../../src/lib/rate-limit.js';
 import type { Logger } from '../../src/logger.js';
+import { AnalyticsRecorder } from '../../src/services/analytics.js';
 import {
   ArtifactService,
   type ArtifactType,
@@ -30,6 +31,7 @@ export interface PostgresTestContext {
   config: AppConfig;
   db: PostgresDatabaseHandle;
   app: ReturnType<typeof createApp>;
+  analytics: AnalyticsRecorder;
   account: Account;
   bot: BotRecord;
   apiKey: string;
@@ -121,13 +123,20 @@ export async function createPostgresTestContext(
     'Postgres Regression Bot',
     'Dialect test bot'
   );
-  const app = createApp({ config, logger, db, cloudModule });
+  const analytics = new AnalyticsRecorder({
+    db,
+    baseUrl: config.baseUrl,
+    logger: logger,
+    flushIntervalMs: 60_000,
+  });
+  const app = createApp({ config, logger, db, cloudModule, analytics });
 
   return {
     cwd,
     config,
     db,
     app,
+    analytics,
     account,
     bot,
     apiKey,

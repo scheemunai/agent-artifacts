@@ -10,6 +10,7 @@ import { initializeDatabase, type SqliteDatabaseHandle } from '../../../src/db/c
 import { runMigrations } from '../../../src/db/migrations.js';
 import type { Account, CloudModule, Plan } from '../../../src/extension/cloud-module.js';
 import { createDefaultCloudModule } from '../../../src/extension/default-module.js';
+import { AnalyticsRecorder } from '../../../src/services/analytics.js';
 import {
   ArtifactService,
   type ArtifactType,
@@ -23,6 +24,7 @@ export interface ViewerTestContext {
   config: AppConfig;
   db: SqliteDatabaseHandle;
   app: ReturnType<typeof createApp>;
+  analytics: AnalyticsRecorder;
   account: Account;
   cloudModule: CloudModule;
   cleanup(): Promise<void>;
@@ -33,6 +35,8 @@ export interface CreateViewerContextOptions {
   sandboxOrigin?: string;
   rateLimitsDisabled?: boolean;
   cloudModule?: CloudModule;
+  /** Hops to trust in `x-forwarded-for`, so a test can present more than one reader. */
+  trustProxy?: number;
 }
 
 export async function createViewerTestContext(
@@ -46,6 +50,10 @@ export async function createViewerTestContext(
       AA_SQLITE_PATH: './data/app.db',
       LOG_LEVEL: 'error',
       AA_RATE_LIMITS_DISABLED: options.rateLimitsDisabled === false ? 'false' : 'true',
+      // OFF by default, because `AA_TRUST_PROXY=0` is the shipped default and one suite asserts
+      // that spoofed forwarding headers are ignored under it. A test that needs to present
+      // distinct readers opts in.
+      AA_TRUST_PROXY: String(options.trustProxy ?? 0),
       ...(options.sandboxOrigin ? { SANDBOX_ORIGIN: options.sandboxOrigin } : {}),
     },
     { cwd }
@@ -60,13 +68,20 @@ export async function createViewerTestContext(
   insertAccount(db, account);
 
   const cloudModule = options.cloudModule ?? createDefaultCloudModule(config);
-  const app = createApp({ config, logger: pino({ enabled: false }), db, cloudModule });
+  const analytics = new AnalyticsRecorder({
+    db,
+    baseUrl: config.baseUrl,
+    logger: pino({ enabled: false }),
+    flushIntervalMs: 60_000,
+  });
+  const app = createApp({ config, logger: pino({ enabled: false }), db, cloudModule, analytics });
 
   return {
     cwd,
     config,
     db,
     app,
+    analytics,
     account,
     cloudModule,
     cleanup: async () => {
@@ -178,6 +193,58 @@ export async function updateArtifact(
     title: input.title,
     content: input.content,
   });
+}
+
+/** A real browser, because a request without one is now correctly refused as a script. */
+export const READER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
+
+export interface ReadPageOptions {
+  ua?: string;
+  ip?: string;
+  query?: string;
+  headers?: Record<string, string>;
+}
+
+/**
+ * Read the page the way a person does, and settle the write before asserting.
+ *
+ * Capture is deliberately not awaited by the response — that is the latency property the whole
+ * design turns on — so a test that asserts a counter straight after the request is asserting
+ * against a race. Flushing here makes the test honest about what it is measuring.
+ */
+export async function readPage(
+  ctx: ViewerTestContext,
+  shareId: string,
+  options: ReadPageOptions = {}
+): Promise<Response> {
+  const response = await ctx.app.request(`/a/${shareId}${options.query ?? ''}`, {
+    headers: {
+      'user-agent': options.ua ?? READER_UA,
+      'x-forwarded-for': options.ip ?? '198.51.100.42',
+      ...options.headers,
+    },
+  });
+  await ctx.analytics.flush();
+  return response;
+}
+
+export function viewEvents(
+  ctx: ViewerTestContext,
+  shareId: string
+): Array<{
+  visitor_hash: string;
+  version_num: number;
+  referrer_host: string | null;
+  device: string | null;
+  js_confirmed: number;
+  day: number;
+}> {
+  return ctx.db.sqlite
+    .prepare(
+      'SELECT visitor_hash, version_num, referrer_host, device, js_confirmed, day FROM view_events WHERE share_id = ? ORDER BY at'
+    )
+    .all(shareId) as never;
 }
 
 export function shareCounters(

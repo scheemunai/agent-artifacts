@@ -39,6 +39,7 @@ async function applyForwardMigrations(handle: DatabaseHandle, logger: Logger): P
   await ensureShareVisibility(handle, logger);
   await ensureBillingColumns(handle, logger);
   await ensureStripeEventsTable(handle, logger);
+  await ensureAnalyticsTables(handle, logger);
 }
 
 /**
@@ -215,6 +216,122 @@ async function ensureStripeEventsTable(handle: DatabaseHandle, logger: Logger): 
     'database.forward_migration.applied'
   );
 }
+
+/**
+ * The analytics store: the raw read log and the daily hashing salts.
+ *
+ * Created here rather than through `db:generate` for the reason `ensureStripeEventsTable` states —
+ * this repo keeps one frozen `0000_init` snapshot and puts every later change in a forward
+ * migration, because regenerating the snapshot rewrites a migration deployed databases have already
+ * applied. `CREATE TABLE IF NOT EXISTS` makes it idempotent on every boot.
+ *
+ * NOTE WHAT IS NOT HERE: no backfill. There is no way to reconstruct who read an artifact before we
+ * started recording it, so the time series legitimately begins at the cutover. The lifetime totals
+ * on `shares` carry the pre-history instead, and keep being incremented — see `AnalyticsRecorder`.
+ */
+async function ensureAnalyticsTables(handle: DatabaseHandle, logger: Logger): Promise<void> {
+  if (handle.dialect === 'sqlite') {
+    handle.sqlite
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS view_events (
+           share_id TEXT NOT NULL REFERENCES shares(id) ON DELETE CASCADE,
+           artifact_id TEXT NOT NULL,
+           account_id TEXT NOT NULL,
+           at INTEGER NOT NULL,
+           day INTEGER NOT NULL,
+           visitor_hash TEXT NOT NULL,
+           version_num INTEGER NOT NULL,
+           referrer_host TEXT,
+           device TEXT,
+           js_confirmed INTEGER NOT NULL DEFAULT 0
+         )`
+      )
+      .run();
+    for (const [name, columns] of VIEW_EVENT_INDEXES) {
+      handle.sqlite.prepare(`CREATE INDEX IF NOT EXISTS ${name} ON view_events (${columns})`).run();
+    }
+    handle.sqlite
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS share_visitor_days (
+           share_id TEXT NOT NULL REFERENCES shares(id) ON DELETE CASCADE,
+           day INTEGER NOT NULL,
+           visitor_hash TEXT NOT NULL,
+           PRIMARY KEY (share_id, day, visitor_hash)
+         )`
+      )
+      .run();
+    handle.sqlite
+      .prepare('CREATE INDEX IF NOT EXISTS idx_share_visitor_days_day ON share_visitor_days (day)')
+      .run();
+    handle.sqlite
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS analytics_salts (
+           day INTEGER NOT NULL,
+           salt TEXT NOT NULL,
+           created_at INTEGER NOT NULL,
+           PRIMARY KEY (day)
+         )`
+      )
+      .run();
+    logger.info(
+      { dialect: handle.dialect, migration: 'analytics' },
+      'database.forward_migration.applied'
+    );
+    return;
+  }
+
+  await handle.pool.query(
+    `CREATE TABLE IF NOT EXISTS view_events (
+       share_id TEXT NOT NULL REFERENCES shares(id) ON DELETE CASCADE,
+       artifact_id TEXT NOT NULL,
+       account_id TEXT NOT NULL,
+       at BIGINT NOT NULL,
+       day INTEGER NOT NULL,
+       visitor_hash TEXT NOT NULL,
+       version_num INTEGER NOT NULL,
+       referrer_host TEXT,
+       device TEXT,
+       js_confirmed BOOLEAN NOT NULL DEFAULT FALSE
+     )`
+  );
+  for (const [name, columns] of VIEW_EVENT_INDEXES) {
+    await handle.pool.query(`CREATE INDEX IF NOT EXISTS ${name} ON view_events (${columns})`);
+  }
+  await handle.pool.query(
+    `CREATE TABLE IF NOT EXISTS share_visitor_days (
+       share_id TEXT NOT NULL REFERENCES shares(id) ON DELETE CASCADE,
+       day INTEGER NOT NULL,
+       visitor_hash TEXT NOT NULL,
+       PRIMARY KEY (share_id, day, visitor_hash)
+     )`
+  );
+  await handle.pool.query(
+    'CREATE INDEX IF NOT EXISTS idx_share_visitor_days_day ON share_visitor_days (day)'
+  );
+  await handle.pool.query(
+    `CREATE TABLE IF NOT EXISTS analytics_salts (
+       day INTEGER NOT NULL,
+       salt TEXT NOT NULL,
+       created_at BIGINT NOT NULL,
+       PRIMARY KEY (day)
+     )`
+  );
+  logger.info(
+    { dialect: handle.dialect, migration: 'analytics' },
+    'database.forward_migration.applied'
+  );
+}
+
+/**
+ * Three, and each one earns its write cost on a table written once per read: the stats home ranges
+ * by account, the artifact panel by artifact, and the retention sweep deletes by day alone.
+ * Uniqueness needs no index here — `share_visitor_days` answers it from its primary key.
+ */
+const VIEW_EVENT_INDEXES: ReadonlyArray<readonly [string, string]> = [
+  ['idx_view_events_account_at', 'account_id, at'],
+  ['idx_view_events_artifact_at', 'artifact_id, at'],
+  ['idx_view_events_day', 'day'],
+];
 
 /**
  * Adds `shares.visibility` and — ON THE ADD, ONCE — records what every existing share already is.

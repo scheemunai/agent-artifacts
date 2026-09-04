@@ -5,6 +5,7 @@ import { initializeDatabase } from './db/client.js';
 import { runMigrations } from './db/migrations.js';
 import { loadCloudModule } from './extension/loader.js';
 import { createLogger } from './logger.js';
+import { AnalyticsRecorder } from './services/analytics.js';
 import {
   heroArtifactPollUrl,
   startLiveArtifactMetaRefresh,
@@ -28,7 +29,31 @@ async function main(): Promise<void> {
     startLiveArtifactMetaRefresh(heroPollUrl, { logger });
   }
 
-  const app = createApp({ config, logger, db: database, cloudModule });
+  /*
+   * Owned here rather than inside the routes so shutdown can drain it. Reads live in memory for up
+   * to one flush interval; losing a second of them to a crash is an acceptable price for never
+   * making a reader wait on a write, but losing them to an ORDERLY restart is just a bug.
+   */
+  const analytics = new AnalyticsRecorder({
+    db: database,
+    baseUrl: config.baseUrl,
+    logger,
+    onView: (view) =>
+      cloudModule.onArtifactEvent?.({
+        type: 'share.viewed',
+        accountId: view.accountId,
+        artifactId: view.artifactId,
+        shareId: view.shareId,
+        at: new Date(view.at).toISOString(),
+      }),
+  });
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.once(signal, () => {
+      void analytics.stop().finally(() => process.exit(0));
+    });
+  }
+
+  const app = createApp({ config, logger, db: database, cloudModule, analytics });
   serve(
     {
       fetch: app.fetch,

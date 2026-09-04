@@ -19,14 +19,10 @@ import {
   retryAfterResponseHeaders,
 } from '../lib/rate-limit.js';
 import type { Logger } from '../logger.js';
+import { AnalyticsRecorder, readViewRequestFacts } from '../services/analytics.js';
 import { ServiceError, toErrorEnvelope } from '../services/errors.js';
 import { SessionService } from '../services/sessions.js';
-import {
-  SHARE_ID_PATTERN,
-  VIEWER_COOKIE_MAX_AGE_SECONDS,
-  type ViewerContentResult,
-  ViewerService,
-} from '../services/viewer.js';
+import { SHARE_ID_PATTERN, type ViewerContentResult, ViewerService } from '../services/viewer.js';
 import { TERMINAL_CAUSE_COPY } from '../ui/copy/terminal-copy.js';
 import { FrameDocument, FrameTerminalDocument } from '../ui/pages/frame-document.js';
 import {
@@ -41,6 +37,8 @@ export interface PublicRoutesContext {
   logger: Logger;
   db?: DatabaseHandle;
   cloudModule?: CloudModule;
+  /** Injected by tests so a flush can be awaited; created here in production. */
+  analytics?: AnalyticsRecorder;
 }
 
 interface PublicRouteVariables {
@@ -65,6 +63,23 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         logger: ctx.logger,
       })
     : null;
+  const analytics =
+    ctx.analytics ??
+    (ctx.db
+      ? new AnalyticsRecorder({
+          db: ctx.db,
+          baseUrl: ctx.config.baseUrl,
+          logger: ctx.logger,
+          onView: (view) =>
+            cloudModule.onArtifactEvent?.({
+              type: 'share.viewed',
+              accountId: view.accountId,
+              artifactId: view.artifactId,
+              shareId: view.shareId,
+              at: new Date(view.at).toISOString(),
+            }),
+        })
+      : null);
   const rateLimitStore = new InMemoryRateLimitStore();
   // The dashboard's own session service, reused rather than reimplemented: "is this cookie a valid
   // session" is a security question with one right answer, and a second copy of it here would be a
@@ -143,19 +158,28 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         return context.body(null, 304);
       }
 
-      // PRD §8.6: a view is counted only on a successful GET of the live content. HEAD serves
-      // the same headers but must never count and must never mint an aa_viewer cookie, or every
-      // link checker and uptime probe would inflate both view_count and unique_viewer_count.
+      /*
+       * THIS ENDPOINT NO LONGER COUNTS ORDINARY READS, AND THAT IS THE POINT OF THE CHANGE.
+       *
+       * It used to be the only place a view was ever recorded, reached because `viewer.js` fetches
+       * it on load. So a reader who blocks scripts read the whole artifact — the page ships the
+       * content inline — and registered nothing, while every crawler that did fetch it registered a
+       * fresh unique viewer. Counting now happens where the page is served, which needs no client
+       * cooperation. Counting here as well would double every scripted reader.
+       *
+       * ONE EXCEPTION: a password-protected share renders a gate with no content, so its read has
+       * not happened yet at page render. The read is this request — the first one that carries a
+       * valid token and actually hands over the artifact.
+       */
       const poll = url.searchParams.get('poll') === '1';
-      const countsView = context.req.method === 'GET' && !poll && !servedHistoricalVersion;
-      if (countsView) {
-        const viewerId = viewerCookie(context as unknown as PublicContext, viewer, ctx.config);
-        await viewer.recordView({
-          shareId: content.shareId,
-          artifactId: content.artifactId,
-          accountId: content.accountId,
-          viewerId,
-        });
+      if (
+        analytics &&
+        content.passwordProtected &&
+        !poll &&
+        context.req.method === 'GET' &&
+        !servedHistoricalVersion
+      ) {
+        recordRead(context as unknown as PublicContext, analytics, ctx.config, content, 'unlock');
       }
 
       return context.json(contentPayload(content), 200);
@@ -211,6 +235,35 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         200
       );
     });
+  });
+
+  /*
+   * "THE READER RAN OUR SCRIPT." A QUALITY SIGNAL, AND ONLY THAT.
+   *
+   * It cannot create a view — there is no capture here — and it cannot remove one. All it does is
+   * stamp `js_confirmed` on reads already recorded for this reader. The ratio it produces is our
+   * instrument for the thing server-side counting gave up: a crawler that is not in the bot table
+   * yet shows up as an artifact whose reads suddenly stop being confirmed by anything.
+   *
+   * POST because it changes state, and because a GET beacon would be replayed by every prefetcher.
+   */
+  app.post('/a/:share_id/pulse', async (context) => {
+    const shareId = context.req.param('share_id');
+    if (!analytics || !viewer || !SHARE_ID_PATTERN.test(shareId)) {
+      return context.body(null, 204);
+    }
+    // Resolved, so a pulse cannot confirm reads on a share the caller could not open — and so a
+    // revoked or expired link stops accepting them at the same moment it stops serving.
+    try {
+      await viewer.getPageModel(shareId, { requesterAccountId: await requesterAccountId(context) });
+    } catch {
+      return context.body(null, 204);
+    }
+    analytics.confirmJs({
+      shareId,
+      facts: readViewRequestFacts(context.req, clientIp(context, ctx.config.trustProxy)),
+    });
+    return context.body(null, 204);
   });
 
   app.on(['GET', 'HEAD'], '/a/:share_id/download', async (context) => {
@@ -361,6 +414,27 @@ export function registerPublicRoutes<E extends Env>(app: Hono<E>, ctx: PublicRou
         model.initialContent.versionNum !== model.initialContent.latestVersionNum
           ? model.initialContent.versionNum
           : undefined;
+      /*
+       * THE READ, RECORDED WHERE IT ACTUALLY HAPPENS.
+       *
+       * `initialContent` is the artifact itself, rendered into this response. If it is present the
+       * reader has been handed the document, whether or not their browser will run a single line of
+       * our JavaScript — which is exactly the population the old counting site could not see. When
+       * it is null this is a password gate, and nobody has read anything yet.
+       *
+       * Not awaited: `capture` classifies, hashes nothing, and appends to an in-memory buffer. The
+       * database is touched by a timer, never by this request.
+       */
+      if (analytics && model.initialContent) {
+        recordRead(
+          context as unknown as PublicContext,
+          analytics,
+          ctx.config,
+          model.initialContent,
+          'page'
+        );
+      }
+
       return context.html(
         ViewerPage({
           model,
@@ -490,17 +564,45 @@ function serviceErrorFromUnknown(error: unknown): ServiceError {
   return new ServiceError(500, 'internal_error', 'Internal server error');
 }
 
-function viewerCookie(context: PublicContext, viewer: ViewerService, config: AppConfig): string {
-  const incoming = getCookie(context, 'aa_viewer');
-  const viewerId = viewer.isValidViewerId(incoming) ? incoming : viewer.mintViewerId();
-  setCookie(context, 'aa_viewer', viewerId, {
+/**
+ * Record one read, and clean up after the mechanism this replaces.
+ *
+ * Uniqueness used to be a random UUID in `aa_viewer`, a first-party cookie with a 365-day life —
+ * which is what made the privacy policy's "cookieless analytics" sentence untrue. Identity is now a
+ * salted hash that no longer exists after 48 hours, so the cookie has no job. It is expired on
+ * sight rather than merely abandoned: leaving a year-long identifier in the browsers of everyone
+ * who ever opened a share would keep the claim false for a year.
+ */
+function recordRead(
+  context: PublicContext,
+  analytics: AnalyticsRecorder,
+  config: AppConfig,
+  content: ViewerContentResult,
+  surface: 'page' | 'unlock'
+): void {
+  retireViewerCookie(context, config);
+  analytics.capture({
+    shareId: content.shareId,
+    artifactId: content.artifactId,
+    accountId: content.accountId,
+    versionNum: content.versionNum,
+    isOwner: content.isOwner,
+    surface,
+    facts: readViewRequestFacts(context.req, clientIp(context, config.trustProxy)),
+  });
+}
+
+function retireViewerCookie(context: PublicContext, config: AppConfig): void {
+  if (getCookie(context, 'aa_viewer') === undefined) {
+    return;
+  }
+  setCookie(context, 'aa_viewer', '', {
     path: '/',
-    maxAge: VIEWER_COOKIE_MAX_AGE_SECONDS,
+    maxAge: 0,
     httpOnly: true,
     sameSite: 'Lax',
     secure: config.secureCookies,
   });
-  return viewerId;
 }
 
 function shareToken(context: PublicContext): string | null {

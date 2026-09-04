@@ -44,6 +44,7 @@ if (root) {
   }
 
   fetchContent({ poll: false });
+  sendPulse();
   installPasswordGate();
   installRefreshButton();
   installVersionPicker();
@@ -225,6 +226,29 @@ function installLiveRevalidation() {
       fetchContent({ poll: true });
     }
   });
+}
+
+/**
+ * Tells the server this reader executes JavaScript. It is NOT how a view is counted — the page
+ * render already did that, before this file ran, which is the whole point of the change that put
+ * counting there. A blocked or failed pulse costs the reader's view nothing.
+ *
+ * `keepalive` so it survives an immediate navigation away, and the failure path is deliberately
+ * silent: an analytics ping has no business writing to a reader's console.
+ */
+function sendPulse() {
+  if (!boot.pulseUrl) {
+    return;
+  }
+  try {
+    fetch(boot.pulseUrl, {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // A reader who blocks this is still a reader. Nothing here is load-bearing.
+  }
 }
 
 async function fetchContent({ poll, manual = false }) {
