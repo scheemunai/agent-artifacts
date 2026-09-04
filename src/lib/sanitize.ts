@@ -113,8 +113,30 @@ export const MARKDOWN_SANITIZE_CONFIG: Config = {
 
 installMarkdownSanitizerHooks();
 
+/**
+ * The sanitizer's own DOM, so a caller that has to *decorate* the result does not have to re-parse
+ * it — and, more to the point, does not get to hold a second opinion about what the markup is.
+ *
+ * `renderMarkdown()` needs to add two things the stylesheet has always expected and never
+ * received: the scroll region around a table, and the class on a task-list item. Both are
+ * structural, both have to survive nesting, and both were reachable only by pattern-matching the
+ * serialized string — which is exactly the kind of second, weaker parser this module exists to
+ * avoid. Handing back the tree the sanitizer already built costs nothing and removes the
+ * temptation.
+ *
+ * What comes back is DOMPurify's `<body>`. Anything added to it afterwards is OURS, added after
+ * every hook has run, and is therefore not author input: that is the whole reason the wrapper can
+ * carry an `aa-` class and a `data-` attribute when author markup cannot.
+ */
+export function sanitizeMarkdownToBody(dirtyHtml: string): Element {
+  return DOMPurify.sanitize(dirtyHtml, {
+    ...MARKDOWN_SANITIZE_CONFIG,
+    RETURN_DOM: true,
+  }) as unknown as Element;
+}
+
 export function sanitizeMarkdownHtml(dirtyHtml: string): string {
-  return DOMPurify.sanitize(dirtyHtml, MARKDOWN_SANITIZE_CONFIG);
+  return sanitizeMarkdownToBody(dirtyHtml).innerHTML;
 }
 
 export function isSafeHref(value: string): boolean {

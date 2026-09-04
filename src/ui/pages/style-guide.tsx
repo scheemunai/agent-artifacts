@@ -1,4 +1,5 @@
 import type { Child } from 'hono/jsx';
+import { TABLE_REGION_LABEL, TABLE_SCROLL_HINT } from '../../lib/markdown.js';
 import { Layout } from '../components/layout.js';
 import {
   MarketingApiBlock,
@@ -422,9 +423,12 @@ export function StyleGuidePage() {
             note="Scoped to .aa-md so public artifact typography cannot leak into app chrome or be affected by it."
           >
             <div class="aa-usage">
-              Render markdown as sanitized HTML inside <code>article.aa-md</code>. Markdown tables
-              and code blocks own their horizontal scrolling so mobile pages never overflow; the
-              optional <code>.aa-md-table-scroll</code> wrapper uses the same contract.
+              Render markdown as sanitized HTML inside <code>article.aa-md</code>. Code blocks own
+              their horizontal scrolling; every table is wrapped by <code>renderMarkdown()</code> in
+              a <code>.aa-md-table-scroll</code> region carrying the same measured affordance
+              contract as <code>Table</code>, so a mobile page never overflows and a clipped column
+              never reads as broken content. Lists carry their markers here and nowhere else — the
+              preflight reset the rest of the product depends on is restored inside this scope only.
             </div>
             <MarkdownSample />
           </StyleGuideSection>
@@ -1593,6 +1597,61 @@ function dialogExamples() {
   );
 }
 
+/**
+ * What `renderMarkdown()` actually emits around a table, rendered here so the guide cannot claim a
+ * shape the renderer does not produce.
+ *
+ * It used to claim the opposite of the truth: one specimen was an unwrapped table captioned "this
+ * unwrapped table proves raw markdown tables scroll inside themselves", which was the behaviour of
+ * `.aa-md table { display: block; overflow-x: auto }` — a table drawing its border at the column
+ * width with the cells stopping at content width. The wrapper beside it was described as optional
+ * and had no emitter at all.
+ */
+function MarkdownTableSpecimen({
+  hintId,
+  columns,
+  rows,
+}: {
+  hintId: string;
+  columns: string[];
+  rows: string[][];
+}) {
+  return (
+    <div class="aa-table-wrap">
+      <section
+        class="aa-md-table-scroll"
+        tabindex={0}
+        aria-label={TABLE_REGION_LABEL}
+        aria-describedby={hintId}
+        data-aa-scroll-region="true"
+        data-aa-scroll-hint-for={hintId}
+      >
+        <table>
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th scope="col">{column}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr>
+                {row.map((cell) => (
+                  <td>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+      <p class="aa-table__hint" id={hintId} data-aa-scroll-hint="true" hidden>
+        {TABLE_SCROLL_HINT}
+      </p>
+    </div>
+  );
+}
+
 function MarkdownSample() {
   return (
     <article class="aa-md" aria-labelledby="markdown-sample-title">
@@ -1624,49 +1683,28 @@ function MarkdownSample() {
   -H "Content-Type: application/json" \
   -d "long_unbroken_value=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`}</code>
       </pre>
-      <h2>Status table</h2>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Very long unwrapped markdown-rendered heading</th>
-            <th scope="col">Another wide heading</th>
-            <th scope="col">Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Plain markdown output</td>
-            <td>Scrollable table surface</td>
-            <td>
-              This unwrapped table proves raw markdown tables scroll inside themselves at 375px.
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <h2>Wrapped table</h2>
-      <div class="aa-md-table-scroll" tabindex={0}>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Area</th>
-              <th scope="col">State</th>
-              <th scope="col">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Markdown</td>
-              <td>Ready</td>
-              <td>Headings, lists, code, tables, images, and task lists are themed.</td>
-            </tr>
-            <tr>
-              <td>HTML</td>
-              <td>Sandboxed</td>
-              <td>Raw HTML belongs in the frame endpoint, never inline in app chrome.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <h2>Wide table</h2>
+      <MarkdownTableSpecimen
+        hintId="markdown-wide-table-hint"
+        columns={['Very long markdown-rendered heading', 'Another wide heading', 'Notes', 'Owner']}
+        rows={[
+          [
+            'Wider than the column',
+            'Keeps its own width',
+            'The wrapper scrolls and fades its clipped edge; the table is never squeezed.',
+            'Platform',
+          ],
+        ]}
+      />
+      <h2>Narrow table</h2>
+      <MarkdownTableSpecimen
+        hintId="markdown-narrow-table-hint"
+        columns={['Area', 'State']}
+        rows={[
+          ['Markdown', 'Ready'],
+          ['HTML', 'Sandboxed'],
+        ]}
+      />
       <h4>Task list and media</h4>
       <ul>
         <li class="task-list-item">

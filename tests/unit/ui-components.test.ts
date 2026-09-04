@@ -169,10 +169,23 @@ describe('ui css contract', () => {
 
   it('keeps markdown-rendered code and tables inside their own scroll surfaces', () => {
     expect(css).toContain('.aa-md pre');
-    expect(css).toMatch(/\.aa-md pre\s*{[\s\S]*?overflow-x: auto;/);
-    expect(css).toMatch(/\.aa-md pre code\s*{[\s\S]*?width: max-content;/);
-    expect(css).toMatch(/\.aa-md table\s*{[\s\S]*?display: block;[\s\S]*?overflow-x: auto;/);
-    expect(css).toContain('.aa-md .aa-md-table-scroll table');
+    expect(css).toMatch(/\.aa-md pre\s*{[^{}]*overflow-x: auto;/);
+    expect(css).toMatch(/\.aa-md pre code\s*{[^{}]*width: max-content;/);
+
+    // THE TABLE STOPPED BEING ITS OWN SCROLL CONTAINER, AND THAT IS THE FIX.
+    //
+    // This used to assert `.aa-md table { display: block; overflow-x: auto }` — the shape that
+    // made the table scroll itself. It did scroll, and it was also the defect: a block box at
+    // `width: 100%` with table layout inside draws its border at the column width while the cells
+    // stop at their content width, so every markdown table in the product carried a wide empty
+    // band inside its own border. A test can pin a defect as easily as a contract, and this one
+    // did, for as long as the rule existed.
+    //
+    // Scoped with `[^{}]*` rather than `[\s\S]*?`, which crossed block boundaries and would have
+    // let the negative assertion below pass on a `display: block` belonging to some other rule.
+    expect(css).toMatch(/\.aa-md \.aa-md-table-scroll\s*{[^{}]*overflow-x: auto;/);
+    expect(css).not.toMatch(/\.aa-md table\s*{[^{}]*display: block;/);
+    expect(css).toMatch(/\.aa-md table\s*{[^{}]*width: max-content;[^{}]*min-width: 100%;/);
     // Mobile inset belongs to the reading column, not to the prose scope: `.aa-md` is embedded in
     // already-padded cards. See `tests/unit/ui-prose-scope.test.ts` for the resolved proof.
     expect(css).toMatch(
@@ -225,7 +238,12 @@ describe('style guide page', () => {
     expect(html).toContain('Specimen controls announce a toast when clicked');
     expect(html).toContain('Skeleton is specimen-only, not for production use.');
     expect(html).toContain('class="aa-md"');
-    expect(html).toContain('raw markdown tables scroll inside themselves at 375px');
+    // Was `'raw markdown tables scroll inside themselves at 375px'`, which described the defect:
+    // the guide's own specimen was an unwrapped table captioned as proof of the behaviour that
+    // drew the stretched border box. The renderer wraps every table now, and the guide shows what
+    // it emits.
+    expect(html).toContain('aa-md-table-scroll');
+    expect(html).toContain('never reads as broken content');
     expect(html).toContain('<script type="module" src="/assets/ui-foundation-');
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)[\s\S]*?>[\s\S]*?<\/script>/i);
     expect(html).not.toMatch(/https?:\/\/(cdn|unpkg|jsdelivr|fonts\.googleapis)/i);
