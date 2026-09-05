@@ -68,15 +68,16 @@
       .wrap {
         max-width: 60rem;
         margin-inline: auto;
-        padding-inline: 1.25rem;
+        padding-inline: clamp(1.25rem, -0.053rem + 5.319vw, 2.5rem);
       }
-      section { padding-block: 0.62rem; }
+      section { padding-block: clamp(0.62rem, -1.444rem + 8.426vw, 2.6rem); }
 
       /* MASTHEAD --------------------------------------------------------- */
       .hero {
         background: var(--dark);
         color: #ffffff;
-        padding-block: 1.5rem 1.15rem;
+        padding-block: clamp(1.5rem, -1.106rem + 10.638vw, 4rem)
+          clamp(1.15rem, -1.039rem + 8.936vw, 3.25rem);
       }
       .eyebrow {
         display: inline-flex;
@@ -332,11 +333,6 @@
       }
       @media (min-width: 34rem) {
         .rows > div { grid-template-columns: 11rem 1fr; }
-      }
-      @media (min-width: 48rem) {
-        .wrap { padding-inline: 2.5rem; }
-        section { padding-block: 2.6rem; }
-        .hero { padding-block: 4rem 3.25rem; }
       }
       @media (min-width: 62rem) {
         .lead {
