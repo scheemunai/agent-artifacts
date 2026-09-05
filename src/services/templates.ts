@@ -226,12 +226,23 @@ export async function mergeTemplate(input: {
     return { template, content: template.content, type: template.type };
   }
 
-  const content = mergeTemplateContent({
-    content: template.content,
-    slots,
-    values: input.slots ?? {},
-  });
-  return { template, content, type: template.type };
+  try {
+    const content = mergeTemplateContent({
+      content: template.content,
+      slots,
+      values: input.slots ?? {},
+    });
+    return { template, content, type: template.type };
+  } catch (error) {
+    const successor = retiredTemplateSuccessor(input.slug);
+    if (successor && error instanceof AppError && error.code === 'validation_failed') {
+      throw new AppError(400, 'validation_failed', 'Template slots are invalid', {
+        ...(error.details as Record<string, unknown>),
+        retired_template: { requested: input.slug, resolved_to: successor },
+      });
+    }
+    throw error;
+  }
 }
 
 export function mergeTemplateContent(input: {
@@ -371,7 +382,7 @@ async function assertTemplateSlugAvailable(
   accountId: string,
   slug: string
 ): Promise<void> {
-  const existing = await resolveTemplate(db, accountId, slug);
+  const existing = await resolveTemplateExact(db, accountId, slug);
   if (!existing) {
     return;
   }
@@ -692,7 +703,51 @@ async function listTemplateRows(
  * which is the only place where nobody is depending on the answer yet. Rows that predate that
  * check keep resolving to the account's template until the owner deletes it.
  */
-async function resolveTemplate(
+/**
+ * Slugs of retired built-ins, and what they now resolve to.
+ *
+ * A SLUG IS AN API. Published artifacts are copies and are unaffected by a template retirement, but
+ * an agent with `template: "recap"` written into a saved workflow would start receiving a 400 for a
+ * template that used to exist — and that failure is invisible to us, because the agent is the only
+ * one who ever sees it. So the CONTENT retires and the NAME does not: `recap.html` violated the
+ * quality contract four ways and `meeting-recap` supersedes it properly, but `recap` keeps
+ * answering.
+ *
+ * Deliberately a one-way map to a surviving slug rather than a table of tombstones: there is no
+ * behaviour here to get wrong, and the response carries the canonical `slug`, so an agent that
+ * looks at what it got back can see the template moved.
+ */
+const RETIRED_TEMPLATE_SLUGS: Readonly<Record<string, string>> = {
+  recap: 'meeting-recap',
+  briefing: 'report',
+};
+
+/**
+ * An alias is only fully transparent for a ZERO-SLOT template, and that asymmetry is worth naming
+ * because it decides what this map can and cannot promise.
+ *
+ * `recap` was zero-slot HTML and `meeting-recap` is too, so a saved `template: "recap"` keeps
+ * publishing byte-for-byte as before — nothing to notice. `briefing` took four required slots
+ * (`title`, `date`, `tldr`, `sections`) and its closest survivor `report` takes five different ones,
+ * so the same call now fails on slots instead of on the template name. That failure is honest — the
+ * template really did change — but a bare "unknown slot: tldr" reads like the agent's own typo. So
+ * the retirement is named in the error, turning a mystery into an instruction.
+ */
+export function retiredTemplateSuccessor(slug: string): string | null {
+  return RETIRED_TEMPLATE_SLUGS[slug] ?? null;
+}
+
+/**
+ * The exact-name lookup, with no alias following.
+ *
+ * Split out from `resolveTemplate` because the two answer different questions and only one of them
+ * wants aliases. "What should I render for this request?" should follow a retirement. "Is this
+ * exact name taken?" must not — routing reservation through the alias made
+ * `POST /v1/templates {slug: "recap"}` answer *"recap is reserved by a built-in template"*, naming
+ * a reservation that no longer exists, because the lookup wandered off to `meeting-recap` and
+ * reported what it found there. One resolver serving two questions is how that happens.
+ */
+async function resolveTemplateExact(
   db: DatabaseHandle,
   accountId: string,
   slug: string
@@ -708,6 +763,23 @@ async function resolveTemplate(
     `,
     [slug, accountId]
   );
+}
+
+async function resolveTemplate(
+  db: DatabaseHandle,
+  accountId: string,
+  slug: string
+): Promise<TemplateRow | null> {
+  const exact = await resolveTemplateExact(db, accountId, slug);
+  if (exact) {
+    return exact;
+  }
+
+  // Only after an exact miss, so an account that has since made its OWN template called `recap`
+  // keeps it. Their template is the more specific answer to their request, and an alias that
+  // shadowed it would be a worse bug than the one this map exists to prevent.
+  const aliased = RETIRED_TEMPLATE_SLUGS[slug];
+  return aliased ? resolveTemplate(db, accountId, aliased) : null;
 }
 
 async function findAccountTemplateBySlug(

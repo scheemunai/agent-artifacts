@@ -235,6 +235,11 @@ describe('V1 contract endpoint', () => {
       // first time the lineup grew. It now states the rule instead, so what has to stay true is the
       // rule and the short closed list it names: the slot-taking built-ins.
       expect(contract).toContain('every HTML built-in ships with');
+
+      // A retirement the agent finds out about from a 400 is a retirement we never hear about.
+      expect(contract).toContain('Retired template slugs still answer');
+      expect(contract).toContain('recap    → meeting-recap');
+      expect(contract).toContain('details.retired_template');
       for (const slug of ['report', 'one-pager', 'dashboard', 'changelog', 'daily-digest']) {
         expect(contract).toContain(slug);
       }

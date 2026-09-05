@@ -165,6 +165,17 @@ export function createWebRoute(
  * The routes both faces of this module serve. Factored out so the early return above cannot ship a
  * build where turning the flag off also takes the style guide with it.
  */
+/**
+ * The public mirror of `RETIRED_TEMPLATE_SLUGS` in the templates service. Kept here rather than
+ * imported because the two answer different questions: the service resolves an alias silently so an
+ * agent's saved `template: "recap"` keeps publishing, while the page redirects so a person and a
+ * crawler both learn the address moved. If you retire a slug, both need the entry.
+ */
+const RETIRED_TEMPLATE_SLUG_REDIRECTS: Readonly<Record<string, string>> = {
+  recap: 'meeting-recap',
+  briefing: 'one-pager',
+};
+
 function registerRemainingWebRoutes(
   web: Hono<{ Variables: WebVariables }>,
   config: AppConfig
@@ -200,10 +211,17 @@ function registerRemainingWebRoutes(
   );
 
   web.get('/templates/:slug', (context) => {
-    const template = starterTemplates().find(
-      (candidate) => candidate.slug === context.req.param('slug')
-    );
-    return template ? context.html(TemplateDetailPage({ template })) : context.notFound();
+    const slug = context.req.param('slug');
+    const template = starterTemplates().find((candidate) => candidate.slug === slug);
+    if (template) {
+      return context.html(TemplateDetailPage({ template }));
+    }
+    // A retired slug is a moved page, not a missing one. The API resolves the alias transparently
+    // because an agent's saved workflow must keep working; a human following an old link gets the
+    // honest answer instead — a 301 to where the template went, which is also what tells a search
+    // engine and a bookmark that the address changed.
+    const moved = RETIRED_TEMPLATE_SLUG_REDIRECTS[slug];
+    return moved ? context.redirect(`/templates/${moved}`, 301) : context.notFound();
   });
 
   /**

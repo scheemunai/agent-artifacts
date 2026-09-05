@@ -41,9 +41,10 @@ ul,ol{margin:0;padding:0;list-style:none}
 
 /* recommendation */
 .rec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.75rem 1rem;align-items:start;margin-top:1.25rem;padding:1rem 1.125rem;background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:.625rem}
+.rec{font-size:.9375rem}
 .rec .badge{padding:.125rem .5rem;background:var(--amber);color:#fff;border-radius:999px;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
 .rec h2{font-size:1.125rem;font-weight:700;color:#5c3403}
-.rec p{margin-top:.25rem;color:#6b3e04;font-size:.9375rem}
+.rec p{margin-top:.25rem;color:#6b3e04}
 
 h2.sec{margin-top:2.25rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
 h2.sec+*{margin-top:.75rem}
@@ -68,17 +69,17 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
 .tnote{padding:.75rem .875rem;border-top:1px solid var(--line);background:var(--tint);color:var(--subtle);font-size:.8125rem}
 
 /* why not */
-.why li{padding:1rem 0;border-top:1px solid var(--line-2)}
+.why li{padding-block:1rem;border-top:1px solid var(--line-2);font-size:.9375rem}
 .why li:first-child{border-top:0;padding-top:.25rem}
 .why h3{font-size:1rem;font-weight:650}
 .why h3 span{color:var(--subtle);font-weight:600}
-.why p{margin-top:.25rem;color:var(--muted);font-size:.9375rem;max-width:42rem}
+.why p{margin-top:.25rem;color:var(--muted);max-width:42rem}
 .why p b{color:var(--ink);font-weight:650}
 
 /* the ask */
 .ask{padding:1.125rem 1.25rem;background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow)}
 .ask ol{counter-reset:a}
-.ask li{position:relative;counter-increment:a;padding:.5rem 0 .5rem 1.75rem;color:var(--ink);font-size:.9375rem}
+.ask li{position:relative;counter-increment:a;padding-block:.5rem;padding-left:1.75rem;color:var(--ink);font-size:.9375rem}
 .ask li+li{border-top:1px solid var(--line)}
 .ask li::before{content:counter(a);position:absolute;left:0;top:.5rem;color:var(--amber);font-size:.8125rem;font-weight:700;font-variant-numeric:tabular-nums}
 .deadline{display:flex;flex-wrap:wrap;align-items:baseline;gap:.375rem .75rem;margin-top:.875rem;padding-top:.875rem;border-top:1px solid var(--line-2)}
@@ -118,11 +119,16 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
   tbody td{padding:.25rem .5rem}
   tbody td+td{margin-top:.1875rem}
   .tnote{padding:.625rem .875rem}
-  .why li{padding:.875rem 0}
-  .ask li{padding:.4375rem 0 .4375rem 1.75rem}
+  .why li{padding-block:.875rem}
+  .ask li{padding-block:.4375rem;padding-left:1.75rem}
   .ask li::before{top:.4375rem}
   .deadline{margin-top:.75rem;padding-top:.75rem}
   .colophon{margin-top:1.25rem;padding-top:.875rem}
+  /* final nudge — spacing only */
+  h2.sec{margin-top:1.25rem}
+  tbody tr{padding:.5625rem .875rem}
+  .why li{padding-block:.75rem}
+  .colophon{margin-top:1.125rem;padding-top:.75rem}
 }
 </style>
 </head>
@@ -132,7 +138,7 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
   <header class="mast">
     <span class="eyebrow">Decision brief</span>
     <h1 class="measure">How we bill for overage from January</h1>
-    <p class="lead measure">Three options scored on the same five criteria. The recommendation is metered overage, and it needs a decision by 19 September to make the January release.</p>
+    <p class="lead measure">Three options, same five criteria. Recommendation: metered overage. Decide by 19 September for the January release.</p>
     <div class="facts">
       <span><b>Owner:</b> Ines Arriaga, Pricing</span>
       <span><b>Decided by:</b> exec review, 19 September</span>
@@ -144,7 +150,7 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
     <span class="badge">Recommended</span>
     <div>
       <h2>Option B — metered overage, billed monthly</h2>
-      <p>Best modelled revenue by a clear margin, the only option that never puts a hard stop in the middle of a customer's work, and the two-week revert fits inside a single release if it goes badly.</p>
+      <p>Best modelled revenue by a clear margin, the only option that never puts a hard stop in a customer's work, and it reverts inside one release.</p>
     </div>
   </div>
 
@@ -193,7 +199,7 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
           </tr>
         </tbody>
       </table>
-      <p class="tnote">Revenue is modelled on the June–August usage distribution and carries ±18% at the 80% interval. Support estimates are scaled from the 2025 seat-cap launch, which is the closest comparable we have.</p>
+      <p class="tnote">Revenue is modelled on the June–August usage distribution and carries ±18% at the 80% interval. Support estimates scale from the 2025 seat-cap launch, our closest comparable.</p>
     </div>
   </section>
 
@@ -202,11 +208,11 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
     <ul class="why">
       <li>
         <h3>A <span>· Hard cap with an upgrade prompt</span></h3>
-        <p>Cheapest, fastest, and the only option that guarantees no unbilled usage — which is a real argument. It is also the only one that stops a customer mid-export. <b>Two of our four largest accounts would have hit the modelled cap in July,</b> and neither of them has a procurement path that closes in a day.</p>
+        <p>Cheapest, fastest, and the only option guaranteeing no unbilled usage — a real argument. It is also the only one that stops a customer mid-export. <b>Two of our four largest accounts would have hit the cap in July,</b> and neither can close procurement in a day.</p>
       </li>
       <li>
         <h3>C <span>· Soft cap with a seven-day grace</span></h3>
-        <p>The compromise position, and it collects most of B's revenue. But a grace period still ends, and it ends on a Tuesday for somebody. It also needs its own notification surface, which is most of the four weeks — <b>so it costs nearly what B costs and keeps a version of A's problem.</b></p>
+        <p>The compromise, and it collects most of B's revenue. But a grace period still ends, and it ends on a Tuesday for somebody. It also needs its own notifications — <b>so it costs nearly what B costs and keeps A's problem.</b></p>
       </li>
     </ul>
   </section>
@@ -217,13 +223,13 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
       <ol>
         <li>Approve Option B and a five-week build starting 22 September.</li>
         <li>Accept that the first invoice carrying overage lands on 3 February, not in January.</li>
-        <li>Name a rollback owner who is not the person building it. The revert is two weeks and it needs a decision-maker who is free to call it.</li>
+        <li>Name a rollback owner who is not the person building it — the revert is two weeks and needs someone free to call it.</li>
       </ol>
       <p class="deadline"><span class="k">Decision needed by</span><span class="v">19 September</span><span class="n">If it slips past the 26th the January release is out and this becomes an April decision.</span></p>
     </div>
   </section>
 
-  <footer class="colophon">Prepared by Ines Arriaga, Pricing. Modelling reviewed by Sam Oyelaran, Data. Sources: usage export 1 June – 31 August 2026, and the 2025 seat-cap launch retrospective.</footer>
+  <footer class="colophon">Prepared by Ines Arriaga, Pricing. Modelling reviewed by Sam Oyelaran, Data. Sources: usage export 1 June – 31 August 2026; 2025 seat-cap retrospective.</footer>
 </div>
 </body>
 </html>

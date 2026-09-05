@@ -51,22 +51,22 @@ ul,ol{margin:0;padding:0;list-style:none}
 .support .k{display:block;margin-top:.0625rem;color:var(--subtle);font-size:.8125rem}
 
 /* the argument */
-.move{margin-top:2rem}
+.move{margin-top:2rem;font-size:1rem}
 .move h2{display:flex;align-items:baseline;gap:.625rem;font-size:1.1875rem;font-weight:700}
 .move h2 .i{color:var(--amber);font-size:.8125rem;font-weight:700;font-variant-numeric:tabular-nums}
-.move p{margin-top:.5rem;color:var(--muted);font-size:1rem}
+.move p{margin-top:.5rem;color:var(--muted)}
 .move p+p{margin-top:.625rem}
 .move p b{color:var(--ink);font-weight:650}
 
 .bill{margin-top:.875rem;padding:.25rem 1rem;background:var(--card);border:1px solid var(--line);border-radius:.5rem}
-.bill li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;padding:.5rem 0;font-size:.9375rem}
+.bill li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;padding-block:.5rem;font-size:.9375rem}
 .bill li+li{border-top:1px solid var(--line)}
 .bill .k{color:var(--muted)}
 .bill .v{color:var(--ink);font-weight:650;text-align:right;font-variant-numeric:tabular-nums}
 .bill .total .k,.bill .total .v{color:var(--ink);font-weight:700}
 
-.ask{margin-top:.875rem;padding:1rem 1.125rem;background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:.625rem}
-.ask p{margin:0;color:#6b3e04;font-size:.9375rem}
+.ask{margin-top:.875rem;padding:1rem 1.125rem;background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:.625rem;font-size:.9375rem}
+.ask p{margin:0;color:#6b3e04}
 .ask p+p{margin-top:.5rem}
 .ask .when{display:flex;flex-wrap:wrap;align-items:baseline;gap:.375rem .625rem;margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--amber-line)}
 .ask .when .k{color:#8a5305;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
@@ -91,11 +91,14 @@ ul,ol{margin:0;padding:0;list-style:none}
   .move p{margin-top:.4375rem}
   .move p+p{margin-top:.5rem}
   .bill{margin-top:.75rem}
-  .bill li{padding:.4375rem 0}
+  .bill li{padding-block:.4375rem}
   .ask{margin-top:.75rem;padding:.875rem 1rem}
   .ask p+p{margin-top:.4375rem}
   .ask .when{margin-top:.625rem;padding-top:.625rem}
   .colophon{margin-top:1.25rem;padding-top:.875rem}
+  /* final nudge — spacing only */
+  .move{margin-top:1.0625rem}
+  .colophon{margin-top:1.125rem;padding-top:.75rem}
 }
 </style>
 </head>
@@ -125,13 +128,13 @@ ul,ol{margin:0;padding:0;list-style:none}
 
   <section class="move">
     <h2><span class="i">01</span>The problem</h2>
-    <p>Nobody answers Europe before 13:00 CET. Just under a third of our tickets arrive in that window and wait a median of six hours and ten minutes for a first reply — not a resolution, a <b>reply</b>.</p>
-    <p>We cannot rota our way out of it — the US team already starts early and the median has not moved in three quarters. <b>Two of the five enterprise accounts we lost this year named response time in their exit call. Both were European.</b></p>
+    <p>Nobody answers Europe before 13:00 CET. Just under a third of tickets arrive in that window and wait a median of six hours ten for a first <b>reply</b> — not a resolution.</p>
+    <p>We cannot rota our way out of it: the US team already starts early and the median has not moved in three quarters. <b>Two of the five enterprise accounts we lost named response time in their exit call. Both European.</b></p>
   </section>
 
   <section class="move">
     <h2><span class="i">02</span>What I propose</h2>
-    <p>One support engineer in Lisbon, starting January, covering 08:00–17:00 CET. On our rotation, in our tooling, in the same queue — <b>not an outsourced tier one and not a follow-the-sun handover.</b> A named person who is awake when the tickets arrive. Lisbon because we already have an entity there, so hiring runs about ten weeks instead of the four months an entity setup would add.</p>
+    <p>One support engineer in Lisbon, starting January, covering 08:00–17:00 CET. Our rotation, our tooling, the same queue — <b>not an outsourced tier one, not a follow-the-sun handover.</b> Lisbon because we have an entity there, so hiring runs ten weeks rather than four months.</p>
   </section>
 
   <section class="move">
@@ -142,31 +145,31 @@ ul,ol{margin:0;padding:0;list-style:none}
       <li><span class="k">Recruiting fee, internal</span><span class="v">$2,000</span></li>
       <li class="total"><span class="k">First-year total</span><span class="v">$93,400</span></li>
     </ul>
-    <p>No new vendor, no new process, no change to the on-call contract. Finance has reviewed the band and confirmed it sits inside the FY27 envelope.</p>
+    <p>No new vendor, no new process, no change to the on-call contract. Finance confirms the band sits inside the FY27 envelope.</p>
   </section>
 
   <section class="move">
     <h2><span class="i">04</span>What it buys</h2>
-    <p>Modelled on the last eight months of volume, first response in the window falls from six hours ten to <b>under forty-five minutes</b> — 31% of volume moves from our worst response band to our best.</p>
-    <p>It also gives the four European accounts renewing in Q2 — $340k of ARR — a named contact in their own working day. Three of the four have asked for one.</p>
+    <p>Modelled on eight months of volume, first response falls from six hours ten to <b>under forty-five minutes</b> — 31% of volume moves from our worst band to our best.</p>
+    <p>It also gives the four European accounts renewing in Q2 — $340k of ARR — a named contact in their own working day. Three have asked for one.</p>
   </section>
 
   <section class="move">
     <h2><span class="i">05</span>What we give up</h2>
-    <p>The help-centre rewrite, the other claim on this budget. It is worth doing; I am arguing about order, not merit. <b>The rewrite is modelled to cut ticket volume by about 8%. The hire changes the experience of 31%,</b> and it changes it for the accounts that are actually leaving.</p>
-    <p>And if the hire lands, the rewrite becomes a stronger Q3 proposal: we will have someone in the timezone who knows which articles are missing.</p>
+    <p>The help-centre rewrite, the other claim on this budget. It is worth doing; I am arguing order, not merit. <b>The rewrite cuts ticket volume about 8%. The hire changes the experience of 31%,</b> and for the accounts actually leaving.</p>
+    <p>And if the hire lands, the rewrite becomes a stronger Q3 proposal — someone in the timezone will know which articles are missing.</p>
   </section>
 
   <section class="move">
     <h2><span class="i">06</span>The ask</h2>
     <div class="ask">
       <p>Approve the requisition, at band S3, against the Q1 contractor budget.</p>
-      <p>Ten weeks of hiring makes 30 September the last date that still produces a January start. <b>If the answer is no, I would rather have it by the 30th than have it open</b> — I will put the money into the rewrite and stop making the case.</p>
+      <p>Ten weeks of hiring makes 30 September the last date that still gives a January start. <b>If the answer is no, I would rather have it by the 30th than have it open</b> — I will put the money into the rewrite.</p>
       <p class="when"><span class="k">Decision needed by</span><span class="v">30 September 2026</span></p>
     </div>
   </section>
 
-  <footer class="colophon">Response figures from the support export, 1 January – 31 August 2026: medians over 14,208 tickets. Band and total reviewed by Ana Roux, Finance, 2 September. ARR from the Q2 renewal list.</footer>
+  <footer class="colophon">Response figures from the support export, 1 January – 31 August 2026: medians over 14,208 tickets. Band and first-year total reviewed by Ana Roux, Finance, on 2 September.</footer>
 </div>
 </body>
 </html>

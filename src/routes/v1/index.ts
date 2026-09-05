@@ -745,6 +745,19 @@ The intended flow for a zero-slot template is three steps:
 Rule of thumb: slots non-empty → send \`template\` + \`slots\`. Slots empty → GET it,
 rehash it, publish it as \`type\`+\`content\`.
 
+### Retired template slugs still answer
+
+A slug is an API, so a retired template keeps its name even when its content goes. Two are retired
+so far and both still resolve, to the template that replaced them:
+
+  recap    → meeting-recap   (zero-slot HTML, as \`recap\` was — nothing changes for you)
+  briefing → report          (both markdown, but \`report\` takes DIFFERENT slots)
+
+The response carries the canonical \`slug\`, so you can see it moved. Where the successor takes
+different slots, the 400 tells you: \`details.retired_template\` names what you asked for and what it
+resolved to, alongside the usual \`valid_slots\`. If you have since created your OWN template under a
+retired name, yours wins — the alias only applies when nothing else answers.
+
 ## 3. Promote an artifact into a template — POST /templates
 
 Promote an existing markdown or HTML artifact into an account template your bots

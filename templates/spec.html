@@ -73,10 +73,10 @@ h2.sec+*{margin-top:.75rem}
 .pri.could{color:var(--subtle)}
 
 /* open questions */
-.open li{padding:.875rem 0;border-top:1px solid var(--line-2)}
+.open li{padding-block:.875rem;border-top:1px solid var(--line-2);font-size:.9375rem}
 .open li:first-child{border-top:0;padding-top:.25rem}
 .open h3{font-size:1rem;font-weight:650}
-.open p{margin-top:.25rem;color:var(--muted);font-size:.9375rem;max-width:42rem}
+.open p{margin-top:.25rem;color:var(--muted);max-width:42rem}
 .open .needs{margin-top:.3125rem;color:var(--subtle);font-size:.8125rem}
 .open .needs b{color:var(--muted);font-weight:600}
 
@@ -94,6 +94,11 @@ h2.sec+*{margin-top:.75rem}
   .req{grid-column:1/-1}
   .acc{grid-column:1/-1}
   .pri{grid-row:1;grid-column:2}
+  /* final nudge — spacing only */
+  h2.sec{margin-top:1.375rem}
+  .scope li{padding:.4375rem 1rem}
+  .reqs>li{padding:.6875rem 1rem}
+  .colophon{margin-top:1.125rem;padding-top:.75rem}
 }
 </style>
 </head>
@@ -103,7 +108,7 @@ h2.sec+*{margin-top:.75rem}
   <header class="mast">
     <span class="eyebrow">Product spec · 1.9</span>
     <h1>Saved views for the ticket queue</h1>
-    <p class="lead measure">Let an agent save a filter set, come back to it by name, and share the three that the whole team keeps rebuilding by hand every morning.</p>
+    <p class="lead measure">Let an agent save a filter set, name it, and share the ones the whole team rebuilds by hand every morning.</p>
     <div class="facts">
       <span class="state">Draft for review</span>
       <span><b>Owner:</b> Mira Halvorsen, Product</span>
@@ -118,7 +123,7 @@ h2.sec+*{margin-top:.75rem}
     <ul class="scope">
       <li class="in"><span class="mk">In</span><span>An agent can save the current filter state as a named view and return to it in one click.</span></li>
       <li class="in"><span class="mk">In</span><span>The filter sets a team rebuilds every morning are saved once and shared.</span></li>
-      <li class="in"><span class="mk">In</span><span>Median time from opening the queue to opening the first ticket falls from 90 seconds to under 20.</span></li>
+      <li class="in"><span class="mk">In</span><span>Time from opening the queue to opening the first ticket: 90s median, target under 20.</span></li>
       <li class="out edge"><span class="mk">Out</span><span>No query language. A view is the existing facets, saved — nothing new to learn.</span></li>
       <li class="out"><span class="mk">Out</span><span>No per-view notification rules. That is the alerting project and it has its own spec.</span></li>
       <li class="out"><span class="mk">Out</span><span>No cross-workspace sharing in 1.9. The entitlement model is not there yet.</span></li>
@@ -133,37 +138,37 @@ h2.sec+*{margin-top:.75rem}
         <span class="rid">R-01</span>
         <p class="req">An agent can save the current filter state as a named view.</p>
         <span class="pri must">Must</span>
-        <p class="acc"><b>Accepts when</b> — a view created from a filtered queue reproduces an identical result set on reload, sort order included.</p>
+        <p class="acc"><b>Accepts when</b> — a view reproduces an identical result set on reload, sort included.</p>
       </li>
       <li>
         <span class="rid">R-02</span>
-        <p class="req">Views are listed by last used: five shown, the rest behind "All views".</p>
+        <p class="req">Views list by last used: five shown, the rest behind "All views".</p>
         <span class="pri must">Must</span>
-        <p class="acc"><b>Accepts when</b> — an agent with twelve views sees the five they used most recently without opening a menu.</p>
+        <p class="acc"><b>Accepts when</b> — an agent with twelve views sees their five most recent without opening a menu.</p>
       </li>
       <li>
         <span class="rid">R-03</span>
         <p class="req">A view can be shared with a team and is read-only to everyone but its owner.</p>
         <span class="pri must">Must</span>
-        <p class="acc"><b>Accepts when</b> — a non-owner can duplicate a shared view and edit the copy, and cannot save over the original.</p>
+        <p class="acc"><b>Accepts when</b> — a non-owner can duplicate a shared view and edit the copy, but not save over it.</p>
       </li>
       <li>
         <span class="rid">R-04</span>
         <p class="req">Every view has a stable URL that anyone with queue access can open.</p>
         <span class="pri should">Should</span>
-        <p class="acc"><b>Accepts when</b> — the URL pasted into a fresh session lands on the same filtered queue, or on a clear "no access" state.</p>
+        <p class="acc"><b>Accepts when</b> — the URL in a fresh session lands on the same queue, or a clear "no access" state.</p>
       </li>
       <li>
         <span class="rid">R-05</span>
         <p class="req">Deleting a shared view warns with the number of people who used it recently.</p>
         <span class="pri should">Should</span>
-        <p class="acc"><b>Accepts when</b> — the confirmation names the count for the last 30 days and requires a second action to proceed.</p>
+        <p class="acc"><b>Accepts when</b> — the confirmation names the 30-day count and requires a second action.</p>
       </li>
       <li>
         <span class="rid">R-06</span>
         <p class="req">Up to three views can be pinned to the sidebar.</p>
         <span class="pri could">Could</span>
-        <p class="acc"><b>Accepts when</b> — pinning a fourth view asks which pin to replace rather than failing silently.</p>
+        <p class="acc"><b>Accepts when</b> — pinning a fourth asks which pin to replace rather than failing silently.</p>
       </li>
     </ol>
   </section>
@@ -173,23 +178,23 @@ h2.sec+*{margin-top:.75rem}
     <ul class="open">
       <li>
         <h3>What happens to a shared view when its owner leaves?</h3>
-        <p>Transfer to the team or archive it. Archiving is safer and will annoy people; transfer needs an owner-election rule we do not have.</p>
+        <p>Transfer to the team, or archive. Archiving is safer and will annoy people; transfer needs an owner-election rule we do not have.</p>
         <p class="needs"><b>Needs:</b> Mira Halvorsen with Legal — before the build starts, not before beta.</p>
       </li>
       <li>
         <h3>Do saved views count against the 200-request filter rate limit?</h3>
-        <p>Five pinned views refreshing on queue open is five requests where there is one today. At 400 agents that is a different traffic shape.</p>
+        <p>Five pinned views refreshing on queue open is five requests where there is one. At 400 agents that is a different traffic shape.</p>
         <p class="needs"><b>Needs:</b> Platform — by 12 September.</p>
       </li>
       <li>
         <h3>Does "ordered by last used" leak activity between teammates?</h3>
-        <p>A shared view's position tells you when a colleague last worked the queue. Probably fine internally; not obviously fine for our regulated accounts.</p>
+        <p>A view's position tells you when a colleague last worked the queue. Fine internally, probably; not obviously fine for regulated accounts.</p>
         <p class="needs"><b>Needs:</b> Security review — before beta.</p>
       </li>
     </ul>
   </section>
 
-  <footer class="colophon">Draft 3, updated 4 September 2026 by Mira Halvorsen. The 90-second baseline comes from the queue instrumentation added in 1.7, measured over 4,100 sessions in August. Comments close 11 September; anything unresolved at that point becomes an open question above, not a silent assumption.</footer>
+  <footer class="colophon">Draft 3, updated 4 September 2026 by Mira Halvorsen. The 90-second baseline comes from queue instrumentation added in 1.7, over 4,100 sessions in August. Comments close 11 September; anything unresolved becomes an open question above, not a silent assumption.</footer>
 </div>
 </body>
 </html>

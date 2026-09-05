@@ -45,16 +45,16 @@ a{color:var(--teal)}
 /* two-column body */
 .wrap{display:grid;grid-template-columns:15rem minmax(0,1fr);gap:2.5rem;margin-top:1.75rem;align-items:start}
 .rail{background:var(--tint);border:1px solid var(--line);border-radius:.75rem;overflow:hidden}
-.rail__sec{padding:.875rem 1rem;border-top:1px solid var(--line)}
+.rail__sec{padding:.875rem 1rem;border-top:1px solid var(--line);font-size:.8125rem}
 .rail__sec:first-child{border-top:0}
 .rail h2{color:var(--subtle);font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.625rem}
-.toc li{display:grid;grid-template-columns:1.5rem minmax(0,1fr);gap:.625rem;padding:.5rem 0;border-top:1px solid var(--line-2)}
+.toc li{display:grid;grid-template-columns:1.5rem minmax(0,1fr);gap:.625rem;padding-block:.5rem;border-top:1px solid var(--line-2)}
 .toc li:first-child{border-top:0;padding-top:0}
 .toc .n{color:var(--teal);font-size:.8125rem;font-weight:700;line-height:1.5;font-variant-numeric:tabular-nums}
 .toc a{display:block;color:var(--ink);font-size:.875rem;font-weight:600;line-height:1.3;text-decoration:none;min-height:2.75rem}
 .toc a:hover,.toc a:focus-visible{color:var(--teal)}
 .toc small{display:block;margin-top:.125rem;color:var(--subtle);font-size:.8125rem;font-weight:400}
-.rail__sec p{color:var(--muted);font-size:.8125rem}
+.rail__sec p{color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:.375rem}
 .chips li{padding:.125rem .5rem;background:var(--card);border:1px solid var(--line-2);border-radius:999px;color:var(--muted);font-size:.8125rem;font-weight:600}
 .chips .hot{background:var(--teal-soft);border-color:#bcd9d7;color:var(--teal)}
@@ -89,7 +89,7 @@ details[open] summary::before{transform:rotate(45deg)}
 summary:focus-visible{outline:2px solid var(--teal);outline-offset:-2px;border-radius:.75rem}
 summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
 .rest{padding:0 1.25rem 1rem}
-.rest li{padding:.625rem 0;border-top:1px solid var(--line);color:var(--muted);font-size:.875rem}
+.rest li{padding-block:.625rem;border-top:1px solid var(--line);color:var(--muted);font-size:.875rem}
 .rest b{display:block;color:var(--ink);font-size:.9375rem;font-weight:650}
 .rest em{font-style:normal;color:var(--subtle);font-size:.8125rem}
 
@@ -109,8 +109,8 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
   .rail__sec{border-left:0;border-top:1px solid var(--line)}
   .rail__sec:first-child{border-top:0}
   .toc small{display:none}
-  .toc a{min-height:0;padding:.3125rem 0}
-  .toc li{padding:.25rem 0}
+  .toc a{min-height:0;padding-block:.3125rem}
+  .toc li{padding-block:.25rem}
   .item{padding:1rem}
   .item__top{grid-template-columns:1.75rem minmax(0,1fr);gap:.625rem}
   .item__n{width:1.75rem;height:1.75rem;font-size:.75rem}
@@ -130,7 +130,7 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
   .wrap{margin-top:1rem}
   .rail h2{margin-bottom:.5rem}
   .rail__sec{padding:.6875rem .875rem}
-  .toc li{padding:.1875rem 0}
+  .toc li{padding-block:.1875rem}
   .stream{gap:.875rem}
   .item{padding:.875rem}
   .tldr{margin-top:.75rem}
@@ -138,6 +138,11 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
   .item__foot{margin-top:.625rem;padding-top:.5rem}
   summary{padding:.75rem 1rem}
   .colophon{margin-top:1.25rem;padding-top:.875rem}
+  /* final nudge — spacing only */
+  .item{padding:.8125rem}
+  .stream{gap:.8125rem}
+  .rail__sec{padding:.625rem .875rem}
+  .colophon{margin-top:1.125rem;padding-top:.75rem}
 }
 </style>
 </head>
@@ -148,7 +153,7 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
     <div>
       <span class="eyebrow">Daily digest</span>
       <h1>AI Engineering Daily</h1>
-      <p class="lead">Four things worth your attention from yesterday's feeds, plus six more in a line each.</p>
+      <p class="lead">Four things worth your attention, plus six more in a line each.</p>
     </div>
     <dl>
       <dt>Date</dt><dd>Thursday 3 September 2026</dd>
@@ -162,10 +167,10 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
       <nav class="rail__sec">
         <h2>In this digest</h2>
         <ul class="toc">
-          <li><span class="n">01</span><a href="#i1">Postgres 18 ends the case for a connection pooler<small>Hexadecimal · 24 min</small></a></li>
-          <li><span class="n">02</span><a href="#i2">We replaced our vector database with one table<small>Latent Space · 38 min</small></a></li>
+          <li><span class="n">01</span><a href="#i1">Postgres 18 ends the connection pooler<small>Hexadecimal · 24 min</small></a></li>
+          <li><span class="n">02</span><a href="#i2">One table replaced our vector database<small>Latent Space · 38 min</small></a></li>
           <li><span class="n">03</span><a href="#i3">The cost curve nobody budgets for<small>Infra Weekly · 17 min</small></a></li>
-          <li><span class="n">04</span><a href="#i4">Shipping agents other teams actually adopt<small>Build Notes · 52 min</small></a></li>
+          <li><span class="n">04</span><a href="#i4">Agents other teams actually adopt<small>Build Notes · 52 min</small></a></li>
         </ul>
       </nav>
       <div class="rail__sec">
@@ -176,7 +181,7 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
       </div>
       <div class="rail__sec">
         <h2>Filtered out</h2>
-        <p>24 dropped: re-uploads, trailers, and three launches with no technical detail.</p>
+        <p>24 dropped: re-uploads, trailers, and launches with no technical detail.</p>
       </div>
     </aside>
 
@@ -189,11 +194,11 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
             <p class="item__meta"><b>Hexadecimal</b><span>24 min</span><span>06:40</span></p>
           </div>
         </div>
-        <p class="tldr"><b>TL;DR</b>Built-in connection multiplexing lands in 18. Under roughly 500 clients it removes the case for running PgBouncer at all; above that the pooler still wins on failover.</p>
+        <p class="tldr"><b>TL;DR</b>Built-in connection multiplexing lands in 18. Under ~500 clients it removes the case for PgBouncer; above that the pooler wins on failover.</p>
         <ul class="pts">
-          <li><b>The number:</b> 12,000 connections held at 41 MB of backend memory, down from 1.7 GB on 17.</li>
-          <li><b>Caveat:</b> prepared statements still pin a backend, so the win shrinks for eager ORMs.</li>
-          <li><b>Migration:</b> keep the pooler in front a week, then cut over by dropping its pool size to zero.</li>
+          <li><b>The number:</b> 12,000 connections at 41 MB of backend memory, down from 1.7 GB on 17.</li>
+          <li><b>Caveat:</b> prepared statements still pin a backend; the win shrinks for eager ORMs.</li>
+          <li><b>Migration:</b> keep the pooler in front a week, then drop its pool size to zero.</li>
         </ul>
         <div class="item__foot">
           <p class="verdict"><b>Watch it if</b> you own the database tier.</p>
@@ -209,11 +214,11 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
             <p class="item__meta"><b>Latent Space</b><span>38 min</span><span>09:05</span></p>
           </div>
         </div>
-        <p class="tldr"><b>TL;DR</b>A 40-million-chunk corpus moved from a managed vector store into pgvector with HNSW. Recall held at 0.94, p95 rose 11 ms, the bill fell $9,400 a month.</p>
+        <p class="tldr"><b>TL;DR</b>A 40M-chunk corpus moved from a managed vector store into pgvector with HNSW. Recall held 0.94, p95 rose 11 ms, the bill fell $9,400/mo.</p>
         <ul class="pts">
-          <li><b>Hybrid search was the unlock:</b> text and vector scores merge in one query — the managed service billed two.</li>
-          <li><b>Index build is the pain:</b> nine hours on a 16-core box, run offline against a replica.</li>
-          <li><b>Don't do this</b> below two million chunks — operations cost more than the saving.</li>
+          <li><b>Hybrid search was the unlock:</b> text and vector scores merge in one query; the service billed two.</li>
+          <li><b>Index build is the pain:</b> nine hours on a 16-core box, offline against a replica.</li>
+          <li><b>Don't do this</b> below two million chunks — ops cost more than the saving.</li>
         </ul>
         <div class="item__foot">
           <p class="verdict"><b>Watch it if</b> your retrieval bill has a comma in it.</p>
@@ -229,10 +234,10 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
             <p class="item__meta"><b>Infra Weekly</b><span>17 min</span><span>11:20</span></p>
           </div>
         </div>
-        <p class="tldr"><b>TL;DR</b>Egress, not compute, turns a cheap architecture expensive. The worked example: a $300-a-month cluster carrying $4,100 of cross-zone traffic on one misplaced replica.</p>
+        <p class="tldr"><b>TL;DR</b>Egress, not compute, turns a cheap architecture expensive: a $300-a-month cluster carrying $4,100 of cross-zone traffic on one misplaced replica.</p>
         <ul class="pts">
-          <li><b>Rule of thumb:</b> price every cross-zone hop before you price the instances.</li>
-          <li><b>Topology-aware routing</b> fixed 80% of it in a single config change.</li>
+          <li><b>Rule of thumb:</b> price every cross-zone hop before the instances.</li>
+          <li><b>Topology-aware routing</b> fixed 80% in one config change.</li>
         </ul>
         <div class="item__foot">
           <p class="verdict"><b>Watch it if</b> you sign off the cloud invoice.</p>
@@ -248,13 +253,13 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
             <p class="item__meta"><b>Build Notes</b><span>52 min</span><span>14:02</span></p>
           </div>
         </div>
-        <p class="tldr"><b>TL;DR</b>Adoption tracked with one thing — whether the agent produced an artifact a human could forward. Agents that only answered in chat churned inside two weeks.</p>
+        <p class="tldr"><b>TL;DR</b>Adoption tracked with one thing — whether the agent produced an artifact a human could forward. Chat-only agents churned in two weeks.</p>
         <ul class="pts">
           <li><b>Durable output beats chat:</b> a link that outlives the session is what gets shared.</li>
-          <li><b>Name the sponsor:</b> agents with a named human owner were three times more likely to still run at 90 days.</li>
+          <li><b>Name the sponsor:</b> agents with a named owner were 3x more likely to still run at 90 days.</li>
         </ul>
         <div class="item__foot">
-          <p class="verdict"><b>Watch it if</b> you are rolling agents out internally.</p>
+          <p class="verdict"><b>Watch it if</b> you are rolling agents out.</p>
           <ul class="chips"><li>Agent UX</li></ul>
         </div>
       </article>
@@ -262,18 +267,18 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
       <details>
         <summary>Also reviewed, one line each <span>6 more — 24 of 34 were filtered out</span></summary>
         <ul class="rest">
-          <li><b>A field guide to flaky end-to-end tests</b>The Green Build · 40 min — <em>Four flake families and a detection recipe for each. Quarantine, don't retry.</em></li>
-          <li><b>Row-level security is not an authorisation model</b>Two Phase Commit · 31 min — <em>Useful framing, no new material after the first ten minutes.</em></li>
-          <li><b>Benchmarking six embedding models on legal text</b>Retrieval Notes · 22 min — <em>Methodology is sound; the winner is the one you already use.</em></li>
+          <li><b>A field guide to flaky end-to-end tests</b>The Green Build · 40 min — <em>Four flake families, a recipe for each. Quarantine, don't retry.</em></li>
+          <li><b>Row-level security is not an authorisation model</b>Two Phase Commit · 31 min — <em>Useful framing; nothing new after ten minutes.</em></li>
+          <li><b>Benchmarking six embedding models on legal text</b>Retrieval Notes · 22 min — <em>Sound method; the winner is the one you already use.</em></li>
           <li><b>What we learned running Kafka for six years</b>Streams &amp; Co · 64 min — <em>Long. The compaction section at 41:00 is the part worth your time.</em></li>
-          <li><b>A cheaper way to do nightly ETL</b>Data Plumbing · 19 min — <em>Ideas are fine; the numbers come from a single unnamed customer.</em></li>
-          <li><b>Terraform modules that survive a rewrite</b>Infra Weekly · 28 min — <em>Overlaps heavily with item 03. Skip if you watched that.</em></li>
+          <li><b>A cheaper way to do nightly ETL</b>Data Plumbing · 19 min — <em>Fine ideas; the numbers are one unnamed customer.</em></li>
+          <li><b>Terraform modules that survive a rewrite</b>Infra Weekly · 28 min — <em>Overlaps item 03. Skip if you watched that.</em></li>
         </ul>
       </details>
     </main>
   </div>
 
-  <footer class="colophon">Compiled 3 September 2026, 18:05 UTC, from 34 subscriptions. Every figure is the presenter's own.</footer>
+  <footer class="colophon">Compiled 3 September 2026, 18:05 UTC from 34 subscriptions. Figures are the presenters' own.</footer>
 </div>
 </body>
 </html>

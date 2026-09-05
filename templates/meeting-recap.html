@@ -52,7 +52,7 @@ h2.sec{margin-top:2.5rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;t
 h2.sec+*{margin-top:.875rem}
 
 /* decision ledger */
-.ledger>li{display:grid;grid-template-columns:2.75rem minmax(0,1fr);gap:1rem;padding:1.125rem 0;border-top:1px solid var(--line-2)}
+.ledger>li{display:grid;grid-template-columns:2.75rem minmax(0,1fr);gap:1rem;padding-block:1.125rem;border-top:1px solid var(--line-2)}
 .ledger>li:first-child{border-top:0;padding-top:.25rem}
 .ledger .num{color:var(--teal);font-size:1.5rem;font-weight:700;line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .ledger h3{font-size:1.125rem;font-weight:650}
@@ -85,9 +85,10 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
 
 /* open questions */
 .opens{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:.75rem}
+.opens{font-size:.8125rem}
 .opens li{padding:1rem 1.125rem;background:var(--card);border:1px solid var(--line);border-radius:.625rem}
 .opens h3{font-size:1rem;font-weight:650}
-.opens p{margin-top:.375rem;color:var(--subtle);font-size:.8125rem}
+.opens p{margin-top:.375rem;color:var(--subtle)}
 .opens p b{color:var(--muted);font-weight:600}
 
 /* deferred note */
@@ -110,7 +111,7 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
   .tags{margin-top:.5rem}
   .note{padding:.75rem .875rem}
   .facts{margin-top:1rem;padding-top:.875rem}
-  .ledger>li{grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem;padding:.8125rem 0}
+  .ledger>li{grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem;padding-block:.8125rem}
   .ledger .num{font-size:1.0625rem;line-height:1.45}
   .strip{gap:.5rem}
   .strip>li{padding:.625rem .75rem}
@@ -130,7 +131,7 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
   .facts{margin-top:.875rem;padding-top:.75rem}
   h2.sec{margin-top:1.25rem}
   h2.sec+*{margin-top:.75rem}
-  .ledger>li{padding:.75rem 0}
+  .ledger>li{padding-block:.75rem}
   .tags{margin-top:.375rem}
   .note{margin-top:.625rem}
   caption{padding:.625rem 1rem}
@@ -139,6 +140,12 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
   .opens{gap:.625rem}
   .opens li{padding:.75rem .875rem}
   .foot{margin-top:1.25rem;padding-top:.875rem}
+  /* final nudge — spacing only */
+  h2.sec{margin-top:1.25rem}
+  .ledger>li{padding-block:.6875rem}
+  tr{padding:.6875rem 1rem}
+  .opens li{padding:.6875rem .875rem}
+  .foot{margin-top:1.25rem;padding-top:.75rem}
 }
 </style>
 </head>
@@ -148,7 +155,7 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
   <header class="mast">
     <span class="eyebrow">Meeting recap</span>
     <h1>Q4 platform priorities</h1>
-    <p>Ninety minutes to settle what Platform builds next quarter. Three decisions, one deferral, and read replicas moved to Q1.</p>
+    <p>Ninety minutes on what Platform builds next quarter. Three decisions, one deferral.</p>
     <div class="facts">
       <span><b>Thursday 4 September 2026</b></span>
       <span>14:00–15:30 UTC</span>
@@ -170,8 +177,8 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
       <li>
         <span class="num">01</span>
         <div>
-          <h3>Distributed tracing takes the two engineers earmarked for read replicas.</h3>
-          <p class="why"><b>Why:</b> two thirds of incident recovery time goes on deciding which service is at fault, and read replicas address a regional outage we have not had in four quarters.</p>
+          <h3>Tracing takes the two engineers earmarked for read replicas.</h3>
+          <p class="why"><b>Why:</b> two thirds of incident recovery goes on deciding which service is at fault; read replicas address a regional outage we have not had in four quarters.</p>
           <p class="tags"><span>Owner: Priya Raman</span><span>Consensus, no objections</span></p>
         </div>
       </li>
@@ -179,7 +186,7 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
         <span class="num">02</span>
         <div>
           <h3>The ingest deploy freeze lifts on 8 September, gated on the error budget.</h3>
-          <p class="why"><b>Why:</b> ingest has run clean for 36 hours and the budget is at 74%. If it is not under 70% on the morning of the 8th, the freeze holds another week.</p>
+          <p class="why"><b>Why:</b> ingest has run clean for 36 hours and the budget is at 74%. Not under 70% on the morning of the 8th and the freeze holds another week.</p>
           <p class="tags"><span>Owner: Marcus Feld</span><span>Gate: error budget &lt; 70%</span></p>
         </div>
       </li>
@@ -187,19 +194,19 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
         <span class="num">03</span>
         <div>
           <h3>Northwind gets scoped SAML, not the full identity roadmap.</h3>
-          <p class="why"><b>Why:</b> the trial needs an answer by Thursday and the full roadmap is a quarter of work. Scoped SAML is eight days and covers the two assertions their review asks for.</p>
+          <p class="why"><b>Why:</b> the trial needs an answer Thursday; the full roadmap is a quarter of work. Scoped SAML is eight days and covers their review.</p>
           <p class="tags"><span>Owner: Dana Whitfield</span><span class="dissent">Dissent recorded: Tomas Lindqvist</span></p>
         </div>
       </li>
     </ol>
-    <p class="note"><b>Deferred.</b> Whether ingest gets a named owning team was raised twice and settled neither time. Moved to the architecture review on 11 September.</p>
+    <p class="note"><b>Deferred.</b> Who owns ingest was raised twice and settled neither time. Moved to the architecture review on 11 September.</p>
   </section>
 
   <section>
     <h2 class="sec">Who owes what</h2>
     <div class="tablecard">
       <table>
-        <caption><b>Action items</b> — 6 assigned, 2 already closed. Dates are end of day.</caption>
+        <caption><b>Action items</b> — 6 assigned, 2 closed. Dates are end of day.</caption>
         <thead>
           <tr>
             <th scope="col">Owner</th>
@@ -211,37 +218,37 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
         <tbody>
           <tr>
             <td class="owner"><span class="who"><span class="av" aria-hidden="true">PR</span><span>Priya Raman</span></span></td>
-            <td class="task">Write the tracing rollout plan: one request id across all four log systems.</td>
+            <td class="task">Write the tracing rollout plan: one request id across four log systems.</td>
             <td class="due">11 Sep</td>
             <td class="status"><span class="st wip">In progress</span></td>
           </tr>
           <tr>
             <td class="owner"><span class="who"><span class="av" aria-hidden="true">MF</span><span>Marcus Feld</span></span></td>
-            <td class="task">Post the go/no-go on the ingest freeze once the error budget number is in.</td>
+            <td class="task">Post the go/no-go once the error budget number is in.</td>
             <td class="due">8 Sep</td>
             <td class="status"><span class="st todo">Not started</span></td>
           </tr>
           <tr>
             <td class="owner"><span class="who"><span class="av" aria-hidden="true">DW</span><span>Dana Whitfield</span></span></td>
-            <td class="task">Send Northwind the scoped SAML timeline and the two assertions it covers.</td>
+            <td class="task">Send Northwind the SAML timeline and the assertions it covers.</td>
             <td class="due">5 Sep</td>
             <td class="status"><span class="st done">Done</span></td>
           </tr>
           <tr>
             <td class="owner"><span class="who"><span class="av" aria-hidden="true">TL</span><span>Tomas Lindqvist</span></span></td>
-            <td class="task">Write down the conditions under which scoped SAML must be replaced.</td>
+            <td class="task">Write down the conditions under which scoped SAML gets replaced.</td>
             <td class="due">18 Sep</td>
             <td class="status"><span class="st todo">Not started</span></td>
           </tr>
           <tr>
             <td class="owner"><span class="who"><span class="av" aria-hidden="true">NO</span><span>Nadia Osei</span></span></td>
-            <td class="task">Add ingest ownership to the 11 September architecture review agenda.</td>
+            <td class="task">Add ingest ownership to the 11 September agenda.</td>
             <td class="due">5 Sep</td>
             <td class="status"><span class="st done">Done</span></td>
           </tr>
           <tr>
             <td class="owner"><span class="who"><span class="av" aria-hidden="true">SK</span><span>Sofia Kaur</span></span></td>
-            <td class="task">Cost the read-replica work well enough to re-propose it in Q1 planning.</td>
+            <td class="task">Cost the read-replica work for a Q1 re-proposal.</td>
             <td class="due">25 Sep</td>
             <td class="status"><span class="st todo">Not started</span></td>
           </tr>
@@ -255,11 +262,11 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
     <ul class="opens">
       <li>
         <h3>Who owns ingest once the freeze lifts?</h3>
-        <p>Three teams merged into it this quarter; none is on the pager. <b>Needs:</b> architecture review, 11 September.</p>
+        <p>Three teams merged into it this quarter; none is on the pager. <b>Needs:</b> 11 September review.</p>
       </li>
       <li>
         <h3>Does scoped SAML block the November enterprise audit?</h3>
-        <p>Nobody in the room had read the control list. <b>Needs:</b> Dana with Security, before 12 September.</p>
+        <p>Nobody had read the control list. <b>Needs:</b> Dana with Security by 12 September.</p>
       </li>
     </ul>
   </section>
