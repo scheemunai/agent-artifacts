@@ -80,8 +80,6 @@ ul,ol{margin:0;padding:0;list-style:none}
 @media (max-width:34rem){
   .page{padding:1.875rem 1rem 2rem}
   .mast .lead{font-size:1rem}
-  .hero{grid-template-columns:minmax(0,1fr);gap:.625rem}
-  .hero .note{padding-bottom:0}
   .support li{padding-block:.3125rem}
   .move h2{font-size:1.0625rem}
   /* height tightening — spacing only, no content removed */
@@ -98,6 +96,15 @@ ul,ol{margin:0;padding:0;list-style:none}
   .ask .when{margin-top:.625rem;padding-top:.625rem}
   .colophon{margin-top:1.25rem;padding-top:.875rem}
 }
+@media (max-width:37.5rem){
+  /* The hero is `minmax(0,auto) minmax(0,1fr)`: the figure claims ~470px, so below 600 the note
+     column collapses to 0-49px and its `41 minutes` runs past the viewport (49px of horizontal
+     overflow at 545, 40 at 560, 0 from 600). Stacking until the two-column layout actually fits
+     is the fix; the previous breakpoint stacked only to 544 and left 545-599 broken. */
+  .hero{grid-template-columns:minmax(0,1fr);gap:.625rem}
+  .hero .note{padding-bottom:0}
+}
+
 </style>
 </head>
 <body>
