@@ -101,7 +101,7 @@ export const starterTemplateManifest = [
         "slug": "postmortem",
         "category": "research",
         "name": "Incident Postmortem",
-        "description": "A blameless incident write-up: an inked impact strip carrying the four numbers that matter, a failure-rate chart with detection and mitigation marked, a timeline whose key beats are impact-start / detected / mitigated, the root cause stated in one sentence, contributing factors, what went well,…",
+        "description": "A blameless incident write-up: an inked impact strip carrying the four numbers that matter, a failure-rate chart with detection and mitigation marked, a timeline whose key beats are impact-start / detected / mitigated, the root cause stated in one sentence, contributing factors.",
         "type": "html",
         "content_file": "postmortem.html",
         "thumbnail": "/assets/template-thumbs/postmortem.png",
@@ -129,37 +129,6 @@ export const starterTemplateManifest = [
         "slots": []
       },
       {
-        "slug": "dashboard",
-        "category": "status",
-        "name": "Dashboard",
-        "description": "Status page with markdown-table metrics and details.",
-        "type": "markdown",
-        "content_file": "dashboard.md",
-        "thumbnail": "/assets/template-thumbs/dashboard.png",
-        "slots": [
-          {
-            "name": "title",
-            "description": "Dashboard title",
-            "required": true
-          },
-          {
-            "name": "updated",
-            "description": "Last updated timestamp",
-            "required": true
-          },
-          {
-            "name": "metrics",
-            "description": "Markdown table or metric bullets",
-            "required": true
-          },
-          {
-            "name": "details",
-            "description": "Additional context",
-            "required": true
-          }
-        ]
-      },
-      {
         "slug": "metrics-dashboard",
         "category": "status",
         "name": "Metrics Dashboard",
@@ -173,7 +142,7 @@ export const starterTemplateManifest = [
         "slug": "project-status",
         "category": "status",
         "name": "Project Status",
-        "description": "Where a workstream actually stands: a verdict stated as a judgement with the reason behind it, a milestone rail with committed dates, scope metered against its totals, blockers with owners and ages, and a 'needs a human' section where every entry names one person, one decision and one date.",
+        "description": "Where a workstream actually stands: a verdict stated as a judgement with the reason behind it, a milestone rail with committed dates, scope metered against its totals, blockers with owners and ages, and a 'needs a human' section where every entry names one person.",
         "type": "html",
         "content_file": "project-status.html",
         "thumbnail": "/assets/template-thumbs/project-status.png",
@@ -183,7 +152,7 @@ export const starterTemplateManifest = [
         "slug": "service-health",
         "category": "status",
         "name": "Service Health",
-        "description": "A reliability review that treats uptime as a budget rather than a state: how much unreliability is left this quarter, a burn-down showing where it went, the incidents ranked by budget consumed rather than by date, what the overspend has already cost in frozen releases and deferred work, and…",
+        "description": "A reliability review that treats uptime as a budget rather than a state: how much unreliability is left this quarter, a burn-down showing where it went, the incidents ranked by budget consumed rather than by date.",
         "type": "html",
         "content_file": "service-health.html",
         "thumbnail": "/assets/template-thumbs/service-health.png",
@@ -243,7 +212,7 @@ export const starterTemplateManifest = [
         "slug": "runbook",
         "category": "plans",
         "name": "Runbook",
-        "description": "A procedure somebody follows at 3am: preconditions as runnable checks with a stop rule, five numbered steps each with the command and its real output, a verification gate placed between the two steps that matter, a rollback with its safe window stated, and the two conditions that mean escalate.",
+        "description": "A procedure somebody follows at 3am: preconditions as runnable checks with a stop rule, five numbered steps each with the command and its real output, a verification gate placed between the two steps that matter, a rollback with its safe window stated.",
         "type": "html",
         "content_file": "runbook.html",
         "thumbnail": "/assets/template-thumbs/runbook.png",

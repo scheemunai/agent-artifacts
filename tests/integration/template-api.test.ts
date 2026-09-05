@@ -554,6 +554,33 @@ describe('retired template slugs keep answering', () => {
     }
   });
 
+  it('refuses slots sent to dashboard, whose successor takes none', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'dashboard-with-the-old-slots',
+          title: 'Weekly numbers',
+          template: 'dashboard',
+          slots: { title: 'Weekly numbers', updated: 'today', metrics: '| a | b |', details: 'x' },
+        }),
+      });
+      // The alias lands on a zero-slot template, which would otherwise answer 201 and copy our
+      // demo dashboard under the caller's title. This is the derived arm of the guard, not the
+      // flipped-slug list: it fires because the slug resolved to a different one.
+      expect(response.status).toBe(400);
+      const body = (await json(response)) as { error: { details: Record<string, unknown> } };
+      expect(body.error.details).toMatchObject({
+        template_changed: { slug: 'metrics-dashboard', requested: 'dashboard' },
+      });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
   it("yields to an account's own template of the same name, because that is the more specific answer", async () => {
     const ctx = await createApiTestContext();
 

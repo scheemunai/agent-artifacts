@@ -819,6 +819,7 @@ const RETIRED_TEMPLATE_SLUGS: Readonly<Record<string, string>> = {
   recap: 'meeting-recap',
   briefing: 'report',
   'report-html': 'report',
+  dashboard: 'metrics-dashboard',
 };
 
 /**

@@ -31,7 +31,6 @@ describe('starter template manifest seeding', () => {
         'changelog',
         'checklist',
         'daily-digest',
-        'dashboard',
         'decision-brief',
         'interview-notes',
         'launch-announcement',

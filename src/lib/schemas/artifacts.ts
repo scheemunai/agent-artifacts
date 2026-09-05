@@ -31,7 +31,12 @@ export const changeSummarySchema = z.string().max(MAX_CHANGE_SUMMARY_CHARS);
 export const metadataSchema = z.record(z.string(), z.unknown());
 export const passwordSchema = z.string().min(MIN_PASSWORD_CHARS).max(MAX_PASSWORD_CHARS);
 export const limitSchema = z.preprocess(
-  (value) => (value === undefined || value === '' ? 20 : value),
+  // 50, not 20. The built-in lineup passed 20 in wave 2, so a bare `GET /v1/templates` answered
+  // with a truncated list and a cursor — and an agent that reads the length rather than the cursor
+  // concludes a template does not exist. A response that is incomplete, plausible, internally
+  // consistent and reports success is the worst failure shape we have, and this is it wearing an
+  // API costume.
+  (value) => (value === undefined || value === '' ? 50 : value),
   z.coerce
     .number()
     .int()

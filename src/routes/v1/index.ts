@@ -727,8 +727,8 @@ lists the valid slots. Templates with no slots are copied verbatim.
 
 Check the slots array before you reach for \`template:\`. The rule, so you do not
 have to memorise a list that grows: every HTML built-in ships with
-\`"slots": []\`, and only the two markdown built-ins — \`one-pager\` and
-\`dashboard\` — take slots. A zero-slot template is an EXAMPLE,
+\`"slots": []\`, and \`one-pager\` is the only markdown built-in left, so it is the
+only one that takes slots. A zero-slot template is an EXAMPLE,
 not a form. \`template:"daily-digest"\` copies that example VERBATIM and any
 \`slots\` you send are silently ignored, so you get a 201 and the demo content, not
 your content. That is working as designed, and it is not what you wanted.
@@ -753,6 +753,7 @@ so far and both still resolve, to the template that replaced them:
   recap       → meeting-recap  (zero-slot HTML both sides — nothing changes for you)
   report-html → report         (zero-slot HTML both sides — nothing changes for you)
   briefing    → report         (\`briefing\` took slots; \`report\` no longer does — see below)
+  dashboard   → metrics-dashboard  (\`dashboard\` took slots; the successor does not)
 
 \`changelog\` and \`report\` are a different case again: same slug, but each became a
 zero-slot HTML document, so the slots they used to take are gone. Sending them now answers 400

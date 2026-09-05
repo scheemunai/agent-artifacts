@@ -175,6 +175,7 @@ const RETIRED_TEMPLATE_SLUG_REDIRECTS: Readonly<Record<string, string>> = {
   recap: 'meeting-recap',
   briefing: 'report',
   'report-html': 'report',
+  dashboard: 'metrics-dashboard',
 };
 
 function registerRemainingWebRoutes(

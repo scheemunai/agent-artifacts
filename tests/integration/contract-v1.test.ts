@@ -238,7 +238,7 @@ describe('V1 contract endpoint', () => {
       expect(contract).toContain('Retired template slugs still answer');
       expect(contract).toContain('recap       → meeting-recap');
       expect(contract).toContain('details.retired_template');
-      for (const slug of ['one-pager', 'dashboard', 'daily-digest']) {
+      for (const slug of ['one-pager', 'daily-digest']) {
         expect(contract).toContain(slug);
       }
 
