@@ -302,10 +302,20 @@ must stay true:
   and scoped to `/v1/*`, so `/stripe/*` is exempt by construction. Throttling Stripe's retries would
   silently drop billing events.
 
-The CSP in `src/app.ts` is deliberately untouched by billing. Hosted Checkout is a top-level
-redirect, so it needs no `script-src`, `connect-src` or `frame-src` allowance for Stripe. Note that
-`form-action 'self'` means the upgrade form must POST to our own endpoint — a form targeting
-`checkout.stripe.com` directly would be blocked by the browser.
+Billing needs no `script-src`, `connect-src` or `frame-src` allowance in the CSP: Hosted Checkout
+is a top-level redirect, not an embed.
+
+It does need `form-action`, and this was learned in production. The directive is enforced against
+**every hop of the redirect chain**, not only the URL the form posts to. The upgrade and manage
+buttons post to `/dashboard/api/billing/*` and those handlers answer 303 to Stripe, so under
+`form-action 'self'` Chrome blocked the submission outright — both flows dead, with
+`Sending form data to '…/billing/checkout' violates … "form-action 'self'"` in the console.
+`appOriginCsp` therefore names `https://checkout.stripe.com` and `https://billing.stripe.com`.
+
+Keep that list exact. `https:` or a `*.stripe.com` wildcard would re-open form submission far past
+what billing needs. If you ever enable **Stripe custom domains**, `session.url` moves to your own
+host, these two entries stop covering it, and checkout breaks in precisely the same way — make the
+hosts configurable at that point rather than widening the directive.
 
 ### Free-tier retention — read before arming
 

@@ -32,7 +32,7 @@ describe('viewer live updates, downloads, and OG', () => {
       const html = await page.text();
       expect(page.status).toBe(200);
       expect(page.headers.get('content-security-policy')).toBe(
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https://checkout.stripe.com https://billing.stripe.com; frame-ancestors 'none'"
       );
       expect(html).toContain('<script id="aa-boot" type="application/json"');
       expect(html).toContain('<script type="module" src="/assets/viewer-');

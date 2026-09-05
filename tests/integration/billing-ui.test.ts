@@ -64,7 +64,9 @@ describe('dashboard billing card', () => {
     const html = settings(billing());
     expect(html).toContain('Upgrade to Pro — €9/month');
     expect(html).toContain('Upgrade yearly — €90/year');
-    // CSP sets form-action 'self': a form targeting checkout.stripe.com would be blocked outright.
+    // The action stays same-origin so the price is chosen server-side from the interval. Note this
+    // is NOT what satisfies the CSP — `form-action` is checked across the redirect too, and the
+    // Stripe hosts are allowed explicitly in `appOriginCsp`. See billing-form-action-csp.test.ts.
     expect(html).toContain('action="/dashboard/api/billing/checkout"');
     expect(html).not.toContain('checkout.stripe.com');
     expect(html).toContain('name="interval" value="monthly"');

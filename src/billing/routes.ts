@@ -108,10 +108,14 @@ export function registerBillingDashboardRoutes(
   /**
    * `POST /dashboard/api/billing/checkout` — start an upgrade.
    *
-   * The browser POSTs HERE, never directly to Stripe: the app's CSP sets `form-action 'self'`, so a
-   * form targeting checkout.stripe.com would be blocked by the browser outright. Server-side is also
-   * what keeps price selection authoritative — the client sends an INTERVAL, not a price id, so a
-   * tampered form cannot subscribe someone to a price of their own choosing.
+   * The browser POSTs HERE, never directly to Stripe, which is what keeps price selection
+   * authoritative: the client sends an INTERVAL, not a price id, so a tampered form cannot
+   * subscribe someone to a price of their own choosing.
+   *
+   * THE 303 BELOW IS SUBJECT TO `form-action`, WHICH IS WHY `appOriginCsp` NAMES STRIPE. The
+   * directive is checked on every hop of the redirect chain, not just on the URL the form posts to,
+   * so a same-origin action does not exempt this redirect — it only moves where the block happens.
+   * Sending a browser somewhere new from here means adding that origin in `src/app.ts` too.
    */
   app.post('/dashboard/api/billing/checkout', async (context) => {
     const account = await ctx.resolveAccount(context);
