@@ -6,25 +6,23 @@
 <title>Every service met its objective and the error budget is 71% gone</title>
 <!--
   Agent Artifacts template · status / service-health
-  VOICE  neo-grotesque ("Helvetica Neue", Helvetica, Arial, Liberation Sans), tabular figures
-  SCHEME light neutral #eef0f1 · slate-teal data #2f6d78 · no brand accent
+  VOICE  neo-grotesque ("Helvetica Neue", Helvetica, Arial, Liberation Sans), tabular nums
+  SCHEME light neutral #eef0f1 · slate-teal data #2f6d78 · no accent
 
   THE ARGUMENT — keep it. A status page answers "are we up?": a state, and the provider's
-  question. This answers "how much unreliability can we still afford, what did we spend it
-  on, and what is it costing us?" An objective is a FLOOR, a budget is a TOTAL — so every
-  service can meet its objective while the quarter's budget is gone. Lead with a CLAIM.
+  question. This answers how much unreliability is left, what spent it, and what that cost.
+  An objective is a FLOOR, a budget is a TOTAL: every service can meet its objective while
+  the quarter's budget is gone. Lead with a CLAIM.
 
-  · Ledger sorts by BUDGET CONSUMED, never by date: one incident usually dwarfs the rest.
-  · "What it has already cost" is not optional. A budget with no consequence is a gauge,
-    and a gauge is what a status page already gives you.
-  · Strips are 90 bars, one per day. Healthy baseline is ONE tiled SVG <pattern>; add rects
-    only for a bad day — a knockout in the CARD colour (#fff) then the shorter state bar.
-    Day d sits at x = d * 4.
-  · Bar HEIGHT encodes availability, colour encodes state. Keep both, and keep the counts
-    in words: red and green are one colour to many readers.
-  · DELETE, don't empty. No incidents? Say so in the hero and drop the ledger.
-  · Never pin the root to the viewport height, never give html or body a percentage height,
-    no fixed or sticky positioning. Nothing external: no fonts, images, scripts, styles.
+  · Ledger sorts by BUDGET CONSUMED, never date — one incident dwarfs the rest.
+  · "What it has already cost" is not optional — a budget with no consequence is a gauge.
+  · Strips are 90 bars, one per day. Baseline is ONE tiled SVG <pattern>; add rects only for
+    a bad day — a knockout in the CARD colour (#fff) then the state bar. Day d is at x = d*4.
+  · Bar HEIGHT encodes availability, colour encodes state. Keep both, and the counts in
+    words: red and green are one colour to many.
+  · DELETE, don't empty. No incidents? Say so in the hero, drop the ledger.
+  · Never pin the root to the viewport height or give html/body a percentage height; no
+    fixed or sticky positioning. Nothing external: no fonts, images, scripts.
 -->
 <style>
 *,*::before,*::after{box-sizing:border-box}
@@ -165,7 +163,18 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.48}
 .chart svg{height:104px}
 .strip{height:24px}
 .kicker p{font-size:1em}
+}@media (max-width:23rem){
+:root{--s5:.875rem;--s6:1rem;--s7:1.125rem;--s8:1.25rem}
+body{padding-inline:var(--s3)}
+.burn,.board,.kicker{padding:var(--s3)}
+.active{padding:var(--s2) var(--s3)}
+.ledger tbody tr,.ledger tfoot tr,.cost li,.inc li{padding-block:var(--s1)}
+.legend,.stats{margin-top:var(--s2);padding-top:var(--s2)}
+.strip{height:20px}
+.chart svg{height:88px}
+.colophon{margin-top:var(--s4)}
 }
+
 </style>
 </head>
 <body>
@@ -178,9 +187,9 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.48}
   <header class="head">
     <span class="lab eyebrow">Reliability review · Q4 FY26 · 8 September</span>
     <h1>Every service met its objective and the error budget is 71% gone</h1>
-    <p class="head__sub">Six weeks into a thirteen-week quarter. Nothing here is breaching an
-      SLO, and <b>1 hour 55 minutes</b> of unreliability is left to spend before 31 October.
-      An objective is a floor; a budget is a total.</p>
+    <p class="head__sub">Six weeks into a thirteen-week quarter, with <b>1 hour 55 minutes</b>
+      of unreliability left to spend before 31 October. An objective is a floor; a budget is a
+      total.</p>
   </header>
 
   <section class="burn" aria-labelledby="bd">
@@ -310,15 +319,13 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.48}
       <span><i class="key key--ok"></i>Operational — full bar</span>
       <span><i class="key key--deg"></i>Degraded — two-thirds bar</span>
       <span><i class="key key--out"></i>Partial outage — short bar</span>
-      <span>Height and colour both encode the day; counts are written beside each strip.</span>
-    </p>
+      </p>
   </section>
 
   <section class="kicker" aria-labelledby="kk">
     <h2 class="lab" id="kk">The thing this board is for</h2>
-    <p>Four services, four objectives met, and seventy-one per cent of the quarter spent in six
-      weeks. <b>Both are true and only one of them is on a status page.</b> The publish pipeline
-      cleared its floor by six hundredths of a point and took two-thirds of the money.</p>
+    <p><b>Both of those are true, and only one of them is on a status page.</b> The publish
+      pipeline cleared its floor by six hundredths of a point and took two-thirds of the money.</p>
   </section>
 
   <footer class="colophon">Uptime comes from external probes in five regions at 30-second

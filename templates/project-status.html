@@ -105,7 +105,7 @@ color:var(--subtle)}
 .rail li.risk .rail__s{color:var(--warn)}
 
 /* SCOPE METERS */
-.scope{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:var(--s5);
+.scope{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(14rem,100%),1fr));gap:var(--s5);
 margin-top:var(--s4)}
 .m__head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
 .m__label{font-size:.875rem}
@@ -175,7 +175,17 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.45}
 .ask__who{margin-top:var(--s2)}
 .ask__n{font-size:.6875rem;letter-spacing:.09em;text-transform:uppercase}
 .colophon{margin-top:var(--s4);padding-top:var(--s2)}
+}/* narrow band: spacing + measure, never leading (WCAG 1.4.12). */
+@media (max-width:23rem){
+  :root{--s3:.5rem;--s4:.75rem;--s5:.875rem;--s6:1rem;--s7:1.125rem;--s8:1.25rem}
+  body{padding-inline:var(--s3)}
+  .verdict{padding:var(--s3)}
+  .blk li{padding-block:var(--s2);padding-inline:var(--s3)}
+  .ask li{padding-block:var(--s2)}
+  .rail li{padding-bottom:var(--s1)}
+  .colophon{margin-top:var(--s4);padding-top:var(--s2)}
 }
+
 </style>
 </head>
 <body>

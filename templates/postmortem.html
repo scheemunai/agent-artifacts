@@ -6,19 +6,17 @@
 <title>Checkout was unavailable for 3 hours 47 minutes on 12 September</title>
 <!--
   Agent Artifacts template · research / postmortem
-  VOICE  editorial serif (ui-serif, Charter, Iowan Old Style, Georgia); mono for labels, times, IDs
-  SCHEME warm paper #f0eae0 · rust accent #a8452a · petrol data hue #2c5670 · inked impact strip
+  VOICE  editorial serif (ui-serif, Charter, Iowan Old Style, Georgia); mono for labels/times/IDs
+  SCHEME warm paper #f0eae0 · rust #a8452a · petrol data #2c5670 · inked impact strip
 
   REWRITING THIS ARTIFACT
-  · Blameless: name systems and decisions, never people. People appear only as owners.
-  · The impact strip is the headline: four measured numbers. Don't know one? Remove
-    the tile — never write "unknown" in it.
-  · Impact-start, detection and mitigation are the key timeline entries; their
-    timestamps must agree with the duration in the strip.
-  · DELETE, don't empty. No chart? Remove the figure. Never an empty heading.
-  · Never pin the root to the viewport height and never give html or body a percentage
-    height; no fixed or sticky positioning. The frame measures this document.
-  · Nothing external: no web fonts, images, scripts or stylesheets.
+  · Blameless: name systems and decisions, never people; owners only.
+  · The impact strip is the headline: four measured numbers; omit any you cannot fill.
+  · Impact-start, detection and mitigation are the key entries; their timestamps must
+    match the duration in the strip.
+  · DELETE, don't empty. No chart? Remove the figure. No empty headings.
+  · Never pin the root to the viewport height or give html/body a percentage height; no
+    fixed or sticky positioning. Nothing external: no fonts, images, scripts, styles.
 -->
 <style>
 *,*::before,*::after{box-sizing:border-box}
@@ -92,7 +90,7 @@ margin-left:-.3125rem}
 letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
 
 /* CAUSE + FACTORS */
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(19rem,1fr));gap:var(--s6);margin-top:var(--s6)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(19rem,100%),1fr));gap:var(--s6);margin-top:var(--s6)}
 .cause{align-self:start;padding:var(--s5);border:1px solid var(--rust-line);border-radius:.75rem;
 background:var(--rust-soft)}
 .cause h2{color:var(--rust)}
@@ -134,6 +132,12 @@ font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase
 color:var(--subtle);font-size:.8125rem;line-height:1.5}
 
 @media (max-width:44rem){
+/* compact SPACING from the layout change, not 34rem — see PR. */
+:root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
+.sec,.two,.chart{margin-top:var(--s5)}
+.two{gap:var(--s5)}
+.h-sec{padding-bottom:var(--s1)}
+.colophon{margin-top:var(--s4);padding-top:var(--s2)}
 /* table -> card. caption MUST be re-declared: an anonymous table box collapses it. */
 .acts,.acts caption,.acts tbody,.acts tr,.acts td{display:block}
 .acts thead{display:none}
@@ -149,14 +153,10 @@ border-top:1px solid var(--line)}
 .acts td:last-child{grid-column:2/-1;grid-row:1;justify-self:start}
 }
 @media (max-width:34rem){
-:root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
 body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.46}
 .ttl{font-size:1.625rem;line-height:1.1}
 .summary{margin-top:var(--s3);font-size:1.0625rem}
 .dl{padding-bottom:var(--s3)}
-.sec,.two,.chart{margin-top:var(--s5)}
-.two{gap:var(--s5)}
-.h-sec{padding-bottom:var(--s1)}
 .tl p,.fac p,.well li,.cause>p+p,.acts td{line-height:1.36}
 .impact{padding:var(--s3) var(--s4)}
 .figs{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2) var(--s4)}
@@ -176,8 +176,15 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.46}
 .well li+li{margin-top:var(--s1)}
 .acts tr{padding-block:var(--s1)}
 .acts caption{margin-bottom:var(--s2);padding-bottom:var(--s1)}
-.colophon{margin-top:var(--s4);padding-top:var(--s2)}
+}/* narrow band: spacing + measure; leading untouched (WCAG 1.4.12). */
+@media (max-width:23rem){
+:root{--s3:.5rem;--s4:.75rem;--s5:.8125rem;--s6:.875rem;--s7:1rem;--s8:1.125rem}
+body{padding-inline:var(--s3)}
+.impact,.cause{padding:var(--s3)}
+.tl li{grid-template-columns:2.75rem minmax(0,1fr)}
+.tl__b::before{left:calc(2.75rem + var(--s3))}
 }
+
 </style>
 </head>
 <body>

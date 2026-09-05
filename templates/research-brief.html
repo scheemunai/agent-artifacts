@@ -102,7 +102,7 @@ ul,ol{margin:0;padding:0;list-style:none}
   margin-top:.15rem}
 
 /* CLOSERS */
-.closers{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:var(--s5);
+.closers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(17rem,100%),1fr));gap:var(--s5);
   margin-top:var(--s7);padding-top:var(--s5);border-top:2px solid var(--ink)}
 .closers h2{font-size:1.1875rem}
 .bul{margin-top:var(--s4)}
@@ -115,39 +115,66 @@ ul,ol{margin:0;padding:0;list-style:none}
   color:var(--subtle);font-size:.8125rem;line-height:1.55}
 
 @media (max-width:62rem){
-  .cols{grid-template-columns:minmax(0,1fr);gap:var(--s6)}
-  .rail{grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
-}
-@media (max-width:34rem){
+  /* One column from here down, so the compact SPACING scale applies from here down too —
+     not from 34rem. Restoring desktop spacing while the layout is still a single narrow
+     column is what made this document taller at 550px than at 390px. Type is not touched
+     here; that stays in the 34rem block where the measure actually needs it. */
   :root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
-  body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.46}
-  .q{line-height:1.1}
+  .cols{grid-template-columns:minmax(0,1fr);gap:var(--s5);margin-top:var(--s5)}
+  .rail{grid-template-columns:repeat(auto-fit,minmax(min(15rem,100%),1fr))}
+  body{padding:var(--s5) var(--s4) var(--s8)}
   .mast{padding-bottom:var(--s4)}
-  .meta{margin-top:var(--s4);gap:var(--s1) var(--s4)}
+  .meta{margin-top:var(--s4)}
   .answer{padding:var(--s4)}
-  .answer p{margin-top:var(--s2);font-size:1.0625rem;line-height:1.34}
   .answer p+p{margin-top:var(--s2)}
-  .cols{margin-top:var(--s5);gap:var(--s5)}
   .h-sec{padding-bottom:var(--s1)}
-  .ev p,.bul li,.card>p,.srcs li,.cite{line-height:1.36}
-  .ev__n{padding-top:.1rem}
-  .ev h3{font-size:1rem;line-height:1.16}
   .ev p{margin-top:var(--s1)}
-  .ev li{grid-template-columns:1.75rem minmax(0,1fr);gap:var(--s3);padding-bottom:var(--s3)}
+  .ev li{padding-bottom:var(--s3)}
   .ev li+li{padding-top:var(--s3)}
   .cite{margin-top:var(--s2)}
   .card{padding:var(--s4)}
   .card>p{margin-top:var(--s2)}
-  .conf{line-height:1.2}
   .scale{margin-top:var(--s2)}
   .srcs li+li{margin-top:var(--s2);padding-top:var(--s2)}
-  /* the rail stops being a rail: confidence and method pair up, sources runs full width */
-  .rail{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4)}
-  .rail>section:nth-child(2){grid-column:1/-1;order:1}
   .closers{margin-top:var(--s5);padding-top:var(--s3);gap:var(--s4)}
   .bul li+li{margin-top:var(--s2)}
   .colophon{margin-top:var(--s5);padding-top:var(--s3)}
 }
+@media (max-width:34rem){
+  body{font-size:.9375rem;line-height:1.46}
+  .q{line-height:1.1}
+  .meta{gap:var(--s1) var(--s4)}
+  .answer p{margin-top:var(--s2);font-size:1.0625rem;line-height:1.34}
+  .ev p,.bul li,.card>p,.srcs li,.cite{line-height:1.36}
+  .ev__n{padding-top:.1rem}
+  .ev h3{font-size:1rem;line-height:1.16}
+  .ev li{grid-template-columns:1.75rem minmax(0,1fr);gap:var(--s3)}
+  .conf{line-height:1.2}
+  /* the rail stops being a rail: confidence and method pair up, sources runs full width */
+  .rail{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4)}
+  .rail>section:nth-child(2){grid-column:1/-1;order:1}
+}/* Below ~360px the single column wraps hard and the page grows again. Tighten the SPACING
+   scale only — line-height stays at 1.46/1.36, because 1.5 is the WCAG 1.4.12 baseline and
+   compressing leading to hit a height budget is the wrong trade. */
+@media (max-width:23rem){
+  :root{--s3:.5rem;--s4:.75rem;--s5:.8125rem;--s6:.875rem;--s7:1rem;--s8:1.125rem}
+  /* at this width the height is WRAPPING, not spacing — narrowing the side gutters returns
+     16px of measure to every paragraph, which buys more than another spacing cut does */
+  body{padding-inline:var(--s3)}
+  /* Measured, not assumed: unpairing the rail here makes the page TALLER (2,983 -> 3,023),
+     so the pairing stays. The saving at this width is in the evidence gutter instead. */
+  .ev li{grid-template-columns:1.5rem minmax(0,1fr);padding-bottom:var(--s2)}
+  .ev li+li{padding-top:var(--s2)}
+  .ev__n{font-size:.75rem}
+  .mast{padding-bottom:var(--s3)}
+  .answer{padding:var(--s3) var(--s4)}
+  .card{padding:var(--s3) var(--s4)}
+  .srcs li+li{margin-top:var(--s1);padding-top:var(--s1)}
+  .closers{margin-top:var(--s4);padding-top:var(--s2);gap:var(--s3)}
+  .bul li+li{margin-top:var(--s1)}
+  .colophon{margin-top:var(--s4);padding-top:var(--s2)}
+}
+
 </style>
 </head>
 <body>

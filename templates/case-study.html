@@ -94,7 +94,7 @@ line-height:1.45}
 .body p+p{margin-top:var(--s3)}
 .body h3{margin-top:var(--s5);font-size:1.0625rem}
 .body h3:first-child{margin-top:0}
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:var(--s6);
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(18rem,100%),1fr));gap:var(--s6);
 margin-top:var(--s6)}
 .snag{padding:var(--s5);border:1px solid var(--rust-line);border-radius:.75rem;
 background:var(--rust-soft)}
@@ -143,7 +143,16 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.5}
 .kicker blockquote{font-size:1.0625rem}
 .two{gap:var(--s5)}
 .body p,.next li,.snag>p{line-height:1.45}
+}/* narrow band: spacing + measure, never leading (WCAG 1.4.12). */
+@media (max-width:23rem){
+  :root{--s3:.5rem;--s4:.75rem;--s5:.875rem;--s6:1rem;--s7:1.125rem;--s8:1.25rem}
+  body{padding-inline:var(--s3)}
+  .snag,.kicker{padding:var(--s3)}
+  .ledger tbody tr{padding-block:var(--s2)}
+  .next li+li{margin-top:var(--s1)}
+  .colophon{margin-top:var(--s4);padding-top:var(--s2)}
 }
+
 </style>
 </head>
 <body>

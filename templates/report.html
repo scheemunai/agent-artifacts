@@ -136,6 +136,15 @@ a{color:var(--rust)}
   .next,.colophon{max-width:40rem}
 }
 @media (max-width:44rem){
+  /* the band is one column from here down, so the compact SPACING scale starts here rather
+     than at 30rem — restoring desktop spacing inside a still-narrow sheet is what made this
+     document taller at 490px than at 390px. Type stays full until 30rem. */
+  :root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.25rem;--s7:1.375rem}
+  .sec{margin-top:var(--s6)}
+  .sec>p,.sec>h3+p{margin-top:var(--s3)}
+  .next{padding-top:var(--s5)}
+  .steps li{padding-block:var(--s3)}
+  .list li+li{margin-top:var(--s2)}
   .lede{grid-template-columns:minmax(0,1fr);gap:var(--s5)}
   .quarter{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:var(--s4);
     padding-left:0;padding-top:var(--s4);border-left:0;border-top:1px solid var(--line2)}
@@ -161,7 +170,24 @@ a{color:var(--rust)}
   .sec>p,.sec>h3+p{margin-top:var(--s3)}
   .list li,.steps p,.lede p{line-height:1.42}
   .colophon{margin-top:var(--s5);padding-top:var(--s3)}
+}/* Below ~360px the sheet wraps hard. Tighten spacing and return measure to the column;
+   line-height is left alone — 1.5 is the WCAG 1.4.12 baseline and leading is the wrong
+   thing to spend on a height budget. */
+@media (max-width:23rem){
+  :root{--s3:.5rem;--s4:.75rem;--s5:.8125rem;--s6:1rem;--s7:1.125rem}
+  .paper{padding-inline:var(--s2)}
+  .steps li{padding-block:var(--s2)}
+  .list li+li{margin-top:var(--s1)}
+  .next{padding-top:var(--s4)}
+  .colophon{margin-top:var(--s4);padding-top:var(--s3)}
+  .chart{padding:var(--s3)}
+  .lede{margin-top:var(--s4);gap:var(--s4)}
+  .quarter{gap:var(--s3);padding-top:var(--s3)}
+  .pull{margin:var(--s5) 0;padding-left:var(--s4)}
+  .sec{margin-top:var(--s5)}
+  .bars div+div{margin-top:var(--s3)}
 }
+
 </style>
 </head>
 <body>
