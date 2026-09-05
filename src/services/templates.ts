@@ -620,10 +620,44 @@ function seedSqliteStarterTemplates(
   });
 
   seed();
+
+  const live = starterTemplates.map((template) => template.slug);
+  const retired = handle.sqlite
+    .prepare(
+      `DELETE FROM templates
+       WHERE account_id IS NULL AND slug NOT IN (${live.map(() => '?').join(', ')})
+       RETURNING slug`
+    )
+    .all(live) as Array<{ slug: string }>;
+  if (retired.length > 0) {
+    logger.info(
+      { slugs: retired.map((row) => row.slug) },
+      'database.templates.retired_built_ins_removed'
+    );
+  }
+
   logger.info({ count: starterTemplates.length }, 'database.templates.seeded');
   return { insertedOrUpdated: starterTemplates.length };
 }
 
+/**
+ * Built-in rows whose slug has left the manifest are DELETED, not left behind.
+ *
+ * Found by running a deploy rather than reasoning about one: seeded a database with the old
+ * eight-template lineup, then booted the new build against it. The upsert refreshed all 21 current
+ * built-ins correctly — and left `recap`, `briefing` and `report-html` sitting there with their old
+ * content, for 24 rows total.
+ *
+ * That is worse than three stale rows. `resolveTemplate` tries an EXACT match before it follows a
+ * retirement alias, so a surviving `recap` row means `template: "recap"` resolves to the ghost and
+ * the alias never fires — the entire retirement design, silently bypassed in production while
+ * passing every test, because tests start from an empty database and production does not.
+ * `GET /v1/templates` reads the database and `/templates` reads the manifest, so the API and the
+ * public page would have disagreed about what exists.
+ *
+ * Scoped to `account_id IS NULL`: an account's own template is never touched, including one that
+ * has taken a freed slug.
+ */
 async function seedPostgresStarterTemplates(
   handle: PostgresDatabaseHandle,
   logger: Logger,
@@ -666,6 +700,20 @@ async function seedPostgresStarterTemplates(
           record.slots,
           record.now,
         ]
+      );
+    }
+
+    const live = starterTemplates.map((template) => template.slug);
+    const retired = await client.query<{ slug: string }>(
+      `DELETE FROM templates
+       WHERE account_id IS NULL AND slug <> ALL($1::text[])
+       RETURNING slug`,
+      [live]
+    );
+    if (retired.rows.length > 0) {
+      logger.info(
+        { slugs: retired.rows.map((row) => row.slug) },
+        'database.templates.retired_built_ins_removed'
       );
     }
 

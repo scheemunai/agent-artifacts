@@ -154,4 +154,73 @@ describe('starter template manifest seeding', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  /**
+   * The test shape that was missing all day: every other seed test starts from an EMPTY database,
+   * which is the one situation production is never in. Seeding the old lineup first is what found
+   * that retired built-ins survived a deploy — and that a surviving `recap` row beats its own alias,
+   * because `resolveTemplate` matches exactly before it follows a retirement.
+   */
+  it('removes built-ins whose slug has left the manifest, and leaves account templates alone', async () => {
+    const ctx = await createMigratedSqliteContext();
+    const logger = pino({ enabled: false });
+
+    try {
+      const now = Date.now();
+      const insert = ctx.db.sqlite.prepare(
+        `INSERT INTO templates (id, account_id, slug, name, description, type, content, slots, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, '[]', ?, ?)`
+      );
+      // Three slugs this build retires, as a previous deploy would have left them.
+      for (const slug of ['recap', 'briefing', 'report-html']) {
+        ctx.db.sqlite
+          .prepare('DELETE FROM templates WHERE slug = ? AND account_id IS NULL')
+          .run(slug);
+        insert.run(`tpl_ghost_${slug}`, null, slug, slug, 'stale', 'markdown', '# stale', now, now);
+      }
+      // And an account's own template, which must survive untouched — the DELETE is scoped to
+      // built-ins, and getting that wrong would destroy customer data on every boot.
+      ctx.db.sqlite
+        .prepare(
+          `INSERT INTO accounts (id, email, password_hash, suspended_at, created_at, updated_at)
+           VALUES ('acc_someone', 'someone@example.test', 'x', NULL, ?, ?)`
+        )
+        .run(now, now);
+      insert.run(
+        'tpl_mine',
+        'acc_someone',
+        'my-own-thing',
+        'Mine',
+        'mine',
+        'markdown',
+        '# mine',
+        now,
+        now
+      );
+
+      await runMigrations(ctx.db, logger);
+
+      const builtIns = ctx.db.sqlite
+        .prepare('SELECT slug FROM templates WHERE account_id IS NULL ORDER BY slug')
+        .all() as Array<{ slug: string }>;
+      expect(builtIns.map((row) => row.slug)).toEqual(
+        loadStarterTemplates()
+          .map((template) => template.slug)
+          .sort()
+      );
+      for (const gone of ['recap', 'briefing', 'report-html']) {
+        expect(
+          builtIns.map((row) => row.slug),
+          `${gone} survived the deploy`
+        ).not.toContain(gone);
+      }
+
+      const mine = ctx.db.sqlite
+        .prepare("SELECT slug, content FROM templates WHERE account_id = 'acc_someone'")
+        .all() as Array<{ slug: string; content: string }>;
+      expect(mine).toEqual([{ slug: 'my-own-thing', content: '# mine' }]);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
 });
