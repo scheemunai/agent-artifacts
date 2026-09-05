@@ -141,9 +141,14 @@ describe('a template detail page renders what the template actually is', () => {
   it('frames an HTML template in the same sandbox a published artifact uses', () => {
     const html = templates.find((template) => template.type === 'html');
     expect(html, 'no html starter to check').toBeDefined();
-    const rendered = renderToString(TemplateDetailPage({ template: html as never }));
+    // The URL is the caller's to choose — which host serves the frame is a property of the
+    // deployment, and `tests/integration/template-frame-origin.test.ts` is where both shapes are
+    // held against the CSP that ships with the page. Here it is a fixture, so this stays a test
+    // about what the page renders around it.
+    const frameUrl = `https://usercontent.example.test/templates/${html?.slug}/frame`;
+    const rendered = renderToString(TemplateDetailPage({ template: html as never, frameUrl }));
 
-    expect(rendered).toContain(`src="/templates/${html?.slug}/frame"`);
+    expect(rendered).toContain(`src="${frameUrl}"`);
     expect(rendered).toContain('sandbox="allow-scripts"');
     expect(rendered).not.toContain('allow-same-origin');
     expect(rendered).toContain('aa-templates__preview-note');
@@ -152,7 +157,12 @@ describe('a template detail page renders what the template actually is', () => {
   it('renders a markdown template inline, with no frame at all', () => {
     const markdown = templates.find((template) => template.type === 'markdown');
     expect(markdown, 'no markdown starter to check').toBeDefined();
-    const rendered = renderToString(TemplateDetailPage({ template: markdown as never }));
+    const rendered = renderToString(
+      TemplateDetailPage({
+        template: markdown as never,
+        frameUrl: `https://usercontent.example.test/templates/${markdown?.slug}/frame`,
+      })
+    );
 
     // Markdown has no sandbox problem and the frame origin could not load the stylesheet anyway.
     expect(rendered).toContain('aa-templates__markdown');

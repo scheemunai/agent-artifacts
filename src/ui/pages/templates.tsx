@@ -134,8 +134,18 @@ export function TemplatesPage({ templates }: { templates: StarterTemplate[] }) {
  * so what a visitor sees here is what a reader would receive. The frame is BOUNDED here and only
  * here: this is a specimen inside a gallery, not the artifact itself, and a page of nineteen
  * full-height documents is not a gallery.
+ *
+ * `frameUrl` arrives built rather than assembled here, because which host serves it is a property
+ * of the deployment and not of the page: `lib/template-frame.ts` makes the one choice, this renders
+ * whatever it made. Spelling the path inline is what shipped a frame the cloud CSP refuses.
  */
-export function TemplateDetailPage({ template }: { template: StarterTemplate }) {
+export function TemplateDetailPage({
+  template,
+  frameUrl,
+}: {
+  template: StarterTemplate;
+  frameUrl: string;
+}) {
   const category = TEMPLATE_CATEGORY_COPY[template.category];
   const markdownPreview =
     template.type === 'markdown' ? renderMarkdown(template.content, { headingOffset: 1 }) : null;
@@ -175,7 +185,7 @@ export function TemplateDetailPage({ template }: { template: StarterTemplate }) 
                 title={`${template.name} preview`}
                 sandbox="allow-scripts"
                 loading="lazy"
-                src={`/templates/${template.slug}/frame`}
+                src={frameUrl}
               ></iframe>
             </div>
             <p class="aa-templates__preview-note">
