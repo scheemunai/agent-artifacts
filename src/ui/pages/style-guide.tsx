@@ -8,6 +8,7 @@ import {
   MarketingFeatureLine,
   MarketingFinalCta,
   MarketingOriginNote,
+  MarketingSteps,
   MarketingWaitlist,
   MarketingWorksWith,
 } from '../components/marketing.js';
@@ -44,6 +45,7 @@ import {
   Toast,
   ToastRegion,
 } from '../components/primitives.js';
+import { HOME_TEMPLATE_STEPS } from './home.js';
 
 interface TokenSpec {
   name: string;
@@ -593,7 +595,7 @@ function marketingComponentsSection() {
     <StyleGuideSection
       id="marketing-components"
       title="Fresh Air marketing components"
-      note="Home page components are registered here first: artifact embed, example card, API block, feature line, works-with line, waitlist form, origin note, terms copy, and the closing call to action."
+      note="Home page components are registered here first: artifact embed, example card, three-step row, API block, feature line, works-with line, waitlist form, origin note, terms copy, and the closing call to action."
     >
       <div class="aa-stack">
         <MarketingArtifactEmbed
@@ -641,6 +643,42 @@ function marketingComponentsSection() {
             attachments.
           </MarketingExampleCard>
         </div>
+
+        {/* The three-step row, in the two shapes it actually renders.
+
+            THE STATE THAT MATTERS HERE IS COPY LENGTH, not an interaction: nothing in this
+            component can be hovered, focused or disabled. What it can do is receive three bodies of
+            different lengths, and the second specimen is that case on purpose — one step of a line,
+            one of four — because the failure it guards against is the row centring its steps
+            against each other and leaving the numerals on three different baselines. The tops stay
+            on the rail.
+
+            The other state is the viewport: three across, one column at 720px and below. That is a
+            media query rather than a prop, so it is read by narrowing this page, not by a second
+            specimen pretending to be narrow. */}
+        {/* The home page's own steps, imported rather than retyped. A specimen that paraphrases
+            production drifts from it, and then the guide is a picture of a page nobody ships. */}
+        <MarketingSteps steps={HOME_TEMPLATE_STEPS} />
+
+        <MarketingSteps
+          steps={[
+            {
+              label: '1',
+              title: 'One line.',
+              body: 'A step whose body is short.',
+            },
+            {
+              label: '2',
+              title: 'Four lines, at this width.',
+              body: 'A step whose body runs long enough to wrap several times, which is the case that shows whether the row keeps its three numerals on one rail or lets each step float against its own copy.',
+            },
+            {
+              label: '3',
+              title: 'Two lines.',
+              body: 'A step somewhere between the other two, so the row is uneven in both directions.',
+            },
+          ]}
+        />
 
         {/* Plain text, because that is what `home.tsx` passes. This specimen used to hand-write
             syntax-coloured spans and a caption wrapper that no page has ever rendered, so the guide

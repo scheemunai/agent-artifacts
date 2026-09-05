@@ -10,8 +10,13 @@ import {
   HOME_HERO_CTA_LABEL,
   HOME_REPO_URL,
   HOME_SUBLINE,
+  HOME_TEMPLATE_STEPS,
+  HOME_TEMPLATES_HREF,
+  HOME_TEMPLATES_TITLE,
   HomePage,
 } from '../../src/ui/pages/home.js';
+import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
+import { declarationValue, parseStylesheet, winningDeclaration } from '../support/css-cascade.js';
 
 const NOW = Date.parse('2026-08-27T18:00:00.000Z');
 const SIX_HOURS_AGO = NOW - 6 * 60 * 60 * 1000;
@@ -206,6 +211,100 @@ describe('cloud marketing homepage', () => {
       expect(hero).toContain('aa-btn--primary');
       expect(hero).toContain(`>${HOME_HERO_CTA_LABEL}<`);
       expect(hero).toContain(`href="${HOME_REPO_URL}"`);
+    });
+  });
+
+  /**
+   * The templates section: three steps and a way into the gallery.
+   *
+   * Asserted on the SECTION rather than on the page, because "the page contains /templates" was
+   * already true before this section existed — nothing else links there, but the next thing that
+   * does would have made this pass for the wrong reason.
+   */
+  describe('start with a template', () => {
+    const html = renderToString(HomePage({ baseUrl: 'https://example.test' }));
+    const section = html.slice(
+      html.indexOf('id="home-templates-title"'),
+      html.indexOf('id="home-features-title"')
+    );
+
+    it('leads somewhere: three steps in order, then the gallery', () => {
+      expect(html).toContain(HOME_TEMPLATES_TITLE);
+      expect(HOME_TEMPLATE_STEPS).toHaveLength(3);
+
+      // An `<ol>`, so the order is in the markup and not only in the numerals a reader can see.
+      expect(section).toContain('<ol class="aa-marketing-steps">');
+      for (const step of HOME_TEMPLATE_STEPS) {
+        expect(section).toContain(step.title);
+        expect(section).toContain(step.body);
+        expect(section).toContain(`<span class="aa-marketing-step__number">${step.label}</span>`);
+      }
+
+      expect(section).toContain(`href="${HOME_TEMPLATES_HREF}"`);
+      expect(section).toContain('aa-btn--primary');
+    });
+
+    it('spends no emoji and no accent on the numerals', () => {
+      // The guardrails for this section, as assertions rather than as a note in a commit message.
+      expect(section).not.toMatch(/\p{Extended_Pictographic}/u);
+
+      const rules = parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8'));
+      const numeral = winningDeclaration(
+        rules,
+        [
+          { tag: 'li', classes: ['aa-marketing-step'] },
+          { tag: 'span', classes: ['aa-marketing-step__number'] },
+        ],
+        'color',
+        1280
+      )?.value;
+
+      expect(numeral).toBe('var(--color-aa-muted)');
+    });
+
+    it('is three across on a desktop and one column on a phone', () => {
+      const rules = parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8'));
+      const columns = (viewport: number) =>
+        winningDeclaration(
+          rules,
+          [{ tag: 'ol', classes: ['aa-marketing-steps'] }],
+          'grid-template-columns',
+          viewport
+        )?.value;
+
+      expect(columns(1280)).toBe('repeat(3, minmax(0, 1fr))');
+      expect(columns(768)).toBe('repeat(3, minmax(0, 1fr))');
+      // 720 is the sheet's existing stack point, shared with the examples and pricing grids rather
+      // than invented for this row: three columns and one orphan is the shape a bespoke breakpoint
+      // produces, and this section is the one that must read as 1-2-3.
+      expect(columns(720)).toBe('minmax(0, 1fr)');
+      expect(columns(390)).toBe('minmax(0, 1fr)');
+    });
+
+    it('uses the shared hairline for the step rule, not a colour of its own', () => {
+      const rules = parseStylesheet(readFileSync('src/ui/assets/app.css', 'utf8'));
+      const step = rules.find((rule) => rule.selector === '.aa-marketing-step');
+
+      expect(declarationValue(step?.block ?? '', 'border-top')).toBe(
+        '1px solid var(--color-aa-line)'
+      );
+      // And on the top edge only where the row reads as one rail — never an accent stripe down one
+      // side, which is the decoration this product does not use.
+      for (const side of ['border-left', 'border-inline-start', 'border-right']) {
+        expect(declarationValue(step?.block ?? '', side)).toBeUndefined();
+      }
+    });
+
+    it('is registered in the style guide with the copy the page actually ships', () => {
+      // The style-guide-first rule, held as a test: the guide renders this component, and it
+      // renders it from the same constant, so a specimen cannot drift into a nicer version of a
+      // thing production does not have.
+      const guide = renderToString(StyleGuidePage());
+
+      expect(guide).toContain('aa-marketing-steps');
+      for (const step of HOME_TEMPLATE_STEPS) {
+        expect(guide).toContain(step.title);
+      }
     });
   });
 });

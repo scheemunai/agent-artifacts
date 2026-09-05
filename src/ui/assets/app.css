@@ -2122,6 +2122,65 @@
     font-weight: 650;
   }
 
+  /* THE THREE-STEP ROW. Open on the page, under one hairline each: on a row the three rules read
+     as a single rail broken by the gaps, and stacked they read as dividers. `--color-aa-line` is
+     the same hairline every other divider in this sheet uses — a coloured edge on one side of a
+     block is decoration dressed as structure, and this page has three boxed treatments already.
+
+     THE NUMERAL TAKES `--color-aa-muted`, NOT THE ACCENT, and `.aa-page-kicker` is where that rule
+     is stated: the accent marks an action, a state or a link, and one that turns up everywhere
+     marks nothing. `.aa-marketing-example__number` spends it on an index already; a second numbered
+     group in the same colour would have made two unrelated sections rhyme. */
+  .aa-marketing-steps {
+    display: grid;
+    width: 100%;
+    gap: var(--spacing-aa-6);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Numeral in its own column so the copy hangs off one indent and the step reads as a numbered
+     item rather than a caption stacked over a paragraph — which is what the example CARDS do, and
+     the two sections have to be told apart at a glance. `align-content: start` keeps the three
+     tops on the rail when one step's copy runs a line longer than the others. */
+  .aa-marketing-step {
+    display: grid;
+    min-width: 0;
+    gap: var(--spacing-aa-1) var(--spacing-aa-3);
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: start;
+    border-top: 1px solid var(--color-aa-line);
+    padding-top: var(--spacing-aa-4);
+  }
+
+  .aa-marketing-step__number {
+    grid-row: 1;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-md);
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  .aa-marketing-step__title {
+    grid-column: 2;
+    margin: 0;
+    color: var(--color-aa-ink);
+    font-size: var(--text-aa-md);
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  .aa-marketing-step__body {
+    grid-column: 2;
+    margin: 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+    line-height: 1.62;
+  }
+
   .aa-marketing-api {
     width: 100%;
     overflow: hidden;
@@ -2646,7 +2705,8 @@
 
   @media (max-width: 720px) {
     .aa-marketing-grid,
-    .aa-marketing-pricing {
+    .aa-marketing-pricing,
+    .aa-marketing-steps {
       grid-template-columns: minmax(0, 1fr);
     }
 

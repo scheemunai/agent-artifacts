@@ -12,6 +12,7 @@ import {
   HOME_COMING_SOON_JOINED_TITLE,
   HOME_COMING_SOON_SUBLINE,
   HOME_HERO,
+  HOME_TEMPLATES_TITLE,
   HomePage,
 } from '../../src/ui/pages/home.js';
 
@@ -94,6 +95,12 @@ describe('the coming-soon homepage is a variant of the marketing one', () => {
     expect(html).not.toContain('What people use it for');
     // And no "Get started", which is the claim the whole page exists to withdraw.
     expect(html).not.toContain('Get started');
+    // The templates section is dropped for a DIFFERENT reason, and the difference is worth keeping
+    // straight: /templates is public and would answer perfectly well before launch. It is out
+    // because this page's whole design is one thing to do, and a second call to action next to the
+    // waitlist is the page arguing with itself. If that judgement is ever reversed, the section
+    // works as-is — only this line and the markup need to change.
+    expect(html).not.toContain(HOME_TEMPLATES_TITLE);
   });
 
   it('serves a real form with a labelled email field and a submit button', () => {
