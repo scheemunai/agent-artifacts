@@ -3665,6 +3665,248 @@
     font-size: var(--text-aa-sm);
   }
 
+  /* THE PUBLIC TEMPLATE GALLERY.
+     The page a visitor opens to find out what an agent can actually make for them, so it is a
+     marketing surface with a product's data behind it. Grouped and never flattened: a flat grid of
+     nineteen cards says "we have a lot", and the thing worth saying is "there is one for the job
+     you are doing". */
+  .aa-templates {
+    display: grid;
+    gap: var(--spacing-aa-16);
+    padding-bottom: var(--spacing-aa-16);
+  }
+
+  .aa-templates__intro {
+    width: min(100%, var(--width-aa-measure));
+  }
+
+  /* A row of category links, because the whole point of the page is that a visitor can get to the
+     job they came for without scrolling past five they did not. */
+  .aa-templates__jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-aa-2);
+    margin-top: calc(var(--spacing-aa-16) * -1 + var(--spacing-aa-5));
+  }
+
+  .aa-templates__jump-link {
+    display: inline-flex;
+    min-height: var(--spacing-aa-touch);
+    align-items: center;
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-full);
+    padding: 0 var(--spacing-aa-4);
+    color: var(--color-aa-ink);
+    background: var(--color-aa-surface-raised);
+    font-size: var(--text-aa-sm);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .aa-templates__jump-link:hover {
+    border-color: var(--color-aa-accent-line);
+    color: var(--color-aa-accent);
+  }
+
+  .aa-templates__group {
+    display: grid;
+    gap: var(--spacing-aa-6);
+  }
+
+  .aa-templates__group-head {
+    display: grid;
+    width: min(100%, var(--width-aa-measure));
+    gap: var(--spacing-aa-2);
+  }
+
+  .aa-templates__group-title {
+    margin: 0;
+    font-size: var(--text-aa-2xl);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+
+  .aa-templates__group-note {
+    max-width: var(--width-aa-measure);
+    margin: 0;
+    color: var(--color-aa-muted);
+  }
+
+  .aa-templates__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: var(--spacing-aa-5);
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+  }
+
+  .aa-templates__card {
+    min-width: 0;
+  }
+
+  /* The whole card is the target. A thumbnail that is not clickable is a thumbnail people click. */
+  .aa-templates__card-link {
+    display: grid;
+    height: 100%;
+    gap: var(--spacing-aa-3);
+    align-content: start;
+    overflow: hidden;
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-lg);
+    background: var(--color-aa-surface-raised);
+    color: var(--color-aa-ink);
+    text-decoration: none;
+    transition:
+      border-color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .aa-templates__card-link:hover {
+    border-color: var(--color-aa-line-strong);
+    box-shadow: var(--shadow-aa-card);
+  }
+
+  .aa-templates__card-link:focus-visible {
+    outline: 2px solid var(--color-aa-focus);
+    outline-offset: 2px;
+  }
+
+  /* 16:10, the geometry every thumbnail is generated at, declared so a missing image leaves a box
+     rather than collapsing the card and reflowing the grid. */
+  .aa-templates__cover {
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-bottom: 1px solid var(--color-aa-line);
+    background: var(--color-aa-surface);
+  }
+
+  .aa-templates__image,
+  .aa-templates__placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+
+  .aa-templates__card-body {
+    display: grid;
+    gap: var(--spacing-aa-1);
+    padding: 0 var(--spacing-aa-4) var(--spacing-aa-4);
+  }
+
+  .aa-templates__card-title {
+    font-size: var(--text-aa-lg);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+
+  .aa-templates__card-note {
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+    line-height: 1.5;
+  }
+
+  .aa-templates__how {
+    display: grid;
+    width: min(100%, var(--width-aa-measure));
+    gap: var(--spacing-aa-4);
+  }
+
+  .aa-templates__code {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-md);
+    padding: var(--spacing-aa-4);
+    background: var(--color-aa-surface);
+    font-family: var(--font-mono);
+    font-size: var(--text-aa-sm);
+    line-height: 1.7;
+  }
+
+  /* BOUNDED, AND ONLY HERE. A published artifact grows the frame to its own height — that is the
+     whole point of the height handshake. This is a specimen inside a gallery, and a page of
+     nineteen full-height documents is not a gallery.
+     Bounded means clipped, and clipped without an affordance is the defect this product has spent a
+     week removing: the recap template is 2854px in a 44rem box, so without a fade and a line saying
+     so it reads as a broken render rather than as a preview you can scroll. */
+  .aa-templates__preview {
+    display: grid;
+    gap: var(--spacing-aa-2);
+  }
+
+  .aa-templates__preview-box {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-lg);
+    background: var(--color-aa-surface-raised);
+  }
+
+  /* The fade sits over the frame and must never eat a scroll or a click meant for it. */
+  .aa-templates__preview-box::after {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    left: 1px;
+    height: 4rem;
+    border-radius: 0 0 var(--radius-aa-lg) var(--radius-aa-lg);
+    background: linear-gradient(to bottom, rgb(255 255 255 / 0%), var(--color-aa-surface-raised));
+    content: "";
+    pointer-events: none;
+  }
+
+  .aa-templates__frame {
+    display: block;
+    width: 100%;
+    height: clamp(26rem, 68vh, 44rem);
+    border: 0;
+    background: var(--color-aa-surface-raised);
+  }
+
+  .aa-templates__preview-note {
+    margin: 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+  }
+
+  .aa-templates__preview-note::before {
+    margin-right: var(--spacing-aa-2);
+    color: var(--color-aa-accent);
+    content: "\2195";
+    font-weight: 700;
+  }
+
+  .aa-templates__markdown {
+    border: 1px solid var(--color-aa-line);
+    border-radius: var(--radius-aa-lg);
+    padding: var(--spacing-aa-6);
+    background: var(--color-aa-surface-raised);
+  }
+
+  .aa-templates__back {
+    color: inherit;
+  }
+
+  @media (max-width: 480px) {
+    .aa-templates {
+      gap: var(--spacing-aa-12);
+    }
+
+    .aa-templates__frame {
+      height: clamp(20rem, 60vh, 30rem);
+    }
+
+    .aa-templates__markdown {
+      padding: var(--spacing-aa-4);
+    }
+  }
+
   /* THE LEGAL PAGES ARE PROSE, AND THEY WERE NOT BEING TREATED AS ANY KIND OF DOCUMENT.
      `legal.tsx` emitted `.aa-legal` and `.aa-legal__heading` and this sheet defined neither, so the
      compiled preflight's `h1..h6 { font-size: inherit; font-weight: inherit }` was the last word:

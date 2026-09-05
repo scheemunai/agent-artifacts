@@ -36,6 +36,7 @@ export function resolveMigrationsFolder(dialect: DatabaseHandle['dialect']): str
 
 async function applyForwardMigrations(handle: DatabaseHandle, logger: Logger): Promise<void> {
   await ensureTemplateThumbnailUrl(handle, logger);
+  await ensureTemplateCategory(handle, logger);
   await ensureShareVisibility(handle, logger);
   await ensureBillingColumns(handle, logger);
   await ensureStripeEventsTable(handle, logger);
@@ -428,6 +429,42 @@ async function ensureTemplateThumbnailUrl(handle: DatabaseHandle, logger: Logger
   }
 
   await handle.pool.query('ALTER TABLE templates ADD COLUMN IF NOT EXISTS thumbnail_url TEXT');
+}
+
+/**
+ * `templates.category` — the job a template does, and the axis the public browse page groups by.
+ *
+ * Nullable on purpose. Built-ins are re-seeded on every boot and always carry a category from the
+ * manifest, so the only rows that can arrive here without one are account templates promoted before
+ * this column existed. They are read through `DEFAULT_TEMPLATE_CATEGORY` rather than backfilled: a
+ * backfill would put every one of somebody's old templates into a category we guessed, which is a
+ * decision about their content that we are not in a position to make. Reading a default is
+ * reversible the moment they set one; writing one is not.
+ */
+async function ensureTemplateCategory(handle: DatabaseHandle, logger: Logger): Promise<void> {
+  if (handle.dialect === 'sqlite') {
+    const columns = handle.sqlite.prepare("PRAGMA table_info('templates')").all() as Array<{
+      name: string;
+    }>;
+    if (columns.some((column) => column.name === 'category')) {
+      return;
+    }
+
+    try {
+      handle.sqlite.prepare('ALTER TABLE templates ADD COLUMN category TEXT').run();
+    } catch (error) {
+      if (!isDuplicateColumnError(error)) {
+        throw error;
+      }
+    }
+    logger.info(
+      { dialect: handle.dialect, migration: 'templates.category' },
+      'database.forward_migration.applied'
+    );
+    return;
+  }
+
+  await handle.pool.query('ALTER TABLE templates ADD COLUMN IF NOT EXISTS category TEXT');
 }
 
 function isDuplicateColumnError(error: unknown): boolean {

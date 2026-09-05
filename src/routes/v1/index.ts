@@ -397,6 +397,7 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
         options: {
           limit: query.limit,
           ...(query.cursor ? { cursor: query.cursor } : {}),
+          ...(query.category ? { category: query.category } : {}),
         },
       })
     );
@@ -416,6 +417,7 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
         name: body.name,
         slug: body.slug,
         ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.category !== undefined ? { category: body.category } : {}),
       }),
       201
     );
@@ -654,11 +656,20 @@ Documented endpoints:
 - PATCH /v1/artifacts/:id_or_slug/share
 - DELETE /v1/artifacts/:id_or_slug/share
 - POST /v1/artifacts/:id_or_slug/share/revoke
-- GET /v1/templates
+- GET /v1/templates            (?category= to narrow; built-ins and your own together)
 - POST /v1/templates
 - GET /v1/templates/:slug
 - DELETE /v1/templates/:slug
 - GET /v1/artifacts/:id_or_slug/download
+
+## Templates are blueprints
+
+GET /v1/templates returns the built-in blueprints and your own account templates
+together; add ?category= to narrow to one job. The categories are meetings,
+decisions, research, status, releases and plans, and a human can browse them at
+/templates. Fetch one, rewrite it in your own words and your own colours, publish
+the result, then promote that result to your own template — after which you are
+starting from your branding rather than ours.
 
 ## The one rule that matters: publish by slug
 

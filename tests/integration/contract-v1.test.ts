@@ -19,7 +19,10 @@ const documentedPublishFields = [
   'password',
 ];
 
-const documentedPromoteTemplateFields = ['artifact_id', 'name', 'slug', 'description'];
+// `category` is the axis the public browse page groups by and the one an agent filters on, so a
+// promoted template that cannot name its own is a template nobody finds. Optional on the wire and
+// defaulted on read, which is why it is documented rather than required.
+const documentedPromoteTemplateFields = ['artifact_id', 'name', 'slug', 'description', 'category'];
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 
@@ -62,7 +65,10 @@ describe('V1 contract endpoint', () => {
       expect(skillText).toContain(`${ctx.config.baseUrl}/a/<share_id>`);
       expect(skillText).toContain('GET /v1/artifacts lists artifacts.');
       expect(skillText).toContain('POST /v1/templates creates an account template');
-      expect(skillText).not.toMatch(/search/i);
+      // Word-bounded. The guard is that the skill does not promise a SEARCH endpoint the API does
+      // not have — and "research" is a template category, which the substring form flagged as a
+      // broken promise. A guard that fires on a word containing the word is a guard people delete.
+      expect(skillText).not.toMatch(/\bsearch\b/i);
     } finally {
       await ctx.cleanup();
     }

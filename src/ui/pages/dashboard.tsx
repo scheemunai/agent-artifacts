@@ -1,4 +1,5 @@
 import type { Child } from 'hono/jsx';
+import type { TemplateCategory } from '../../lib/schemas/templates.js';
 import {
   type AccountStats,
   type ArtifactStats,
@@ -36,6 +37,7 @@ import {
   READERS_DEFINITION,
   READERS_LABEL,
 } from '../copy/analytics-copy.js';
+import { TEMPLATE_CATEGORY_COPY, TEMPLATE_CATEGORY_ORDER } from '../copy/template-categories.js';
 
 export type DashboardSection = 'overview' | 'artifacts' | 'bots' | 'templates' | 'settings';
 export type ArtifactType = 'markdown' | 'html';
@@ -109,6 +111,7 @@ export interface DashboardTemplateView {
   thumbnailUrl: string | null;
   type: ArtifactType;
   slots: string[];
+  category: TemplateCategory;
   builtIn: boolean;
 }
 
@@ -699,13 +702,34 @@ export function DashboardTemplatesPage({
             </p>
           </header>
         </section>
-        <TemplateGroup
-          id="templates-starter"
-          title="Starter templates"
-          templates={starters}
-          emptyTitle="No starter templates are installed."
-          empty="Starter templates seed at boot, so this is usually a sign the seed has not run yet."
-        />
+        {/* GROUPED BY THE JOB, not listed by name.
+            The same six categories the public gallery and `GET /v1/templates?category=` use, so a
+            person browsing here and an agent filtering there are looking at one taxonomy. A flat
+            list of nineteen starters answers "what is installed"; the question somebody actually
+            has is "what do I start from for the thing I am doing".
+            Empty categories are not rendered — a heading over nothing is a heading that has to be
+            read to discover it says nothing. */}
+        {TEMPLATE_CATEGORY_ORDER.map((category) => {
+          const group = starters.filter((template) => template.category === category);
+          return group.length === 0 ? null : (
+            <TemplateGroup
+              id={`templates-starter-${category}`}
+              title={TEMPLATE_CATEGORY_COPY[category].label}
+              templates={group}
+              emptyTitle="No starter templates are installed."
+              empty="Starter templates seed at boot, so this is usually a sign the seed has not run yet."
+            />
+          );
+        })}
+        {starters.length === 0 ? (
+          <TemplateGroup
+            id="templates-starter"
+            title="Starter templates"
+            templates={starters}
+            emptyTitle="No starter templates are installed."
+            empty="Starter templates seed at boot, so this is usually a sign the seed has not run yet."
+          />
+        ) : null}
         <TemplateGroup
           id="templates-personal"
           title="Your templates"

@@ -1,20 +1,38 @@
 import { type Context, Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { AppConfig } from '../config.js';
+import { publicArtifactFrameHeaders } from '../lib/frame-policy.js';
 import { clientIp, FixedWindowLimiter, rateLimitKey } from '../lib/rate-limit.js';
 import type { Logger } from '../logger.js';
 import { getLiveArtifactMeta, heroArtifactUrl } from '../services/live-artifact-meta.js';
 import { SESSION_COOKIE_NAME, unsignedSessionToken } from '../services/sessions.js';
 import { selfHostedEntryPath } from '../services/setup-state.js';
+import { loadStarterTemplates, type StarterTemplate } from '../services/templates.js';
 import {
   createWaitlistService,
   WaitlistError,
   type WaitlistService,
 } from '../services/waitlist.js';
+import { FrameDocument } from '../ui/pages/frame-document.js';
 import { HOME_WAITLIST_ACTION, HomePage, type HomeWaitlist } from '../ui/pages/home.js';
 import { LEGAL_SLUGS, LegalPage, legalDocument } from '../ui/pages/legal.js';
 import { LoginPlaceholderPage, SetupPlaceholderPage } from '../ui/pages/placeholder.js';
 import { StyleGuidePage } from '../ui/pages/style-guide.js';
+import { TemplateDetailPage, TemplatesPage } from '../ui/pages/templates.js';
+
+/**
+ * Loaded on first request and kept for the life of the process.
+ *
+ * Module scope rather than per-route-factory because the manifest is SHIPPED BYTES — it cannot
+ * change under a running process, and both faces of this module serve the same gallery from it.
+ * Re-reading eight files per request would cost something and buy nothing.
+ */
+let cachedStarterTemplates: StarterTemplate[] | null = null;
+
+function starterTemplates(): StarterTemplate[] {
+  cachedStarterTemplates ??= loadStarterTemplates();
+  return cachedStarterTemplates;
+}
 
 const WAITLIST_ERRORS: Record<string, string> = {
   invalid_email: 'That does not look like an email address. Check it and try again.',
@@ -80,7 +98,7 @@ export function createWebRoute(
   // rendering a "launching soon" page to anyone who POSTs at the live site. The route belongs to
   // the pre-launch homepage; when that page is not being served, neither is its form action.
   if (!config.comingSoon) {
-    registerRemainingWebRoutes(web);
+    registerRemainingWebRoutes(web, config);
     return web;
   }
 
@@ -139,7 +157,7 @@ export function createWebRoute(
     }
   });
 
-  registerRemainingWebRoutes(web);
+  registerRemainingWebRoutes(web, config);
   return web;
 }
 
@@ -147,7 +165,10 @@ export function createWebRoute(
  * The routes both faces of this module serve. Factored out so the early return above cannot ship a
  * build where turning the flag off also takes the style guide with it.
  */
-function registerRemainingWebRoutes(web: Hono<{ Variables: WebVariables }>): void {
+function registerRemainingWebRoutes(
+  web: Hono<{ Variables: WebVariables }>,
+  config: AppConfig
+): void {
   /**
    * The legal pages, served by BOTH faces of this module and in every deployment mode.
    *
@@ -162,6 +183,50 @@ function registerRemainingWebRoutes(web: Hono<{ Variables: WebVariables }>): voi
       return document ? context.html(LegalPage({ document })) : context.notFound();
     });
   }
+
+  /**
+   * The public template gallery.
+   *
+   * Pre-login and pre-account by design, for the same reason the legal pages are: this is where
+   * somebody deciding whether to sign up finds out what an agent can actually make for them. It
+   * reads the shipped manifest rather than the database — no account, no seeding, no dependency to
+   * buy nothing, and the manifest is what seeds the built-ins so the two cannot disagree.
+   *
+   * Loaded once. The manifest is shipped bytes; re-reading eight files per request would be a cost
+   * with no upside.
+   */
+  web.get('/templates', (context) =>
+    context.html(TemplatesPage({ templates: starterTemplates() }))
+  );
+
+  web.get('/templates/:slug', (context) => {
+    const template = starterTemplates().find(
+      (candidate) => candidate.slug === context.req.param('slug')
+    );
+    return template ? context.html(TemplateDetailPage({ template })) : context.notFound();
+  });
+
+  /**
+   * The gallery's live preview, in the same sandbox a published artifact renders in.
+   *
+   * Same shell and the same headers as `/a/:share_id/frame`, deliberately: a preview that renders
+   * under a softer policy than the real thing is a preview that can look right while the artifact
+   * looks wrong. This content is ours and is already served to any authenticated agent through
+   * `GET /v1/templates/:slug`, so nothing new is exposed — only the rendering posture is reused.
+   */
+  web.get('/templates/:slug/frame', (context) => {
+    const template = starterTemplates().find(
+      (candidate) => candidate.slug === context.req.param('slug')
+    );
+    if (template?.type !== 'html') {
+      return context.notFound();
+    }
+    return context.body(
+      FrameDocument({ content: template.content, title: template.name }),
+      200,
+      publicArtifactFrameHeaders({ config: config })
+    );
+  });
 
   web.get('/style-guide', (context) => context.html(StyleGuidePage()));
   web.get('/setup', (context) => context.html(SetupPlaceholderPage()));
