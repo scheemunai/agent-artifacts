@@ -240,7 +240,7 @@ describe('V1 contract endpoint', () => {
       expect(contract).toContain('Retired template slugs still answer');
       expect(contract).toContain('recap    → meeting-recap');
       expect(contract).toContain('details.retired_template');
-      for (const slug of ['report', 'one-pager', 'dashboard', 'changelog', 'daily-digest']) {
+      for (const slug of ['report', 'one-pager', 'dashboard', 'daily-digest']) {
         expect(contract).toContain(slug);
       }
 
@@ -303,13 +303,19 @@ describe('V1 contract endpoint', () => {
         .map((item) => item.slug)
         .sort();
       expect(zeroSlotBuiltIns).toEqual([
+        'changelog',
+        'checklist',
         'daily-digest',
         'decision-brief',
         'interview-notes',
+        'launch-announcement',
         'meeting-recap',
         'metrics-dashboard',
+        'migration-guide',
+        'project-plan',
         'proposal',
         'report-html',
+        'runbook',
         'spec',
       ]);
     } finally {

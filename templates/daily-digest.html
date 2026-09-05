@@ -8,6 +8,8 @@
   TEMPLATE: daily-digest  ·  CATEGORY: meetings
   VOICE: humanist sans (system-ui stack)   SCHEME: cool grey-blue paper, teal accent
   Rewriting this? Replace the content, keep the structure and the styling.
+  The TL;DR band is full-bleed with square edges on purpose. Inset, rounded and tinted is the
+  shape every CSS framework gives an alert, and it makes a considered summary look generated.
   DELETE, DON'T EMPTY: no themes? remove that whole .rail__sec, heading included.
   Nothing collapsed? remove the <details>. Never leave a heading with nothing under it.
   MANY ITEMS: feature at most six; put the rest in the collapsed "also reviewed" list and
@@ -68,8 +70,8 @@ a{color:var(--teal)}
 .item__meta{margin-top:.25rem;color:var(--subtle);font-size:.8125rem}
 .item__meta b{color:var(--muted);font-weight:600}
 .item__meta span::before{content:"·";margin:0 .375rem;color:var(--line-2)}
-.tldr{margin-top:.875rem;padding:.75rem .875rem;background:var(--teal-soft);border-radius:.5rem;color:#0b4f4d;font-size:.9375rem}
-.tldr b{display:block;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.125rem}
+.tldr{margin:.875rem -1.25rem 0;padding:.6875rem 1.25rem;background:var(--teal-soft);border-block:1px solid #c6dcd9;color:#0b4f4d;font-size:.9375rem}
+.tldr b{font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-right:.5rem}
 .pts{margin-top:.875rem}
 .pts li{position:relative;padding-left:1.125rem;color:var(--muted);font-size:.9375rem}
 .pts li+li{margin-top:.375rem}
@@ -103,25 +105,24 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
 }
 @media (max-width:34rem){
   .page{padding:1.875rem 1rem 2rem}
-  .wrap{margin-top:1.25rem}
   .mast dl{flex:1 1 auto}
   .rail{grid-template-columns:minmax(0,1fr)}
   .rail__sec{border-left:0;border-top:1px solid var(--line)}
   .rail__sec:first-child{border-top:0}
   .toc small{display:none}
-  .toc a{min-height:0;padding-block:.3125rem}
-  .toc li{padding-block:.25rem}
-  .item{padding:1rem}
+  /* The 44px touch target is a MOBILE requirement, so it must not be relaxed here — an earlier
+     tightening pass set min-height:0 at exactly the width where the rule applies. Flex centres the
+     label inside the target rather than leaving it stranded at the top of a 44px box. */
+  .toc a{min-height:2.75rem;display:flex;align-items:center;padding-block:.25rem}
+
   .item__top{grid-template-columns:1.75rem minmax(0,1fr);gap:.625rem}
   .item__n{width:1.75rem;height:1.75rem;font-size:.75rem}
   .item h3{font-size:1.0625rem}
-  .item{padding:.9375rem}
-  .stream{gap:1rem}
+
   .pts li+li{margin-top:.25rem}
   .toc a{font-size:.8125rem}
-  .colophon{margin-top:1.5rem}
-  .item__foot{margin-top:.75rem;padding-top:.625rem}
-  .tldr{padding:.625rem .75rem}
+
+  .tldr{margin-inline:-.875rem;padding:.625rem .875rem}
   summary,.rest{padding-inline:1rem}
   /* height tightening — spacing only, no content removed */
   .mast{padding-bottom:.75rem}
@@ -138,11 +139,6 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
   .item__foot{margin-top:.625rem;padding-top:.5rem}
   summary{padding:.75rem 1rem}
   .colophon{margin-top:1.25rem;padding-top:.875rem}
-  /* final nudge — spacing only */
-  .item{padding:.8125rem}
-  .stream{gap:.8125rem}
-  .rail__sec{padding:.625rem .875rem}
-  .colophon{margin-top:1.125rem;padding-top:.75rem}
 }
 </style>
 </head>

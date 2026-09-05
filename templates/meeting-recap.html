@@ -103,28 +103,26 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
   .page{padding:1.875rem 1rem 1.75rem}
   .mast p{font-size:1rem}
   .ledger h3{font-size:1.0625rem}
-  h2.sec{margin-top:1.5rem}
-  .foot{margin-top:1.5rem}
-  .strip .n{font-size:1.25rem}
-  .strip>li{padding:.5rem .75rem}
-  .opens li{padding:.875rem 1rem}
-  .tags{margin-top:.5rem}
+
+
+
+
+
   .note{padding:.75rem .875rem}
-  .facts{margin-top:1rem;padding-top:.875rem}
-  .ledger>li{grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem;padding-block:.8125rem}
+  .ledger>li{grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem}
   .ledger .num{font-size:1.0625rem;line-height:1.45}
   .strip{gap:.5rem}
   .strip>li{padding:.625rem .75rem}
   .strip .n{font-size:1.375rem}
-  caption{display:block;padding:.75rem 1rem}
+  caption{display:block}
   thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
   table,tbody{display:block;width:100%}
-  tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem .75rem;padding:.8125rem 1rem;border-top:1px solid var(--line)}
+  tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem .75rem;border-top:1px solid var(--line)}
   tbody tr:first-child{border-top:0}
   td{display:block;padding:0;border-top:0}
   td.owner{grid-column:1;grid-row:1;align-self:center}
   td.status{grid-column:2;grid-row:1;justify-self:end;align-self:center}
-  td.task{grid-column:1/-1;margin-top:.375rem}
+  td.task{grid-column:1/-1}
   td.due{grid-column:1/-1;font-size:.8125rem;color:var(--subtle)}
   td.due::before{content:"Due ";font-weight:600}
   /* height tightening — spacing only, no content removed */
@@ -140,12 +138,6 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
   .opens{gap:.625rem}
   .opens li{padding:.75rem .875rem}
   .foot{margin-top:1.25rem;padding-top:.875rem}
-  /* final nudge — spacing only */
-  h2.sec{margin-top:1.25rem}
-  .ledger>li{padding-block:.6875rem}
-  tr{padding:.6875rem 1rem}
-  .opens li{padding:.6875rem .875rem}
-  .foot{margin-top:1.25rem;padding-top:.75rem}
 }
 </style>
 </head>

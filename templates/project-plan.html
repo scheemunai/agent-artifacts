@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Self-serve onboarding — project plan</title>
+    <!--
+      project-plan · plans · humanist sans, tabular figures · sage paper, forest accent.
+      Every status colour ships its word too, never colour alone.
+
+      REWRITING · Replace copy, keep structure; touch :root only to re-theme.
+      · The rail is a week grid: set `--weeks`, then place each bar and its state
+        annotation with `grid-column: <start>/<end + 1>`. Month rules and the today
+        line are percentages of the track: (week - 1) / weeks.
+      · Delete, do not empty — never a heading with nothing under it.
+      · Four phases is the intended density. Past eight, group them.
+    -->
+    <style>
+      :root {
+        --ink: #17211a;
+        --muted: #515c54;
+        --faint: #67736a;
+        --line: #dde3d9;
+        --rule: #c6d0c0;
+        --page: #f2f5ef;
+        --card: #ffffff;
+        --accent: #1f6b45;
+        --accent-soft: #d3e5d9;
+        --risk: #9a5411;
+        --risk-soft: #f5e6d4;
+        --idle: #c8d1c6;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.5;
+        font-variant-numeric: tabular-nums;
+      }
+      h1,
+      h2,
+      h3 { margin: 0; line-height: 1.2; letter-spacing: -0.012em; }
+      p { margin: 0; }
+      ul,
+      ol { margin: 0; padding: 0; list-style: none; }
+      .wrap { max-width: 60rem; margin-inline: auto; padding-inline: 1.1rem; }
+      section { padding-block: 0.56rem; border-top: 1px solid var(--line); }
+      .h2 { font-size: 1.0625rem; font-weight: 700; }
+      .sub { margin-top: 0.2rem; font-size: 0.875rem; color: var(--muted); }
+
+      /* HEAD -------------------------------------------------------------- */
+      .head { padding-block: 1.42rem 1.05rem; }
+      .eyebrow {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .head h1 {
+        margin-top: 0.4rem;
+        font-size: clamp(1.75rem, 6.2vw, 2.5rem);
+        font-weight: 700;
+      }
+      .head .lede {
+        margin-top: 0.7rem;
+        max-width: 46ch;
+        font-size: 1.0625rem;
+        color: var(--muted);
+      }
+      .verdict {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.9rem;
+        padding: 0.4rem 0.8rem 0.4rem 0.6rem;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #14472e;
+        font-size: 0.8125rem;
+        font-weight: 700;
+      }
+      .verdict::before {
+        content: "";
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+        gap: 0.7rem 1.25rem;
+        margin-top: 1.1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--rule);
+      }
+      .facts dt {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .facts dd { margin: 0.15rem 0 0; font-size: 0.9375rem; font-weight: 600; }
+
+      /* RAIL -------------------------------------------------------------- */
+      .rail {
+        --pad: 0.85rem;
+        --weeks: 17;
+        --labw: 0rem;
+        position: relative;
+        margin-top: 1rem;
+        padding: 0.8rem var(--pad) 0.85rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      .track {
+        display: grid;
+        grid-template-columns: repeat(var(--weeks), 1fr);
+        align-items: center;
+      }
+      .months b {
+        padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--line);
+        font: 700 0.6875rem var(--sans);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      /* month rules + today: absolute over the track, never fixed or sticky */
+      .rule {
+        position: absolute;
+        top: 2rem;
+        bottom: 0.8rem;
+        left: calc(var(--pad) + var(--labw));
+        right: var(--pad);
+        pointer-events: none;
+      }
+      .rule i { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+      .rule .today { border-left: 1px dashed var(--faint); }
+      .ph { position: relative; margin-top: 0.55rem; }
+      .cap {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.1rem 0.5rem;
+        background: var(--card);
+        font-size: 0.8125rem;
+      }
+      .cap b { font-weight: 700; }
+      .cap span { color: var(--faint); }
+      .ann {
+        padding-inline: 0.45rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .ann--l { text-align: right; }
+      .s-done { color: var(--accent); }
+      .s-now { color: #14472e; }
+      .s-risk { color: var(--risk); }
+      .s-idle { color: var(--faint); }
+      .bar {
+        display: flex;
+        height: 1.25rem;
+        border-radius: 3px;
+        background: var(--accent-soft);
+      }
+      .bar--done { background: var(--accent); }
+      .bar--now { background: var(--accent-soft); border: 1px solid var(--accent); }
+      .bar--now i { width: 40%; background: var(--accent); border-radius: 2px 0 0 2px; }
+      .bar--risk { background: var(--risk-soft); border: 1px solid var(--risk); }
+      .bar--idle { background: var(--idle); }
+
+      /* PHASES ------------------------------------------------------------ */
+      .phases { display: grid; gap: 0.58rem; margin-top: 1rem; }
+      .phase {
+        padding: 0.82rem 0.9rem 0.88rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      .phase--now { border-color: var(--accent); }
+      .phase__top {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.3rem 0.7rem;
+      }
+      .phase__n { font-size: 0.75rem; font-weight: 700; color: var(--faint); }
+      .phase h3 { font-size: 1rem; font-weight: 700; }
+      .phase__meta { margin-top: 0.35rem; font-size: 0.8125rem; color: var(--muted); }
+      .does {
+        margin-top: 0.5rem;
+        display: grid;
+        gap: 0.3rem;
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .does li { padding-left: 1rem; text-indent: -1rem; }
+      .does li::before { content: "— "; color: var(--rule); }
+      .exit {
+        margin-top: 0.6rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--line);
+        font-size: 0.875rem;
+        color: var(--muted);
+      }
+      .exit b { color: var(--ink); }
+
+      /* DEPENDENCIES ------------------------------------------------------ */
+      .deps { display: grid; gap: 0.56rem; margin-top: 0.9rem; }
+      .dep {
+        display: grid;
+        gap: 0.2rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--line);
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .dep__top {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.25rem 0.6rem;
+        color: var(--ink);
+      }
+      .dep__top b { font-size: 0.9375rem; }
+      .dep__due { font-size: 0.8125rem; color: var(--faint); }
+      .tag {
+        padding: 0.1rem 0.4rem;
+        border-radius: 3px;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .tag--block { background: var(--risk-soft); color: #7a410d; }
+      .tag--soft { background: var(--accent-soft); color: #14472e; }
+
+      /* RISKS ------------------------------------------------------------- */
+      .risks { display: grid; gap: 0.56rem; margin-top: 0.9rem; }
+      .risk {
+        display: grid;
+        gap: 0.25rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--line);
+      }
+      .risk__hd {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.15rem 0.6rem;
+        font-size: 0.9375rem;
+        font-weight: 700;
+      }
+      .risk__lv {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .risk__lv em { font-style: normal; color: var(--risk); }
+      .risk p { font-size: 0.9375rem; color: var(--muted); }
+      .risk p b { color: var(--ink); }
+
+      .foot {
+        padding-block: 0.6rem 0.85rem;
+        border-top: 1px solid var(--rule);
+        font-size: 0.8125rem;
+        color: var(--faint);
+      }
+
+      @media (min-width: 44rem) {
+        .wrap { padding-inline: 2rem; }
+        section { padding-block: 1.65rem; }
+        .head { padding-block: 2.6rem 1.75rem; }
+        .rail {
+          --pad: 1.25rem;
+          --labw: 12.5rem;
+          padding: 1.15rem var(--pad) 1.3rem;
+        }
+        .rail__head,
+        .ph {
+          display: grid;
+          grid-template-columns: var(--labw) 1fr;
+          align-items: center;
+        }
+        .ph { margin-top: 0.5rem; }
+        .cap { display: block; padding-right: 1rem; font-size: 0.875rem; }
+        .cap span { display: block; }
+        .bar { height: 1.6rem; }
+        .phases { grid-template-columns: 1fr 1fr; gap: 1rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEAD -------------------------------------------------------------- -->
+    <header class="head wrap">
+      <p class="eyebrow">Project plan</p>
+      <h1>Self-serve onboarding</h1>
+      <p class="lede">
+        Signup to a working workspace with nobody in the loop. Four phases, seventeen weeks,
+        two people.
+      </p>
+      <p class="verdict">On track — phase 2 of 4, one week ahead</p>
+      <dl class="facts">
+        <div><dt>Owner</dt><dd>Priya Raman</dd></div>
+        <div><dt>Window</dt><dd>27 Jul → 20 Nov 2026</dd></div>
+        <div><dt>Next milestone</dt><dd>25 Sep · phase 2 exit</dd></div>
+        <div><dt>Reviewed</dt><dd>Fortnightly, Thu</dd></div>
+      </dl>
+    </header>
+
+    <!-- RAIL -------------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">The seventeen weeks</h2>
+      <p class="sub">
+        One column per week; the dashed line is today, 4 Sep. Every date is written out, so
+        the plan reads without the chart.
+      </p>
+      <div class="rail">
+        <span class="rule" aria-hidden="true"><i style="left:29.41%"></i><i style="left:52.94%"></i><i style="left:82.35%"></i><i class="today" style="left:35.29%"></i></span>
+        <div class="rail__head"><span></span>
+          <div class="track months"><b style="grid-column:1/6">Aug</b><b style="grid-column:6/10">Sep</b><b style="grid-column:10/15">Oct</b><b style="grid-column:15/18">Nov</b></div>
+        </div>
+
+        <div class="ph">
+          <p class="cap"><b>1 · Discovery</b> <span>27 Jul → 21 Aug</span></p>
+          <div class="track"><div class="bar bar--done" style="grid-column:1/5"></div><span class="ann s-done" style="grid-column:5/-1">Complete</span></div>
+        </div>
+
+        <div class="ph">
+          <p class="cap"><b>2 · Signup</b> <span>24 Aug → 25 Sep</span></p>
+          <div class="track"><div class="bar bar--now" style="grid-column:5/10"><i></i></div><span class="ann s-now" style="grid-column:10/-1">In progress</span></div>
+        </div>
+
+        <div class="ph">
+          <p class="cap"><b>3 · Guided setup</b> <span>28 Sep → 30 Oct</span></p>
+          <div class="track"><span class="ann ann--l s-idle" style="grid-column:1/10">Not started</span><div class="bar bar--idle" style="grid-column:10/15"></div></div>
+        </div>
+
+        <div class="ph">
+          <p class="cap"><b>4 · Billing</b> <span>2 Nov → 20 Nov</span></p>
+          <div class="track"><span class="ann ann--l s-risk" style="grid-column:1/15">At risk</span><div class="bar bar--risk" style="grid-column:15/18"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHASES ------------------------------------------------------------ -->
+    <section class="wrap">
+      <h2 class="h2">What each phase actually delivers</h2>
+      <div class="phases">
+        <article class="phase">
+          <div class="phase__top">
+            <span class="phase__n">Phase 1</span>
+            <span class="state s-done">Complete</span>
+          </div>
+          <h3>Discovery &amp; instrumentation</h3>
+          <p class="phase__meta">27 Jul → 21 Aug · Dana Okafor</p>
+          <ul class="does">
+            <li>Funnel events on every step from signup to first publish.</li>
+            <li>A baseline: 41% of trials never create a workspace.</li>
+          </ul>
+          <p class="exit">
+            <b>Exit:</b> baseline dashboard signed off. Met 19 Aug, two days early.
+          </p>
+        </article>
+
+        <article class="phase phase--now">
+          <div class="phase__top">
+            <span class="phase__n">Phase 2</span>
+            <span class="state s-now">In progress · week 2 of 5</span>
+          </div>
+          <h3>Signup &amp; workspace provisioning</h3>
+          <p class="phase__meta">24 Aug → 25 Sep · Priya Raman</p>
+          <ul class="does">
+            <li>Email and Google sign-in, no invite code.</li>
+            <li>Workspace created on the first request, not by a job.</li>
+          </ul>
+          <p class="exit">
+            <b>Exit:</b> a new account reaches a working workspace unaided.
+          </p>
+        </article>
+
+        <article class="phase">
+          <div class="phase__top">
+            <span class="phase__n">Phase 3</span>
+            <span class="state s-idle">Not started</span>
+          </div>
+          <h3>Guided setup &amp; templates</h3>
+          <p class="phase__meta">28 Sep → 30 Oct · Marco Bellini</p>
+          <ul class="does">
+            <li>Six starter templates, three written by docs in September.</li>
+            <li>A setup checklist that dismisses itself when done.</li>
+          </ul>
+          <p class="exit">
+            <b>Exit:</b> 60% of new workspaces publish something in their first week.
+          </p>
+        </article>
+
+        <article class="phase">
+          <div class="phase__top">
+            <span class="phase__n">Phase 4</span>
+            <span class="state s-risk">At risk</span>
+          </div>
+          <h3>Self-serve billing</h3>
+          <p class="phase__meta">2 Nov → 20 Nov · Priya Raman</p>
+          <ul class="does">
+            <li>Card capture, plan upgrade, invoice history.</li>
+            <li>Downgrade and cancel, so support does not have to.</li>
+          </ul>
+          <p class="exit">
+            <b>Exit:</b> a customer upgrades without contacting sales.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- DEPENDENCIES ------------------------------------------------------ -->
+    <section class="wrap">
+      <h2 class="h2">Depends on other people</h2>
+      <div class="deps">
+        <div class="dep">
+          <p class="dep__top">
+            <b>Billing migration to the new ledger</b>
+            <span class="tag tag--block">Blocks phase 4</span>
+            <span class="dep__due">Finance platform · due 10 Nov</span>
+          </p>
+          <p>
+            Ten days of float. Later than 13 Nov and phase 4 moves to December.
+          </p>
+        </div>
+        <div class="dep">
+          <p class="dep__top">
+            <b>Security review of the invite flow</b>
+            <span class="tag tag--block">Blocks phase 2 exit</span>
+            <span class="dep__due">Security · due 18 Sep</span>
+          </p>
+          <p>Booked. A week of slack before the phase 2 exit date.</p>
+        </div>
+        <div class="dep">
+          <p class="dep__top">
+            <b>Pricing page copy</b>
+            <span class="tag tag--soft">Wanted, not blocking</span>
+            <span class="dep__due">Marketing · due 16 Oct</span>
+          </p>
+          <p>Phase 4 ships with the current copy if this is late.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- RISKS ------------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">What could go wrong</h2>
+      <div class="risks">
+        <div class="risk">
+          <p class="risk__hd">The billing migration slips <span class="risk__lv">Likely · <em>High impact</em></span></p>
+          <p>
+            <b>Mitigation:</b> phase 4 drops to card capture if the ledger misses 13 Nov.
+          </p>
+        </div>
+        <div class="risk">
+          <p class="risk__hd">Google sign-in review takes longer than quoted <span class="risk__lv">Possible · <em>Medium impact</em></span></p>
+          <p>
+            <b>Mitigation:</b> email sign-in ships first and stands alone. Google is additive.
+          </p>
+        </div>
+        <div class="risk">
+          <p class="risk__hd">Starter templates are not good enough to matter <span class="risk__lv">Unlikely · Medium impact</span></p>
+          <p>
+            <b>Mitigation:</b> three are written and reviewed before phase 3 opens.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot wrap">
+      <p>
+        Self-serve onboarding · plan revised 4 Sep 2026 · owner Priya Raman
+      </p>
+    </footer>
+  </body>
+</html>

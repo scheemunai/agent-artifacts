@@ -28,16 +28,21 @@ describe('starter template manifest seeding', () => {
       // it from the manifest would make it assert nothing.
       expect(starterTemplateManifest.map((template) => template.slug).sort()).toEqual([
         'changelog',
+        'checklist',
         'daily-digest',
         'dashboard',
         'decision-brief',
         'interview-notes',
+        'launch-announcement',
         'meeting-recap',
         'metrics-dashboard',
+        'migration-guide',
         'one-pager',
+        'project-plan',
         'proposal',
         'report',
         'report-html',
+        'runbook',
         'spec',
       ]);
       expect(report).toBeDefined();
