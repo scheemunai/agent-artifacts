@@ -16,6 +16,8 @@ import {
 import {
   DEFAULT_TEMPLATE_CATEGORY,
   promoteTemplateSchema,
+  TEMPLATE_DESCRIPTION_MAX,
+  TEMPLATE_NAME_MAX,
   type TemplateCategory,
   templateCategorySchema,
   templateSlotSchema,
@@ -93,8 +95,8 @@ const escapedOpenPattern = /\\\{\\\{/g;
 const manifestEntrySchema = z
   .object({
     slug: slugSchema,
-    name: z.string().min(1).max(80),
-    description: z.string().max(300),
+    name: z.string().min(1).max(TEMPLATE_NAME_MAX),
+    description: z.string().max(TEMPLATE_DESCRIPTION_MAX),
     category: templateCategorySchema,
     type: artifactTypeSchema,
     thumbnail: z.string().min(1).optional(),
