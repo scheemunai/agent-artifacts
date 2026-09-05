@@ -99,7 +99,7 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
 .foot{margin-top:2.5rem;padding-top:1.125rem;border-top:1px solid var(--line-2);display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.75rem 2rem;color:var(--subtle);font-size:.8125rem}
 .foot b{display:block;color:var(--muted);font-weight:600;margin-bottom:.125rem}
 
-@media (max-width:34rem){
+@media (max-width:40rem){
   .page{padding:1.875rem 1rem 1.75rem}
   .mast p{font-size:1rem}
   .ledger h3{font-size:1.0625rem}
@@ -111,7 +111,7 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
   .note{padding:.75rem .875rem}
   .ledger>li{grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem}
   .ledger .num{font-size:1.0625rem;line-height:1.45}
-  .strip{gap:.5rem}
+  .strip{gap:.5rem;grid-template-columns:repeat(auto-fit,minmax(8rem,1fr))}
   .strip>li{padding:.625rem .75rem}
   .strip .n{font-size:1.375rem}
   caption{display:block}
@@ -126,19 +126,49 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
   td.due{grid-column:1/-1;font-size:.8125rem;color:var(--subtle)}
   td.due::before{content:"Due ";font-weight:600}
   /* height tightening — spacing only, no content removed */
-  .facts{margin-top:.875rem;padding-top:.75rem}
-  h2.sec{margin-top:1.25rem}
+  .facts{margin-top:.75rem;padding-top:.625rem}
+  h2.sec{margin-top:1.125rem}
   h2.sec+*{margin-top:.75rem}
-  .ledger>li{padding-block:.75rem}
+  .ledger>li{padding-block:.6875rem}
   .tags{margin-top:.375rem}
   .note{margin-top:.625rem}
   caption{padding:.625rem 1rem}
-  tr{padding:.75rem 1rem}
+  tr{padding:.625rem .875rem}
   td.task{margin-top:.3125rem}
   .opens{gap:.625rem}
-  .opens li{padding:.75rem .875rem}
+  .opens li{padding:.625rem .75rem}
   .foot{margin-top:1.25rem;padding-top:.875rem}
 }
+
+@media (max-width:24rem){
+  /* 320-384: the card collapse is already on, and the document is still over budget because every
+     line wraps more. Spend width and spacing, never content: drop the numeral gutter so the decision
+     text gets the full measure, and tighten the vertical rhythm. */
+  .page{padding:1rem .625rem 1.125rem}
+  /* The h1 clamp floors at 1.75rem, which is three lines at 320. 1.5rem is still far above every
+     type floor in the contract (13px prose / 12px metadata / 11px labels) and buys a line. */
+  .mast h1{font-size:1.5rem;line-height:1.2}
+  .mast p{margin-top:.5rem}
+  .ledger>li{grid-template-columns:minmax(0,1fr);gap:.1875rem;padding-block:.5rem}
+  .ledger .num{font-size:1rem;line-height:1.3}
+  .ledger .why{margin-top:.25rem}
+  .tags{margin-top:.3125rem}
+  .strip{margin-top:.875rem;gap:.375rem}
+  .strip>li{padding:.4375rem .5rem}
+  .facts{margin-top:.625rem;padding-top:.5rem}
+  .opens li{padding:.5rem .625rem}
+  .note{margin-top:.4375rem;padding:.5rem .625rem}
+  .foot{margin-top:1.125rem;padding-top:.75rem}
+  /* the action table is 7 collapsed cards; every row pays the same padding, so this is the
+     largest spacing lever in the document at this width. Nothing structural is removed. */
+  tr{padding:.5rem .75rem;gap:.125rem .5rem}
+  td.task{margin-top:.1875rem}
+  caption{padding:.5rem .75rem}
+  h2.sec{margin-top:1rem}
+  h2.sec+*{margin-top:.625rem}
+  .opens{gap:.5rem}
+}
+
 </style>
 </head>
 <body>
