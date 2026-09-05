@@ -8,7 +8,7 @@
   TEMPLATE: spec  ·  CATEGORY: decisions
   VOICE: humanist sans (system-ui stack), tight measure   SCHEME: near-white paper, deep amber accent
   Rewriting this? Replace the content, keep the structure and the styling.
-  THE OUT ROWS ARE NOT DECORATION. A spec with goals and no non-goals has not been written yet —
+  THE OUT COLUMN IS NOT DECORATION. A spec with goals and no non-goals has not been written yet —
   the non-goals are what stop the scope moving, so give them the same care as the goals.
   EVERY REQUIREMENT NEEDS AN ACCEPTANCE LINE. If you cannot say how you would know it was met,
   it is a wish, not a requirement: cut it or move it to the open questions.
@@ -42,19 +42,25 @@ ul,ol{margin:0;padding:0;list-style:none}
 .state{display:inline-flex;align-items:center;gap:.4375rem;padding:.0625rem .5rem;border:1px solid var(--amber-line);background:var(--amber-soft);border-radius:999px;color:var(--amber);font-size:.8125rem;font-weight:700}
 .state::before{content:"";width:.4375rem;height:.4375rem;border-radius:999px;background:var(--amber)}
 
-/* scope ledger — one list, one marker column, the in/out boundary as a single line */
-.scope{margin-top:.75rem;background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
-.scope li{display:grid;grid-template-columns:3.25rem minmax(0,1fr);gap:.875rem;padding:.5625rem 1.125rem;border-top:1px solid var(--line);font-size:.9375rem}
-.scope li:first-child{border-top:0}
-.scope li.edge{border-top:2px solid var(--line-2)}
-.scope .in{color:var(--ink)}
-.scope .out{color:var(--muted);background:var(--tint)}
-.mk{display:flex;align-items:center;gap:.375rem;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.7}
-.mk::before{content:"";flex:none;width:.5625rem;height:.5625rem;border-radius:.125rem}
-.in .mk{color:var(--amber)}
-.in .mk::before{background:var(--amber)}
-.out .mk{color:var(--subtle)}
-.out .mk::before{box-shadow:inset 0 0 0 1.5px var(--line-2)}
+/* SCOPE BAND — the opening move, directly under the metadata row.
+   Two columns, in beside out, so the scope boundary is a vertical rule you read across rather
+   than a line you read down. This is the template's own best idea hoisted to the top: the shape
+   and the promise ("goals beside non-goals") are the same object again.
+   The marker is filled vs hollow AND the column carries the word, so neither colour nor position
+   is doing the work alone. */
+.scope{display:grid;grid-template-columns:1fr 1fr;margin-top:.75rem;background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
+.scope>div{padding:.875rem 1.125rem}
+.scope .out{background:var(--tint);border-left:1px solid var(--line-2)}
+.scope h3{font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem}
+.scope .in h3{color:var(--amber)}
+.scope .out h3{color:var(--subtle)}
+.scope li{position:relative;padding-left:1.0625rem;font-size:.9375rem;line-height:1.5}
+.scope li+li{margin-top:.4375rem}
+.scope li::before{content:"";position:absolute;left:0;top:.4375rem;width:.5rem;height:.5rem;border-radius:.125rem}
+.scope .in li{color:var(--ink)}
+.scope .in li::before{background:var(--amber)}
+.scope .out li{color:var(--muted)}
+.scope .out li::before{box-shadow:inset 0 0 0 1.5px var(--line-2)}
 h2.sec{margin-top:2.25rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
 h2.sec .count{color:var(--muted);font-weight:600;letter-spacing:0;text-transform:none;font-size:.8125rem}
 h2.sec+*{margin-top:.75rem}
@@ -87,8 +93,9 @@ h2.sec+*{margin-top:.75rem}
   .mast .lead{font-size:1rem}
   h2.sec{margin-top:1.625rem}
   .colophon{margin-top:1.5rem}
-  .scope li{display:block;padding:.5rem 1rem}
-  .mk{display:inline-flex;vertical-align:baseline;margin-right:.375rem}
+  .scope{grid-template-columns:minmax(0,1fr)}
+  .scope>div{padding:.75rem 1rem}
+  .scope .out{border-left:0;border-top:1px solid var(--line-2)}
   .reqs>li{grid-template-columns:minmax(0,1fr) auto;gap:.25rem .75rem;padding:.8125rem 1rem}
   .rid{grid-row:auto;grid-column:1;font-size:.8125rem;color:var(--subtle)}
   .req{grid-column:1/-1}
@@ -115,15 +122,25 @@ h2.sec+*{margin-top:.75rem}
 
   <section>
     <h2 class="sec">Scope <span class="count">— three things this does, four it deliberately does not</span></h2>
-    <ul class="scope">
-      <li class="in"><span class="mk">In</span><span>An agent can save the current filter state as a named view and return to it in one click.</span></li>
-      <li class="in"><span class="mk">In</span><span>The filter sets a team rebuilds every morning are saved once and shared.</span></li>
-      <li class="in"><span class="mk">In</span><span>Time from opening the queue to opening the first ticket: 90s median, target under 20.</span></li>
-      <li class="out edge"><span class="mk">Out</span><span>No query language. A view is the existing facets, saved — nothing new to learn.</span></li>
-      <li class="out"><span class="mk">Out</span><span>No per-view notification rules. That is the alerting project and it has its own spec.</span></li>
-      <li class="out"><span class="mk">Out</span><span>No cross-workspace sharing in 1.9. The entitlement model is not there yet.</span></li>
-      <li class="out"><span class="mk">Out</span><span>No change to the default queue order for agents who never save a view.</span></li>
-    </ul>
+    <div class="scope">
+      <div class="in">
+        <h3>In scope</h3>
+        <ul>
+          <li>An agent can save the current filter state as a named view and return to it in one click.</li>
+          <li>The filter sets a team rebuilds every morning are saved once and shared.</li>
+          <li>Time from opening the queue to opening the first ticket: 90s median, target under 20.</li>
+        </ul>
+      </div>
+      <div class="out">
+        <h3>Out of scope</h3>
+        <ul>
+          <li>No query language. A view is the existing facets, saved.</li>
+          <li>No per-view notification rules — that is the alerting project.</li>
+          <li>No cross-workspace sharing in 1.9; the entitlement model is not there.</li>
+          <li>No change to the default queue order for agents who never save a view.</li>
+        </ul>
+      </div>
+    </div>
   </section>
 
   <section>

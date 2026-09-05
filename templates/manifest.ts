@@ -80,7 +80,7 @@ export const starterTemplateManifest = [
         "slug": "spec",
         "category": "decisions",
         "name": "Spec",
-        "description": "A PRD: one scope ledger where every line is marked in or out, numbered requirements each carrying a priority and an acceptance line, and the open questions still blocking the build.",
+        "description": "A PRD that opens on scope itself — what the release does, beside what it deliberately does not — then numbered requirements each carrying a priority and an acceptance line, and the open questions still blocking the build.",
         "type": "html",
         "content_file": "spec.html",
         "thumbnail": "/assets/template-thumbs/spec.png",
