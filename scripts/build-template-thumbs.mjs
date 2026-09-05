@@ -44,15 +44,21 @@ const OUTPUT_HEIGHT = Math.round(OUTPUT_WIDTH / ASPECT);
 const REVIEW_WIDTH = 1280;
 const VIEWPORT_BY_TYPE = { html: 1280, markdown: 1024 };
 /**
- * `report-html` is a 42rem reading column on a paper card, and the width it is captured at decides
- * what KIND of object the grid shows. At 1024 the paper is 768px of white inside 256px of page
- * background: at card size that reads as a small sheet floating in a grey mat, which is not what
- * `recap` and `metrics-dashboard` — full-bleed layouts, captured edge to edge — read as, so one
- * card in the row looked like a different species. 768 is the paper's own outer width and also the
- * template's `max-width: 48rem` breakpoint, so the capture lands on the compact padding and the
- * document fills the frame with only its own margin showing.
+ * A narrow reading column captured at the wide default decides what KIND of object the grid shows.
+ * At 1024 `report-html`'s paper is 768px of white inside 256px of page background: at card size
+ * that reads as a small sheet floating in a grey mat, which is not what the full-bleed layouts
+ * captured edge to edge read as, so one card in the row looked like a different species. 768 is the
+ * paper's own outer width and also its `max-width: 48rem` breakpoint, so the capture lands on the
+ * compact padding and the document fills the frame with only its own margin showing.
+ *
+ * `proposal` is the same case — a 46rem column — and is keyed here for the same reason. THE RULE
+ * THIS MAP LIVES BY: a slug rename or a new narrow-column template must edit this map in the SAME
+ * commit. The lookup fails SILENTLY — a key that matches nothing falls through to VIEWPORT_BY_TYPE
+ * and captures at 1280, producing a wrong-looking thumbnail rather than an error. The previous
+ * version of this comment named a template (`recap`) that no longer exists, which is how a stale
+ * comment on a silent failure gets the failure re-armed.
  */
-const VIEWPORT_BY_SLUG = { 'report-html': 768 };
+const VIEWPORT_BY_SLUG = { 'report-html': 768, proposal: 768 };
 
 /**
  * Realistic values for the markdown starters' slots. A thumbnail of `{{title}}` sells nothing, and

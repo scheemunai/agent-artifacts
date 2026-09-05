@@ -94,7 +94,7 @@ async function seed(ctx: AuthTestContext, email = 'preview-owner@example.test'):
     htmlTemplateId: (
       ctx.db.sqlite
         .prepare('SELECT id FROM templates WHERE slug = ? AND account_id IS NULL')
-        .get('recap') as { id: string }
+        .get('daily-digest') as { id: string }
     ).id,
   };
 }

@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Decision brief — how we bill for overage from January</title>
+<!--
+  TEMPLATE: decision-brief  ·  CATEGORY: decisions
+  VOICE: humanist sans (system-ui stack), tight measure   SCHEME: near-white paper, deep amber accent
+  Rewriting this? Replace the content, keep the structure and the styling.
+  THE RULE THIS TEMPLATE EXISTS FOR: every option is scored on the SAME criteria, in the same
+  order, with real values. An option with a blank cell has not been evaluated — either fill it
+  or drop the option. Two to four options; past four this is a survey, not a decision.
+  DELETE, DON'T EMPTY: nothing to say against the alternatives? remove "Why not the others"
+  entirely, heading included. Never leave a heading with nothing under it.
+-->
+<style>
+:root{
+  --bg:#faf9f7; --card:#fff; --tint:#f4f2ee;
+  --ink:#1c1a16; --muted:#55504a; --subtle:#6a645c;
+  --line:#e8e4de; --line-2:#d6d0c7;
+  --amber:#96560a; --amber-soft:#fdf1e0; --amber-line:#eed6ae;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --shadow:0 1px 2px rgb(28 26 22/.05),0 12px 32px -16px rgb(28 26 22/.3);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+p,dl,dd{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+.page{max-width:56rem;margin-inline:auto;padding:2.5rem 1.5rem 3rem}
+.measure{max-width:40rem}
+
+.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--amber);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--amber)}
+.mast h1{margin:.625rem 0 0;font-size:clamp(1.75rem,3.6vw,2.375rem);font-weight:700}
+.mast .lead{margin-top:.5rem;color:var(--muted);font-size:1.0625rem}
+.facts{display:flex;flex-wrap:wrap;gap:.375rem 1.25rem;margin-top:1.125rem;padding-top:.875rem;border-top:1px solid var(--line-2);font-size:.8125rem;color:var(--subtle)}
+.facts b{color:var(--muted);font-weight:600}
+
+/* recommendation */
+.rec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.75rem 1rem;align-items:start;margin-top:1.25rem;padding:1rem 1.125rem;background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:.625rem}
+.rec{font-size:.9375rem}
+.rec .badge{padding:.125rem .5rem;background:var(--amber);color:#fff;border-radius:999px;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.rec h2{font-size:1.125rem;font-weight:700;color:#5c3403}
+.rec p{margin-top:.25rem;color:#6b3e04}
+
+h2.sec{margin-top:2.25rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
+h2.sec+*{margin-top:.75rem}
+
+/* comparison matrix */
+.matrix{background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:.9375rem}
+thead th{padding:.75rem .875rem;background:var(--tint);border-bottom:1px solid var(--line-2);text-align:left;vertical-align:top;font-size:.8125rem;font-weight:700;color:var(--ink)}
+thead th:first-child{font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);width:9.5rem}
+thead th.pick{background:var(--amber-soft);border-bottom-color:var(--amber-line);color:#5c3403}
+thead th .tag{display:block;margin-top:.1875rem;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+tbody th{padding:.75rem .875rem;border-top:1px solid var(--line);text-align:left;vertical-align:top;font-weight:600;color:var(--muted);font-size:.875rem}
+tbody td{padding:.75rem .875rem;border-top:1px solid var(--line);vertical-align:top;color:var(--ink);font-variant-numeric:tabular-nums}
+tbody td.pick{background:var(--amber-soft)}
+tbody tr:first-child th,tbody tr:first-child td{border-top:0}
+.risk{display:flex;align-items:center;gap:.4375rem}
+.risk i{display:flex;gap:.125rem;flex:none}
+.risk i span{width:.375rem;height:.75rem;border-radius:1px;box-shadow:inset 0 0 0 1px #b8b0a2}
+.risk i span.on{background:var(--muted);box-shadow:none}
+.risk b{font-weight:650}
+.risk-note{display:block;margin-top:.1875rem;color:var(--subtle);font-size:.8125rem}
+.tnote{padding:.75rem .875rem;border-top:1px solid var(--line);background:var(--tint);color:var(--subtle);font-size:.8125rem}
+
+/* why not */
+.why li{padding-block:1rem;border-top:1px solid var(--line-2);font-size:.9375rem}
+.why li:first-child{border-top:0;padding-top:.25rem}
+.why h3{font-size:1rem;font-weight:650}
+.why h3 span{color:var(--subtle);font-weight:600}
+.why p{margin-top:.25rem;color:var(--muted);max-width:42rem}
+.why p b{color:var(--ink);font-weight:650}
+
+/* the ask */
+.ask{padding:1.125rem 1.25rem;background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow)}
+.ask ol{counter-reset:a}
+.ask li{position:relative;counter-increment:a;padding-block:.5rem;padding-left:1.75rem;color:var(--ink);font-size:.9375rem}
+.ask li+li{border-top:1px solid var(--line)}
+.ask li::before{content:counter(a);position:absolute;left:0;top:.5rem;color:var(--amber);font-size:.8125rem;font-weight:700;font-variant-numeric:tabular-nums}
+.deadline{display:flex;flex-wrap:wrap;align-items:baseline;gap:.375rem .75rem;margin-top:.875rem;padding-top:.875rem;border-top:1px solid var(--line-2)}
+.deadline .k{color:var(--subtle);font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.deadline .v{color:var(--amber);font-size:1.25rem;font-weight:700;letter-spacing:-.02em}
+.deadline .n{color:var(--muted);font-size:.875rem;flex:1 1 16rem}
+
+.colophon{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--line-2);color:var(--subtle);font-size:.8125rem}
+
+@media (max-width:34rem){
+  .page{padding:1.875rem 1rem 2rem}
+  h2.sec{margin-top:1.625rem}
+  .colophon{margin-top:1.5rem}
+  .mast .lead{font-size:1rem}
+  .rec{grid-template-columns:minmax(0,1fr);gap:.5rem}
+  .rec .badge{justify-self:start}
+  .matrix{border-radius:.625rem}
+  table,tbody{display:block}
+  caption{display:block}
+  thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  tbody tr{display:block;padding:.75rem .875rem;border-top:1px solid var(--line-2)}
+  tbody tr:first-child{border-top:0}
+  tbody th,tbody td{display:block;padding:0;border-top:0}
+  tbody th{margin-bottom:.375rem;color:var(--ink);font-size:.9375rem;font-weight:700}
+  tbody td{padding:.3125rem .5rem;border-radius:.3125rem;font-size:.9375rem}
+  tbody td+td{margin-top:.25rem}
+  tbody td::before{content:attr(data-label);display:block;color:var(--subtle);font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  tbody td.pick::before{color:var(--amber)}
+  .ask{padding:1rem}
+  /* height tightening — spacing only, no content removed */
+  .facts{margin-top:1rem;padding-top:.75rem}
+  .rec{margin-top:1rem;padding:.875rem 1rem}
+  h2.sec{margin-top:1.375rem}
+  h2.sec+*{margin-top:.625rem}
+  tbody tr{padding:.625rem .875rem}
+  tbody th{margin-bottom:.3125rem}
+  tbody td{padding:.25rem .5rem}
+  tbody td+td{margin-top:.1875rem}
+  .tnote{padding:.625rem .875rem}
+  .why li{padding-block:.875rem}
+  .ask li{padding-block:.4375rem;padding-left:1.75rem}
+  .ask li::before{top:.4375rem}
+  .deadline{margin-top:.75rem;padding-top:.75rem}
+  .colophon{margin-top:1.25rem;padding-top:.875rem}
+  /* final nudge — spacing only */
+  h2.sec{margin-top:1.25rem}
+  tbody tr{padding:.5625rem .875rem}
+  .why li{padding-block:.75rem}
+  .colophon{margin-top:1.125rem;padding-top:.75rem}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="mast">
+    <span class="eyebrow">Decision brief</span>
+    <h1 class="measure">How we bill for overage from January</h1>
+    <p class="lead measure">Three options, same five criteria. Recommendation: metered overage. Decide by 19 September for the January release.</p>
+    <div class="facts">
+      <span><b>Owner:</b> Ines Arriaga, Pricing</span>
+      <span><b>Decided by:</b> exec review, 19 September</span>
+      <span><b>Reversible:</b> yes, inside one release</span>
+    </div>
+  </header>
+
+  <div class="rec">
+    <span class="badge">Recommended</span>
+    <div>
+      <h2>Option B — metered overage, billed monthly</h2>
+      <p>Best modelled revenue by a clear margin, the only option that never puts a hard stop in a customer's work, and it reverts inside one release.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2 class="sec">The options, on the same criteria</h2>
+    <div class="matrix">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Criterion</th>
+            <th scope="col">A · Hard cap with upgrade prompt</th>
+            <th scope="col" class="pick">B · Metered overage<span class="tag">Recommended</span></th>
+            <th scope="col">C · Soft cap with 7-day grace</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Modelled revenue, FY27</th>
+            <td data-label="A · Hard cap">+$180k</td>
+            <td class="pick" data-label="B · Metered overage">+$310k</td>
+            <td data-label="C · Soft cap">+$240k</td>
+          </tr>
+          <tr>
+            <th scope="row">Support load</th>
+            <td data-label="A · Hard cap">+40 tickets / month</td>
+            <td class="pick" data-label="B · Metered overage">+12 tickets / month</td>
+            <td data-label="C · Soft cap">+25 tickets / month</td>
+          </tr>
+          <tr>
+            <th scope="row">Time to ship</th>
+            <td data-label="A · Hard cap">3 weeks</td>
+            <td class="pick" data-label="B · Metered overage">5 weeks</td>
+            <td data-label="C · Soft cap">4 weeks</td>
+          </tr>
+          <tr>
+            <th scope="row">Churn risk</th>
+            <td data-label="A · Hard cap"><span class="risk"><i aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span></i><b>High</b></span><span class="risk-note">Stops work mid-task</span></td>
+            <td class="pick" data-label="B · Metered overage"><span class="risk"><i aria-hidden="true"><span class="on"></span><span></span><span></span></i><b>Low</b></span><span class="risk-note">Nothing is interrupted</span></td>
+            <td data-label="C · Soft cap"><span class="risk"><i aria-hidden="true"><span class="on"></span><span class="on"></span><span></span></i><b>Medium</b></span><span class="risk-note">The grace period ends</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Time to revert</th>
+            <td data-label="A · Hard cap">1 week</td>
+            <td class="pick" data-label="B · Metered overage">2 weeks</td>
+            <td data-label="C · Soft cap">3 weeks</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="tnote">Revenue is modelled on the June–August usage distribution and carries ±18% at the 80% interval. Support estimates scale from the 2025 seat-cap launch, our closest comparable.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">Why not the others</h2>
+    <ul class="why">
+      <li>
+        <h3>A <span>· Hard cap with an upgrade prompt</span></h3>
+        <p>Cheapest, fastest, and the only option guaranteeing no unbilled usage — a real argument. It is also the only one that stops a customer mid-export. <b>Two of our four largest accounts would have hit the cap in July,</b> and neither can close procurement in a day.</p>
+      </li>
+      <li>
+        <h3>C <span>· Soft cap with a seven-day grace</span></h3>
+        <p>The compromise, and it collects most of B's revenue. But a grace period still ends, and it ends on a Tuesday for somebody. It also needs its own notifications — <b>so it costs nearly what B costs and keeps A's problem.</b></p>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="sec">What we are asking for</h2>
+    <div class="ask">
+      <ol>
+        <li>Approve Option B and a five-week build starting 22 September.</li>
+        <li>Accept that the first invoice carrying overage lands on 3 February, not in January.</li>
+        <li>Name a rollback owner who is not the person building it — the revert is two weeks and needs someone free to call it.</li>
+      </ol>
+      <p class="deadline"><span class="k">Decision needed by</span><span class="v">19 September</span><span class="n">If it slips past the 26th the January release is out and this becomes an April decision.</span></p>
+    </div>
+  </section>
+
+  <footer class="colophon">Prepared by Ines Arriaga, Pricing. Modelling reviewed by Sam Oyelaran, Data. Sources: usage export 1 June – 31 August 2026; 2025 seat-cap retrospective.</footer>
+</div>
+</body>
+</html>

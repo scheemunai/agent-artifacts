@@ -672,7 +672,7 @@ test('/templates browses by category and renders every card', async ({ page }) =
 });
 
 test('/templates/:slug previews the real document and says it is bounded', async ({ page }) => {
-  const response = await page.goto('/templates/recap');
+  const response = await page.goto('/templates/meeting-recap');
   expect(response?.status()).toBe(200);
 
   // The same sandboxed frame a published artifact renders in, so what a visitor sees here is what a
@@ -1216,3 +1216,12 @@ function isAssetUrl(rawUrl: string): boolean {
   const url = new URL(rawUrl);
   return url.pathname.startsWith('/assets/');
 }
+
+test('a retired template slug redirects instead of 404ing', async ({ page }) => {
+  // The API resolves the alias transparently so a saved agent workflow keeps working; a person
+  // following an old link gets the honest answer — the page moved, and here is where.
+  const response = await page.goto('/templates/recap');
+  expect(response?.status()).toBe(200);
+  expect(new URL(page.url()).pathname).toBe('/templates/meeting-recap');
+  await expect(page.locator('.aa-templates__frame')).toBeVisible();
+});

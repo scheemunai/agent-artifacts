@@ -30,7 +30,7 @@ async function makeContext(): Promise<AuthTestContext> {
 interface Seeded {
   cookie: string;
   /** A built-in HTML template: has a thumbnail, and its preview is framed. */
-  recapId: string;
+  digestId: string;
   /** A built-in markdown template: has a thumbnail, and its preview is server-rendered. */
   reportId: string;
   /** Promoted from the account's own artifact, so it has no thumbnail at all. */
@@ -72,7 +72,7 @@ async function seed(ctx: AuthTestContext): Promise<Seeded> {
 
   return {
     cookie: await login(ctx, account.email, 'password123'),
-    recapId: builtIn('recap'),
+    digestId: builtIn('daily-digest'),
     reportId: builtIn('report'),
     promotedId: promoted.id,
   };
@@ -89,7 +89,7 @@ function cardFor(html: string, templateId: string): string {
 describe('the templates listing shows the example instead of describing its fields', () => {
   it('leads each starter card with the thumbnail the template ships', async () => {
     const ctx = await makeContext();
-    const { cookie, recapId } = await seed(ctx);
+    const { cookie, digestId } = await seed(ctx);
 
     const html = await (
       await ctx.app.request('/dashboard/templates', { headers: { Cookie: cookie } })
@@ -97,11 +97,11 @@ describe('the templates listing shows the example instead of describing its fiel
 
     // A grid, and still the dashboard's card list: same reset, same square corners.
     expect(html).toContain('class="aa-dashboard-card-list aa-template-grid"');
-    const card = cardFor(html, recapId);
-    expect(card).toContain('src="/assets/template-thumbs/recap.png"');
+    const card = cardFor(html, digestId);
+    expect(card).toContain('src="/assets/template-thumbs/daily-digest.png"');
     // Decorative: the accessible name of the one link in the card is the template's name.
     expect(card).toContain('alt=""');
-    expect(card).toContain('>Recap</a>');
+    expect(card).toContain('>Daily digest</a>');
     // Lowercase, as the artifact badges and the preview panel spell it.
     expect(card).toContain('>html</span>');
     expect(card).toContain('>starter</span>');
@@ -143,10 +143,10 @@ describe('the templates listing shows the example instead of describing its fiel
 describe('the template preview shows the example, not only its source', () => {
   it('frames an HTML template and keeps the source block', async () => {
     const ctx = await makeContext();
-    const { cookie, recapId } = await seed(ctx);
+    const { cookie, digestId } = await seed(ctx);
 
     const html = await (
-      await ctx.app.request(`/dashboard/templates?preview=${recapId}`, {
+      await ctx.app.request(`/dashboard/templates?preview=${digestId}`, {
         headers: { Cookie: cookie },
       })
     ).text();
@@ -181,10 +181,10 @@ describe('the template preview shows the example, not only its source', () => {
 describe('the template frame is gated the way the artifact frame is', () => {
   it('serves an HTML template sandboxed, to whoever holds the preview token', async () => {
     const ctx = await makeContext();
-    const { cookie, recapId } = await seed(ctx);
+    const { cookie, digestId } = await seed(ctx);
     const panel = (
       await (
-        await ctx.app.request(`/dashboard/templates?preview=${recapId}`, {
+        await ctx.app.request(`/dashboard/templates?preview=${digestId}`, {
           headers: { Cookie: cookie },
         })
       ).text()
@@ -200,7 +200,7 @@ describe('the template frame is gated the way the artifact frame is', () => {
     // Raw, exactly as the artifact frame serves an artifact: a template promoted from an artifact
     // must not preview differently here than it does on the page it was promoted from.
     const stored = (
-      ctx.db.sqlite.prepare('SELECT content FROM templates WHERE id = ?').get(recapId) as {
+      ctx.db.sqlite.prepare('SELECT content FROM templates WHERE id = ?').get(digestId) as {
         content: string;
       }
     ).content;

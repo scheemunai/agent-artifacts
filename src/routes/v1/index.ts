@@ -725,16 +725,17 @@ lists the valid slots. Templates with no slots are copied verbatim.
 
 ### Zero-slot templates: fetch, rewrite, publish (do NOT use template:)
 
-Check the slots array before you reach for \`template:\`. Several built-ins ship
-with \`"slots": []\` — today \`recap\`, \`metrics-dashboard\` and \`report-html\`, all
-HTML. A zero-slot template is an EXAMPLE, not a form. \`template:"recap"\` copies
-that example VERBATIM and any \`slots\` you send are silently ignored, so you get a
-201 and the demo content, not your content. That is working as designed, and it
-is not what you wanted.
+Check the slots array before you reach for \`template:\`. The rule, so you do not
+have to memorise a list that grows: every HTML built-in ships with
+\`"slots": []\`, and only the four markdown built-ins — \`report\`, \`one-pager\`,
+\`dashboard\` and \`changelog\` — take slots. A zero-slot template is an EXAMPLE,
+not a form. \`template:"daily-digest"\` copies that example VERBATIM and any
+\`slots\` you send are silently ignored, so you get a 201 and the demo content, not
+your content. That is working as designed, and it is not what you wanted.
 
 The intended flow for a zero-slot template is three steps:
 
-  1. GET /v1/templates/recap        → read \`content\` (and \`type\`)
+  1. GET /v1/templates/daily-digest → read \`content\` (and \`type\`)
   2. Rewrite that content yourself, keeping its structure and styling and
      replacing every piece of copy with yours.
   3. POST /v1/artifacts {"slug":"...","type":"html","title":"...",
@@ -743,6 +744,19 @@ The intended flow for a zero-slot template is three steps:
 
 Rule of thumb: slots non-empty → send \`template\` + \`slots\`. Slots empty → GET it,
 rehash it, publish it as \`type\`+\`content\`.
+
+### Retired template slugs still answer
+
+A slug is an API, so a retired template keeps its name even when its content goes. Two are retired
+so far and both still resolve, to the template that replaced them:
+
+  recap    → meeting-recap   (zero-slot HTML, as \`recap\` was — nothing changes for you)
+  briefing → report          (both markdown, but \`report\` takes DIFFERENT slots)
+
+The response carries the canonical \`slug\`, so you can see it moved. Where the successor takes
+different slots, the 400 tells you: \`details.retired_template\` names what you asked for and what it
+resolved to, alongside the usual \`valid_slots\`. If you have since created your OWN template under a
+retired name, yours wins — the alias only applies when nothing else answers.
 
 ## 3. Promote an artifact into a template — POST /templates
 
