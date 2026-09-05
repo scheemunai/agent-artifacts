@@ -54,7 +54,7 @@ describe('dashboard heading hierarchy', () => {
         headers: { Cookie: cookie },
       })
     ).text();
-    expect(template).toContain('Template preview: Report');
+    expect(template).toContain('Template preview: One-pager');
     expect(template).toContain('data-aa-dashboard-template-preview="markdown"');
     expect(
       hasAttributes(template, 'data-aa-dashboard-template-preview="markdown"', 'aria-hidden="true"')
@@ -122,7 +122,7 @@ async function seedHeadingFixture(
     idOrSlug: created.artifact.id,
   });
   const report = ctx.db.sqlite
-    .prepare("SELECT id FROM templates WHERE slug = 'report' AND account_id IS NULL")
+    .prepare("SELECT id FROM templates WHERE slug = 'one-pager' AND account_id IS NULL")
     .get() as { id: string };
   const cookie = await login(ctx, account.email, 'password123');
   return {

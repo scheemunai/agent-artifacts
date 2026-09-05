@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Retention after the price change — Q3 2026</title>
+<!--
+  Agent Artifacts template · research / report
+  VOICE  editorial serif (ui-serif, Charter, Iowan Old Style, Georgia)
+  SCHEME warm paper #f0eae0 · rust accent #a8452a · petrol data hue #2c5670
+
+  REWRITING THIS ARTIFACT
+  · Replace the copy; keep the structure and the styling.
+  · DELETE, don't empty. A section you have nothing for is removed entirely —
+    never a heading with nothing under it. Three sections is a finished report.
+  · Never pin the root to the viewport height, and never give html or body a
+    percentage height; no fixed or sticky positioning. The host frame measures this
+    document and does not scroll.
+  · Nothing external — no web fonts, images, scripts or stylesheets.
+-->
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{
+  --bg:#f0eae0;--paper:#fffdf9;--tint:#faf6ef;
+  --ink:#231e1a;--muted:#5b5249;--subtle:#72685f;
+  --line:#e7dfd3;--line2:#d5cabb;
+  --rust:#a8452a;--rust-soft:#fbf0e9;--rust-line:#eecfc0;
+  --data:#2c5670;--track:#e0e6ea;
+  --serif:ui-serif,Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:3rem;--s8:4rem;
+}
+body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
+  font-family:var(--serif);font-size:1.0625rem;line-height:1.68;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.22;letter-spacing:-.01em;font-weight:600}
+p{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+a{color:var(--rust)}
+.paper{max-width:48rem;margin-inline:auto;padding:var(--s7);background:var(--paper);
+  border:1px solid var(--line);border-radius:1rem;
+  box-shadow:0 1px 2px rgb(35 30 26/.04),0 12px 32px -16px rgb(35 30 26/.22)}
+
+/* COVER */
+.cover{padding-bottom:var(--s4);border-bottom:1px solid var(--line2)}
+.eyebrow{display:inline-flex;align-items:center;gap:var(--s2);margin-bottom:var(--s4);
+  color:var(--rust);font-family:var(--mono);font-size:.6875rem;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase}
+.eyebrow::before{content:"";width:.4375rem;height:.4375rem;border-radius:99px;background:var(--rust)}
+.title{font-size:clamp(2rem,5.2vw,2.875rem);letter-spacing:-.022em}
+.byline{display:flex;flex-wrap:wrap;gap:var(--s3) var(--s6);margin-top:var(--s5)}
+.byline dt{color:var(--subtle);font-family:var(--mono);font-size:.6875rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase}
+.byline dd{margin:.1rem 0 0;font-size:.875rem;font-weight:600}
+
+/* OPENING BAND — prose left, the quarter's figures right. This is report's move:
+   no other research template opens on a two-column split, and it is the band a
+   sibling would otherwise collide with. Deliberately UNTINTED. */
+.lede{display:grid;grid-template-columns:minmax(0,1fr) 11rem;gap:var(--s5) var(--s5);
+  margin-top:var(--s5)}
+.lede h2{margin-bottom:var(--s3);color:var(--rust);font-family:var(--mono);font-size:.6875rem;
+  font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.lede__lead{font-size:1.1875rem;line-height:1.5}
+.lede p+p{margin-top:var(--s3);color:var(--muted)}
+.quarter{align-self:start;padding-left:var(--s5);border-left:1px solid var(--line2)}
+.quarter div+div{margin-top:var(--s4);padding-top:var(--s4);border-top:1px solid var(--line)}
+.quarter dt{color:var(--subtle);font-family:var(--mono);font-size:.6875rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase}
+.quarter dd{margin:var(--s1) 0 0;font-size:1.625rem;font-weight:600;letter-spacing:-.025em;
+  line-height:1.05;font-variant-numeric:tabular-nums}
+.quarter p{margin-top:.15rem;color:var(--muted);font-size:.8125rem;line-height:1.4}
+
+/* SECTIONS */
+.sec{margin-top:var(--s6)}
+.sec__n{display:block;margin-bottom:var(--s2);color:var(--subtle);font-family:var(--mono);
+  font-size:.75rem;letter-spacing:.08em}
+.sec h2{font-size:1.5rem}
+.sec h3{margin-top:var(--s5);font-size:1.125rem}
+.sec>p,.sec>h3+p{margin-top:var(--s4)}
+
+/* KEY FIGURES */
+
+/* CHART — magnitude bars. One hue, light to dark: keep the darkest step on the
+   largest value (.b2 / .b3 are the lighter steps). Every value is also printed
+   as text, so the figure reads if the bars never paint. */
+.chart{margin:var(--s5) 0 0;padding:var(--s5);border:1px solid var(--line);border-radius:.625rem}
+.chart figcaption{color:var(--subtle);font-family:var(--mono);font-size:.6875rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase}
+.bars{margin-top:var(--s4)}
+.bars div+div{margin-top:var(--s4)}
+.bars dt{display:flex;justify-content:space-between;gap:var(--s3);font-size:.9375rem;font-weight:600}
+.bars dt em{font-style:normal;font-variant-numeric:tabular-nums}
+.bars dd{margin:var(--s2) 0 0}
+.bars dd>span{display:grid;height:.625rem;border-radius:99px;background:var(--track);overflow:hidden}
+.bars i{border-radius:99px;background:var(--data)}
+.bars b{display:block;margin-top:var(--s2);color:var(--subtle);font-size:.8125rem;font-weight:400}
+.bars .b2 i{background:#5a8296}
+.bars .b3 i{background:#6e93a4}
+
+/* LIST */
+.list{margin-top:var(--s4)}
+.list li{position:relative;padding-left:var(--s5)}
+.list li+li{margin-top:var(--s3)}
+.list li::before{content:"";position:absolute;top:.72rem;left:var(--s2);width:.3125rem;height:.3125rem;
+  border-radius:99px;background:var(--line2)}
+
+/* PULL QUOTE */
+.pull{margin:var(--s6) 0 0;padding-left:var(--s5);border-left:2px solid var(--rust-line);
+  color:var(--muted);font-size:1.1875rem;font-style:italic;line-height:1.5}
+.pull cite{display:block;margin-top:var(--s2);color:var(--subtle);font-size:.8125rem;font-style:normal}
+
+/* NEXT STEPS */
+.next{margin-top:var(--s6);padding-top:var(--s5);border-top:1px solid var(--line2)}
+.next h2{font-size:1.5rem}
+.steps{counter-reset:step;margin-top:var(--s5)}
+.steps li{counter-increment:step;display:grid;grid-template-columns:1.75rem minmax(0,1fr);
+  gap:var(--s4);padding:var(--s4) 0;border-top:1px solid var(--line)}
+.steps li:first-child{padding-top:0;border-top:0}
+.steps li::before{content:counter(step);display:grid;place-items:center;width:1.75rem;height:1.75rem;
+  margin-top:.25rem;border-radius:99px;background:var(--rust-soft);color:var(--rust);
+  font-family:var(--mono);font-size:.75rem;font-weight:600;line-height:1}
+.steps strong{display:block;font-size:1.0625rem;font-weight:600}
+.steps p{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s4);margin-top:var(--s1);
+  color:var(--subtle);font-size:.875rem}
+.steps p span:first-child{color:var(--muted);font-weight:600}
+
+.colophon{margin-top:var(--s7);padding-top:var(--s4);border-top:1px solid var(--line);
+  color:var(--subtle);font-size:.8125rem;line-height:1.6}
+
+@media (min-width:64rem){
+  .paper{max-width:57rem;padding-left:var(--s6)}
+  .sec{display:grid;grid-template-columns:3.5rem minmax(0,40rem);gap:0 var(--s5)}
+  .sec__n{grid-column:1;grid-row:1;margin:0;padding-top:.45rem;text-align:right}
+  .sec>:not(.sec__n){grid-column:2}
+  .cover,.lede,.next,.colophon{margin-left:calc(3.5rem + var(--s5))}
+  .next,.colophon{max-width:40rem}
+}
+@media (max-width:44rem){
+  .lede{grid-template-columns:minmax(0,1fr);gap:var(--s5)}
+  .quarter{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:var(--s4);
+    padding-left:0;padding-top:var(--s4);border-left:0;border-top:1px solid var(--line2)}
+  .quarter div+div{margin-top:0;padding-top:0;border-top:0}
+}
+@media (max-width:48rem){
+  body{padding:var(--s4) var(--s3) var(--s6)}
+  .paper{padding:var(--s6) var(--s5) var(--s7)}
+  .byline{gap:var(--s4) var(--s5)}
+}
+@media (max-width:30rem){
+  :root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.25rem;--s7:1.375rem}
+  body{padding:var(--s2) var(--s2) var(--s6);font-size:.9375rem;line-height:1.48}
+  .paper{padding:var(--s4) var(--s3) var(--s5);border-radius:.625rem}
+  .chart{padding:var(--s4)}
+  .title{line-height:1.14}
+  .lede__lead,.pull{font-size:1rem}
+  .sec h2,.next h2{font-size:1.375rem}
+  .steps li{padding:var(--s3) 0}
+  .next{padding-top:var(--s5)}
+  .list li+li{margin-top:var(--s2)}
+  .sec{margin-top:var(--s6)}
+  .sec>p,.sec>h3+p{margin-top:var(--s3)}
+  .list li,.steps p,.lede p{line-height:1.42}
+  .colophon{margin-top:var(--s5);padding-top:var(--s3)}
+}
+</style>
+</head>
+<body>
+<article class="paper">
+
+  <header class="cover">
+    <span class="eyebrow">Quarterly review</span>
+    <h1 class="title">Retention after the price change</h1>
+    <dl class="byline">
+      <div><dt>Period</dt><dd>Q3 2026 · Jul–Sep</dd></div>
+      <div><dt>Author</dt><dd>Priya Raman</dd></div>
+      <div><dt>Team</dt><dd>Revenue Operations</dd></div>
+      <div><dt>Version</dt><dd>v2 · Final</dd></div>
+    </dl>
+  </header>
+
+  <section class="lede" aria-labelledby="sum">
+    <div>
+      <h2 id="sum">Executive summary</h2>
+      <p class="lede__lead">Retention held at 104% through the first full quarter on the new
+        pricing. The average hides a split: enterprise expanded, mid-market did not renew.</p>
+      <p>The price change did not cost us the book — retention closed two points below plan and
+        seven above the approved floor. The damage is concentrated: enterprise finished at 118%,
+        mid-market at 96%, its first quarter below par since 2024, and eleven of its fourteen
+        non-renewals named seat pricing.</p>
+      <p>We recommend a viewer tier for 20–80 seat accounts, and holding list price.</p>
+    </div>
+    <dl class="quarter">
+      <div><dt>Net revenue retention</dt><dd>104%</dd><p>vs 106% plan</p></div>
+      <div><dt>Gross logo churn</dt><dd>2.1%</dd><p>4-qtr avg 2.0%</p></div>
+      <div><dt>Expansion ARR</dt><dd>$1.42M</dd><p>up 31% on Q2</p></div>
+    </dl>
+  </section>
+
+  <section class="sec" aria-labelledby="s1">
+    <span class="sec__n">01</span>
+    <h2 id="s1">Where the quarter landed</h2>
+    <p>Three quarters of the book renewed at list without an exception, and expansion revenue was
+      the strongest we have recorded — almost all of it seat growth above 200 seats.</p>
+    <figure class="chart">
+      <figcaption>Net revenue retention by segment · Q3 2026</figcaption>
+      <dl class="bars">
+        <div><dt><span>Enterprise</span><em>118%</em></dt>
+          <dd><span><i style="width:100%"></i></span>
+            <b>41 accounts · $6.9M · no non-renewals</b></dd></div>
+        <div class="b2"><dt><span>Mid-market</span><em>96%</em></dt>
+          <dd><span><i style="width:81%"></i></span>
+            <b>163 accounts · $4.1M · 14 non-renewals</b></dd></div>
+        <div class="b3"><dt><span>Self-serve</span><em>89%</em></dt>
+          <dd><span><i style="width:75%"></i></span>
+            <b>2,904 accounts · $1.3M · flat on Q2</b></dd></div>
+      </dl>
+    </figure>
+  </section>
+
+  <section class="sec" aria-labelledby="s2">
+    <span class="sec__n">02</span>
+    <h2 id="s2">What moved mid-market</h2>
+    <p>Customer Success ran exit interviews on all fourteen non-renewals and on nine accounts that
+      renewed after an escalation. The pattern is consistent.</p>
+    <ul class="list">
+      <li><strong>Seat pricing punishes the shape of these teams.</strong> Mid-market accounts add
+        occasional viewers, not daily editors. Eleven of fourteen were paying editor prices for
+        people who log in twice a month.</li>
+      <li><strong>Discount expiry did most of the work.</strong> Nine of the fourteen were on legacy
+        discounts that lapsed in the same cycle, so the felt increase was 34%, not 9%.</li>
+      <li><strong>Nobody left on product.</strong> Feature gaps came up in two of twenty-three
+        conversations and were the stated reason in neither.</li>
+    </ul>
+    <blockquote class="pull">“We didn’t leave because it got expensive. We left because we couldn’t
+      explain to finance what the extra money bought.”
+      <cite>— Head of Operations · 240 seats · churned 14 Sep</cite></blockquote>
+  </section>
+
+  <section class="sec" aria-labelledby="s3">
+    <span class="sec__n">03</span>
+    <h2 id="s3">The Q4 decision</h2>
+    <p>Two proposals compete for the same pricing slot, and they are not compatible: both change
+      what a mid-market account pays.</p>
+    <h3>A viewer tier for 20–80 seat accounts — recommended</h3>
+    <p>A read-and-comment seat at 30% of the editor price, capped at three per editor. Applied to
+      the churned accounts it cuts invoices by a median of 22% and holds revenue on eleven of the
+      fourteen: $310K given up against $1.1M of renewal risk. Billable by 20 November.</p>
+    <h3>A second list increase in January — defer</h3>
+    <p>The annual plan assumes a further 6% in January. Enterprise would absorb it; mid-market would
+      see two increases in five months against the same lapsing discounts. The revenue is $840K; the
+      risk is the segment.</p>
+  </section>
+
+  <section class="next" aria-labelledby="nx">
+    <h2 id="nx">Next steps</h2>
+    <ol class="steps">
+      <li><div><strong>Approve or reject the viewer tier</strong>
+        <p><span>Priya Raman</span><span>Decision needed by 17 October</span></p></div></li>
+      <li><div><strong>Model the January increase against a segmented rollout</strong>
+        <p><span>Revenue Operations</span><span>Draft by 31 October</span></p></div></li>
+      <li><div><strong>Give every 20+ seat account a named renewal owner</strong>
+        <p><span>Marcus Lai, Customer Success</span><span>In place by 1 November</span></p></div></li>
+    </ol>
+  </section>
+
+  <footer class="colophon">Revenue Operations, for the Q3 business review, 6 October 2026. Retention
+    is trailing-twelve-month cohort against contracted ARR at period start.</footer>
+
+</article>
+</body>
+</html>

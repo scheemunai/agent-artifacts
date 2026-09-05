@@ -624,7 +624,8 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
         slug: 'report',
         built_in: true,
         thumbnail_url: '/assets/template-thumbs/report.png',
-        type: 'markdown',
+        // `report` became a zero-slot HTML document in wave 2; `one-pager` is the markdown starter.
+        type: 'html',
       });
 
       const merged = await ctx.app.request('/v1/artifacts', {
@@ -633,20 +634,18 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
         body: JSON.stringify({
           slug: 'templated-report',
           title: 'Templated Report',
-          template: 'report',
+          template: 'one-pager',
           slots: {
-            title: 'Templated Report',
-            date: '2026-08-26',
-            summary: 'Summary',
-            body: 'Body',
-            next_steps: 'Next',
+            title: 'Week 34',
+            subtitle: 'Shipped v2.1 and resolved queue drift.',
+            body: '## Highlights\n\n- Merged templates server-side.',
           },
         }),
       });
       expect(merged.status).toBe(201);
       expect(await json(merged)).toMatchObject({
         type: 'markdown',
-        content: expect.stringContaining('Body'),
+        content: expect.stringContaining('Highlights'),
       });
 
       const missing = await ctx.app.request('/v1/artifacts', {
@@ -655,7 +654,7 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
         body: JSON.stringify({
           slug: 'missing-slots',
           title: 'Missing',
-          template: 'report',
+          template: 'one-pager',
           slots: {},
         }),
       });
@@ -676,14 +675,12 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
         body: JSON.stringify({
           slug: 'unknown-slot',
           title: 'Unknown',
-          template: 'report',
+          template: 'one-pager',
           slots: {
-            title: 'Unknown',
-            date: '2026-08-26',
-            summary: 'Summary',
-            body: 'Body',
-            next_steps: 'Next',
-            surprise: 'Nope',
+            title: 'Week 34',
+            subtitle: 'Shipped v2.1 and resolved queue drift.',
+            body: '## Highlights\n\n- Merged templates server-side.',
+            surprise: 'A slot this template does not declare.',
           },
         }),
       });

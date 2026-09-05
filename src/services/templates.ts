@@ -36,6 +36,7 @@ export interface StarterTemplate {
   category: TemplateCategory;
   type: ArtifactType;
   thumbnail?: string | undefined;
+  thumbnailViewport?: number | undefined;
   content: string;
   slots: TemplateSlot[];
 }
@@ -98,6 +99,15 @@ const manifestEntrySchema = z
     type: artifactTypeSchema,
     thumbnail: z.string().min(1).optional(),
     content_file: z.string().min(1),
+    /**
+     * The viewport width the thumbnail is captured at, when the type default is wrong for this
+     * document. It lives HERE, on the manifest line, because it used to live in a lookup table
+     * inside `scripts/build-template-thumbs.mjs` keyed by slug — a second source of truth that
+     * fails SILENTLY: a key that stops matching falls through to the type default and produces a
+     * wrong-looking thumbnail rather than an error. `report-html` renaming to `report` was that
+     * trap, armed and pointing at a real rename. One place, travelling with the entry it describes.
+     */
+    thumbnail_viewport: z.number().int().min(320).max(1920).optional(),
     slots: z.array(templateSlotSchema).default([]),
   })
   .strict();
@@ -158,6 +168,9 @@ export function loadStarterTemplates(rootDir?: string): StarterTemplate[] {
       category: entry.category,
       type: entry.type,
       ...(entry.thumbnail !== undefined ? { thumbnail: entry.thumbnail } : {}),
+      ...(entry.thumbnail_viewport !== undefined
+        ? { thumbnailViewport: entry.thumbnail_viewport }
+        : {}),
       content,
       slots: entry.slots,
     };
@@ -757,6 +770,7 @@ async function listTemplateRows(
 const RETIRED_TEMPLATE_SLUGS: Readonly<Record<string, string>> = {
   recap: 'meeting-recap',
   briefing: 'report',
+  'report-html': 'report',
 };
 
 /**
@@ -794,7 +808,7 @@ export function retiredTemplateSuccessor(slug: string): string | null {
  * document with a 201 on it. Add a slug here in the same change that flips it; `report` joins when
  * its HTML replacement lands.
  */
-const FLIPPED_TEMPLATE_SLUGS = new Set(['changelog']);
+const FLIPPED_TEMPLATE_SLUGS = new Set(['changelog', 'report']);
 
 async function resolveTemplateExact(
   db: DatabaseHandle,

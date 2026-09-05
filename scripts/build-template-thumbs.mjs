@@ -44,21 +44,17 @@ const OUTPUT_HEIGHT = Math.round(OUTPUT_WIDTH / ASPECT);
 const REVIEW_WIDTH = 1280;
 const VIEWPORT_BY_TYPE = { html: 1280, markdown: 1024 };
 /**
- * A narrow reading column captured at the wide default decides what KIND of object the grid shows.
- * At 1024 `report-html`'s paper is 768px of white inside 256px of page background: at card size
- * that reads as a small sheet floating in a grey mat, which is not what the full-bleed layouts
- * captured edge to edge read as, so one card in the row looked like a different species. 768 is the
- * paper's own outer width and also its `max-width: 48rem` breakpoint, so the capture lands on the
- * compact padding and the document fills the frame with only its own margin showing.
+ * The per-slug viewport override now travels ON THE MANIFEST ENTRY as `thumbnail_viewport`, not in
+ * a table here. It used to be a lookup keyed by slug, and that is a second source of truth that
+ * fails silently: a key that stops matching falls through to VIEWPORT_BY_TYPE and captures a narrow
+ * reading column at 1280, which is a wrong-looking thumbnail rather than an error. `report-html`
+ * renaming to `report` was exactly that trap, live, in this wave.
  *
- * `proposal` is the same case — a 46rem column — and is keyed here for the same reason. THE RULE
- * THIS MAP LIVES BY: a slug rename or a new narrow-column template must edit this map in the SAME
- * commit. The lookup fails SILENTLY — a key that matches nothing falls through to VIEWPORT_BY_TYPE
- * and captures at 1280, producing a wrong-looking thumbnail rather than an error. The previous
- * version of this comment named a template (`recap`) that no longer exists, which is how a stale
- * comment on a silent failure gets the failure re-armed.
+ * Why the override exists at all: a 46rem reading column captured at the wide default is 768px of
+ * paper inside 512px of page background, which at card size reads as a small sheet floating in a
+ * grey mat while its neighbours are full-bleed. 768 is the paper's own outer width, so the capture
+ * lands on the compact padding and the document fills the frame with only its own margin showing.
  */
-const VIEWPORT_BY_SLUG = { 'report-html': 768, proposal: 768 };
 
 /**
  * Realistic values for the markdown starters' slots. A thumbnail of `{{title}}` sells nothing, and
@@ -66,32 +62,6 @@ const VIEWPORT_BY_SLUG = { 'report-html': 768, proposal: 768 };
  * content lives here, next to the renderer that consumes it, rather than in the shipped template.
  */
 const SAMPLE_SLOTS = {
-  report: {
-    title: 'Q3 platform reliability review',
-    date: '30 September 2026',
-    summary:
-      'Availability finished the quarter at 99.96%, ahead of the 99.9% commitment, and severity-1 incidents more than halved. Recovery time did not improve, and that is now the binding constraint.',
-    body: [
-      '### Where the quarter landed',
-      '',
-      'The API and publishing paths carried the availability gains. The ingest pipeline accounted for four of the five severity-1 incidents and all of the customer-visible data delay.',
-      '',
-      '| Measure | Q2 | Q3 | Target |',
-      '| --- | --- | --- | --- |',
-      '| Availability | 99.82% | 99.96% | 99.90% |',
-      '| Severity-1 incidents | 12 | 5 | — |',
-      '| Mean time to recovery | 42 min | 41 min | 25 min |',
-      '',
-      '### Why recovery time stopped improving',
-      '',
-      'A median of 27 of the 41 minutes is spent deciding *which* service is at fault. Once a service is named, median repair is nine minutes. Detection is already fast: fault to page is 90 seconds.',
-    ].join('\n'),
-    next_steps: [
-      '1. Approve the Q4 swap: distributed tracing in, multi-region read replicas out.',
-      '2. Propagate one request identifier across all four log systems by 15 November.',
-      '3. Give the ingest pipeline a named owning team.',
-    ].join('\n'),
-  },
   changelog: {
     title: 'Agent Artifacts changelog',
     version: '1.8.0',
@@ -219,7 +189,7 @@ const written = [];
 
 try {
   for (const template of templates) {
-    const viewportWidth = VIEWPORT_BY_SLUG[template.slug] ?? VIEWPORT_BY_TYPE[template.type];
+    const viewportWidth = template.thumbnailViewport ?? VIEWPORT_BY_TYPE[template.type];
     if (!viewportWidth) {
       throw new Error(`No thumbnail viewport configured for template type: ${template.type}`);
     }

@@ -73,7 +73,7 @@ async function seed(ctx: AuthTestContext): Promise<Seeded> {
   return {
     cookie: await login(ctx, account.email, 'password123'),
     digestId: builtIn('daily-digest'),
-    reportId: builtIn('report'),
+    reportId: builtIn('one-pager'),
     promotedId: promoted.id,
   };
 }

@@ -173,7 +173,8 @@ export function createWebRoute(
  */
 const RETIRED_TEMPLATE_SLUG_REDIRECTS: Readonly<Record<string, string>> = {
   recap: 'meeting-recap',
-  briefing: 'one-pager',
+  briefing: 'report',
+  'report-html': 'report',
 };
 
 function registerRemainingWebRoutes(

@@ -74,7 +74,8 @@ export const starterTemplateManifest = [
         "type": "html",
         "content_file": "proposal.html",
         "thumbnail": "/assets/template-thumbs/proposal.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 768
       },
       {
         "slug": "spec",
@@ -110,46 +111,11 @@ export const starterTemplateManifest = [
         "slug": "report",
         "category": "research",
         "name": "Report",
-        "description": "General-purpose report: title, date, summary, body, next steps.",
-        "type": "markdown",
-        "content_file": "report.md",
-        "thumbnail": "/assets/template-thumbs/report.png",
-        "slots": [
-          {
-            "name": "title",
-            "description": "Report title",
-            "required": true
-          },
-          {
-            "name": "date",
-            "description": "Report date",
-            "required": true
-          },
-          {
-            "name": "summary",
-            "description": "2-3 sentence overview",
-            "required": true
-          },
-          {
-            "name": "body",
-            "description": "Main body",
-            "required": true
-          },
-          {
-            "name": "next_steps",
-            "description": "Action items / next steps",
-            "required": true
-          }
-        ]
-      },
-      {
-        "slug": "report-html",
-        "category": "research",
-        "name": "Executive report",
-        "description": "Editorial single-column document: cover header, executive summary callout, numbered sections, key figures, and owned next steps.",
+        "description": "The serious long document: a masthead over a two-column opening band — executive summary left, the quarter's headline figures right — then numbered sections carrying a ranked magnitude figure, a pull quote, and owned next steps with dates.",
         "type": "html",
-        "content_file": "report-html.html",
-        "thumbnail": "/assets/template-thumbs/report-html.png",
+        "content_file": "report.html",
+        "thumbnail": "/assets/template-thumbs/report.png",
+        "thumbnail_viewport": 768,
         "slots": []
       },
       {

@@ -21,7 +21,7 @@ describe('starter template manifest seeding', () => {
     const ctx = await createMigratedSqliteContext();
     const logger = pino({ enabled: false });
     const starters = loadStarterTemplates();
-    const report = starters.find((template) => template.slug === 'report');
+    const onePager = starters.find((template) => template.slug === 'one-pager');
 
     try {
       // Deliberately literal: this is the tripwire that says the built-in lineup changed. Deriving
@@ -44,13 +44,12 @@ describe('starter template manifest seeding', () => {
         'project-status',
         'proposal',
         'report',
-        'report-html',
         'research-brief',
         'runbook',
         'service-health',
         'spec',
       ]);
-      expect(report).toBeDefined();
+      expect(onePager).toBeDefined();
 
       ctx.db.sqlite
         .prepare("UPDATE templates SET content = 'drifted', slots = '[]' WHERE account_id IS NULL")
@@ -81,12 +80,10 @@ describe('starter template manifest seeding', () => {
         expect(JSON.parse(row.slots)).toEqual(starter?.slots);
         expect(row.thumbnail_url).toBe(starter?.thumbnail ?? null);
       }
-      expect(JSON.parse(rows.find((row) => row.slug === 'report')?.slots ?? '[]')).toEqual([
-        { name: 'title', description: 'Report title', required: true },
-        { name: 'date', description: 'Report date', required: true },
-        { name: 'summary', description: '2-3 sentence overview', required: true },
-        { name: 'body', description: 'Main body', required: true },
-        { name: 'next_steps', description: 'Action items / next steps', required: true },
+      expect(JSON.parse(rows.find((row) => row.slug === 'one-pager')?.slots ?? '[]')).toEqual([
+        { name: 'title', description: 'Page title', required: true },
+        { name: 'subtitle', description: 'Subtitle or positioning line', required: true },
+        { name: 'body', description: 'Main page content', required: true },
       ]);
     } finally {
       await ctx.cleanup();
