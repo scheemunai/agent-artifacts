@@ -137,7 +137,6 @@ color:var(--subtle);font-size:.8125rem;line-height:1.5}
 /* table -> card. caption MUST be re-declared: an anonymous table box collapses it. */
 .acts,.acts caption,.acts tbody,.acts tr,.acts td{display:block}
 .acts thead{display:none}
-.acts caption{margin-bottom:0}
 .acts tr{display:grid;grid-template-columns:auto auto 1fr;gap:.15rem var(--s3);padding:var(--s3) 0;
 border-top:1px solid var(--line)}
 .acts td{padding:0;border-top:0}
@@ -147,36 +146,46 @@ border-top:1px solid var(--line)}
 .a-due{grid-column:2;grid-row:3;margin-top:.15rem}
 .a-who::after{content:"·";margin-left:.5em;color:var(--line2)}
 .acts td:last-child{grid-column:2/-1;grid-row:1;justify-self:start}
-}
-@media (max-width:34rem){
+
 :root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
-body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.46}
-.ttl{font-size:1.625rem;line-height:1.1}
-.summary{margin-top:var(--s3);font-size:1.0625rem}
+body{padding:var(--s5) var(--s4) var(--s8)}
+.summary{margin-top:var(--s3)}
 .dl{padding-bottom:var(--s3)}
 .sec,.two,.chart{margin-top:var(--s5)}
 .two{gap:var(--s5)}
 .h-sec{padding-bottom:var(--s1)}
-.tl p,.fac p,.well li,.cause>p+p,.acts td{line-height:1.36}
 .impact{padding:var(--s3) var(--s4)}
-.figs{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2) var(--s4)}
-.figs>div+div{padding-left:0;border-left:0}
-.figs>div:nth-child(even){padding-left:var(--s4);border-left:1px solid var(--ol)}
-.figs dd{font-size:1.25rem}
-.figs p{font-size:.75rem;line-height:1.3}
-.chart svg{height:82px}
-.tl li{grid-template-columns:3.25rem minmax(0,1fr);gap:var(--s3)}
+.figs{gap:var(--s2) var(--s4)}
+.figs>div+div{padding-left:0}
+.figs>div:nth-child(even){padding-left:var(--s4)}
+.tl li{gap:var(--s3)}
 .tl__b{padding-left:var(--s4);padding-bottom:var(--s1)}
-.tl__b::before{left:calc(3.25rem + var(--s3))}
-.tl__t{font-size:.8125rem}
-.tl li.key h3{font-size:1.0625rem}
 .cause{padding:var(--s3) var(--s4)}
-.cause>p.lede{font-size:1.0625rem}
 .fac li+li{margin-top:var(--s1);padding-top:var(--s1)}
 .well li+li{margin-top:var(--s1)}
 .acts tr{padding-block:var(--s1)}
 .acts caption{margin-bottom:var(--s2);padding-bottom:var(--s1)}
 .colophon{margin-top:var(--s4);padding-top:var(--s2)}
+}
+@media (max-width:34rem){
+/* Spacing compaction now starts where the layout becomes one column, not here: between
+   the two, the document jumped hundreds of px across one pixel of viewport. Same
+   values, earlier start; type stays here. */
+body{font-size:.9375rem;line-height:1.46}
+.ttl{font-size:1.625rem;line-height:1.1}
+.summary{font-size:1.0625rem}
+.tl p,.fac p,.well li,.cause>p+p,.acts td{line-height:1.36}
+.figs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.figs>div+div{border-left:0}
+.figs>div:nth-child(even){border-left:1px solid var(--ol)}
+.figs dd{font-size:1.25rem}
+.figs p{font-size:.75rem;line-height:1.3}
+.chart svg{height:82px}
+.tl li{grid-template-columns:3.25rem minmax(0,1fr)}
+.tl__b::before{left:calc(3.25rem + var(--s3))}
+.tl__t{font-size:.8125rem}
+.tl li.key h3{font-size:1.0625rem}
+.cause>p.lede{font-size:1.0625rem}
 }
 </style>
 </head>

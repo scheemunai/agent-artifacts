@@ -140,6 +140,17 @@ a{color:var(--rust)}
   .quarter{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:var(--s4);
     padding-left:0;padding-top:var(--s4);border-left:0;border-top:1px solid var(--line2)}
   .quarter div+div{margin-top:0;padding-top:0;border-top:0}
+
+  :root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.25rem;--s7:1.375rem}
+  body{padding:var(--s2) var(--s2) var(--s6)}
+  .paper{padding:var(--s4) var(--s3) var(--s5)}
+  .chart{padding:var(--s4)}
+  .steps li{padding:var(--s3) 0}
+  .next{padding-top:var(--s5)}
+  .list li+li{margin-top:var(--s2)}
+  .sec{margin-top:var(--s6)}
+  .sec>p,.sec>h3+p{margin-top:var(--s3)}
+  .colophon{margin-top:var(--s5);padding-top:var(--s3)}
 }
 @media (max-width:48rem){
   body{padding:var(--s4) var(--s3) var(--s6)}
@@ -147,20 +158,15 @@ a{color:var(--rust)}
   .byline{gap:var(--s4) var(--s5)}
 }
 @media (max-width:30rem){
-  :root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.25rem;--s7:1.375rem}
-  body{padding:var(--s2) var(--s2) var(--s6);font-size:.9375rem;line-height:1.48}
-  .paper{padding:var(--s4) var(--s3) var(--s5);border-radius:.625rem}
-  .chart{padding:var(--s4)}
+  /* Spacing compaction now starts where the layout becomes one column, not here: between
+     the two the document ran desktop spacing in a narrow column and jumped hundreds of px
+     across one pixel of viewport. Same values, earlier start; type stays here. */
+  body{font-size:.9375rem;line-height:1.48}
+  .paper{border-radius:.625rem}
   .title{line-height:1.14}
   .lede__lead,.pull{font-size:1rem}
   .sec h2,.next h2{font-size:1.375rem}
-  .steps li{padding:var(--s3) 0}
-  .next{padding-top:var(--s5)}
-  .list li+li{margin-top:var(--s2)}
-  .sec{margin-top:var(--s6)}
-  .sec>p,.sec>h3+p{margin-top:var(--s3)}
   .list li,.steps p,.lede p{line-height:1.42}
-  .colophon{margin-top:var(--s5);padding-top:var(--s3)}
 }
 </style>
 </head>
