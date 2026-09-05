@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Q4 platform priorities — meeting recap</title>
+<!--
+  TEMPLATE: meeting-recap  ·  CATEGORY: meetings
+  VOICE: humanist sans (system-ui stack)   SCHEME: cool grey-blue paper, teal accent
+  Rewriting this? Replace the content, keep the structure and the styling.
+  STATUS = A WORD AND A SHAPE, never colour alone: filled disc = done, diamond = in progress,
+  hollow ring = not started. Green and amber are the pair deutan vision collapses, so the shape
+  is what carries the state in greyscale and when read aloud. Do not "simplify" them to dots.
+  DELETE, DON'T EMPTY: if you have no open questions, remove the whole <section>,
+  heading included. Never leave a heading with nothing under it. A short recap
+  should be a short page — do not pad it.
+-->
+<style>
+:root{
+  --bg:#eef1f5; --card:#fff; --tint:#f7f9fb;
+  --ink:#18242f; --muted:#4c5b69; --subtle:#5c6a78;
+  --line:#e2e7ec; --line-2:#cbd4dd;
+  --teal:#0d6a68; --teal-soft:#e2efee;
+  --done:#1f6f43; --wip:#8a5a00; --todo:#5c6a78;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --shadow:0 1px 2px rgb(24 36 47/.04),0 12px 32px -16px rgb(24 36 47/.28);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+p,ul,ol,dl,dd{margin:0}
+ul{padding:0;list-style:none}
+a{color:var(--teal)}
+.page{max-width:64rem;margin-inline:auto;padding:2.75rem 1.5rem 3.5rem}
+
+/* masthead */
+.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--teal);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--teal)}
+.mast h1{margin:.75rem 0 0;font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700}
+.mast p{margin-top:.625rem;max-width:44rem;color:var(--muted);font-size:1.0625rem}
+.facts{display:flex;flex-wrap:wrap;gap:.375rem 1.25rem;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--line-2);font-size:.8125rem;color:var(--subtle)}
+.facts b{color:var(--muted);font-weight:600}
+
+/* count strip */
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));gap:.75rem;margin-top:1.5rem}
+.strip>li{padding:.875rem 1rem;background:var(--card);border:1px solid var(--line);border-radius:.625rem}
+.strip .n{display:block;font-size:1.75rem;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.strip .k{display:block;margin-top:.125rem;color:var(--subtle);font-size:.8125rem}
+
+h2.sec{margin-top:2.5rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
+h2.sec+*{margin-top:.875rem}
+
+/* decision ledger */
+.ledger>li{display:grid;grid-template-columns:2.75rem minmax(0,1fr);gap:1rem;padding:1.125rem 0;border-top:1px solid var(--line-2)}
+.ledger>li:first-child{border-top:0;padding-top:.25rem}
+.ledger .num{color:var(--teal);font-size:1.5rem;font-weight:700;line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.ledger h3{font-size:1.125rem;font-weight:650}
+.ledger .why{margin-top:.375rem;color:var(--muted);font-size:.9375rem}
+.ledger .why b{color:var(--ink);font-weight:600}
+.tags{display:flex;flex-wrap:wrap;gap:.375rem .5rem;margin-top:.625rem;font-size:.8125rem;color:var(--subtle)}
+.tags span{padding:.125rem .5rem;background:var(--tint);border:1px solid var(--line);border-radius:999px}
+.tags .dissent{background:#fdf0ed;border-color:#f3cfc7;color:#8f2f22}
+
+/* actions table */
+.tablecard{background:var(--card);border:1px solid var(--line);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:.9375rem}
+caption{text-align:left;padding:.875rem 1.125rem;border-bottom:1px solid var(--line);color:var(--subtle);font-size:.8125rem}
+.tablecard caption b{color:var(--ink);font-weight:650;font-size:.9375rem}
+th{text-align:left;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);padding:.625rem 1.125rem;background:var(--tint);border-bottom:1px solid var(--line)}
+td{padding:.875rem 1.125rem;border-top:1px solid var(--line);vertical-align:top;color:var(--muted)}
+tbody tr:first-child td{border-top:0}
+.who{display:flex;align-items:center;gap:.625rem;min-width:0}
+.av{flex:none;display:grid;place-items:center;width:2rem;height:2rem;border-radius:999px;background:#dde4ec;color:#33424f;font-size:.75rem;font-weight:700;letter-spacing:.02em}
+.who span{color:var(--ink);font-weight:600;white-space:nowrap}
+td.task{color:var(--ink)}
+td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
+.st{display:inline-flex;align-items:center;gap:.4375rem;white-space:nowrap;font-size:.8125rem;font-weight:600}
+.st::before{content:"";width:.5rem;height:.5rem;border-radius:999px;background:currentColor}
+.st.done{color:var(--done)}
+.st.wip{color:var(--wip)}
+.st.todo{color:var(--todo)}
+.st.wip::before{width:.4375rem;height:.4375rem;border-radius:1px;transform:rotate(45deg)}
+.st.todo::before{background:none;box-shadow:inset 0 0 0 1.5px currentColor}
+
+/* open questions */
+.opens{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:.75rem}
+.opens li{padding:1rem 1.125rem;background:var(--card);border:1px solid var(--line);border-radius:.625rem}
+.opens h3{font-size:1rem;font-weight:650}
+.opens p{margin-top:.375rem;color:var(--subtle);font-size:.8125rem}
+.opens p b{color:var(--muted);font-weight:600}
+
+/* deferred note */
+.note{margin-top:.75rem;padding:.875rem 1.125rem;background:var(--teal-soft);border-radius:.5rem;color:#0b4f4d;font-size:.9375rem}
+.note b{font-weight:650}
+
+/* footer */
+.foot{margin-top:2.5rem;padding-top:1.125rem;border-top:1px solid var(--line-2);display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.75rem 2rem;color:var(--subtle);font-size:.8125rem}
+.foot b{display:block;color:var(--muted);font-weight:600;margin-bottom:.125rem}
+
+@media (max-width:34rem){
+  .page{padding:1.875rem 1rem 1.75rem}
+  .mast p{font-size:1rem}
+  .ledger h3{font-size:1.0625rem}
+  h2.sec{margin-top:1.5rem}
+  .foot{margin-top:1.5rem}
+  .strip .n{font-size:1.25rem}
+  .strip>li{padding:.5rem .75rem}
+  .opens li{padding:.875rem 1rem}
+  .tags{margin-top:.5rem}
+  .note{padding:.75rem .875rem}
+  .facts{margin-top:1rem;padding-top:.875rem}
+  .ledger>li{grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem;padding:.8125rem 0}
+  .ledger .num{font-size:1.0625rem;line-height:1.45}
+  .strip{gap:.5rem}
+  .strip>li{padding:.625rem .75rem}
+  .strip .n{font-size:1.375rem}
+  caption{display:block;padding:.75rem 1rem}
+  thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  table,tbody{display:block;width:100%}
+  tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem .75rem;padding:.8125rem 1rem;border-top:1px solid var(--line)}
+  tbody tr:first-child{border-top:0}
+  td{display:block;padding:0;border-top:0}
+  td.owner{grid-column:1;grid-row:1;align-self:center}
+  td.status{grid-column:2;grid-row:1;justify-self:end;align-self:center}
+  td.task{grid-column:1/-1;margin-top:.375rem}
+  td.due{grid-column:1/-1;font-size:.8125rem;color:var(--subtle)}
+  td.due::before{content:"Due ";font-weight:600}
+  /* height tightening — spacing only, no content removed */
+  .facts{margin-top:.875rem;padding-top:.75rem}
+  h2.sec{margin-top:1.25rem}
+  h2.sec+*{margin-top:.75rem}
+  .ledger>li{padding:.75rem 0}
+  .tags{margin-top:.375rem}
+  .note{margin-top:.625rem}
+  caption{padding:.625rem 1rem}
+  tr{padding:.75rem 1rem}
+  td.task{margin-top:.3125rem}
+  .opens{gap:.625rem}
+  .opens li{padding:.75rem .875rem}
+  .foot{margin-top:1.25rem;padding-top:.875rem}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="mast">
+    <span class="eyebrow">Meeting recap</span>
+    <h1>Q4 platform priorities</h1>
+    <p>Ninety minutes to settle what Platform builds next quarter. Three decisions, one deferral, and read replicas moved to Q1.</p>
+    <div class="facts">
+      <span><b>Thursday 4 September 2026</b></span>
+      <span>14:00–15:30 UTC</span>
+      <span>7 of 8 invited attended</span>
+      <span>Chaired by Nadia Osei</span>
+    </div>
+  </header>
+
+  <ul class="strip">
+    <li><span class="n">3</span><span class="k">decisions made</span></li>
+    <li><span class="n">6</span><span class="k">actions assigned</span></li>
+    <li><span class="n">2</span><span class="k">questions still open</span></li>
+    <li><span class="n">1</span><span class="k">deferred to 11 Sep</span></li>
+  </ul>
+
+  <section>
+    <h2 class="sec">What we decided</h2>
+    <ol class="ledger">
+      <li>
+        <span class="num">01</span>
+        <div>
+          <h3>Distributed tracing takes the two engineers earmarked for read replicas.</h3>
+          <p class="why"><b>Why:</b> two thirds of incident recovery time goes on deciding which service is at fault, and read replicas address a regional outage we have not had in four quarters.</p>
+          <p class="tags"><span>Owner: Priya Raman</span><span>Consensus, no objections</span></p>
+        </div>
+      </li>
+      <li>
+        <span class="num">02</span>
+        <div>
+          <h3>The ingest deploy freeze lifts on 8 September, gated on the error budget.</h3>
+          <p class="why"><b>Why:</b> ingest has run clean for 36 hours and the budget is at 74%. If it is not under 70% on the morning of the 8th, the freeze holds another week.</p>
+          <p class="tags"><span>Owner: Marcus Feld</span><span>Gate: error budget &lt; 70%</span></p>
+        </div>
+      </li>
+      <li>
+        <span class="num">03</span>
+        <div>
+          <h3>Northwind gets scoped SAML, not the full identity roadmap.</h3>
+          <p class="why"><b>Why:</b> the trial needs an answer by Thursday and the full roadmap is a quarter of work. Scoped SAML is eight days and covers the two assertions their review asks for.</p>
+          <p class="tags"><span>Owner: Dana Whitfield</span><span class="dissent">Dissent recorded: Tomas Lindqvist</span></p>
+        </div>
+      </li>
+    </ol>
+    <p class="note"><b>Deferred.</b> Whether ingest gets a named owning team was raised twice and settled neither time. Moved to the architecture review on 11 September.</p>
+  </section>
+
+  <section>
+    <h2 class="sec">Who owes what</h2>
+    <div class="tablecard">
+      <table>
+        <caption><b>Action items</b> — 6 assigned, 2 already closed. Dates are end of day.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Owner</th>
+            <th scope="col">Action</th>
+            <th scope="col">Due</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="owner"><span class="who"><span class="av" aria-hidden="true">PR</span><span>Priya Raman</span></span></td>
+            <td class="task">Write the tracing rollout plan: one request id across all four log systems.</td>
+            <td class="due">11 Sep</td>
+            <td class="status"><span class="st wip">In progress</span></td>
+          </tr>
+          <tr>
+            <td class="owner"><span class="who"><span class="av" aria-hidden="true">MF</span><span>Marcus Feld</span></span></td>
+            <td class="task">Post the go/no-go on the ingest freeze once the error budget number is in.</td>
+            <td class="due">8 Sep</td>
+            <td class="status"><span class="st todo">Not started</span></td>
+          </tr>
+          <tr>
+            <td class="owner"><span class="who"><span class="av" aria-hidden="true">DW</span><span>Dana Whitfield</span></span></td>
+            <td class="task">Send Northwind the scoped SAML timeline and the two assertions it covers.</td>
+            <td class="due">5 Sep</td>
+            <td class="status"><span class="st done">Done</span></td>
+          </tr>
+          <tr>
+            <td class="owner"><span class="who"><span class="av" aria-hidden="true">TL</span><span>Tomas Lindqvist</span></span></td>
+            <td class="task">Write down the conditions under which scoped SAML must be replaced.</td>
+            <td class="due">18 Sep</td>
+            <td class="status"><span class="st todo">Not started</span></td>
+          </tr>
+          <tr>
+            <td class="owner"><span class="who"><span class="av" aria-hidden="true">NO</span><span>Nadia Osei</span></span></td>
+            <td class="task">Add ingest ownership to the 11 September architecture review agenda.</td>
+            <td class="due">5 Sep</td>
+            <td class="status"><span class="st done">Done</span></td>
+          </tr>
+          <tr>
+            <td class="owner"><span class="who"><span class="av" aria-hidden="true">SK</span><span>Sofia Kaur</span></span></td>
+            <td class="task">Cost the read-replica work well enough to re-propose it in Q1 planning.</td>
+            <td class="due">25 Sep</td>
+            <td class="status"><span class="st todo">Not started</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">Still open</h2>
+    <ul class="opens">
+      <li>
+        <h3>Who owns ingest once the freeze lifts?</h3>
+        <p>Three teams merged into it this quarter; none is on the pager. <b>Needs:</b> architecture review, 11 September.</p>
+      </li>
+      <li>
+        <h3>Does scoped SAML block the November enterprise audit?</h3>
+        <p>Nobody in the room had read the control list. <b>Needs:</b> Dana with Security, before 12 September.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <p><b>Present</b>Nadia Osei (chair), Priya Raman, Marcus Feld, Dana Whitfield, Tomas Lindqvist, Sofia Kaur, Ben Achterberg</p>
+    <p><b>Apologies</b>Grace Lim — written comments on decision 03, read into the record</p>
+    <p><b>Next</b>Architecture review, 11 September, 15:00 UTC</p>
+  </footer>
+
+</div>
+</body>
+</html>

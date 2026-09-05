@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Engineering Daily — 3 September 2026</title>
+<!--
+  TEMPLATE: daily-digest  ·  CATEGORY: meetings
+  VOICE: humanist sans (system-ui stack)   SCHEME: cool grey-blue paper, teal accent
+  Rewriting this? Replace the content, keep the structure and the styling.
+  DELETE, DON'T EMPTY: no themes? remove that whole .rail__sec, heading included.
+  Nothing collapsed? remove the <details>. Never leave a heading with nothing under it.
+  MANY ITEMS: feature at most six; put the rest in the collapsed "also reviewed" list and
+  say how many there were. A digest of three items should be a short page, not a padded one.
+-->
+<style>
+:root{
+  --bg:#eef1f5; --card:#fff; --tint:#f7f9fb;
+  --ink:#18242f; --muted:#4c5b69; --subtle:#5c6a78;
+  --line:#e2e7ec; --line-2:#cbd4dd;
+  --teal:#0d6a68; --teal-soft:#e2efee;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --shadow:0 1px 2px rgb(24 36 47/.04),0 12px 32px -16px rgb(24 36 47/.28);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+p,dl,dd{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+a{color:var(--teal)}
+.page{max-width:70rem;margin-inline:auto;padding:2.5rem 1.5rem 3rem}
+
+/* masthead */
+.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--teal);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--teal)}
+.mast{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem 2rem;padding-bottom:1rem;border-bottom:2px solid var(--ink)}
+.mast h1{margin:.625rem 0 0;font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700}
+.mast .lead{margin-top:.5rem;max-width:34rem;color:var(--muted);font-size:1rem}
+.mast>div{flex:1 1 26rem;min-width:0}
+.mast dl{flex:0 1 15rem;display:flex;flex-wrap:wrap;gap:.25rem .875rem;font-size:.8125rem;color:var(--subtle)}
+.mast dt{font-weight:600;color:var(--muted)}
+.mast dd{margin-inline:.25rem 0}
+
+/* two-column body */
+.wrap{display:grid;grid-template-columns:15rem minmax(0,1fr);gap:2.5rem;margin-top:1.75rem;align-items:start}
+.rail{background:var(--tint);border:1px solid var(--line);border-radius:.75rem;overflow:hidden}
+.rail__sec{padding:.875rem 1rem;border-top:1px solid var(--line)}
+.rail__sec:first-child{border-top:0}
+.rail h2{color:var(--subtle);font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.625rem}
+.toc li{display:grid;grid-template-columns:1.5rem minmax(0,1fr);gap:.625rem;padding:.5rem 0;border-top:1px solid var(--line-2)}
+.toc li:first-child{border-top:0;padding-top:0}
+.toc .n{color:var(--teal);font-size:.8125rem;font-weight:700;line-height:1.5;font-variant-numeric:tabular-nums}
+.toc a{display:block;color:var(--ink);font-size:.875rem;font-weight:600;line-height:1.3;text-decoration:none;min-height:2.75rem}
+.toc a:hover,.toc a:focus-visible{color:var(--teal)}
+.toc small{display:block;margin-top:.125rem;color:var(--subtle);font-size:.8125rem;font-weight:400}
+.rail__sec p{color:var(--muted);font-size:.8125rem}
+.chips{display:flex;flex-wrap:wrap;gap:.375rem}
+.chips li{padding:.125rem .5rem;background:var(--card);border:1px solid var(--line-2);border-radius:999px;color:var(--muted);font-size:.8125rem;font-weight:600}
+.chips .hot{background:var(--teal-soft);border-color:#bcd9d7;color:var(--teal)}
+
+/* item cards */
+.stream{display:flex;flex-direction:column;gap:1.125rem}
+.item{padding:1.25rem;background:var(--card);border:1px solid var(--line);border-radius:.75rem;box-shadow:var(--shadow);scroll-margin-top:1rem}
+.item__top{display:grid;grid-template-columns:2rem minmax(0,1fr);gap:.875rem}
+.item__n{display:grid;place-items:center;width:2rem;height:2rem;border-radius:999px;background:var(--teal);color:#fff;font-size:.8125rem;font-weight:700;font-variant-numeric:tabular-nums}
+.item h3{font-size:1.1875rem;font-weight:700}
+.item__meta{margin-top:.25rem;color:var(--subtle);font-size:.8125rem}
+.item__meta b{color:var(--muted);font-weight:600}
+.item__meta span::before{content:"·";margin:0 .375rem;color:var(--line-2)}
+.tldr{margin-top:.875rem;padding:.75rem .875rem;background:var(--teal-soft);border-radius:.5rem;color:#0b4f4d;font-size:.9375rem}
+.tldr b{display:block;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.125rem}
+.pts{margin-top:.875rem}
+.pts li{position:relative;padding-left:1.125rem;color:var(--muted);font-size:.9375rem}
+.pts li+li{margin-top:.375rem}
+.pts li::before{content:"";position:absolute;left:.25rem;top:.6875rem;width:.3125rem;height:.3125rem;border-radius:999px;background:var(--line-2)}
+.pts b{color:var(--ink);font-weight:650}
+.item__foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.625rem;margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--line)}
+.verdict{color:var(--muted);font-size:.8125rem}
+.verdict b{color:var(--ink);font-weight:650}
+
+/* condensed tail */
+details{margin-top:.25rem;background:var(--card);border:1px solid var(--line);border-radius:.75rem}
+summary{padding:.875rem 1.25rem;cursor:pointer;color:var(--ink);font-size:.9375rem;font-weight:650;min-height:2.75rem;display:flex;align-items:center;gap:.5rem}
+summary{list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";flex:none;width:.4375rem;height:.4375rem;margin-right:.25rem;border-right:2px solid var(--teal);border-bottom:2px solid var(--teal);transform:rotate(-45deg)}
+details[open] summary::before{transform:rotate(45deg)}
+summary:focus-visible{outline:2px solid var(--teal);outline-offset:-2px;border-radius:.75rem}
+summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
+.rest{padding:0 1.25rem 1rem}
+.rest li{padding:.625rem 0;border-top:1px solid var(--line);color:var(--muted);font-size:.875rem}
+.rest b{display:block;color:var(--ink);font-size:.9375rem;font-weight:650}
+.rest em{font-style:normal;color:var(--subtle);font-size:.8125rem}
+
+.colophon{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--line-2);color:var(--subtle);font-size:.8125rem}
+
+@media (max-width:60rem){
+  .wrap{grid-template-columns:minmax(0,1fr);gap:1.5rem}
+  .rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr))}
+  .rail__sec{border-top:0;border-left:1px solid var(--line)}
+  .rail__sec:first-child{border-left:0}
+}
+@media (max-width:34rem){
+  .page{padding:1.875rem 1rem 2rem}
+  .wrap{margin-top:1.25rem}
+  .mast dl{flex:1 1 auto}
+  .rail{grid-template-columns:minmax(0,1fr)}
+  .rail__sec{border-left:0;border-top:1px solid var(--line)}
+  .rail__sec:first-child{border-top:0}
+  .toc small{display:none}
+  .toc a{min-height:0;padding:.3125rem 0}
+  .toc li{padding:.25rem 0}
+  .item{padding:1rem}
+  .item__top{grid-template-columns:1.75rem minmax(0,1fr);gap:.625rem}
+  .item__n{width:1.75rem;height:1.75rem;font-size:.75rem}
+  .item h3{font-size:1.0625rem}
+  .item{padding:.9375rem}
+  .stream{gap:1rem}
+  .pts li+li{margin-top:.25rem}
+  .toc a{font-size:.8125rem}
+  .colophon{margin-top:1.5rem}
+  .item__foot{margin-top:.75rem;padding-top:.625rem}
+  .tldr{padding:.625rem .75rem}
+  summary,.rest{padding-inline:1rem}
+  /* height tightening — spacing only, no content removed */
+  .mast{padding-bottom:.75rem}
+  .mast h1{margin-top:.5rem}
+  .mast .lead{margin-top:.375rem}
+  .wrap{margin-top:1rem}
+  .rail h2{margin-bottom:.5rem}
+  .rail__sec{padding:.6875rem .875rem}
+  .toc li{padding:.1875rem 0}
+  .stream{gap:.875rem}
+  .item{padding:.875rem}
+  .tldr{margin-top:.75rem}
+  .pts{margin-top:.75rem}
+  .item__foot{margin-top:.625rem;padding-top:.5rem}
+  summary{padding:.75rem 1rem}
+  .colophon{margin-top:1.25rem;padding-top:.875rem}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="mast">
+    <div>
+      <span class="eyebrow">Daily digest</span>
+      <h1>AI Engineering Daily</h1>
+      <p class="lead">Four things worth your attention from yesterday's feeds, plus six more in a line each.</p>
+    </div>
+    <dl>
+      <dt>Date</dt><dd>Thursday 3 September 2026</dd>
+      <dt>Reviewed</dt><dd>34 items</dd>
+      <dt>Saved</dt><dd>2 h 51 m of watch time</dd>
+    </dl>
+  </header>
+
+  <div class="wrap">
+    <aside class="rail">
+      <nav class="rail__sec">
+        <h2>In this digest</h2>
+        <ul class="toc">
+          <li><span class="n">01</span><a href="#i1">Postgres 18 ends the case for a connection pooler<small>Hexadecimal · 24 min</small></a></li>
+          <li><span class="n">02</span><a href="#i2">We replaced our vector database with one table<small>Latent Space · 38 min</small></a></li>
+          <li><span class="n">03</span><a href="#i3">The cost curve nobody budgets for<small>Infra Weekly · 17 min</small></a></li>
+          <li><span class="n">04</span><a href="#i4">Shipping agents other teams actually adopt<small>Build Notes · 52 min</small></a></li>
+        </ul>
+      </nav>
+      <div class="rail__sec">
+        <h2>Themes today</h2>
+        <ul class="chips">
+          <li class="hot">Cost control</li><li>Postgres</li><li>Retrieval</li><li>Agent UX</li><li>CI reliability</li>
+        </ul>
+      </div>
+      <div class="rail__sec">
+        <h2>Filtered out</h2>
+        <p>24 dropped: re-uploads, trailers, and three launches with no technical detail.</p>
+      </div>
+    </aside>
+
+    <main class="stream">
+      <article class="item" id="i1">
+        <div class="item__top">
+          <span class="item__n" aria-hidden="true">01</span>
+          <div>
+            <h3>Postgres 18 ends the case for a connection pooler</h3>
+            <p class="item__meta"><b>Hexadecimal</b><span>24 min</span><span>06:40</span></p>
+          </div>
+        </div>
+        <p class="tldr"><b>TL;DR</b>Built-in connection multiplexing lands in 18. Under roughly 500 clients it removes the case for running PgBouncer at all; above that the pooler still wins on failover.</p>
+        <ul class="pts">
+          <li><b>The number:</b> 12,000 connections held at 41 MB of backend memory, down from 1.7 GB on 17.</li>
+          <li><b>Caveat:</b> prepared statements still pin a backend, so the win shrinks for eager ORMs.</li>
+          <li><b>Migration:</b> keep the pooler in front a week, then cut over by dropping its pool size to zero.</li>
+        </ul>
+        <div class="item__foot">
+          <p class="verdict"><b>Watch it if</b> you own the database tier.</p>
+          <ul class="chips"><li>Postgres</li><li>Cost control</li></ul>
+        </div>
+      </article>
+
+      <article class="item" id="i2">
+        <div class="item__top">
+          <span class="item__n" aria-hidden="true">02</span>
+          <div>
+            <h3>We replaced our vector database with one table</h3>
+            <p class="item__meta"><b>Latent Space</b><span>38 min</span><span>09:05</span></p>
+          </div>
+        </div>
+        <p class="tldr"><b>TL;DR</b>A 40-million-chunk corpus moved from a managed vector store into pgvector with HNSW. Recall held at 0.94, p95 rose 11 ms, the bill fell $9,400 a month.</p>
+        <ul class="pts">
+          <li><b>Hybrid search was the unlock:</b> text and vector scores merge in one query — the managed service billed two.</li>
+          <li><b>Index build is the pain:</b> nine hours on a 16-core box, run offline against a replica.</li>
+          <li><b>Don't do this</b> below two million chunks — operations cost more than the saving.</li>
+        </ul>
+        <div class="item__foot">
+          <p class="verdict"><b>Watch it if</b> your retrieval bill has a comma in it.</p>
+          <ul class="chips"><li>Retrieval</li><li>Cost control</li></ul>
+        </div>
+      </article>
+
+      <article class="item" id="i3">
+        <div class="item__top">
+          <span class="item__n" aria-hidden="true">03</span>
+          <div>
+            <h3>The cost curve nobody budgets for</h3>
+            <p class="item__meta"><b>Infra Weekly</b><span>17 min</span><span>11:20</span></p>
+          </div>
+        </div>
+        <p class="tldr"><b>TL;DR</b>Egress, not compute, turns a cheap architecture expensive. The worked example: a $300-a-month cluster carrying $4,100 of cross-zone traffic on one misplaced replica.</p>
+        <ul class="pts">
+          <li><b>Rule of thumb:</b> price every cross-zone hop before you price the instances.</li>
+          <li><b>Topology-aware routing</b> fixed 80% of it in a single config change.</li>
+        </ul>
+        <div class="item__foot">
+          <p class="verdict"><b>Watch it if</b> you sign off the cloud invoice.</p>
+          <ul class="chips"><li>Cost control</li></ul>
+        </div>
+      </article>
+
+      <article class="item" id="i4">
+        <div class="item__top">
+          <span class="item__n" aria-hidden="true">04</span>
+          <div>
+            <h3>Shipping agents other teams actually adopt</h3>
+            <p class="item__meta"><b>Build Notes</b><span>52 min</span><span>14:02</span></p>
+          </div>
+        </div>
+        <p class="tldr"><b>TL;DR</b>Adoption tracked with one thing — whether the agent produced an artifact a human could forward. Agents that only answered in chat churned inside two weeks.</p>
+        <ul class="pts">
+          <li><b>Durable output beats chat:</b> a link that outlives the session is what gets shared.</li>
+          <li><b>Name the sponsor:</b> agents with a named human owner were three times more likely to still run at 90 days.</li>
+        </ul>
+        <div class="item__foot">
+          <p class="verdict"><b>Watch it if</b> you are rolling agents out internally.</p>
+          <ul class="chips"><li>Agent UX</li></ul>
+        </div>
+      </article>
+
+      <details>
+        <summary>Also reviewed, one line each <span>6 more — 24 of 34 were filtered out</span></summary>
+        <ul class="rest">
+          <li><b>A field guide to flaky end-to-end tests</b>The Green Build · 40 min — <em>Four flake families and a detection recipe for each. Quarantine, don't retry.</em></li>
+          <li><b>Row-level security is not an authorisation model</b>Two Phase Commit · 31 min — <em>Useful framing, no new material after the first ten minutes.</em></li>
+          <li><b>Benchmarking six embedding models on legal text</b>Retrieval Notes · 22 min — <em>Methodology is sound; the winner is the one you already use.</em></li>
+          <li><b>What we learned running Kafka for six years</b>Streams &amp; Co · 64 min — <em>Long. The compaction section at 41:00 is the part worth your time.</em></li>
+          <li><b>A cheaper way to do nightly ETL</b>Data Plumbing · 19 min — <em>Ideas are fine; the numbers come from a single unnamed customer.</em></li>
+          <li><b>Terraform modules that survive a rewrite</b>Infra Weekly · 28 min — <em>Overlaps heavily with item 03. Skip if you watched that.</em></li>
+        </ul>
+      </details>
+    </main>
+  </div>
+
+  <footer class="colophon">Compiled 3 September 2026, 18:05 UTC, from 34 subscriptions. Every figure is the presenter's own.</footer>
+</div>
+</body>
+</html>

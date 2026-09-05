@@ -336,7 +336,7 @@ describe('template categories', () => {
       }
       // The manifest's own answers, so a mislabelled built-in fails here rather than on the page.
       const byslug = new Map(items.map((item) => [item.slug, item.category]));
-      expect(byslug.get('recap')).toBe('meetings');
+      expect(byslug.get('daily-digest')).toBe('meetings');
       expect(byslug.get('metrics-dashboard')).toBe('status');
       expect(byslug.get('report-html')).toBe('research');
     } finally {
@@ -385,7 +385,9 @@ describe('template categories', () => {
       expect(slugs, 'the account template is missing from its own category').toContain(
         'my-standup-template'
       );
-      expect(slugs, 'the built-in blueprint is missing from the category').toContain('recap');
+      expect(slugs, 'the built-in blueprint is missing from the category').toContain(
+        'daily-digest'
+      );
       for (const item of items) {
         expect(item.category).toBe('meetings');
       }

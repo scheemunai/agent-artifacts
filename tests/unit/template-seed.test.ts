@@ -24,15 +24,21 @@ describe('starter template manifest seeding', () => {
     const report = starters.find((template) => template.slug === 'report');
 
     try {
+      // Deliberately literal: this is the tripwire that says the built-in lineup changed. Deriving
+      // it from the manifest would make it assert nothing.
       expect(starterTemplateManifest.map((template) => template.slug).sort()).toEqual([
-        'briefing',
         'changelog',
+        'daily-digest',
         'dashboard',
+        'decision-brief',
+        'interview-notes',
+        'meeting-recap',
         'metrics-dashboard',
         'one-pager',
-        'recap',
+        'proposal',
         'report',
         'report-html',
+        'spec',
       ]);
       expect(report).toBeDefined();
 
@@ -55,16 +61,9 @@ describe('starter template manifest seeding', () => {
       // Same source as the seeder, for the same reason the Postgres suite now derives it: a
       // hard-coded count is a copy of the manifest that nobody updates when the manifest changes.
       expect(count.count).toBe(loadStarterTemplates().length);
-      expect(rows.map((row) => row.slug)).toEqual([
-        'briefing',
-        'changelog',
-        'dashboard',
-        'metrics-dashboard',
-        'one-pager',
-        'recap',
-        'report',
-        'report-html',
-      ]);
+      // What the seeder owes is the manifest, so compare against the manifest (the tripwire above
+      // already pins what the manifest itself is allowed to be).
+      expect(rows.map((row) => row.slug)).toEqual(starters.map((t) => t.slug).sort());
       for (const row of rows) {
         const starter = starters.find((template) => template.slug === row.slug);
         expect(starter).toBeDefined();

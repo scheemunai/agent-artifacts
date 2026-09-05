@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CloudModule } from '../../src/extension/cloud-module.js';
 import { AppError } from '../../src/lib/errors.js';
+import { loadStarterTemplates } from '../../src/services/templates.js';
 import { countRows, createApiTestContext, createV1OnlyApp, json } from './api-test-utils.js';
 
 const jsonContent = { 'Content-Type': 'application/json' };
@@ -609,7 +610,9 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
       });
       expect(templatesResponse.status).toBe(200);
       const templates = await json(templatesResponse);
-      expect(templates.items as unknown[]).toHaveLength(8);
+      // Derived, not literal: this assertion is about the account's templates merging with the
+      // built-ins, not about how many built-ins there happen to be this month.
+      expect(templates.items as unknown[]).toHaveLength(loadStarterTemplates().length);
 
       const reportResponse = await ctx.app.request('/v1/templates/report', {
         headers: ctx.authHeaders,

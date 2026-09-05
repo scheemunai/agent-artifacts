@@ -672,7 +672,7 @@ test('/templates browses by category and renders every card', async ({ page }) =
 });
 
 test('/templates/:slug previews the real document and says it is bounded', async ({ page }) => {
-  const response = await page.goto('/templates/recap');
+  const response = await page.goto('/templates/meeting-recap');
   expect(response?.status()).toBe(200);
 
   // The same sandboxed frame a published artifact renders in, so what a visitor sees here is what a

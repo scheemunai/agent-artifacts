@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interview notes — Ana Petrović, Rovna Logistics</title>
+<!--
+  TEMPLATE: interview-notes  ·  CATEGORY: meetings
+  VOICE: humanist sans (system-ui stack)   SCHEME: cool grey-blue paper, teal accent
+  Rewriting this? Replace the content, keep the structure and the styling.
+  THE QUOTES ARE THE ARTIFACT. Lead every finding with the subject's own words and put your
+  reading underneath it, labelled, so the reader can always tell what was said from what you
+  concluded. Do not paraphrase into the blockquote.
+  DELETE, DON'T EMPTY: no loose verbatims? remove the whole section, heading included.
+  One finding is a legitimate interview. A short page should be short.
+-->
+<style>
+:root{
+  --bg:#eef1f5; --card:#fff; --tint:#f7f9fb;
+  --ink:#18242f; --muted:#4c5b69; --subtle:#5c6a78;
+  --line:#e2e7ec; --line-2:#cbd4dd;
+  --teal:#0d6a68; --teal-soft:#e2efee;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+p,dl,dd,figure,blockquote{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+.page{max-width:52rem;margin-inline:auto;padding:2.5rem 1.5rem 3rem}
+
+.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--teal);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--teal)}
+.mast h1{margin:.625rem 0 0;font-size:clamp(1.75rem,4vw,2.375rem);font-weight:700}
+.mast .lead{margin-top:.5rem;color:var(--muted);font-size:1rem}
+
+/* lede quote — the artifact opens with the interview's own words */
+.lede{margin-top:1.125rem;padding-bottom:1.125rem;border-bottom:2px solid var(--ink)}
+.lede .mark{display:block;color:var(--teal);font-size:2.75rem;line-height:.55;font-weight:700}
+.lede blockquote p{margin-top:.5rem;font-size:clamp(1.4375rem,3.2vw,2.0625rem);font-weight:650;line-height:1.26;letter-spacing:-.022em;text-wrap:balance}
+.lede figcaption{margin-top:.5rem;color:var(--subtle);font-size:.875rem}
+.lede .who{color:var(--muted);font-weight:600}
+
+/* subject band */
+.subject{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.625rem 1.5rem;margin-top:1.25rem;padding:.9375rem 1.125rem;background:var(--card);border:1px solid var(--line);border-radius:.625rem}
+.subject>div{flex:1 1 17rem;min-width:0}
+.subject h2{font-size:1.0625rem;font-weight:700}
+.subject .role{margin-top:.125rem;color:var(--muted);font-size:.9375rem}
+.subject dl{flex:0 1 auto;display:flex;flex-wrap:wrap;gap:.25rem .875rem;font-size:.8125rem;color:var(--subtle)}
+.subject dt{font-weight:600;color:var(--muted)}
+.subject dd{margin-inline:.25rem 0}
+
+/* the question */
+.question{margin-top:1rem;padding:.9375rem 1.125rem;background:var(--teal-soft);border-radius:.625rem;color:#0b4f4d}
+.question b{display:block;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.1875rem}
+.question p{font-size:.9375rem}
+
+h2.sec{margin-top:2.25rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
+
+/* findings — the quote leads, the reading follows */
+.find{display:grid;grid-template-columns:3.75rem minmax(0,1fr);gap:1.25rem;padding:1.5rem 0;border-top:1px solid var(--line-2)}
+.find:first-of-type{border-top:0;padding-top:1rem}
+.gut{text-align:right}
+.gut .mark{display:block;color:var(--teal);font-size:3rem;line-height:.62;font-weight:700}
+.gut .t{display:block;margin-top:.625rem;color:var(--subtle);font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums}
+blockquote p{font-size:clamp(1.1875rem,2.3vw,1.5rem);font-weight:600;line-height:1.35;letter-spacing:-.015em;text-wrap:balance}
+.find figcaption{margin-top:.5rem;color:var(--subtle);font-size:.8125rem}
+.reading{margin-top:1rem;padding-top:.875rem;border-top:1px solid var(--line)}
+.reading b{display:block;color:var(--teal);font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.1875rem}
+.reading p{color:var(--muted);font-size:.9375rem}
+.reading em{font-style:normal;color:var(--ink);font-weight:600}
+
+/* loose verbatims */
+.verb li{display:grid;grid-template-columns:3.75rem minmax(0,1fr);gap:1.25rem;padding:.75rem 0;border-top:1px solid var(--line)}
+.verb li:first-child{border-top:0}
+.verb .t{text-align:right;color:var(--subtle);font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.6}
+.verb q{color:var(--ink);font-size:1rem}
+.verb small{display:block;margin-top:.125rem;color:var(--subtle);font-size:.8125rem}
+
+/* what we do next */
+.next li{display:grid;grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem;padding:.75rem 0;border-top:1px solid var(--line)}
+.next li:first-child{border-top:0}
+.next .n{color:var(--teal);font-size:.8125rem;font-weight:700;line-height:1.7;font-variant-numeric:tabular-nums}
+.next p{color:var(--ink);font-size:.9375rem}
+.next small{display:block;margin-top:.125rem;color:var(--subtle);font-size:.8125rem}
+.next small b{color:var(--muted);font-weight:600}
+
+.colophon{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--line-2);color:var(--subtle);font-size:.8125rem}
+
+@media (max-width:34rem){
+  .page{padding:1.875rem 1rem 2rem}
+  h2.sec{margin-top:1.625rem}
+  .lede .mark{font-size:2.25rem}
+  .find{grid-template-columns:minmax(0,1fr);gap:.5rem;padding:1.125rem 0}
+  .gut{display:flex;align-items:baseline;gap:.625rem;text-align:left}
+  .gut .mark{font-size:2rem;line-height:1}
+  .gut .t{margin-top:0}
+  .verb li,.next li{grid-template-columns:minmax(0,1fr);gap:.125rem;padding:.625rem 0}
+  .verb .t,.next .n{text-align:left;line-height:1.4}
+  .colophon{margin-top:1.5rem}
+  /* height tightening — spacing only, no content removed */
+  .lede{margin-top:1rem;padding-bottom:1rem}
+  .subject{margin-top:1rem;padding:.875rem 1rem}
+  .question{margin-top:.875rem;padding:.875rem 1rem}
+  .find{padding:1rem 0}
+  .reading{margin-top:.875rem;padding-top:.75rem}
+  .verb li,.next li{padding:.5625rem 0}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="mast">
+    <span class="eyebrow">Interview notes · 6 of 9</span>
+    <h1>Why a working agent gets switched off in month two</h1>
+    <p class="lead">The output was never the problem. The schedule and the provenance were.</p>
+  </header>
+
+  <figure class="lede">
+    <span class="mark" aria-hidden="true">&ldquo;</span>
+    <blockquote><p>If it had told me it had skipped a week, I would have kept it.</p></blockquote>
+    <figcaption><b class="who">Ana Petrović</b> · 41:02 · on what would have changed her mind</figcaption>
+  </figure>
+
+  <div class="subject">
+    <div>
+      <h2>Ana Petrović</h2>
+      <p class="role">Staff engineer, data platform · Rovna Logistics (400 staff, mid-market)</p>
+    </div>
+    <dl>
+      <dt>Date</dt><dd>2 Sep 2026</dd>
+      <dt>Length</dt><dd>47 min, remote</dd>
+      <dt>By</dt><dd>Kaisa Lehtinen</dd>
+    </dl>
+  </div>
+
+  <div class="question">
+    <b>What we came to learn</b>
+    <p>Why teams that set up a scheduled agent turn it off in the second month. Ana ran a Monday metrics job for seven weeks and disabled it on 18 August.</p>
+  </div>
+
+  <section>
+    <h2 class="sec">Findings</h2>
+
+    <figure class="find">
+      <div class="gut"><span class="mark" aria-hidden="true">&ldquo;</span><span class="t">08:12</span></div>
+      <div>
+        <blockquote><p>The report was fine. The problem was that on Tuesday nobody could tell me whether it had actually run.</p></blockquote>
+        <figcaption>Ana Petrović, on the first three weeks</figcaption>
+        <div class="reading">
+          <b>What follows</b>
+          <p>Every churned team in the study so far describes the same gap: the output was trusted, the <em>schedule</em> was not. Ana checked manually for three weeks, decided that was the job she had been trying to automate, and switched it off.</p>
+        </div>
+      </div>
+    </figure>
+
+    <figure class="find">
+      <div class="gut"><span class="mark" aria-hidden="true">&ldquo;</span><span class="t">21:40</span></div>
+      <div>
+        <blockquote><p>I forwarded the first one to my director and she asked me to just paste it into the doc. So I was doing it by hand anyway.</p></blockquote>
+        <figcaption>Ana Petrović, on sharing the output upward</figcaption>
+        <div class="reading">
+          <b>What follows</b>
+          <p>The artifact was not the unit of sharing in her organisation — the weekly doc was. A correct output that cannot travel the last ten metres fails in the same place as no output at all. <em>This is the second interview with the same shape</em> (see 03).</p>
+        </div>
+      </div>
+    </figure>
+
+    <figure class="find">
+      <div class="gut"><span class="mark" aria-hidden="true">&ldquo;</span><span class="t">35:05</span></div>
+      <div>
+        <blockquote><p>We turned it off when the numbers moved and nobody had changed anything. I could not see what it had read.</p></blockquote>
+        <figcaption>Ana Petrović, on the week before she disabled it</figcaption>
+        <div class="reading">
+          <b>What follows</b>
+          <p>Trust broke on provenance, not accuracy — the figure was right, and she still could not tell which query produced it. <em>Three unprompted mentions across six interviews,</em> and no question about provenance in the guide.</p>
+        </div>
+      </div>
+    </figure>
+  </section>
+
+  <section>
+    <h2 class="sec">Other verbatims</h2>
+    <ul class="verb">
+      <li><span class="t">04:55</span><div><q>I set it up in about ten minutes. That part was genuinely great.</q><small>Setup was never raised as a friction point in any interview.</small></div></li>
+      <li><span class="t">14:20</span><div><q>I'd pay for it if it posted into the channel itself. That is the whole feature for me.</q><small>Unprompted willingness to pay — the fourth so far.</small></div></li>
+      <li><span class="t">29:18</span><div><q>Nobody on my team reads a link on a Monday. They read what is in front of them.</q><small>Supports the finding at 21:40. The cheapest fix in the study so far is the lede quote above.</small></div></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="sec">What we do next</h2>
+    <ol class="next">
+      <li><span class="n">01</span><div><p>Put a run-status line on every scheduled artifact: last run, next run, and a visible skipped state.</p><small><b>Kaisa Lehtinen</b> · into the 18 September synthesis</small></div></li>
+      <li><span class="n">02</span><div><p>Test a plain-text export against interviews 7–9 before we build anything for it.</p><small><b>Marco Bell</b> · by 12 September</small></div></li>
+      <li><span class="n">03</span><div><p>Add a direct provenance question to the guide — three unprompted mentions is a signal we are not asking about.</p><small><b>Kaisa Lehtinen</b> · before interview 7</small></div></li>
+    </ol>
+  </section>
+
+  <footer class="colophon">Recorded with consent; the transcript is held for 90 days and then deleted. Quotes are verbatim, lightly de-hesitated, and timestamps refer to the recording. Interview 6 of 9 · synthesis 18 September.</footer>
+</div>
+</body>
+</html>

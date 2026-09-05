@@ -134,7 +134,7 @@ test('the cloud template preview frames an HTML template from the sandbox origin
   await signIn(page);
 
   await page.goto(`${CLOUD_BASE_URL}/dashboard/templates`);
-  const recap = page.getByRole('link', { name: 'Recap', exact: true });
+  const recap = page.getByRole('link', { name: 'Meeting recap', exact: true });
   await expect(recap).toBeVisible();
   await recap.click();
 

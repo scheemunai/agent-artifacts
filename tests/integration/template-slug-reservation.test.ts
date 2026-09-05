@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Account } from '../../src/extension/cloud-module.js';
 import { createDefaultCloudModule } from '../../src/extension/default-module.js';
 import { createBot } from '../../src/services/bots.js';
+import { loadStarterTemplates } from '../../src/services/templates.js';
 import {
   type ApiTestContext,
   createApiTestContext,
@@ -86,16 +87,11 @@ describe('built-in template slugs are reserved', () => {
 
     try {
       const artifactId = await publishSource(ctx, 'reservation-source');
-      const builtInSlugs = [
-        'report',
-        'changelog',
-        'briefing',
-        'dashboard',
-        'one-pager',
-        'recap',
-        'metrics-dashboard',
-        'report-html',
-      ];
+      // The point of this test is that reservation covers the WHOLE built-in lineup, so the list
+      // has to come from the lineup. A hand-copied array silently stops covering the newest
+      // template the day someone adds one — which is exactly the gap this test exists to close.
+      const builtInSlugs = loadStarterTemplates().map((template) => template.slug);
+      expect(builtInSlugs.length).toBeGreaterThan(1);
 
       for (const slug of builtInSlugs) {
         const response = await ctx.app.request('/v1/templates', {

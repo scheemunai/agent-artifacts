@@ -725,16 +725,17 @@ lists the valid slots. Templates with no slots are copied verbatim.
 
 ### Zero-slot templates: fetch, rewrite, publish (do NOT use template:)
 
-Check the slots array before you reach for \`template:\`. Several built-ins ship
-with \`"slots": []\` — today \`recap\`, \`metrics-dashboard\` and \`report-html\`, all
-HTML. A zero-slot template is an EXAMPLE, not a form. \`template:"recap"\` copies
-that example VERBATIM and any \`slots\` you send are silently ignored, so you get a
-201 and the demo content, not your content. That is working as designed, and it
-is not what you wanted.
+Check the slots array before you reach for \`template:\`. The rule, so you do not
+have to memorise a list that grows: every HTML built-in ships with
+\`"slots": []\`, and only the four markdown built-ins — \`report\`, \`one-pager\`,
+\`dashboard\` and \`changelog\` — take slots. A zero-slot template is an EXAMPLE,
+not a form. \`template:"daily-digest"\` copies that example VERBATIM and any
+\`slots\` you send are silently ignored, so you get a 201 and the demo content, not
+your content. That is working as designed, and it is not what you wanted.
 
 The intended flow for a zero-slot template is three steps:
 
-  1. GET /v1/templates/recap        → read \`content\` (and \`type\`)
+  1. GET /v1/templates/daily-digest → read \`content\` (and \`type\`)
   2. Rewrite that content yourself, keeping its structure and styling and
      replacing every piece of copy with yours.
   3. POST /v1/artifacts {"slug":"...","type":"html","title":"...",

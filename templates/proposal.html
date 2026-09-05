@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Proposal — give support the European morning</title>
+<!--
+  TEMPLATE: proposal  ·  CATEGORY: decisions
+  VOICE: humanist sans (system-ui stack), narrow measure   SCHEME: near-white paper, deep amber accent
+  Rewriting this? Replace the content, keep the structure and the styling.
+  THIS TEMPLATE IS ONE ARGUMENT, NOT A SURVEY. Six numbered movements: the problem, the proposal,
+  the cost, what it buys, what it costs us elsewhere, the ask. If you find yourself weighing
+  options against criteria, you want `decision-brief` instead.
+  ONE hero figure. It is the number the whole argument turns on, and it is the only place the
+  accent is spent at size. Do not add a second.
+  DELETE, DON'T EMPTY: nothing given up? remove that movement and renumber. Never leave a heading
+  with nothing under it.
+-->
+<style>
+:root{
+  --bg:#faf9f7; --card:#fff; --tint:#f4f2ee;
+  --ink:#1c1a16; --muted:#55504a; --subtle:#6a645c;
+  --line:#e8e4de; --line-2:#d6d0c7;
+  --amber:#96560a; --amber-soft:#fdf1e0; --amber-line:#eed6ae;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+p,dl,dd{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+.page{max-width:46rem;margin-inline:auto;padding:2.75rem 1.5rem 3rem}
+
+.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--amber);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--amber)}
+.mast h1{margin:.625rem 0 0;font-size:clamp(1.875rem,4.4vw,2.75rem);font-weight:700;text-wrap:balance}
+.mast .lead{margin-top:.625rem;color:var(--muted);font-size:1.0625rem}
+.route{display:flex;flex-wrap:wrap;gap:.375rem 1.25rem;margin-top:1.125rem;padding-top:.875rem;border-top:1px solid var(--line-2);font-size:.8125rem;color:var(--subtle)}
+.route b{color:var(--muted);font-weight:600}
+
+/* the one number the argument turns on */
+.hero{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:.75rem 2rem;align-items:end;margin-top:1.75rem;padding-bottom:1.25rem;border-bottom:2px solid var(--ink)}
+.figure{color:var(--amber);font-size:clamp(3.25rem,10vw,4.5rem);font-weight:700;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.figure small{display:block;margin-top:.5rem;color:var(--ink);font-size:.9375rem;font-weight:600;letter-spacing:normal;line-height:1.4}
+.hero .note{color:var(--muted);font-size:.9375rem;padding-bottom:.25rem}
+.hero .note b{color:var(--ink);font-weight:650}
+.support{display:grid;grid-template-columns:repeat(auto-fit,minmax(10.5rem,1fr));gap:.75rem;margin-top:1.25rem}
+.support li{padding:.75rem .875rem;background:var(--card);border:1px solid var(--line);border-radius:.5rem}
+.support .n{display:block;font-size:1.25rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.support .k{display:block;margin-top:.0625rem;color:var(--subtle);font-size:.8125rem}
+
+/* the argument */
+.move{margin-top:2rem}
+.move h2{display:flex;align-items:baseline;gap:.625rem;font-size:1.1875rem;font-weight:700}
+.move h2 .i{color:var(--amber);font-size:.8125rem;font-weight:700;font-variant-numeric:tabular-nums}
+.move p{margin-top:.5rem;color:var(--muted);font-size:1rem}
+.move p+p{margin-top:.625rem}
+.move p b{color:var(--ink);font-weight:650}
+
+.bill{margin-top:.875rem;padding:.25rem 1rem;background:var(--card);border:1px solid var(--line);border-radius:.5rem}
+.bill li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;padding:.5rem 0;font-size:.9375rem}
+.bill li+li{border-top:1px solid var(--line)}
+.bill .k{color:var(--muted)}
+.bill .v{color:var(--ink);font-weight:650;text-align:right;font-variant-numeric:tabular-nums}
+.bill .total .k,.bill .total .v{color:var(--ink);font-weight:700}
+
+.ask{margin-top:.875rem;padding:1rem 1.125rem;background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:.625rem}
+.ask p{margin:0;color:#6b3e04;font-size:.9375rem}
+.ask p+p{margin-top:.5rem}
+.ask .when{display:flex;flex-wrap:wrap;align-items:baseline;gap:.375rem .625rem;margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--amber-line)}
+.ask .when .k{color:#8a5305;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.ask .when .v{color:var(--amber);font-size:1.25rem;font-weight:700;letter-spacing:-.02em}
+
+.colophon{margin-top:2.25rem;padding-top:1rem;border-top:1px solid var(--line-2);color:var(--subtle);font-size:.8125rem}
+
+@media (max-width:34rem){
+  .page{padding:1.875rem 1rem 2rem}
+  .mast .lead{font-size:1rem}
+  .hero{grid-template-columns:minmax(0,1fr);gap:.625rem;margin-top:1.375rem;padding-bottom:1rem}
+  .hero .note{padding-bottom:0}
+  .move{margin-top:1.375rem}
+  .support li{padding:.625rem .75rem}
+  .move h2{font-size:1.0625rem}
+  .colophon{margin-top:1.625rem}
+  /* height tightening — spacing only, no content removed */
+  .route{margin-top:1rem;padding-top:.75rem}
+  .hero{margin-top:1.25rem;padding-bottom:.875rem}
+  .support{margin-top:1rem}
+  .move{margin-top:1.1875rem}
+  .move p{margin-top:.4375rem}
+  .move p+p{margin-top:.5rem}
+  .bill{margin-top:.75rem}
+  .bill li{padding:.4375rem 0}
+  .ask{margin-top:.75rem;padding:.875rem 1rem}
+  .ask p+p{margin-top:.4375rem}
+  .ask .when{margin-top:.625rem;padding-top:.625rem}
+  .colophon{margin-top:1.25rem;padding-top:.875rem}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="mast">
+    <span class="eyebrow">Proposal</span>
+    <h1>Give support the European morning</h1>
+    <p class="lead">One hire in Lisbon covers the six hours that currently have nobody in them. It costs us the help-centre rewrite, and I think that is the right trade.</p>
+    <div class="route">
+      <span><b>From:</b> Ola Berg, Support</span>
+      <span><b>To:</b> Ravi Menon, COO</span>
+      <span><b>4 September 2026</b></span>
+    </div>
+  </header>
+
+  <div class="hero">
+    <p class="figure">6 h 10 m<small>Median first response, tickets opened before 13:00 CET</small></p>
+    <p class="note">The same ticket opened at 15:00 CET is answered in <b>41 minutes</b>. Nothing about the ticket is different. Nobody is awake.</p>
+  </div>
+  <ul class="support">
+    <li><span class="n">31%</span><span class="k">of all tickets arrive in that window</span></li>
+    <li><span class="n">$93.4k</span><span class="k">fully loaded, first year, one hire</span></li>
+    <li><span class="n">2 of 5</span><span class="k">enterprise churns this year cited response time</span></li>
+  </ul>
+
+  <section class="move">
+    <h2><span class="i">01</span>The problem</h2>
+    <p>Nobody answers Europe before 13:00 CET. Just under a third of our tickets arrive in that window and wait a median of six hours and ten minutes for a first reply — not a resolution, a <b>reply</b>.</p>
+    <p>We cannot rota our way out of it — the US team already starts early and the median has not moved in three quarters. <b>Two of the five enterprise accounts we lost this year named response time in their exit call. Both were European.</b></p>
+  </section>
+
+  <section class="move">
+    <h2><span class="i">02</span>What I propose</h2>
+    <p>One support engineer in Lisbon, starting January, covering 08:00–17:00 CET. On our rotation, in our tooling, in the same queue — <b>not an outsourced tier one and not a follow-the-sun handover.</b> A named person who is awake when the tickets arrive. Lisbon because we already have an entity there, so hiring runs about ten weeks instead of the four months an entity setup would add.</p>
+  </section>
+
+  <section class="move">
+    <h2><span class="i">03</span>What it costs</h2>
+    <ul class="bill">
+      <li><span class="k">Salary and employer costs, band S3</span><span class="v">$88,000</span></li>
+      <li><span class="k">Tooling seats and equipment</span><span class="v">$3,400</span></li>
+      <li><span class="k">Recruiting fee, internal</span><span class="v">$2,000</span></li>
+      <li class="total"><span class="k">First-year total</span><span class="v">$93,400</span></li>
+    </ul>
+    <p>No new vendor, no new process, no change to the on-call contract. Finance has reviewed the band and confirmed it sits inside the FY27 envelope.</p>
+  </section>
+
+  <section class="move">
+    <h2><span class="i">04</span>What it buys</h2>
+    <p>Modelled on the last eight months of volume, first response in the window falls from six hours ten to <b>under forty-five minutes</b> — 31% of volume moves from our worst response band to our best.</p>
+    <p>It also gives the four European accounts renewing in Q2 — $340k of ARR — a named contact in their own working day. Three of the four have asked for one.</p>
+  </section>
+
+  <section class="move">
+    <h2><span class="i">05</span>What we give up</h2>
+    <p>The help-centre rewrite, the other claim on this budget. It is worth doing; I am arguing about order, not merit. <b>The rewrite is modelled to cut ticket volume by about 8%. The hire changes the experience of 31%,</b> and it changes it for the accounts that are actually leaving.</p>
+    <p>And if the hire lands, the rewrite becomes a stronger Q3 proposal: we will have someone in the timezone who knows which articles are missing.</p>
+  </section>
+
+  <section class="move">
+    <h2><span class="i">06</span>The ask</h2>
+    <div class="ask">
+      <p>Approve the requisition, at band S3, against the Q1 contractor budget.</p>
+      <p>Ten weeks of hiring makes 30 September the last date that still produces a January start. <b>If the answer is no, I would rather have it by the 30th than have it open</b> — I will put the money into the rewrite and stop making the case.</p>
+      <p class="when"><span class="k">Decision needed by</span><span class="v">30 September 2026</span></p>
+    </div>
+  </section>
+
+  <footer class="colophon">Response figures from the support export, 1 January – 31 August 2026: medians over 14,208 tickets. Band and total reviewed by Ana Roux, Finance, 2 September. ARR from the Q2 renewal list.</footer>
+</div>
+</body>
+</html>

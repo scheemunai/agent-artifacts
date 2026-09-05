@@ -231,7 +231,11 @@ describe('V1 contract endpoint', () => {
       // Zero-slot templates are examples to rehash, not forms to fill.
       expect(contract).toContain('Zero-slot templates');
       expect(contract).toContain('slots` you send are silently ignored');
-      for (const slug of ['recap', 'metrics-dashboard', 'report-html']) {
+      // The contract used to enumerate the zero-slot built-ins, and the enumeration went stale the
+      // first time the lineup grew. It now states the rule instead, so what has to stay true is the
+      // rule and the short closed list it names: the slot-taking built-ins.
+      expect(contract).toContain('every HTML built-in ships with');
+      for (const slug of ['report', 'one-pager', 'dashboard', 'changelog', 'daily-digest']) {
         expect(contract).toContain(slug);
       }
 
@@ -293,7 +297,16 @@ describe('V1 contract endpoint', () => {
         .filter((item) => item.built_in && item.slots.length === 0)
         .map((item) => item.slug)
         .sort();
-      expect(zeroSlotBuiltIns).toEqual(['metrics-dashboard', 'recap', 'report-html']);
+      expect(zeroSlotBuiltIns).toEqual([
+        'daily-digest',
+        'decision-brief',
+        'interview-notes',
+        'meeting-recap',
+        'metrics-dashboard',
+        'proposal',
+        'report-html',
+        'spec',
+      ]);
     } finally {
       await ctx.cleanup();
     }

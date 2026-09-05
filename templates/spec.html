@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Spec — saved views for the ticket queue (1.9)</title>
+<!--
+  TEMPLATE: spec  ·  CATEGORY: decisions
+  VOICE: humanist sans (system-ui stack), tight measure   SCHEME: near-white paper, deep amber accent
+  Rewriting this? Replace the content, keep the structure and the styling.
+  THE OUT ROWS ARE NOT DECORATION. A spec with goals and no non-goals has not been written yet —
+  the non-goals are what stop the scope moving, so give them the same care as the goals.
+  EVERY REQUIREMENT NEEDS AN ACCEPTANCE LINE. If you cannot say how you would know it was met,
+  it is a wish, not a requirement: cut it or move it to the open questions.
+  DELETE, DON'T EMPTY: no open questions left? remove the section, heading included. Renumber
+  requirements so the IDs stay contiguous.
+-->
+<style>
+:root{
+  --bg:#faf9f7; --card:#fff; --tint:#f4f2ee;
+  --ink:#1c1a16; --muted:#55504a; --subtle:#6a645c;
+  --line:#e8e4de; --line-2:#d6d0c7;
+  --amber:#96560a; --amber-soft:#fdf1e0; --amber-line:#eed6ae;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --shadow:0 1px 2px rgb(28 26 22/.05),0 12px 32px -16px rgb(28 26 22/.3);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+p,dl,dd{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+.page{max-width:54rem;margin-inline:auto;padding:2.5rem 1.5rem 3rem}
+.measure{max-width:40rem}
+
+.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--amber);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--amber)}
+.mast h1{margin:.625rem 0 0;font-size:clamp(1.75rem,3.6vw,2.375rem);font-weight:700}
+.mast .lead{margin-top:.5rem;color:var(--muted);font-size:1.0625rem}
+.facts{display:flex;flex-wrap:wrap;gap:.375rem 1.25rem;margin-top:1.125rem;padding-top:.875rem;border-top:1px solid var(--line-2);font-size:.8125rem;color:var(--subtle)}
+.facts b{color:var(--muted);font-weight:600}
+.state{display:inline-flex;align-items:center;gap:.4375rem;padding:.0625rem .5rem;border:1px solid var(--amber-line);background:var(--amber-soft);border-radius:999px;color:var(--amber);font-size:.8125rem;font-weight:700}
+.state::before{content:"";width:.4375rem;height:.4375rem;border-radius:999px;background:var(--amber)}
+
+/* scope ledger — one list, one marker column, the in/out boundary as a single line */
+.scope{margin-top:.75rem;background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
+.scope li{display:grid;grid-template-columns:3.25rem minmax(0,1fr);gap:.875rem;padding:.5625rem 1.125rem;border-top:1px solid var(--line);font-size:.9375rem}
+.scope li:first-child{border-top:0}
+.scope li.edge{border-top:2px solid var(--line-2)}
+.scope .in{color:var(--ink)}
+.scope .out{color:var(--muted);background:var(--tint)}
+.mk{display:flex;align-items:center;gap:.375rem;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.7}
+.mk::before{content:"";flex:none;width:.5625rem;height:.5625rem;border-radius:.125rem}
+.in .mk{color:var(--amber)}
+.in .mk::before{background:var(--amber)}
+.out .mk{color:var(--subtle)}
+.out .mk::before{box-shadow:inset 0 0 0 1.5px var(--line-2)}
+h2.sec{margin-top:2.25rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
+h2.sec .count{color:var(--muted);font-weight:600;letter-spacing:0;text-transform:none;font-size:.8125rem}
+h2.sec+*{margin-top:.75rem}
+
+/* requirements */
+.reqs{background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
+.reqs>li{display:grid;grid-template-columns:3.5rem minmax(0,1fr) auto;gap:.375rem 1rem;padding:.9375rem 1.125rem;border-top:1px solid var(--line)}
+.reqs>li:first-child{border-top:0}
+.rid{grid-row:span 2;color:var(--ink);font-size:.8125rem;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;line-height:1.5}
+.req{color:var(--ink);font-size:.9375rem;font-weight:600}
+.acc{grid-column:2;color:var(--muted);font-size:.875rem}
+.acc b{color:var(--subtle);font-weight:700;font-size:.6875rem;letter-spacing:.08em;text-transform:uppercase}
+.pri{grid-row:span 2;align-self:start;justify-self:end;padding:.0625rem .4375rem;border-radius:.25rem;font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.pri.must{background:var(--ink);color:#fff}
+.pri.should{border:1px solid var(--line-2);color:var(--muted)}
+.pri.could{color:var(--subtle)}
+
+/* open questions */
+.open li{padding:.875rem 0;border-top:1px solid var(--line-2)}
+.open li:first-child{border-top:0;padding-top:.25rem}
+.open h3{font-size:1rem;font-weight:650}
+.open p{margin-top:.25rem;color:var(--muted);font-size:.9375rem;max-width:42rem}
+.open .needs{margin-top:.3125rem;color:var(--subtle);font-size:.8125rem}
+.open .needs b{color:var(--muted);font-weight:600}
+
+.colophon{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--line-2);color:var(--subtle);font-size:.8125rem}
+
+@media (max-width:34rem){
+  .page{padding:1.875rem 1rem 2rem}
+  .mast .lead{font-size:1rem}
+  h2.sec{margin-top:1.625rem}
+  .colophon{margin-top:1.5rem}
+  .scope li{display:block;padding:.5rem 1rem}
+  .mk{display:inline-flex;vertical-align:baseline;margin-right:.375rem}
+  .reqs>li{grid-template-columns:minmax(0,1fr) auto;gap:.25rem .75rem;padding:.8125rem 1rem}
+  .rid{grid-row:auto;grid-column:1;font-size:.8125rem;color:var(--subtle)}
+  .req{grid-column:1/-1}
+  .acc{grid-column:1/-1}
+  .pri{grid-row:1;grid-column:2}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="mast">
+    <span class="eyebrow">Product spec · 1.9</span>
+    <h1>Saved views for the ticket queue</h1>
+    <p class="lead measure">Let an agent save a filter set, come back to it by name, and share the three that the whole team keeps rebuilding by hand every morning.</p>
+    <div class="facts">
+      <span class="state">Draft for review</span>
+      <span><b>Owner:</b> Mira Halvorsen, Product</span>
+      <span><b>Build:</b> Team Queue</span>
+      <span><b>Target:</b> 1.9, 20 October</span>
+      <span><b>Review closes:</b> 11 September</span>
+    </div>
+  </header>
+
+  <section>
+    <h2 class="sec">Scope <span class="count">— three things this does, four it deliberately does not</span></h2>
+    <ul class="scope">
+      <li class="in"><span class="mk">In</span><span>An agent can save the current filter state as a named view and return to it in one click.</span></li>
+      <li class="in"><span class="mk">In</span><span>The filter sets a team rebuilds every morning are saved once and shared.</span></li>
+      <li class="in"><span class="mk">In</span><span>Median time from opening the queue to opening the first ticket falls from 90 seconds to under 20.</span></li>
+      <li class="out edge"><span class="mk">Out</span><span>No query language. A view is the existing facets, saved — nothing new to learn.</span></li>
+      <li class="out"><span class="mk">Out</span><span>No per-view notification rules. That is the alerting project and it has its own spec.</span></li>
+      <li class="out"><span class="mk">Out</span><span>No cross-workspace sharing in 1.9. The entitlement model is not there yet.</span></li>
+      <li class="out"><span class="mk">Out</span><span>No change to the default queue order for agents who never save a view.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="sec">Requirements <span class="count">— 6, three of them must-have</span></h2>
+    <ol class="reqs">
+      <li>
+        <span class="rid">R-01</span>
+        <p class="req">An agent can save the current filter state as a named view.</p>
+        <span class="pri must">Must</span>
+        <p class="acc"><b>Accepts when</b> — a view created from a filtered queue reproduces an identical result set on reload, sort order included.</p>
+      </li>
+      <li>
+        <span class="rid">R-02</span>
+        <p class="req">Views are listed by last used: five shown, the rest behind "All views".</p>
+        <span class="pri must">Must</span>
+        <p class="acc"><b>Accepts when</b> — an agent with twelve views sees the five they used most recently without opening a menu.</p>
+      </li>
+      <li>
+        <span class="rid">R-03</span>
+        <p class="req">A view can be shared with a team and is read-only to everyone but its owner.</p>
+        <span class="pri must">Must</span>
+        <p class="acc"><b>Accepts when</b> — a non-owner can duplicate a shared view and edit the copy, and cannot save over the original.</p>
+      </li>
+      <li>
+        <span class="rid">R-04</span>
+        <p class="req">Every view has a stable URL that anyone with queue access can open.</p>
+        <span class="pri should">Should</span>
+        <p class="acc"><b>Accepts when</b> — the URL pasted into a fresh session lands on the same filtered queue, or on a clear "no access" state.</p>
+      </li>
+      <li>
+        <span class="rid">R-05</span>
+        <p class="req">Deleting a shared view warns with the number of people who used it recently.</p>
+        <span class="pri should">Should</span>
+        <p class="acc"><b>Accepts when</b> — the confirmation names the count for the last 30 days and requires a second action to proceed.</p>
+      </li>
+      <li>
+        <span class="rid">R-06</span>
+        <p class="req">Up to three views can be pinned to the sidebar.</p>
+        <span class="pri could">Could</span>
+        <p class="acc"><b>Accepts when</b> — pinning a fourth view asks which pin to replace rather than failing silently.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2 class="sec">Open questions <span class="count">— 3, all blocking the build start</span></h2>
+    <ul class="open">
+      <li>
+        <h3>What happens to a shared view when its owner leaves?</h3>
+        <p>Transfer to the team or archive it. Archiving is safer and will annoy people; transfer needs an owner-election rule we do not have.</p>
+        <p class="needs"><b>Needs:</b> Mira Halvorsen with Legal — before the build starts, not before beta.</p>
+      </li>
+      <li>
+        <h3>Do saved views count against the 200-request filter rate limit?</h3>
+        <p>Five pinned views refreshing on queue open is five requests where there is one today. At 400 agents that is a different traffic shape.</p>
+        <p class="needs"><b>Needs:</b> Platform — by 12 September.</p>
+      </li>
+      <li>
+        <h3>Does "ordered by last used" leak activity between teammates?</h3>
+        <p>A shared view's position tells you when a colleague last worked the queue. Probably fine internally; not obviously fine for our regulated accounts.</p>
+        <p class="needs"><b>Needs:</b> Security review — before beta.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer class="colophon">Draft 3, updated 4 September 2026 by Mira Halvorsen. The 90-second baseline comes from the queue instrumentation added in 1.7, measured over 4,100 sessions in August. Comments close 11 September; anything unresolved at that point becomes an open question above, not a silent assumption.</footer>
+</div>
+</body>
+</html>
