@@ -222,4 +222,60 @@ describe('starter template manifest seeding', () => {
       await ctx.cleanup();
     }
   });
+
+  /**
+   * The complementary case to the retirement test above, and builder-3 is right that one test does
+   * not cover both. Retirement asks: did a row that should have gone, go? A TYPE FLIP asks: was a
+   * row that must be TRANSFORMED transformed completely?
+   *
+   * `changelog` and `report` both changed from markdown-with-slots to zero-slot HTML on the same
+   * slug. An upsert that refreshed `content` but not `type` and `slots` would pass every
+   * content-freshness assertion we have and still serve an HTML document through the markdown
+   * renderer with the old slot list attached — a half-migration that looks like a success. The
+   * columns are in the update list in both dialects; this is the assertion that says so.
+   */
+  it('rewrites type and slots on an in-place flip, not only content', async () => {
+    const ctx = await createMigratedSqliteContext();
+    const logger = pino({ enabled: false });
+
+    try {
+      const now = Date.now();
+      // The shape a production database is actually in: `changelog` and `report` as they were
+      // BEFORE the flip — markdown, with the slots they used to take.
+      const before = [
+        { slug: 'changelog', slots: '[{"name":"version","required":true}]' },
+        {
+          slug: 'report',
+          slots: '[{"name":"title","required":true},{"name":"body","required":true}]',
+        },
+      ];
+      for (const row of before) {
+        ctx.db.sqlite
+          .prepare(
+            `UPDATE templates SET type = 'markdown', content = '# {{version}}', slots = ?
+             WHERE slug = ? AND account_id IS NULL`
+          )
+          .run(row.slots, row.slug);
+      }
+
+      await runMigrations(ctx.db, logger);
+
+      const starters = new Map(loadStarterTemplates().map((t) => [t.slug, t]));
+      for (const row of before) {
+        const after = ctx.db.sqlite
+          .prepare(
+            'SELECT type, slots, content FROM templates WHERE slug = ? AND account_id IS NULL'
+          )
+          .get(row.slug) as { type: string; slots: string; content: string };
+        const starter = starters.get(row.slug);
+        expect(after.type, `${row.slug} kept its old type through the flip`).toBe('html');
+        expect(JSON.parse(after.slots), `${row.slug} kept its old slots through the flip`).toEqual(
+          []
+        );
+        expect(after.content, `${row.slug} content not refreshed`).toBe(starter?.content);
+      }
+    } finally {
+      await ctx.cleanup();
+    }
+  });
 });
