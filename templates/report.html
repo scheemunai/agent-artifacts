@@ -31,13 +31,13 @@ html{-webkit-text-size-adjust:100%}
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
   --s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:3rem;--s8:4rem;
 }
-body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
-  font-family:var(--serif);font-size:1.0625rem;line-height:1.68;-webkit-font-smoothing:antialiased}
+body{margin:0;padding:clamp(1rem,-5rem + 12.5vw,var(--s7)) clamp(.75rem,-1.7rem + 5vw,var(--s5)) clamp(2rem,-4rem + 12.5vw,var(--s8));background:var(--bg);color:var(--ink);
+  font-family:var(--serif);font-size:clamp(.9375rem,.7292rem + .694vw,1.0625rem);line-height:1.68;-webkit-font-smoothing:antialiased}
 h1,h2,h3{margin:0;line-height:1.22;letter-spacing:-.01em;font-weight:600}
 p{margin:0}
 ul,ol{margin:0;padding:0;list-style:none}
 a{color:var(--rust)}
-.paper{max-width:48rem;margin-inline:auto;padding:var(--s7);background:var(--paper);
+.paper{max-width:48rem;margin-inline:auto;padding:clamp(2rem,-3.4rem + 10vw,var(--s7)) clamp(1.5rem,-2.05rem + 7.5vw,var(--s7)) var(--s7);background:var(--paper);
   border:1px solid var(--line);border-radius:1rem;
   box-shadow:0 1px 2px rgb(35 30 26/.04),0 12px 32px -16px rgb(35 30 26/.22)}
 
@@ -48,7 +48,7 @@ a{color:var(--rust)}
   letter-spacing:.14em;text-transform:uppercase}
 .eyebrow::before{content:"";width:.4375rem;height:.4375rem;border-radius:99px;background:var(--rust)}
 .title{font-size:clamp(2rem,5.2vw,2.875rem);letter-spacing:-.022em}
-.byline{display:flex;flex-wrap:wrap;gap:var(--s3) var(--s6);margin-top:var(--s5)}
+.byline{display:flex;flex-wrap:wrap;gap:clamp(.75rem,.5rem + .35vw,1rem) clamp(1.5rem,.75rem + 1.04vw,2rem);margin-top:var(--s5)}
 .byline dt{color:var(--subtle);font-family:var(--mono);font-size:.6875rem;font-weight:600;
   letter-spacing:.1em;text-transform:uppercase}
 .byline dd{margin:.1rem 0 0;font-size:.875rem;font-weight:600}
@@ -60,7 +60,7 @@ a{color:var(--rust)}
   margin-top:var(--s5)}
 .lede h2{margin-bottom:var(--s3);color:var(--rust);font-family:var(--mono);font-size:.6875rem;
   font-weight:600;letter-spacing:.1em;text-transform:uppercase}
-.lede__lead{font-size:1.1875rem;line-height:1.5}
+.lede__lead{font-size:clamp(1rem,.6875rem + 1.042vw,1.1875rem);line-height:1.5}
 .lede p+p{margin-top:var(--s3);color:var(--muted)}
 .quarter{align-self:start;padding-left:var(--s5);border-left:1px solid var(--line2)}
 .quarter div+div{margin-top:var(--s4);padding-top:var(--s4);border-top:1px solid var(--line)}
@@ -74,7 +74,7 @@ a{color:var(--rust)}
 .sec{margin-top:var(--s6)}
 .sec__n{display:block;margin-bottom:var(--s2);color:var(--subtle);font-family:var(--mono);
   font-size:.75rem;letter-spacing:.08em}
-.sec h2{font-size:1.5rem}
+.sec h2{font-size:clamp(1.375rem,1.1667rem + .694vw,1.5rem)}
 .sec h3{margin-top:var(--s5);font-size:1.125rem}
 .sec>p,.sec>h3+p{margin-top:var(--s4)}
 
@@ -106,12 +106,12 @@ a{color:var(--rust)}
 
 /* PULL QUOTE */
 .pull{margin:var(--s6) 0 0;padding-left:var(--s5);border-left:2px solid var(--rust-line);
-  color:var(--muted);font-size:1.1875rem;font-style:italic;line-height:1.5}
+  color:var(--muted);font-size:clamp(1rem,.6875rem + 1.042vw,1.1875rem);font-style:italic;line-height:1.5}
 .pull cite{display:block;margin-top:var(--s2);color:var(--subtle);font-size:.8125rem;font-style:normal}
 
 /* NEXT STEPS */
 .next{margin-top:var(--s6);padding-top:var(--s5);border-top:1px solid var(--line2)}
-.next h2{font-size:1.5rem}
+.next h2{font-size:clamp(1.375rem,1.1667rem + .694vw,1.5rem)}
 .steps{counter-reset:step;margin-top:var(--s5)}
 .steps li{counter-increment:step;display:grid;grid-template-columns:1.75rem minmax(0,1fr);
   gap:var(--s4);padding:var(--s4) 0;border-top:1px solid var(--line)}
@@ -136,6 +136,14 @@ a{color:var(--rust)}
   .next,.colophon{max-width:40rem}
 }
 @media (max-width:44rem){
+  /* Leading and radius cannot ramp (unitless line-height has no fluid form, and an em one changes
+     what children inherit), so they step HERE, at the width the layout itself changes. They used to
+     step at 481px, where nothing else did. Body leading lands on 1.5 exactly, not the 1.48/1.42 it
+     used to take: moving the step down to 704 widens the band it governs, and the band must not be
+     one where prose sits under the WCAG 1.4.12 floor. The title is display type, not prose. */
+  body{line-height:1.5}
+  .paper{border-radius:.625rem}
+  .title{line-height:1.14}
   .lede{grid-template-columns:minmax(0,1fr);gap:var(--s5)}
   .quarter{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:var(--s4);
     padding-left:0;padding-top:var(--s4);border-left:0;border-top:1px solid var(--line2)}
@@ -151,22 +159,6 @@ a{color:var(--rust)}
   .sec{margin-top:var(--s6)}
   .sec>p,.sec>h3+p{margin-top:var(--s3)}
   .colophon{margin-top:var(--s5);padding-top:var(--s3)}
-}
-@media (max-width:48rem){
-  body{padding:var(--s4) var(--s3) var(--s6)}
-  .paper{padding:var(--s6) var(--s5) var(--s7)}
-  .byline{gap:var(--s4) var(--s5)}
-}
-@media (max-width:30rem){
-  /* Spacing compaction now starts where the layout becomes one column, not here: between
-     the two the document ran desktop spacing in a narrow column and jumped hundreds of px
-     across one pixel of viewport. Same values, earlier start; type stays here. */
-  body{font-size:.9375rem;line-height:1.48}
-  .paper{border-radius:.625rem}
-  .title{line-height:1.14}
-  .lede__lead,.pull{font-size:1rem}
-  .sec h2,.next h2{font-size:1.375rem}
-  .list li,.steps p,.lede p{line-height:1.42}
 }
 </style>
 </head>
