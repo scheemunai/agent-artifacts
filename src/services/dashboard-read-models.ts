@@ -1,8 +1,10 @@
 import type { QueryResult, QueryResultRow } from 'pg';
 import type { DatabaseHandle, PostgresDatabaseHandle } from '../db/client.js';
 import { renderMarkdown } from '../lib/markdown.js';
+import type { TemplateCategory } from '../lib/schemas/templates.js';
 import { caseInsensitiveContainsClause, likeContainsParam } from '../lib/search-query.js';
 import { SHARE_VISIBILITIES, type ShareVisibility } from './artifacts.js';
+import { templateCategory } from './templates.js';
 
 export type DashboardArtifactType = 'markdown' | 'html';
 
@@ -72,6 +74,7 @@ export interface DashboardTemplateViewModel {
   thumbnailUrl: string | null;
   type: DashboardArtifactType;
   slots: string[];
+  category: TemplateCategory;
   builtIn: boolean;
 }
 
@@ -126,6 +129,7 @@ interface TemplateQueryRow extends QueryResultRow {
   name: string;
   description: string | null;
   thumbnail_url: string | null;
+  category: string | null;
   type: DashboardArtifactType;
   content: string;
   slots: string;
@@ -286,6 +290,7 @@ export class DashboardReadModelService {
       thumbnailUrl: row.thumbnail_url,
       type: row.type,
       slots: parseTemplateSlots(row.slots),
+      category: templateCategory(row),
       builtIn: row.account_id === null,
     }));
   }

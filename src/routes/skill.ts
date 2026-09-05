@@ -177,9 +177,11 @@ GET /v1/artifacts/:id_or_slug/download returns the raw \`.md\` or \`.html\` cont
 
 A template is a reusable example artifact — markdown or HTML — you rehash into new work: keep its style and structure, publish fresh content in it.
 
-- GET /v1/templates lists the examples available to you.
+- GET /v1/templates lists the examples available to you — the built-in blueprints AND your own account templates, in one result.
+- GET /v1/templates?category=meetings narrows to one job. The categories are: meetings, decisions, research, status, releases, plans. Browse them as a human at /templates.
 - GET /v1/templates/:slug returns one, with its content and any slots it declares.
-- POST /v1/templates creates an account template from an existing markdown or HTML artifact. \`{{slot_name}}\` markers are optional; a template with no slots is an example you copy and rewrite.
+- POST /v1/templates creates an account template from an existing markdown or HTML artifact. Send \`category\` so it is findable the same way the built-ins are; it defaults to research when omitted. \`{{slot_name}}\` markers are optional; a template with no slots is an example you copy and rewrite.
+- The built-in \`changelog\` template is HTML with no slots. It was a markdown template with slots; publishing to it with \`slots\` now fails validation. Fetch it, rewrite it, and publish the result as an ordinary artifact.
 - DELETE /v1/templates/:slug deletes one of your own account templates. Built-in slugs are reserved: you cannot create a template that shadows one (409 slug_conflict) and you cannot delete one (403 built_in_template).
 
 Create template body:
@@ -194,6 +196,8 @@ Create template body:
 \`\`\`
 
 Publish with a template by sending \`template\` instead of \`type\` and \`content\`; include \`slots\` only when the template declares them. When it declares none, fetch it, rewrite its content in your own words, and publish the result as an ordinary artifact.
+
+The built-in templates are BLUEPRINTS, not house style. Fetch one, rewrite the copy, change the colours and the type to your own, and publish it — then promote that result to your own account template so the next document starts from your branding rather than ours.
 
 ### Habits
 

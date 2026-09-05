@@ -126,7 +126,10 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
 
     expect(html).not.toContain('id="templates-starter"');
     expect(html).not.toContain('id="templates-starter-scroll-hint"');
-    expect(html).toContain('aria-label="Starter templates"');
+    // The starters are grouped by category now — the same six the public gallery and
+    // `?category=` use — so there is no single "Starter templates" list to name any more. What this
+    // assertion is actually about is unchanged: a labelled CARD list rather than a scroll region.
+    expect(html).toContain('aria-label="Meetings &amp; recaps"');
     expect(html).toContain('aa-dashboard-card-list');
     expect(html).toContain('Preview');
   });

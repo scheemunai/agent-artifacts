@@ -65,7 +65,10 @@ describe('V1 contract endpoint', () => {
       expect(skillText).toContain(`${ctx.config.baseUrl}/a/<share_id>`);
       expect(skillText).toContain('GET /v1/artifacts lists artifacts.');
       expect(skillText).toContain('POST /v1/templates creates an account template');
-      expect(skillText).not.toMatch(/search/i);
+      // Word-bounded. The guard is that the skill does not promise a SEARCH endpoint the API does
+      // not have — and "research" is a template category, which the substring form flagged as a
+      // broken promise. A guard that fires on a word containing the word is a guard people delete.
+      expect(skillText).not.toMatch(/\bsearch\b/i);
     } finally {
       await ctx.cleanup();
     }

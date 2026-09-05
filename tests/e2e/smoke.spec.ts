@@ -593,6 +593,111 @@ test('every legal page is reachable from the footer of the others', async ({ pag
   }
 });
 
+/**
+ * The public template gallery — the page whose entire job is being SEEN.
+ *
+ * The legal pages shipped broken because nothing ever opened them; this is the same shape of
+ * surface (pre-login, marketing, rendered from data) and it gets covered on the way in rather than
+ * after somebody notices. Computed styles in a real browser, because the compiled preflight only
+ * exists there.
+ */
+test('/templates browses by category and renders every card', async ({ page }) => {
+  const response = await page.goto('/templates');
+  expect(response?.status(), '/templates must be reachable without an account').toBe(200);
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Start from something an agent can rewrite.'
+  );
+
+  // Grouped, never flattened: the grouping IS the feature. A flat list would render the same cards.
+  const groups = page.locator('.aa-templates__group');
+  await expect(groups.first()).toBeVisible();
+  expect(await groups.count(), 'no categories rendered').toBeGreaterThan(1);
+
+  // Every group has a real heading and at least one card — an empty category must not be rendered
+  // at all, because a heading over nothing has to be read to discover it says nothing.
+  const emptyGroups = await page.evaluate(
+    () =>
+      [...document.querySelectorAll('.aa-templates__group')].filter(
+        (group) => group.querySelectorAll('.aa-templates__card').length === 0
+      ).length
+  );
+  expect(emptyGroups, 'a category was rendered with no templates in it').toBe(0);
+
+  const headings = await page.evaluate(() =>
+    [...document.querySelectorAll('.aa-templates__group-title')].map((element) => {
+      const computed = getComputedStyle(element);
+      return { tag: element.tagName, fontSize: computed.fontSize, fontWeight: computed.fontWeight };
+    })
+  );
+  const bodySize = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.aa-templates__group-note') as Element).fontSize
+  );
+  for (const heading of headings) {
+    expect(heading.tag).toBe('H2');
+    expect(heading.fontSize, 'a category heading takes the preflight inherit').not.toBe('inherit');
+    expect(heading.fontSize).not.toBe(bodySize);
+  }
+
+  // Thumbnails are the page. A broken one is a card that says nothing.
+  //
+  // Scrolled first, and that is the assertion rather than a workaround: the cards are
+  // `loading="lazy"`, so an image below the fold has `naturalWidth === 0` because it has not been
+  // asked for yet — which is correct behaviour and is what a visitor gets until they scroll. The
+  // first version of this check read the images where they lay and failed only at 560px, where the
+  // fold happens to fall mid-grid. What is worth guarding is that every thumbnail loads once it is
+  // reached.
+  await page.evaluate(async () => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    window.scrollTo(0, 0);
+  });
+  await page.waitForLoadState('networkidle');
+
+  const images = await page.evaluate(() =>
+    [...document.querySelectorAll('.aa-templates__image')].map((image) => ({
+      src: (image as HTMLImageElement).getAttribute('src') ?? '',
+      loaded: (image as HTMLImageElement).complete,
+      width: (image as HTMLImageElement).naturalWidth,
+    }))
+  );
+  expect(images.length, 'no thumbnails on the gallery at all').toBeGreaterThan(0);
+  const broken = images.filter((image) => image.loaded && image.width === 0);
+  expect(
+    broken.map((image) => image.src),
+    'a template thumbnail failed to load'
+  ).toEqual([]);
+
+  await expectNoHorizontalOverflow(page);
+});
+
+test('/templates/:slug previews the real document and says it is bounded', async ({ page }) => {
+  const response = await page.goto('/templates/recap');
+  expect(response?.status()).toBe(200);
+
+  // The same sandboxed frame a published artifact renders in, so what a visitor sees here is what a
+  // reader would receive.
+  const frame = page.locator('.aa-templates__frame');
+  await expect(frame).toBeVisible();
+  await expect(frame).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(page.frameLocator('.aa-templates__frame').locator('h1')).toBeVisible();
+
+  // Bounded means clipped, and clipped without an affordance is the defect this product spent a
+  // week removing. The note is the affordance.
+  await expect(page.locator('.aa-templates__preview-note')).toContainText('scroll inside it');
+
+  await expectNoHorizontalOverflow(page);
+});
+
+test('a markdown template previews inline rather than in a frame', async ({ page }) => {
+  // Markdown has no sandbox problem and no stylesheet the frame could load, so it renders in the
+  // page — the same server-rendered prose the dashboard preview shows.
+  await page.goto('/templates/one-pager');
+  await expect(page.locator('.aa-templates__markdown')).toBeVisible();
+  await expect(page.locator('.aa-templates__frame')).toHaveCount(0);
+  await expectNoHorizontalOverflow(page);
+});
+
 test('password gate unlocks a protected markdown artifact', async ({ page }) => {
   await page.goto(seed.protectedShareUrl);
 

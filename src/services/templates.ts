@@ -432,7 +432,7 @@ export function parseSlots(slots: string): TemplateSlot[] {
  * existed, and putting somebody's old template into a category we guessed is a decision about their
  * content; defaulting on read is the same answer and stays wrong only until they set one.
  */
-export function templateCategory(row: TemplateRow): TemplateCategory {
+export function templateCategory(row: { category: string | null }): TemplateCategory {
   const parsed = templateCategorySchema.safeParse(row.category);
   return parsed.success ? parsed.data : DEFAULT_TEMPLATE_CATEGORY;
 }

@@ -4,8 +4,10 @@ import type { Pool, PoolClient } from 'pg';
 import type { DatabaseHandle, PostgresDatabaseHandle, SqliteDatabaseHandle } from '../db/client.js';
 import type { Account, ArtifactEvent, CloudModule } from '../extension/cloud-module.js';
 import { ARTIFACT_ID_PATTERN } from '../lib/schemas/artifacts.js';
+import type { TemplateCategory } from '../lib/schemas/templates.js';
 import type { Logger } from '../logger.js';
 import { ServiceError } from './errors.js';
+import { templateCategory } from './templates.js';
 
 export type ArtifactType = 'markdown' | 'html';
 export type ArtifactWriteMode = 'created' | 'updated' | 'unchanged';
@@ -150,6 +152,7 @@ export interface TemplatePreview {
   name: string;
   description: string | null;
   thumbnailUrl: string | null;
+  category: TemplateCategory;
   type: ArtifactType;
   content: string;
   slots: string[];
@@ -214,6 +217,7 @@ interface TemplatePreviewDbRow {
   name: string;
   description: string | null;
   thumbnail_url: string | null;
+  category: string | null;
   type: ArtifactType;
   content: string;
   slots: string;
@@ -680,6 +684,7 @@ export class ArtifactService {
           name: row.name,
           description: row.description,
           thumbnailUrl: row.thumbnail_url,
+          category: templateCategory(row),
           type: row.type,
           content: row.content,
           slots: parseTemplateSlotNames(row.slots),

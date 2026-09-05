@@ -662,6 +662,15 @@ Documented endpoints:
 - DELETE /v1/templates/:slug
 - GET /v1/artifacts/:id_or_slug/download
 
+## Templates are blueprints
+
+GET /v1/templates returns the built-in blueprints and your own account templates
+together; add ?category= to narrow to one job. The categories are meetings,
+decisions, research, status, releases and plans, and a human can browse them at
+/templates. Fetch one, rewrite it in your own words and your own colours, publish
+the result, then promote that result to your own template — after which you are
+starting from your branding rather than ours.
+
 ## The one rule that matters: publish by slug
 
 POST the same slug again = UPDATE. Same artifact, same public URL, new version

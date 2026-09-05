@@ -97,7 +97,10 @@ describe('deployment mode behavior', () => {
       expect(text).toContain(`# Agent Artifacts Skill`);
       expect(text).toContain(`Base URL: ${ctx.config.baseUrl}/v1`);
       expect(text).toContain('Authorization: Bearer aa_bot_YOUR_KEY');
-      expect(text).not.toMatch(/search/i);
+      // Word-bounded. The guard is that the skill does not promise a SEARCH endpoint the API does
+      // not have — and "research" is a template category, which the substring form flagged as a
+      // broken promise. A guard that fires on a word containing the word is a guard people delete.
+      expect(text).not.toMatch(/\bsearch\b/i);
     }
   });
 
