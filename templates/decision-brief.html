@@ -79,7 +79,7 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
 /* the ask */
 .ask{padding:1.125rem 1.25rem;background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow)}
 .ask ol{counter-reset:a}
-.ask li{position:relative;counter-increment:a;padding-block:.5rem;padding-left:1.75rem;color:var(--ink);font-size:.9375rem}
+.ask li{position:relative;counter-increment:a;padding-block:.5rem .5rem;padding-left:1.75rem;color:var(--ink);font-size:.9375rem}
 .ask li+li{border-top:1px solid var(--line)}
 .ask li::before{content:counter(a);position:absolute;left:0;top:.5rem;color:var(--amber);font-size:.8125rem;font-weight:700;font-variant-numeric:tabular-nums}
 .deadline{display:flex;flex-wrap:wrap;align-items:baseline;gap:.375rem .75rem;margin-top:.875rem;padding-top:.875rem;border-top:1px solid var(--line-2)}
@@ -91,8 +91,7 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
 
 @media (max-width:34rem){
   .page{padding:1.875rem 1rem 2rem}
-  h2.sec{margin-top:1.625rem}
-  .colophon{margin-top:1.5rem}
+
   .mast .lead{font-size:1rem}
   .rec{grid-template-columns:minmax(0,1fr);gap:.5rem}
   .rec .badge{justify-self:start}
@@ -100,12 +99,11 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
   table,tbody{display:block}
   caption{display:block}
   thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-  tbody tr{display:block;padding:.75rem .875rem;border-top:1px solid var(--line-2)}
+  tbody tr{display:block;border-top:1px solid var(--line-2)}
   tbody tr:first-child{border-top:0}
   tbody th,tbody td{display:block;padding:0;border-top:0}
-  tbody th{margin-bottom:.375rem;color:var(--ink);font-size:.9375rem;font-weight:700}
-  tbody td{padding:.3125rem .5rem;border-radius:.3125rem;font-size:.9375rem}
-  tbody td+td{margin-top:.25rem}
+  tbody th{color:var(--ink);font-size:.9375rem;font-weight:700}
+  tbody td{border-radius:.3125rem;font-size:.9375rem}
   tbody td::before{content:attr(data-label);display:block;color:var(--subtle);font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
   tbody td.pick::before{color:var(--amber)}
   .ask{padding:1rem}
@@ -120,15 +118,10 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
   tbody td+td{margin-top:.1875rem}
   .tnote{padding:.625rem .875rem}
   .why li{padding-block:.875rem}
-  .ask li{padding-block:.4375rem;padding-left:1.75rem}
+  .ask li{padding-block:.4375rem .4375rem;padding-left:1.75rem}
   .ask li::before{top:.4375rem}
   .deadline{margin-top:.75rem;padding-top:.75rem}
   .colophon{margin-top:1.25rem;padding-top:.875rem}
-  /* final nudge — spacing only */
-  h2.sec{margin-top:1.25rem}
-  tbody tr{padding:.5625rem .875rem}
-  .why li{padding-block:.75rem}
-  .colophon{margin-top:1.125rem;padding-top:.75rem}
 }
 </style>
 </head>

@@ -727,8 +727,8 @@ lists the valid slots. Templates with no slots are copied verbatim.
 
 Check the slots array before you reach for \`template:\`. The rule, so you do not
 have to memorise a list that grows: every HTML built-in ships with
-\`"slots": []\`, and only the four markdown built-ins — \`report\`, \`one-pager\`,
-\`dashboard\` and \`changelog\` — take slots. A zero-slot template is an EXAMPLE,
+\`"slots": []\`, and only the three markdown built-ins — \`report\`, \`one-pager\`
+and \`dashboard\` — take slots. A zero-slot template is an EXAMPLE,
 not a form. \`template:"daily-digest"\` copies that example VERBATIM and any
 \`slots\` you send are silently ignored, so you get a 201 and the demo content, not
 your content. That is working as designed, and it is not what you wanted.
@@ -752,6 +752,11 @@ so far and both still resolve, to the template that replaced them:
 
   recap    → meeting-recap   (zero-slot HTML, as \`recap\` was — nothing changes for you)
   briefing → report          (both markdown, but \`report\` takes DIFFERENT slots)
+
+\`changelog\` is a different case again: same slug, but it became a zero-slot HTML
+document, so the six slots it used to take are gone. Sending them now answers 400
+with \`details.template_changed\` rather than a 201 carrying our demo release notes —
+a wrong 201 is the one failure nobody ever reports.
 
 The response carries the canonical \`slug\`, so you can see it moved. Where the successor takes
 different slots, the 400 tells you: \`details.retired_template\` names what you asked for and what it

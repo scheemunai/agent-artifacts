@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atlas API v2 — public beta readiness</title>
+    <!--
+      TEMPLATE  checklist · category: plans
+      VOICE     humanist sans; tabular figures. The hero number is what BLOCKS, not what
+                is done — a readiness review exists to name the things still in the way.
+      SCHEME    soft sage paper, forest accent, burnt-amber for blocked. Every state ships
+                a mark AND a word; the meter's three runs are gapped and directly labelled,
+                so the green/amber pair never has to be told apart by colour alone.
+
+      REWRITING THIS ARTIFACT
+      · Replace the copy, keep the structure. Touch :root only to re-theme.
+      · The meter is one cell per item: repeat <i> inside each run and update the run's
+        printed count. The counts are the source of truth; the meter only echoes them.
+      · Delete, do not empty. Nothing waived? Remove that section — never leave a
+        heading with nothing under it.
+      · Past about twelve items in one group, split the group or summarise it.
+    -->
+    <style>
+      :root {
+        --ink: #17211a;
+        --muted: #4f5a53;
+        --faint: #66726a;
+        --line: #dce3d8;
+        --rule: #c4cfbe;
+        --page: #f2f5ef;
+        --card: #ffffff;
+        --accent: #1f6b45;
+        --accent-soft: #d6e7dc;
+        --block: #9a4a10;
+        --block-soft: #f8e9d8;
+        --waive: #7f8c7f;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.5;
+        font-variant-numeric: tabular-nums;
+      }
+      h1, h2, h3 { margin: 0; line-height: 1.2; letter-spacing: -0.012em; }
+      p { margin: 0; }
+      ul { margin: 0; padding: 0; list-style: none; }
+      code { font-family: var(--mono); font-size: 0.9em; }
+      .defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+      .wrap { max-width: 54rem; margin-inline: auto; padding-inline: 1.1rem; }
+      section { padding-block: 0.95rem; border-top: 1px solid var(--line); }
+      .h2 { font-size: 1.0625rem; font-weight: 700; }
+      .sub { margin-top: 0.2rem; font-size: 0.9375rem; color: var(--muted); }
+
+      /* HEAD -------------------------------------------------------------- */
+      .head { padding-block: 1.35rem 0.95rem; }
+      .eyebrow {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .head h1 {
+        margin-top: 0.35rem;
+        font-size: clamp(1.6rem, 5.8vw, 2.3rem);
+        font-weight: 700;
+      }
+      .head .lede {
+        margin-top: 0.55rem;
+        max-width: 50ch;
+        font-size: 1rem;
+        color: var(--muted);
+      }
+      .head .lede b { color: var(--ink); }
+
+      /* TALLY ------------------------------------------------------------- */
+      .tally {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.4rem 1.5rem;
+        margin-top: 1rem;
+      }
+      .hero { display: flex; align-items: baseline; gap: 0.45rem; }
+      .hero b {
+        font-size: clamp(2.5rem, 11vw, 3.5rem);
+        font-weight: 700;
+        line-height: 0.9;
+        letter-spacing: -0.03em;
+        color: var(--block);
+      }
+      .hero span {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--block);
+      }
+      .tally dl { display: flex; gap: 1.25rem; margin: 0; }
+      .tally dt {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .tally dd { margin: 0.1rem 0 0; font-size: 1.0625rem; font-weight: 700; }
+
+      /* METER ------------------------------------------------------------- */
+      .meter { display: flex; flex-wrap: wrap; gap: 0.5rem 1.1rem; margin-top: 1rem; }
+      .run { display: grid; gap: 0.3rem; }
+      .run__cells { display: flex; gap: 2px; }
+      .run i {
+        width: 0.65rem;
+        height: 1.05rem;
+        border-radius: 2px;
+        background: var(--accent);
+      }
+      .run--block i { background: var(--block); }
+      .run--waive i { background: none; border: 1.5px solid var(--waive); }
+      .run__label {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .run__label .i { width: 0.7rem; height: 0.7rem; flex: none; }
+      .run--ok .run__label { color: var(--accent); }
+      .run--block .run__label { color: var(--block); }
+
+      .meta {
+        margin-top: 1rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid var(--rule);
+        font-size: 0.875rem;
+        color: var(--faint);
+      }
+      .meta b { color: var(--ink); font-weight: 600; }
+
+      /* BLOCKERS ---------------------------------------------------------- */
+      .blockers { display: grid; gap: 0.6rem; margin-top: 0.85rem; }
+      .blk {
+        font-size: 0.9375rem;
+        display: grid;
+        grid-template-columns: 1.15rem 1fr;
+        gap: 0.15rem 0.6rem;
+        padding: 0.75rem 0.85rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--block);
+        border-radius: 5px;
+      }
+      .blk .i { width: 1.15rem; height: 1.15rem; margin-top: 0.1rem; color: var(--block); }
+      .blk h3 { grid-column: 2; font-size: 0.9375rem; font-weight: 700; }
+      .blk__meta {
+        grid-column: 2;
+        margin-top: 0.15rem;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--block);
+      }
+      .blk p {
+        grid-column: 2;
+        margin-top: 0.35rem;
+        color: var(--muted);
+      }
+
+      /* CLEARED ----------------------------------------------------------- */
+      .areas { margin-top: 0.85rem; }
+      .area { break-inside: avoid; margin-bottom: 0.85rem; }
+      .area h3 {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.2rem 0.55rem;
+        padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--rule);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+      .area h3 span {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--faint);
+      }
+      .area ul { margin-top: 0.4rem; }
+      .area li {
+        display: grid;
+        grid-template-columns: 1rem 1fr;
+        gap: 0.5rem;
+        padding-block: 0.28rem;
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .area .i { width: 1rem; height: 1rem; margin-top: 0.2rem; color: var(--accent); }
+
+      /* WAIVED ------------------------------------------------------------ */
+      .waived { display: grid; gap: 0.65rem; margin-top: 0.85rem; }
+      .wv {
+        display: grid;
+        grid-template-columns: 1.05rem 1fr;
+        gap: 0.15rem 0.6rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--line);
+      }
+      .wv .i { width: 1.05rem; height: 1.05rem; margin-top: 0.2rem; color: var(--waive); }
+      .wv b { grid-column: 2; font-size: 0.9375rem; }
+      .wv p { grid-column: 2; font-size: 0.9375rem; color: var(--muted); }
+      .wv .who {
+        grid-column: 2;
+        margin-top: 0.15rem;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        color: var(--faint);
+      }
+
+      .foot {
+        padding-block: 0.8rem 1.15rem;
+        border-top: 1px solid var(--rule);
+        font-size: 0.8125rem;
+        color: var(--faint);
+      }
+
+      @media (min-width: 44rem) {
+        .wrap { padding-inline: 2rem; }
+        section { padding-block: 1.7rem; }
+        .head { padding-block: 2.75rem 1.85rem; }
+        .tally { gap: 0.5rem 2.5rem; }
+        .run i { width: 0.8rem; height: 1.35rem; }
+        .meter { gap: 0.6rem 1.75rem; }
+        .blockers { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .areas { columns: 2; column-gap: 2.5rem; }
+        .area { margin-bottom: 1.35rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <svg class="defs" aria-hidden="true" focusable="false">
+      <symbol id="ok" viewBox="0 0 16 16">
+        <path
+          d="M2.5 8.5l3.5 3.5 7.5-8"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="blk" viewBox="0 0 16 16">
+        <path
+          d="M8 1.5l6.5 11.5H1.5z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linejoin="round"
+        />
+        <path d="M8 6v3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        <circle cx="8" cy="11.4" r="0.9" fill="currentColor" />
+      </symbol>
+      <symbol id="wv" viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.5" />
+        <path d="M5 8h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </symbol>
+    </svg>
+
+    <!-- HEAD -------------------------------------------------------------- -->
+    <header class="head wrap">
+      <p class="eyebrow">Readiness checklist</p>
+      <h1>Atlas API v2 — public beta</h1>
+      <p class="lede">
+        <b>Not ready.</b> Four items block, every one of them owned and dated. The earliest
+        honest launch date is <b>18 September</b>, and it is set by the search latency work.
+      </p>
+      <div class="tally">
+        <p class="hero"><b>4</b> <span>blocking</span></p>
+        <dl>
+          <div><dt>Clear</dt><dd>18</dd></div>
+          <div><dt>Waived</dt><dd>2</dd></div>
+          <div><dt>Reviewed</dt><dd>24</dd></div>
+        </dl>
+      </div>
+      <div class="meter">
+        <div class="run run--ok">
+          <div class="run__cells" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i
+            ><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <p class="run__label"><svg class="i" aria-hidden="true"><use href="#ok" /></svg>18 clear</p>
+        </div>
+        <div class="run run--block">
+          <div class="run__cells" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <p class="run__label"><svg class="i" aria-hidden="true"><use href="#blk" /></svg>4 blocking</p>
+        </div>
+        <div class="run run--waive">
+          <div class="run__cells" aria-hidden="true"><i></i><i></i></div>
+          <p class="run__label"><svg class="i" aria-hidden="true"><use href="#wv" /></svg>2 waived</p>
+        </div>
+      </div>
+      <p class="meta">
+        Reviewed <b>4 Sep 2026</b> by Priya Raman, Sam Oduya and Lena Fischer · next review
+        <b>11 Sep</b> · the gate is all four blockers closed, not a date
+      </p>
+    </header>
+
+    <!-- BLOCKERS ---------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">The four that block</h2>
+      <p class="sub">Nothing here is waivable. Owner and date on every one.</p>
+      <div class="blockers">
+        <article class="blk">
+          <svg class="i" aria-hidden="true"><use href="#blk" /></svg>
+          <h3>Rate limiting is not enforced on the v2 gateway</h3>
+          <p class="blk__meta">Security · Sam Oduya · due 12 Sep</p>
+          <p>
+            The limiter still reads config from the v1 store, so on v2 routes it fails open.
+            Reproduced on staging 2 Sep with 4,000 req/min from one key.
+          </p>
+        </article>
+        <article class="blk">
+          <svg class="i" aria-hidden="true"><use href="#blk" /></svg>
+          <h3>p99 on <code>/v2/search</code> is 840ms against a 400ms target</h3>
+          <p class="blk__meta">Performance · Marco Bellini · due 18 Sep</p>
+          <p>
+            Two of the three regressions trace to the new pagination join. This is the item
+            setting the launch date.
+          </p>
+        </article>
+        <article class="blk">
+          <svg class="i" aria-hidden="true"><use href="#blk" /></svg>
+          <h3>No procedure for revoking a leaked beta key</h3>
+          <p class="blk__meta">Support · Lena Fischer · due 15 Sep</p>
+          <p>
+            Revocation works; nobody outside the team knows how to do it at 2am. Needs a runbook
+            and one dry run with the on-call rota.
+          </p>
+        </article>
+        <article class="blk">
+          <svg class="i" aria-hidden="true"><use href="#blk" /></svg>
+          <h3>Beta terms have not come back from legal</h3>
+          <p class="blk__meta">Legal · R. Achebe · due 11 Sep</p>
+          <p>
+            Sent 28 Aug against a ten-working-day turnaround, so 11 Sep is the quoted date rather
+            than a negotiated one.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- CLEARED ----------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">Cleared</h2>
+      <p class="sub">Eighteen items, checked against evidence rather than memory.</p>
+      <div class="areas">
+        <div class="area">
+          <h3>Security <span>5 of 5</span></h3>
+          <ul>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>API keys scoped per workspace</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Audit log covers every v2 route</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Service secrets rotated 12 Jun</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>CORS allowlist reviewed</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Pen test findings closed, 3 of 3</li>
+          </ul>
+        </div>
+        <div class="area">
+          <h3>Reliability <span>4 of 4</span></h3>
+          <ul>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Autoscaling tested to 4× peak</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Alerting on the v2 error budget</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Failover drill passed 22 Aug</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Rollback to v1 verified end to end</li>
+          </ul>
+        </div>
+        <div class="area">
+          <h3>Data <span>3 of 3</span></h3>
+          <ul>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Backfill verified on 1.2M rows</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>PII fields tagged in the catalogue</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Retention job running on v2 tables</li>
+          </ul>
+        </div>
+        <div class="area">
+          <h3>Docs &amp; support <span>4 of 4</span></h3>
+          <ul>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Reference generated from the spec</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Migration guide published</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Support macros written and reviewed</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>On-call rota covers launch week</li>
+          </ul>
+        </div>
+        <div class="area">
+          <h3>Billing <span>2 of 2</span></h3>
+          <ul>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Metering matches v1 within 0.3%</li>
+            <li><svg class="i" aria-hidden="true"><use href="#ok" /></svg>Overage alerts at 80% and 100%</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- WAIVED ------------------------------------------------------------ -->
+    <section class="wrap">
+      <h2 class="h2">Waived for beta</h2>
+      <p class="sub">Both come back as blocking before general availability.</p>
+      <div class="waived">
+        <div class="wv">
+          <svg class="i" aria-hidden="true"><use href="#wv" /></svg>
+          <b>SOC 2 evidence for the v2 gateway</b>
+          <p>Beta is invite-only and under NDA, so the exposure is bounded and known.</p>
+          <p class="who">Waived by Security · D. Okafor · 1 Sep · required for GA</p>
+        </div>
+        <div class="wv">
+          <svg class="i" aria-hidden="true"><use href="#wv" /></svg>
+          <b>Localised error messages</b>
+          <p>English only for beta. Tracked as ATL-2211 with a translator booked for October.</p>
+          <p class="who">Waived by Product · P. Raman · 29 Aug · required for GA</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot wrap">
+      <p>
+        Atlas API v2 · public beta readiness · reviewed 4 Sep 2026 · owner Priya Raman · re-run
+        this checklist before general availability
+      </p>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fieldnote 2.0 is available today</title>
+    <!--
+      TEMPLATE  launch-announcement · category: releases
+      VOICE     rounded — the friendly member of the releases family. Generous radii and
+                weight contrast carry it wherever the rounded system face is unavailable.
+      SCHEME    high contrast: an inverted near-black masthead over a white page, one
+                saturated accent (signal blue; a lighter tint of the same hue on dark).
+
+      REWRITING THIS ARTIFACT
+      · Replace the copy, keep the structure. Touch :root only to re-theme.
+      · Delete, do not empty. No beta numbers worth printing? Remove the whole `.numbers`
+        section — never leave a heading with nothing under it.
+      · One lead feature plus two supporting ones. If you have five, pick three; an
+        announcement is an argument, not an inventory.
+    -->
+    <style>
+      :root {
+        --ink: #101114;
+        --muted: #55585f;
+        --faint: #6b6f7a;
+        --line: #e5e6ea;
+        --page: #ffffff;
+        --wash: #f4f5f7;
+        --dark: #101114;
+        --on-dark: #a9adba;
+        --accent: #1b3fd8;
+        --accent-lift: #7fa0ff;
+        --ok: #146c43;
+        --rounded: ui-rounded, "SF Pro Rounded", "Segoe UI Variable Display", "Segoe UI", system-ui,
+          sans-serif;
+        --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        --r: 14px;
+      }
+      *,
+      *::before,
+      *::after { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--rounded);
+        font-size: 1.0625rem;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.15;
+        letter-spacing: -0.025em;
+        font-weight: 700;
+      }
+      p { margin: 0; }
+      ul,
+      ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      a { color: var(--accent); }
+      .wrap {
+        max-width: 60rem;
+        margin-inline: auto;
+        padding-inline: 1.25rem;
+      }
+      section { padding-block: 0.62rem; }
+
+      /* MASTHEAD --------------------------------------------------------- */
+      .hero {
+        background: var(--dark);
+        color: #ffffff;
+        padding-block: 1.5rem 1.15rem;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent-lift);
+      }
+      .eyebrow::before {
+        content: "";
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 999px;
+        background: var(--accent-lift);
+      }
+      h1 {
+        margin-top: 0.75rem;
+        font-size: clamp(2.125rem, 7vw, 3.5rem);
+        max-width: 18ch;
+      }
+      .standfirst {
+        margin-top: 0.9rem;
+        max-width: 44ch;
+        font-size: 1.1875rem;
+        color: var(--on-dark);
+      }
+      .cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.62rem;
+        margin-top: 1.05rem;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0.6rem 1.15rem;
+        border-radius: 999px;
+        font-size: 1rem;
+        font-weight: 700;
+        text-decoration: none;
+        background: #ffffff;
+        color: var(--ink);
+      }
+      .btn--ghost {
+        background: transparent;
+        color: #ffffff;
+        box-shadow: inset 0 0 0 1.5px #3a3d47;
+      }
+      .btn:focus-visible {
+        outline: 3px solid var(--accent-lift);
+        outline-offset: 3px;
+      }
+      .facts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem 2rem;
+        margin-top: 1.15rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid #2a2d36;
+      }
+      .facts dt {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #7d818c;
+      }
+      .facts dd {
+        margin: 0.25rem 0 0;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      /* LEAD FEATURE ----------------------------------------------------- */
+      .lead h2 { font-size: clamp(1.5rem, 4.2vw, 2rem); }
+      .kicker {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--faint);
+        margin-bottom: 0.6rem;
+      }
+      .lead p {
+        margin-top: 1rem;
+        max-width: 46ch;
+        color: var(--muted);
+      }
+      .lead__art {
+        margin-top: 1.1rem;
+        background: var(--wash);
+        border-radius: var(--r);
+        padding: 1rem;
+      }
+      .lead__art svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      /* labels are HTML at a real CSS size — inside the viewBox they scaled with it,
+         rendering 9.7px at 390 and 23.4px at 768. Columns match the panel centres. */
+      .flow__labels {
+        display: grid;
+        grid-template-columns: 31% 42% 27%;
+        margin-top: 0.35rem;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        color: var(--faint);
+      }
+      .caption {
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--faint);
+      }
+
+      /* SUPPORTING ------------------------------------------------------- */
+      .also {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+      }
+      .also li {
+        padding: 0.85rem;
+        background: var(--wash);
+        border-radius: var(--r);
+      }
+      .also h3 { font-size: 1.125rem; }
+      .also p {
+        margin-top: 0.55rem;
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+
+      /* NUMBERS ---------------------------------------------------------- */
+      .numbers { border-block: 1px solid var(--line); }
+      .numbers ul {
+        display: grid;
+        gap: 0.9rem 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+      }
+
+      .fig {
+        font-size: clamp(1.625rem, 4.6vw, 2.5rem);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+      .numbers li:first-child .fig { color: var(--accent); }
+      .numbers p:not(.fig) {
+        margin-top: 0.45rem;
+        font-size: 0.9375rem;
+        color: var(--muted);
+        max-width: 26ch;
+      }
+
+      /* STEPS ------------------------------------------------------------ */
+      .steps {
+        counter-reset: s;
+        display: grid;
+        gap: 0.92rem;
+        margin-top: 0.88rem;
+      }
+      .steps li {
+        counter-increment: s;
+        display: grid;
+        grid-template-columns: 2.25rem 1fr;
+        gap: 0.35rem 1rem;
+        align-content: start;
+      }
+      .steps li > * { grid-column: 2; }
+      .steps li::before {
+        content: counter(s);
+        grid-area: 1 / 1;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 999px;
+        background: var(--ink);
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 0.9375rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .steps h3 {
+        font-size: 1.0625rem;
+        align-self: center;
+      }
+      .steps p {
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .cmd {
+        display: block;
+        margin-top: 0.5rem;
+        padding: 0.7rem 0.85rem;
+        border-radius: 10px;
+        background: var(--ink);
+        color: #e9eaee;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+      .cmd b {
+        color: var(--accent-lift);
+        font-weight: 400;
+        user-select: none;
+      }
+
+      /* AVAILABILITY ----------------------------------------------------- */
+      .avail { background: var(--wash); }
+      .rows {
+        margin-top: 1rem;
+        display: grid;
+        gap: 0.75rem;
+      }
+      .rows > div {
+        display: grid;
+        gap: 0.2rem 1.5rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid var(--line);
+      }
+      .rows dt {
+        font-weight: 700;
+        font-size: 0.9375rem;
+      }
+      .rows dd {
+        margin: 0;
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .yes {
+        color: var(--ok);
+        font-weight: 700;
+      }
+      .foot {
+        padding-block: 0.8rem 1rem;
+        font-size: 0.875rem;
+        color: var(--faint);
+      }
+      .foot p + p { margin-top: 0.35rem; }
+
+      @media (min-width: 22rem) {
+        .rows > div { grid-template-columns: 6.75rem 1fr; }
+      }
+      @media (min-width: 34rem) {
+        .rows > div { grid-template-columns: 11rem 1fr; }
+      }
+      @media (min-width: 48rem) {
+        .wrap { padding-inline: 2.5rem; }
+        section { padding-block: 2.6rem; }
+        .hero { padding-block: 4rem 3.25rem; }
+      }
+      @media (min-width: 62rem) {
+        .lead {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+          gap: 3rem;
+          align-items: start;
+        }
+        .lead__art {
+          margin-top: 0;
+          padding: 1.5rem;
+        }
+        .steps {
+          grid-template-columns: repeat(3, 1fr);
+          gap: 2.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- MASTHEAD -------------------------------------------------------- -->
+    <header class="hero">
+      <div class="wrap">
+        <p class="eyebrow">Available today · 4 September 2026</p>
+        <h1>Fieldnote 2.0 works with no signal at all</h1>
+        <p class="standfirst">
+          Survey the whole site offline; it syncs itself when you get back to the truck.
+        </p>
+        <div class="cta">
+          <a class="btn" href="https://fieldnote.app/download">Get the update</a>
+          <a class="btn btn--ghost" href="https://fieldnote.app/whats-new">Release notes</a>
+        </div>
+        <dl class="facts">
+          <div><dt>Version</dt><dd>2.0.0</dd></div>
+          <div><dt>Platforms</dt><dd>iOS 16+, Android 12+, web</dd></div>
+          <div><dt>Upgrade</dt><dd>Free, all plans</dd></div>
+          <div><dt>Downtime</dt><dd>None — nothing to migrate</dd></div>
+        </dl>
+      </div>
+    </header>
+
+    <!-- LEAD FEATURE ---------------------------------------------------- -->
+    <section class="lead wrap">
+      <div>
+        <p class="kicker">The headline change</p>
+        <h2>Offline is the default, not the fallback</h2>
+        <p>
+          Every form, photo and signature is written to the device first and queued. The queue
+          drains by itself the moment there is a network, in the order the records were created.
+        </p>
+        <p>
+          Conflicts are boring now too: two people editing one record produces two versions, both
+          kept, merged in one tap. Nothing is silently overwritten.
+        </p>
+      </div>
+      <figure class="lead__art">
+        <svg viewBox="0 0 320 110" role="img" aria-labelledby="art-t" focusable="false">
+          <title id="art-t">
+            A record is saved on the device, held in a queue while offline, then uploaded in
+            order when the network returns.
+          </title>
+          <rect x="1" y="26" width="86" height="80" rx="12" fill="#fff" stroke="#d7d9e0" />
+          <rect x="14" y="42" width="60" height="7" rx="3.5" fill="#101114" />
+          <rect x="14" y="56" width="44" height="6" rx="3" fill="#c8cad2" />
+          <rect x="14" y="68" width="52" height="6" rx="3" fill="#c8cad2" />
+          <rect x="14" y="84" width="34" height="10" rx="5" fill="#146c43" />
+          <path d="M95 66h34" stroke="#a3a6b0" stroke-width="2" stroke-dasharray="4 4" />
+          <path d="M129 66l-6-4v8z" fill="#a3a6b0" />
+          <rect x="137" y="34" width="60" height="64" rx="10" fill="#f4f5f7" stroke="#d7d9e0" />
+          <rect x="147" y="44" width="40" height="9" rx="4" fill="#1b3fd8" />
+          <rect x="147" y="57" width="40" height="9" rx="4" fill="#8ba0e8" />
+          <rect x="147" y="70" width="40" height="9" rx="4" fill="#b9c4ef" />
+          <rect x="147" y="83" width="40" height="9" rx="4" fill="#d7ddf6" />
+          <path d="M205 66h34" stroke="#a3a6b0" stroke-width="2" />
+          <path d="M239 66l-6-4v8z" fill="#a3a6b0" />
+          <rect x="247" y="26" width="72" height="80" rx="12" fill="#101114" />
+          <rect x="261" y="46" width="44" height="7" rx="3.5" fill="#7fa0ff" />
+          <rect x="261" y="60" width="30" height="6" rx="3" fill="#4a4e59" />
+          <rect x="261" y="72" width="38" height="6" rx="3" fill="#4a4e59" />
+        </svg>
+        <p class="flow__labels"><span>On device</span><span>Queued</span><span>Synced</span></p>
+        <figcaption class="caption">
+          The round trip needs no connection at any point.
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- SUPPORTING ------------------------------------------------------ -->
+    <section class="wrap">
+      <h2 class="kicker" style="margin-bottom: 1rem">Also in 2.0</h2>
+      <ul class="also">
+        <li>
+          <h3>Shared form library</h3>
+          <p>
+            Publish once; every crew gets it on next sync, with the version they filled in recorded
+            against each submission.
+          </p>
+        </li>
+        <li>
+          <h3>Review queue</h3>
+          <p>
+            Everything that came in overnight in one list, flagged for missing photos and
+            out-of-range readings.
+          </p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- NUMBERS --------------------------------------------------------- -->
+    <section class="numbers">
+      <div class="wrap">
+        <h2 class="kicker" style="margin-bottom: 1rem">From nine weeks of beta</h2>
+        <ul>
+          <li>
+            <p class="fig">241,800</p>
+            <p>records captured offline by 1,900 crews</p>
+          </li>
+          <li>
+            <p class="fig">18 sec</p>
+            <p>median time to drain a full day's queue</p>
+          </li>
+          <li>
+            <p class="fig">0</p>
+            <p>records lost to a failed sync</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- HOW TO TRY IT --------------------------------------------------- -->
+    <section class="wrap">
+      <h2>Try it on your next site visit</h2>
+      <ol class="steps">
+        <li>
+          <h3>Update the app</h3>
+          <p>
+            From the App Store or Play Store; on managed fleets, push <code>2.0.0</code> by MDM.
+          </p>
+        </li>
+        <li>
+          <h3>Download your sites</h3>
+          <p>Settings → Offline, then pick the sites for the week. About 40MB each.</p>
+          <code class="cmd"><b>fieldnote</b> sites pull --week current</code>
+        </li>
+        <li>
+          <h3>Turn the radio off and work</h3>
+          <p>
+            Aeroplane mode is a fair test. What you capture lands in the review queue once you are
+            back in range.
+          </p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- AVAILABILITY ---------------------------------------------------- -->
+    <section class="avail">
+      <div class="wrap">
+        <h2>Availability</h2>
+        <dl class="rows">
+          <div>
+            <dt>Who gets it</dt>
+            <dd><span class="yes">Everyone.</span> All plans, all regions, no waitlist.</dd>
+          </div>
+          <div>
+            <dt>What it costs</dt>
+            <dd>Nothing — included in Team and Enterprise at current pricing.</dd>
+          </div>
+          <div>
+            <dt>Older devices</dt>
+            <dd>iOS 15 and Android 11 stay on 1.9, with security fixes until 30 June 2027.</dd>
+          </div>
+          <div>
+            <dt>What is next</dt>
+            <dd>Offline photo annotation is in beta this month; the review-queue API follows in Q1.</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <footer class="foot wrap">
+      <p>
+        Fieldnote 2.0 · announced 4 September 2026 by the product team · questions to
+        <a href="mailto:support@fieldnote.app">support@fieldnote.app</a>.
+      </p>
+    </footer>
+  </body>
+</html>

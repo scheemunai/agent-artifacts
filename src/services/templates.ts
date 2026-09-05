@@ -231,6 +231,26 @@ export async function mergeTemplate(input: {
 
   const slots = parseSlots(template.slots);
   if (slots.length === 0) {
+    // A zero-slot template copies verbatim and ignores `slots`. That is documented, and for a
+    // template that has ALWAYS been zero-slot it is merely unhelpful. For one that took slots until
+    // last week it is a trap: `changelog` was markdown with six required slots and is now a
+    // zero-slot HTML document, so a saved workflow would keep getting 201 — and the demo release
+    // notes instead of its own. A silent 201 with the wrong content is worse than any error,
+    // because nothing anywhere reports it.
+    const supplied = Object.keys(input.slots ?? {});
+    if (supplied.length > 0 && FLIPPED_TEMPLATE_SLUGS.has(template.slug)) {
+      throw new AppError(400, 'validation_failed', 'Template no longer takes slots', {
+        template: template.slug,
+        ignored_slots: supplied,
+        valid_slots: [],
+        template_changed: {
+          slug: template.slug,
+          now: `zero-slot ${template.type}`,
+          what_to_do:
+            'GET the template, rewrite its content in your own words, and publish it as type + content. Sending slots would have been ignored.',
+        },
+      });
+    }
     return { template, content: template.content, type: template.type };
   }
 
@@ -755,6 +775,18 @@ export function retiredTemplateSuccessor(slug: string): string | null {
  * a reservation that no longer exists, because the lookup wandered off to `meeting-recap` and
  * reported what it found there. One resolver serving two questions is how that happens.
  */
+/**
+ * Built-ins that USED to take slots and no longer do.
+ *
+ * Kept as an explicit list rather than applied to every zero-slot template, because the two cases
+ * are genuinely different. A template that has always been zero-slot has never accepted slots from
+ * anyone, so rejecting them now would break callers to teach them something the contract already
+ * says. A template that took slots yesterday has live callers who will otherwise be handed a demo
+ * document with a 201 on it. Add a slug here in the same change that flips it; `report` joins when
+ * its HTML replacement lands.
+ */
+const FLIPPED_TEMPLATE_SLUGS = new Set(['changelog']);
+
 async function resolveTemplateExact(
   db: DatabaseHandle,
   accountId: string,

@@ -573,4 +573,59 @@ describe('retired template slugs keep answering', () => {
       await ctx.cleanup();
     }
   });
+  it('refuses slots for a template that used to take them, instead of a 201 with our demo content', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'changelog-with-the-old-slots',
+          title: 'v2.2',
+          template: 'changelog',
+          // The six slots `changelog` took as a markdown template. It is now zero-slot HTML.
+          slots: {
+            title: 'v2.2',
+            version: '2.2',
+            date: '2026-09-07',
+            added: '- Templates',
+            changed: '- Nothing',
+            fixed: '- A leak',
+          },
+        }),
+      });
+      // A zero-slot template ignores slots and answers 201, which for a template that took slots
+      // last week means a saved workflow silently publishes OUR release notes under THEIR title.
+      expect(response.status).toBe(400);
+      const body = (await json(response)) as { error: { details: Record<string, unknown> } };
+      expect(body.error.details).toMatchObject({
+        template_changed: { slug: 'changelog', now: 'zero-slot html' },
+      });
+      expect(body.error.details.ignored_slots).toContain('version');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('still copies a zero-slot template verbatim when no slots are sent', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'changelog-the-right-way',
+          title: 'v2.2',
+          template: 'changelog',
+        }),
+      });
+      // The guard is about slots that would have been ignored, not about the template.
+      expect(response.status).toBe(201);
+      expect((await json(response)) as Record<string, unknown>).toMatchObject({ type: 'html' });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
 });

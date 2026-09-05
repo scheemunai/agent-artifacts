@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Halyard SDK v3 → v4 migration guide</title>
+    <!--
+      TEMPLATE  migration-guide · category: releases
+      VOICE     mono-led — monospace for headings, labels, code and every version number;
+                system sans for prose only. Same family as `changelog`, different shape.
+      SCHEME    high contrast: near-black ink on white, one saturated accent (signal blue).
+                Before/after panels use red and green, always with the words "Before" and
+                "After" and a − / + sign, so colour is never the only cue.
+
+      REWRITING THIS ARTIFACT
+      · Replace the copy, keep the structure. Touch :root only to re-theme.
+      · Delete, do not empty. No codemod? Remove that step. No troubleshooting yet?
+        Remove the whole section — never leave a heading with nothing under it.
+      · Keep code lines under ~44 characters so 390px never needs a horizontal drag.
+      · Three before/after pairs and three steps is the intended density.
+    -->
+    <style>
+      :root {
+        --ink: #101114;
+        --muted: #55585f;
+        --faint: #6b6f7a;
+        --line: #e4e5e9;
+        --page: #ffffff;
+        --wash: #f5f5f7;
+        --accent: #1b3fd8;
+        --before: #b42318;
+        --before-bg: #fdf2f1;
+        --after: #146c43;
+        --after-bg: #eff7f2;
+        --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      *,
+      *::before,
+      *::after { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 1rem;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.2;
+        font-family: var(--mono);
+        letter-spacing: -0.02em;
+      }
+      p { margin: 0; }
+      ul,
+      ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      a { color: var(--accent); }
+      code {
+        font-family: var(--mono);
+        font-size: 0.875em;
+        overflow-wrap: break-word;
+      }
+      .wrap {
+        max-width: 56rem;
+        margin-inline: auto;
+        padding-inline: 1.25rem;
+      }
+      section {
+        padding-block: 0.56rem;
+        border-top: 1px solid var(--line);
+      }
+      .h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+      }
+      .lede {
+        margin-top: 0.75rem;
+        max-width: 46ch;
+        color: var(--muted);
+      }
+
+      /* HEAD ------------------------------------------------------------- */
+      .head { padding-block: 1.3rem 0.92rem; }
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      h1 {
+        margin-top: 0.75rem;
+        font-size: clamp(1.625rem, 5.2vw, 2.375rem);
+        font-weight: 700;
+      }
+      .jump {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        margin-top: 0.9rem;
+        font-family: var(--mono);
+        font-size: 0.9375rem;
+        font-weight: 700;
+      }
+      .jump s {
+        color: var(--faint);
+        text-decoration-thickness: 1px;
+      }
+      .jump span { color: var(--accent); }
+      .deadline {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.35rem 0.75rem;
+        margin-top: 1rem;
+        padding: 0.65rem 0.9rem;
+        background: var(--ink);
+        color: #ffffff;
+        border-radius: 4px;
+      }
+      .deadline b {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: #ffd166;
+        color: var(--ink);
+        padding: 0.2rem 0.45rem;
+        border-radius: 3px;
+      }
+      .deadline p {
+        font-size: 0.9375rem;
+        color: #e7e8ec;
+      }
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+        gap: 0.7rem 1.5rem;
+        margin-top: 1rem;
+      }
+      .facts dt {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .facts dd {
+        margin: 0.2rem 0 0;
+        font-family: var(--mono);
+        font-size: 0.9375rem;
+        font-weight: 600;
+      }
+
+      /* BEFORE / AFTER --------------------------------------------------- */
+      .change { margin-top: 0.72rem; }
+      .change h3 {
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .change > p {
+        margin-top: 0.4rem;
+        max-width: 60ch;
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .pair {
+        display: grid;
+        gap: 0.5rem;
+        margin-top: 0.65rem;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        overflow: hidden;
+        background: var(--wash);
+      }
+      .panel__label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.7rem;
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--line);
+      }
+      .panel--before .panel__label {
+        background: var(--before-bg);
+        color: var(--before);
+      }
+      .panel--after .panel__label {
+        background: var(--after-bg);
+        color: var(--after);
+      }
+      .panel__label::before {
+        font-size: 0.875rem;
+        line-height: 1;
+      }
+      .panel--before .panel__label::before { content: "−"; }
+      .panel--after .panel__label::before { content: "+"; }
+      pre {
+        margin: 0;
+        padding: 0.5rem 0.7rem;
+        /* wrap rather than clip: a hidden 10px scroll with no affordance reads as broken */
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        background: var(--page);
+        font-size: 0.8125rem;
+        line-height: 1.45;
+        tab-size: 2;
+      }
+      /* 1em, NOT 1rem: rem is root-relative and would render this code at 16px
+         inside a pre declared at 13px */
+      pre code { font-size: 1em; }
+      .cm { color: var(--faint); }
+      .panel__label--diff {
+        background: var(--wash);
+        color: var(--muted);
+      }
+      .renames {
+        display: grid;
+        background: var(--page);
+      }
+      .renames li {
+        display: grid;
+        gap: 0.15rem 0.75rem;
+        padding: 0.5rem 0.7rem;
+        border-top: 1px solid var(--line);
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        line-height: 1.5;
+        overflow-wrap: break-word;
+      }
+      .renames li:first-child { border-top: 0; }
+      .renames s {
+        color: var(--before);
+        text-decoration-thickness: 1px;
+      }
+      .renames b {
+        color: var(--after);
+        font-weight: 600;
+      }
+      .renames s::before,
+      .renames b::before {
+        display: inline-block;
+        width: 1ch;
+        color: var(--faint);
+      }
+      .renames s::before { content: "−"; }
+      .renames b::before { content: "+"; }
+
+      /* STEPS ------------------------------------------------------------ */
+      .steps {
+        counter-reset: s;
+        display: grid;
+        gap: 1.05rem;
+        margin-top: 1.05rem;
+      }
+      .steps > li {
+        counter-increment: s;
+        display: grid;
+        grid-template-columns: 1.75rem 1fr;
+        gap: 0.4rem 0.85rem;
+        align-content: start;
+      }
+      .steps > li > * { grid-column: 2; }
+      .steps > li::before {
+        content: counter(s);
+        grid-area: 1 / 1;
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 4px;
+        background: var(--ink);
+        color: #ffffff;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .steps h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        align-self: center;
+      }
+      .steps p {
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .cmd {
+        display: block;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        padding: 0.7rem 0.8rem;
+        border-radius: 4px;
+        background: var(--ink);
+        color: #e9eaee;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        line-height: 1.5;
+      }
+      .cmd .p {
+        color: #8aa4ff;
+        user-select: none;
+      }
+      .cmd .o { color: #a9adba; }
+      .cmd:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* TROUBLE ---------------------------------------------------------- */
+      .trouble {
+        margin-top: 0.85rem;
+        border-top: 1px solid var(--line);
+      }
+      .trouble details { border-bottom: 1px solid var(--line); }
+      .trouble summary {
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        padding: 0.6rem 0;
+        min-height: 44px;
+        box-sizing: border-box;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--before);
+        cursor: pointer;
+        list-style: none;
+        overflow-wrap: break-word;
+      }
+      .trouble summary::-webkit-details-marker { display: none; }
+      .trouble summary::before {
+        content: "+";
+        flex: none;
+        width: 1em;
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .trouble details[open] summary::before { content: "\2212"; }
+      .trouble summary:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .trouble p {
+        margin: 0 0 0.75rem 1.6rem;
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+
+      /* TIMELINE --------------------------------------------------------- */
+      .dates {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+        gap: 0.5rem 1.5rem;
+        margin-top: 0.75rem;
+      }
+      .dates li {
+        padding-top: 0.6rem;
+        border-top: 2px solid var(--line);
+        font-size: 0.875rem;
+        color: var(--muted);
+      }
+      .dates b {
+        display: block;
+        margin-bottom: 0.15rem;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        color: var(--ink);
+      }
+      .dates li[data-now] { border-top-color: var(--accent); }
+      .dates li[data-now] b { color: var(--accent); }
+      .foot {
+        padding-block: 0.75rem 1rem;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        color: var(--faint);
+        border-top: 1px solid var(--line);
+      }
+
+      @media (min-width: 44rem) {
+        .wrap { padding-inline: 2rem; }
+        section { padding-block: 1.9rem; }
+        .head { padding-block: 3rem 2.25rem; }
+        .pair {
+          grid-template-columns: 1fr 1fr;
+          align-items: start;
+        }
+        .steps { gap: 1.5rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEAD ------------------------------------------------------------ -->
+    <header class="head wrap">
+      <p class="eyebrow">Migration guide</p>
+      <h1>Halyard SDK v3 → v4</h1>
+      <p class="jump"><s>3.8.2</s> <span>→</span> 4.1.0</p>
+      <p class="lede">
+        Three breaking changes, one codemod, about twenty minutes. No coordinated deploy: v3 and
+        v4 clients can talk to the API at the same time.
+      </p>
+      <div class="deadline">
+        <b>Deadline</b>
+        <p>v3 stops receiving security fixes on <strong>1 December 2026</strong> — 88 days away.</p>
+      </div>
+      <dl class="facts">
+        <div><dt>Applies to</dt><dd>JS / TS SDK</dd></div>
+        <div><dt>Effort</dt><dd>~20 min</dd></div>
+        <div><dt>Breaking</dt><dd>3 changes</dd></div>
+        <div><dt>Rollback</dt><dd>Safe, any time</dd></div>
+      </dl>
+    </header>
+
+    <!-- WHAT CHANGED ---------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">What breaks, and what to write instead</h2>
+
+      <article class="change">
+        <h3>1 · The client takes an options object</h3>
+        <p>
+          A bare API-key string is no longer accepted, and the export is now named.
+        </p>
+        <div class="pair">
+          <div class="panel panel--before">
+            <p class="panel__label">Before · v3</p>
+            <pre><code>import Halyard from "halyard";
+const hal = new Halyard(
+  process.env.HALYARD_API_KEY
+);</code></pre>
+          </div>
+          <div class="panel panel--after">
+            <p class="panel__label">After · v4</p>
+            <pre><code>import { Halyard } from "halyard";
+const hal = new Halyard({
+  token: process.env.HALYARD_TOKEN,
+});</code></pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="change">
+        <h3>2 · List calls return a page, not an array</h3>
+        <p>
+          Every <code>list*</code> method returns <code>{ data, cursor }</code>. Iterate the client
+          when you want all of it — it pages for you.
+        </p>
+        <div class="pair">
+          <div class="panel panel--before">
+            <p class="panel__label">Before · v3</p>
+            <pre><code>const runs = await hal.listRuns();
+runs.map(r =&gt; r.id);
+<span class="cm">// silently capped at 100</span></code></pre>
+          </div>
+          <div class="panel panel--after">
+            <p class="panel__label">After · v4</p>
+            <pre><code>const page = await hal.listRuns();
+page.data.map(r =&gt; r.id);
+for await (const r of hal.runs) {}</code></pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="change">
+        <h3>3 · Three renames, no other behaviour change</h3>
+        <p>The codemod does all three; they are listed so you can grep for them yourself.</p>
+        <div class="panel">
+          <p class="panel__label panel__label--diff">− v3 &nbsp;/&nbsp; + v4</p>
+          <ul class="renames">
+            <li><s>err.code === 429</s><b>err.type === "rate_limited"</b></li>
+            <li><s>hal.close()</s><b>await hal.dispose()</b></li>
+            <li><s>HALYARD_API_KEY</s><b>HALYARD_TOKEN</b></li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <!-- STEPS ----------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">Do it in three steps</h2>
+      <ol class="steps">
+        <li>
+          <h3>Upgrade the dependency</h3>
+          <code class="cmd"><span class="p">$</span> npm install halyard@^4.1.0</code>
+        </li>
+        <li>
+          <h3>Run the codemod</h3>
+          <p>
+            It rewrites constructors, renames and <code>err.code</code> comparisons. Where it is not
+            sure it leaves a <code>TODO(halyard)</code> — <code>grep -rn "TODO(halyard)" src/</code>
+            to find them. Pagination is the one only you can decide.
+          </p>
+          <code class="cmd"><span class="p">$</span> npx halyard-codemod v3-to-v4 src/
+<span class="o">  42 files scanned
+  17 files changed
+   3 need a human · see TODO(halyard)</span></code>
+        </li>
+        <li>
+          <h3>Verify before you deploy</h3>
+          <p>
+            Strict mode turns every remaining v3 shape into a thrown error instead of a warning, so
+            the test run tells you the truth.
+          </p>
+          <code class="cmd"><span class="p">$</span> HALYARD_STRICT=1 npm test
+<span class="o">  ✓ 184 passing
+  ✓ 0 deprecation warnings</span></code>
+        </li>
+      </ol>
+    </section>
+
+    <!-- TROUBLESHOOTING -------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">If it goes wrong</h2>
+      <p class="lede">
+        Two errors account for almost every report. Rolling back is reinstalling
+        <code>halyard@3.8.2</code> and reverting the codemod commit.
+      </p>
+      <div class="trouble">
+        <details>
+          <summary>TypeError: runs.map is not a function</summary>
+          <p>
+            A <code>list</code> call you did not update. Use <code>page.data</code>, or iterate
+            <code>hal.runs</code> if you actually wanted every row.
+          </p>
+        </details>
+        <details>
+          <summary>HalyardError: missing_token</summary>
+          <p>
+            The process still exports <code>HALYARD_API_KEY</code>. Rename it in your deployment
+            config — v4 does not read the old name, on purpose.
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <!-- TIMELINE --------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">The dates that matter</h2>
+      <ul class="dates">
+        <li><b>12 Aug 2026</b><span>v4.0.0 released, v3 enters maintenance.</span></li>
+        <li data-now><b>1 Dec 2026</b><span>v3 security fixes stop. Plan for this one.</span></li>
+        <li><b>1 Mar 2027</b><span>v3 unpublished, support ends.</span></li>
+      </ul>
+    </section>
+
+    <footer class="foot wrap">
+      <p>
+        Halyard SDK · migration guide revised 4 Sep 2026 ·
+        <a href="https://halyard.dev/docs/v4">halyard.dev/docs/v4</a>
+      </p>
+    </footer>
+  </body>
+</html>

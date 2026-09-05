@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Runbook — rotate the production database credentials</title>
+    <!--
+      TEMPLATE  runbook · category: plans
+      VOICE     humanist sans for prose and headings (the plans family voice); monospace
+                reserved for commands, output, identifiers and step labels.
+      SCHEME    soft sage paper, forest accent, near-black terminal blocks. Amber is the
+                stop colour and always ships with the word STOP or ROLLBACK beside it.
+
+      REWRITING THIS ARTIFACT
+      · Replace the copy, keep the structure. Touch :root only to re-theme.
+      · A command block is <pre><b>$ cmd</b><span>output</span></pre>. Keep lines at or under
+        35 characters INCLUDING the `$ ` prefix — that is what fits a 390px screen at
+        13px mono. Blocks wrap rather than scroll, so nothing is ever hidden.
+      · Delete, do not empty. Nothing to roll back? Remove the section — never leave a
+        heading with nothing under it.
+      · Five steps is the intended density. Past nine, split the runbook in two.
+    -->
+    <style>
+      :root {
+        --ink: #17211a;
+        --muted: #4f5a53;
+        --faint: #66726a;
+        --line: #dce3d8;
+        --rule: #c4cfbe;
+        --page: #f2f5ef;
+        --card: #ffffff;
+        --accent: #1f6b45;
+        --accent-soft: #d6e7dc;
+        --stop: #9a4a10;
+        --stop-soft: #f8e9d8;
+        --term: #141c17;
+        --term-dim: #93a89a;
+        --term-cmd: #a8e0bf;
+        --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      h1, h2, h3 { margin: 0; line-height: 1.22; letter-spacing: -0.012em; }
+      p { margin: 0; }
+      ul, ol { margin: 0; padding: 0; list-style: none; }
+      code { font-family: var(--mono); font-size: 0.875em; }
+      .wrap { max-width: 50rem; margin-inline: auto; padding-inline: 1.1rem; }
+      section { padding-block: 0.42rem; border-top: 1px solid var(--line); }
+      .h2 { font-size: 1.0625rem; font-weight: 700; }
+      .sub { margin-top: 0.25rem; font-size: 0.9375rem; color: var(--muted); }
+
+      /* HEAD -------------------------------------------------------------- */
+      .head { padding-block: 1.15rem 0.75rem; }
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .head h1 {
+        margin-top: 0.4rem;
+        font-size: clamp(1.6rem, 5.6vw, 2.25rem);
+        font-weight: 700;
+      }
+      .head .lede {
+        margin-top: 0.65rem;
+        max-width: 48ch;
+        font-size: 1rem;
+        color: var(--muted);
+      }
+      .head .lede b { color: var(--ink); }
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+        gap: 0.5rem 1.25rem;
+        margin-top: 0.9rem;
+        padding-top: 0.72rem;
+        border-top: 1px solid var(--rule);
+      }
+      .facts dt {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .facts dd { margin: 0.15rem 0 0; font-size: 0.9375rem; font-weight: 600; }
+
+      /* PRECONDITIONS ----------------------------------------------------- */
+      .pre { display: grid; gap: 0.26rem; margin-top: 0.55rem; }
+      .pre li {
+        display: grid;
+        grid-template-columns: 1.15rem 1fr;
+        gap: 0.1rem 0.55rem;
+        font-size: 0.9375rem;
+      }
+      .pre li::before {
+        content: "";
+        width: 0.95rem;
+        height: 0.95rem;
+        margin-top: 0.32rem;
+        border: 1.5px solid var(--accent);
+        border-radius: 3px;
+      }
+      .pre > li > b { font-weight: 600; }
+      .pre code {
+        display: block;
+        grid-column: 2;
+        margin-top: 0.25rem;
+        padding: 0.28rem 0.5rem;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        background: var(--term);
+        border-radius: 4px;
+        color: var(--term-cmd);
+        font-size: 0.8125rem;
+        line-height: 1.45;
+        text-indent: -2ch;
+        padding-left: calc(0.5rem + 2ch);
+      }
+      .pre code::before { content: "$ "; color: #5f7a68; }
+      .stop {
+        display: grid;
+        gap: 0.2rem;
+        margin-top: 0.9rem;
+        padding: 0.52rem 0.8rem;
+        background: var(--stop-soft);
+        border: 1px solid #dfae7a;
+        border-radius: 5px;
+        font-size: 0.9375rem;
+        color: #5f2f08;
+      }
+      .stop b {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        color: var(--stop);
+      }
+
+      /* STEPS ------------------------------------------------------------- */
+      .steps { margin-top: 0.9rem; }
+      .steps > li {
+        display: grid;
+        grid-template-columns: 1.7rem 1fr;
+        gap: 0.15rem 0.7rem;
+        padding-bottom: 0.5rem;
+      }
+      .steps > li + li { padding-top: 0.5rem; border-top: 1px solid var(--line); }
+      .n {
+        grid-row: span 2;
+        width: 1.7rem;
+        height: 1.7rem;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        font-weight: 700;
+      }
+      .steps h3 { font-size: 1rem; font-weight: 700; align-self: center; }
+      .steps .body { grid-column: 2; display: grid; gap: 0.4rem; margin-top: 0.3rem;
+        font-size: 0.9375rem; }
+      .steps p { color: var(--muted); }
+      .steps p b { color: var(--ink); }
+
+      pre {
+        margin: 0;
+        padding: 0.6rem 0.75rem;
+        /* wrap rather than clip; continuation lines hang under the command */
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        background: var(--term);
+        border-radius: 5px;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        line-height: 1.4;
+        color: var(--term-dim);
+        tab-size: 2;
+      }
+      pre b,
+      pre span,
+      pre .hl { display: block; padding-left: 2ch; text-indent: -2ch; }
+      pre b { font-weight: 400; color: var(--term-cmd); }
+      pre b::before { content: "$ "; color: #5f7a68; }
+      pre .hl { display: block; color: #e8b98a; }
+
+      .note {
+        padding-left: 0.7rem;
+        border-left: 2px solid var(--rule);
+        font-size: 0.875rem;
+        color: var(--muted);
+      }
+      .note b { color: var(--ink); }
+
+      /* ROLLBACK ---------------------------------------------------------- */
+      .rollback {
+        margin-top: 0.6rem;
+        padding: 0.7rem 0.9rem 0.78rem;
+        background: var(--card);
+        border: 1px solid #dfae7a;
+        border-radius: 6px;
+      }
+      .rollback h3 {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--stop);
+      }
+      .rollback p { margin-top: 0.35rem; font-size: 0.9375rem; color: var(--muted); }
+      .rollback pre { margin-top: 0.6rem; }
+
+      /* ESCALATE ---------------------------------------------------------- */
+      .esc { display: grid; gap: 0.34rem; margin-top: 0.55rem; }
+      .esc li {
+        display: grid;
+        gap: 0.1rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--line);
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .esc b { color: var(--ink); }
+
+      .foot {
+        padding-block: 0.5rem 0.65rem;
+        border-top: 1px solid var(--rule);
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        color: var(--faint);
+      }
+
+      @media (min-width: 44rem) {
+        .wrap { padding-inline: 2rem; }
+        section { padding-block: 1.5rem; }
+        .head { padding-block: 2.4rem 1.6rem; }
+        .steps > li { grid-template-columns: 2rem 1fr; gap: 0.2rem 1rem; }
+        .steps > li + li { padding-top: 1.15rem; }
+        .n { width: 2rem; height: 2rem; font-size: 0.875rem; }
+        .steps h3 { font-size: 1.0625rem; }
+        pre { padding: 0.8rem 0.9rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEAD -------------------------------------------------------------- -->
+    <header class="head wrap">
+      <p class="eyebrow">Runbook</p>
+      <h1>Rotate the production database credentials</h1>
+      <p class="lede">
+        Quarterly rotation of <code>api_rw</code> on <code>prod-pg-1</code>. Zero downtime —
+        <b>but only if step 4 finishes before you touch step 5.</b>
+      </p>
+      <dl class="facts">
+        <div><dt>When</dt><dd>Quarterly</dd></div>
+        <div><dt>Takes</dt><dd>~15 min</dd></div>
+        <div><dt>Downtime</dt><dd>None</dd></div>
+        <div><dt>Needs</dt><dd>db-admin</dd></div>
+      </dl>
+    </header>
+
+    <!-- PRECONDITIONS ----------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">Before you start</h2>
+      <p class="sub">All four. They take a minute together.</p>
+      <ul class="pre">
+        <li>
+          <b>You are on the VPN and reach the primary.</b>
+          <code>psql -h prod-pg-1 -c '\conninfo'</code>
+        </li>
+        <li>
+          <b>The deploy freeze is off.</b>
+          <code>./bin/freeze status   # =&gt; open</code>
+        </li>
+        <li>
+          <b>No migration is running.</b>
+          <code>./bin/migrations running   # =&gt; 0</code>
+        </li>
+        <li>
+          <b>You can write to the secret store.</b>
+          <code>vault kv get -field=version \
+  secret/prod/db</code>
+        </li>
+      </ul>
+      <p class="stop">
+        <b>Stop if any is false</b>
+        Rotating during a migration leaves the migrator holding a dead connection. Wait it out.
+      </p>
+    </section>
+
+    <!-- PROCEDURE --------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">The procedure</h2>
+      <p class="sub">
+        Two roles exist at once for a few minutes. That overlap is the design — nothing
+        restarts, nothing has to be timed.
+      </p>
+      <ol class="steps">
+        <li>
+          <span class="n">1</span>
+          <h3>Announce it</h3>
+          <div class="body">
+            <p>A rotation nobody expected costs more than the one you announce.</p>
+            <pre><b>./bin/announce "rotating api_rw,
+  ~15 min, no downtime expected"</b><span>posted to #eng-oncall</span></pre>
+          </div>
+        </li>
+
+        <li>
+          <span class="n">2</span>
+          <h3>Generate the new secret</h3>
+          <div class="body">
+            <p>Written to a staging slot the application does not read yet.</p>
+            <pre><b>export NEW=$(openssl rand -hex 24)</b><b>vault kv put secret/prod/db/next \
+  password="$NEW"</b><span>Key       Value
+version   8</span></pre>
+          </div>
+        </li>
+
+        <li>
+          <span class="n">3</span>
+          <h3>Create the successor role</h3>
+          <div class="body">
+            <p>
+              It inherits from the <code>api_rw</code> group role, so you never re-grant table
+              by table.
+            </p>
+            <pre><b>psql -h prod-pg-1 \
+  -f sql/rotate.sql \
+  -v pw="$NEW" -v role=api_rw_q3</b><span>CREATE ROLE
+GRANT</span></pre>
+          </div>
+        </li>
+
+        <li>
+          <span class="n">4</span>
+          <h3>Point the application at it</h3>
+          <div class="body">
+            <p>
+              <b>This is the step that matters.</b> The sidecar reloads on its own, no restart.
+              Until it returns, the old role is still serving traffic.
+            </p>
+            <pre><b>vault kv put secret/prod/db \
+  username=api_rw_q3 \
+  password="$NEW"</b><b>./bin/wait-for-rollout \
+  --key secret/prod/db \
+  --timeout 120s</b><span>all 14 pods on version 9 (47s)</span></pre>
+          </div>
+        </li>
+
+        <li>
+          <span class="n">5</span>
+          <h3>Retire the old role</h3>
+          <div class="body">
+            <p>Only once the check below has been clean for five minutes.</p>
+            <pre><b>psql -h prod-pg-1 \
+  -c "drop role api_rw_q2"</b><span>DROP ROLE</span></pre>
+            <p class="note">
+              <b>If it says objects depend on it:</b> something still owns tables as that role.
+              Stop and escalate — never <code>REASSIGN OWNED</code> on production alone.
+            </p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- VERIFY ------------------------------------------------------------ -->
+    <section class="wrap">
+      <h2 class="h2">Verify — between steps 4 and 5</h2>
+      <p class="sub">
+        Zero on the old role for five straight minutes. That is the bar.
+      </p>
+      <pre><b>psql -h prod-pg-1 -c "select usename,
+  count(*) from pg_stat_activity
+  where datname='app' group by 1"</b><span> api_rw_q3 | 42
+ api_rw_q2 |  0</span></pre>
+      <p class="note" style="margin-top: 0.6rem">
+        <b>If the old role still has connections:</b> a pod missed the reload. Restart it.
+      </p>
+    </section>
+
+    <!-- ROLLBACK ---------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">If it goes wrong</h2>
+      <div class="rollback">
+        <h3>Rollback — safe at any point before step 5</h3>
+        <p>
+          The old secret version and the old role both still exist, so this is a sixty-second
+          undo — not a deploy.
+        </p>
+        <pre><b>vault kv rollback -version=8 \
+  secret/prod/db</b><b>./bin/wait-for-rollout \
+  --key secret/prod/db</b><span class="hl">all 14 pods back on version 8 (39s)</span></pre>
+      </div>
+    </section>
+
+    <!-- ESCALATE ---------------------------------------------------------- -->
+    <section class="wrap">
+      <h2 class="h2">When to escalate</h2>
+      <ul class="esc">
+        <li>
+          <b>Connections have not drained after 10 minutes.</b>
+          <span>Page <code>/page data-platform</code> and leave both roles in place.</span>
+        </li>
+        <li>
+          <b><code>DROP ROLE</code> fails for any reason.</b>
+          <span>Stop and page. Two live roles is safe; half-rotated is not.</span>
+        </li>
+      </ul>
+    </section>
+
+    <footer class="foot wrap">
+      <p>
+        rotate-db-credentials · owner data-platform · reviewed 28 Aug 2026 · last run 12 Jun 2026
+      </p>
+    </footer>
+  </body>
+</html>

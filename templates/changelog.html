@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kestrel Platform — Changelog</title>
+    <!--
+      TEMPLATE  changelog · category: releases
+      VOICE     mono-led — monospace for headings, version numbers, tags and refs;
+                system sans for prose only.
+      SCHEME    high contrast: near-black ink on white, one saturated accent (signal blue),
+                used three times at most. Type colours carry a text label, never colour alone.
+
+      REWRITING THIS ARTIFACT
+      · Replace the copy, keep the structure. Touch :root only to re-theme.
+      · Delete, do not empty. No breaking changes this release? Remove the whole
+        `.breaking` section — never leave a heading with nothing under it.
+      · Two releases in full plus a collapsed list of older ones is the intended density.
+        Past ~12 entries in one release, summarise: the changelog is a reading document.
+    -->
+    <style>
+      :root {
+        --ink: #101114;
+        --muted: #5a5d66;
+        --faint: #6b6f7a;
+        --line: #e4e5e9;
+        --rule: #cfd1d8;
+        --page: #f4f4f6;
+        --card: #ffffff;
+        --accent: #1b3fd8;
+        --add: #146c43;
+        --break: #b42318;
+        --break-bg: #fdf1f0;
+        --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      *,
+      *::before,
+      *::after { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        padding: 1.6rem 1rem 2.5rem;
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 1rem;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.2;
+      }
+      p { margin: 0; }
+      ul,
+      ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      a {
+        color: var(--accent);
+        text-underline-offset: 2px;
+      }
+      code {
+        font-family: var(--mono);
+        font-size: 0.875em;
+        overflow-wrap: anywhere;
+        background: #f0f1f4;
+        border-radius: 3px;
+        padding: 0.1em 0.34em;
+      }
+      .page {
+        max-width: 58rem;
+        margin-inline: auto;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgb(16 17 20 / 0.05), 0 12px 32px -16px rgb(16 17 20 / 0.28);
+      }
+
+      /* HEAD ------------------------------------------------------------- */
+      .head {
+        padding: 1.75rem 1.25rem 1.5rem;
+        border-bottom: 2px solid var(--ink);
+      }
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      h1 {
+        margin-top: 0.65rem;
+        font-family: var(--mono);
+        font-size: clamp(1.75rem, 5.4vw, 2.5rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+      .lede {
+        margin-top: 0.75rem;
+        max-width: 40rem;
+        color: var(--muted);
+        font-size: 1.0625rem;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 2.25rem;
+        margin: 1.5rem 0 0;
+      }
+      .meta div { min-width: 6.5rem; }
+      .meta dt {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .meta dd {
+        margin: 0.2rem 0 0;
+        font-family: var(--mono);
+        font-size: 0.9375rem;
+        font-weight: 600;
+      }
+
+      /* BREAKING --------------------------------------------------------- */
+      .breaking {
+        padding: 1.25rem;
+        background: var(--break-bg);
+        border-bottom: 1px solid var(--line);
+      }
+      .breaking h2 {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.6rem;
+        font-family: var(--mono);
+        font-size: 1rem;
+        letter-spacing: -0.01em;
+      }
+      .flag {
+        font-size: 0.6875rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #ffffff;
+        background: var(--break);
+        padding: 0.2rem 0.45rem;
+        border-radius: 3px;
+      }
+      .breaking ol {
+        margin-top: 1rem;
+        display: grid;
+        gap: 0.85rem;
+      }
+      .breaking li {
+        padding-left: 1.4rem;
+        position: relative;
+        font-size: 0.9375rem;
+        color: #3d2b28;
+      }
+      .breaking li::before {
+        content: "→";
+        position: absolute;
+        left: 0;
+        top: 0;
+        font-family: var(--mono);
+        color: var(--break);
+        font-weight: 700;
+      }
+      .breaking b { color: var(--ink); }
+
+      /* RELEASE ---------------------------------------------------------- */
+      .rel {
+        display: grid;
+        gap: 1rem;
+        padding: 1.5rem 1.25rem;
+        border-bottom: 1px solid var(--line);
+      }
+      .rel__rail {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.5rem 0.9rem;
+      }
+      .ver {
+        font-family: var(--mono);
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+      .rel--past .ver {
+        font-size: 1.25rem;
+        color: var(--muted);
+      }
+      .stamp {
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        color: var(--faint);
+      }
+      .chip {
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        font-weight: 700;
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        padding: 0.15rem 0.4rem;
+        color: var(--muted);
+      }
+      .chip--now {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .summary {
+        font-size: 1rem;
+        color: var(--muted);
+        max-width: 42rem;
+      }
+      .entries {
+        display: grid;
+        gap: 0.9rem;
+        margin-top: 1rem;
+      }
+      .entry {
+        font-size: 0.9375rem;
+        display: grid;
+        gap: 0.35rem 1rem;
+        padding-top: 0.9rem;
+        border-top: 1px solid var(--line);
+      }
+      .entry:first-child {
+        padding-top: 0;
+        border-top: 0;
+      }
+      .tag {
+        align-self: start;
+        font-family: var(--mono);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--muted);
+      }
+      .tag::before {
+        content: "";
+        width: 0.5rem;
+        height: 0.5rem;
+        background: currentColor;
+        border-radius: 1px;
+        flex: none;
+      }
+      .tag--add { color: var(--add); }
+      .tag--fix { color: var(--accent); }
+      .tag--rm { color: var(--break); }
+      .entry h3 {
+        font-size: 1.0625rem;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+      }
+      .entry p { color: var(--muted); }
+      .ref {
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--faint);
+        overflow-wrap: anywhere;
+      }
+
+      /* OLDER ------------------------------------------------------------ */
+      .older {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--line);
+      }
+      .older > summary {
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        padding: 0.6rem 0;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--accent);
+      }
+      .older > summary::marker { content: ""; }
+      .older > summary::before {
+        content: "+";
+        font-weight: 700;
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        width: 1.35rem;
+        height: 1.35rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+      }
+      .older[open] > summary::before { content: "–"; }
+      .older:focus-within > summary::before {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .archive {
+        margin-top: 0.75rem;
+        display: grid;
+        gap: 0.6rem;
+      }
+      .archive li {
+        display: grid;
+        grid-template-columns: 4.25rem 1fr;
+        gap: 0.15rem 0.9rem;
+        padding-top: 0.6rem;
+        border-top: 1px solid var(--line);
+        font-size: 0.9375rem;
+        color: var(--muted);
+      }
+      .archive b {
+        font-family: var(--mono);
+        font-weight: 700;
+        color: var(--ink);
+        font-size: 0.875rem;
+      }
+
+      /* FOOT ------------------------------------------------------------- */
+      .foot {
+        padding: 1.25rem;
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        color: var(--faint);
+        display: grid;
+        gap: 0.4rem;
+      }
+
+      /* 34rem+ ----------------------------------------------------------- */
+      @media (min-width: 34rem) {
+        .entry { grid-template-columns: 7rem 1fr; }
+        .tag {
+          grid-row: span 3;
+          padding-top: 0.28rem;
+        }
+      }
+      @media (min-width: 48rem) {
+        body { padding: 3.5rem 2rem 5rem; }
+        .head { padding: 3rem 2.5rem 2rem; }
+        .breaking,
+        .older,
+        .foot { padding: 1.75rem 2.5rem; }
+        .rel {
+          grid-template-columns: 11rem 1fr;
+          gap: 1.5rem 2rem;
+          padding: 2.25rem 2.5rem;
+        }
+        .rel__rail { display: block; }
+        .stamp,
+        .chip {
+          display: block;
+          width: fit-content;
+          margin-top: 0.5rem;
+        }
+        .foot { grid-template-columns: 1fr auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <!-- HEAD ---------------------------------------------------------- -->
+      <header class="head">
+        <p class="eyebrow">Changelog</p>
+        <h1>Kestrel Platform</h1>
+        <p class="lede">
+          Every user-visible change to the Kestrel API, CLI and dashboard. Dates are the day a
+          release reached the stable channel.
+        </p>
+        <dl class="meta">
+          <div><dt>Latest</dt><dd>4.3.0</dd></div>
+          <div><dt>Released</dt><dd>4 Sep 2026</dd></div>
+          <div><dt>Channel</dt><dd>stable</dd></div>
+          <div><dt>API version</dt><dd>2026-06-01</dd></div>
+        </dl>
+      </header>
+
+      <!-- BREAKING ------------------------------------------------------ -->
+      <section class="breaking" aria-labelledby="breaking-h">
+        <h2 id="breaking-h">
+          <span class="flag">Breaking</span> Two changes need action before you upgrade
+        </h2>
+        <ol>
+          <li>
+            <b><code>GET /v1/runs</code> no longer returns <code>steps[]</code> inline.</b> Fetch
+            them from <code>/v1/runs/:id/steps</code>, or pass <code>?expand=steps</code> for the
+            old shape. The inline field is removed for good in 5.0.
+          </li>
+          <li>
+            <b>The CLI reads <code>KESTREL_TOKEN</code>, not <code>KESTREL_API_KEY</code>.</b> The
+            old variable still works until 1 Dec 2026 and prints a deprecation warning on every
+            invocation. <code>kestrel doctor</code> tells you which one you are on.
+          </li>
+        </ol>
+      </section>
+
+      <!-- CURRENT RELEASE ----------------------------------------------- -->
+      <section class="rel" aria-labelledby="v430">
+        <div class="rel__rail">
+          <h2 class="ver" id="v430">4.3.0</h2>
+          <p class="stamp">4 Sep 2026</p>
+          <p class="chip chip--now">Current</p>
+        </div>
+        <div>
+          <p class="summary">
+            Scheduled runs get a real backfill story, the run log stops truncating at 10k lines, and
+            the dashboard finally remembers which workspace you were in.
+          </p>
+          <ul class="entries">
+            <li class="entry">
+              <span class="tag tag--add">Added</span>
+              <h3>Backfill for scheduled runs</h3>
+              <p>
+                <code>kestrel schedule backfill &lt;id&gt; --from 2026-08-01</code> replays a
+                schedule over a past window, at most 50 runs at a time, with the same concurrency
+                limit as live execution.
+              </p>
+              <p class="ref">#2841 · docs/schedules#backfill</p>
+            </li>
+            <li class="entry">
+              <span class="tag tag--add">Added</span>
+              <h3>Run log streaming over SSE</h3>
+              <p>
+                <code>GET /v1/runs/:id/logs?stream=true</code> emits log lines as they are written.
+                Logs are retained for 30 days on Team plans, 7 on Free.
+              </p>
+              <p class="ref">#2803</p>
+            </li>
+            <li class="entry">
+              <span class="tag">Changed</span>
+              <h3>Run logs keep the last 200k lines, not 10k</h3>
+              <p>
+                Long-running jobs were silently losing their tail, which is precisely the part
+                anyone reads. Older lines are now dropped from the head instead.
+              </p>
+              <p class="ref">#2790 · reported by 14 workspaces</p>
+            </li>
+            <li class="entry">
+              <span class="tag tag--fix">Fixed</span>
+              <h3>Retries no longer double-count against the rate limit</h3>
+              <p>
+                An automatic retry consumed two units of quota instead of one. Affected workspaces
+                have had the difference credited back to the current billing period.
+              </p>
+              <p class="ref">#2822 · severity: high</p>
+            </li>
+            <li class="entry">
+              <span class="tag tag--rm">Removed</span>
+              <h3>The legacy <code>/v0</code> endpoints are gone</h3>
+              <p>
+                Deprecated since March, at 0.02% of traffic for the last eight weeks. Every caller
+                was contacted directly in August.
+              </p>
+              <p class="ref">#2755 · announced 12 Mar 2026</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- PREVIOUS RELEASE ---------------------------------------------- -->
+      <section class="rel rel--past" aria-labelledby="v422">
+        <div class="rel__rail">
+          <h2 class="ver" id="v422">4.2.2</h2>
+          <p class="stamp">21 Aug 2026</p>
+          <p class="chip">Patch</p>
+        </div>
+        <div>
+          <p class="summary">A patch release: one regression from 4.2.0 and two small corrections.</p>
+          <ul class="entries">
+            <li class="entry">
+              <span class="tag tag--fix">Fixed</span>
+              <h3>Webhook signatures verified against the wrong secret after rotation</h3>
+              <p>
+                For roughly six hours after a secret was rotated, deliveries were signed with the
+                retired key. Rotation now writes both keys and accepts either for 24 hours.
+              </p>
+              <p class="ref">#2731 · postmortem published</p>
+            </li>
+            <li class="entry">
+              <span class="tag">Changed</span>
+              <h3>Timeouts are reported in seconds everywhere</h3>
+              <p>The API returned milliseconds, the CLI printed seconds, and the dashboard mixed both.</p>
+              <p class="ref">#2724</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ARCHIVE ------------------------------------------------------- -->
+      <details class="older">
+        <summary>Six earlier releases, 4.0.0 – 4.2.1</summary>
+        <ul class="archive">
+          <li><b>4.2.1</b><span>Hotfix: dashboard failed to load for workspaces with over 500 schedules.</span></li>
+          <li><b>4.2.0</b><span>Schedules, per-workspace concurrency limits, and the run timeline view.</span></li>
+          <li><b>4.1.2</b><span>Fixed token refresh in the Python SDK; CLI binaries signed for macOS 15.</span></li>
+          <li><b>4.1.0</b><span>Webhooks with signed payloads and per-event delivery history.</span></li>
+          <li><b>4.0.1</b><span>Fixed the migration that left duplicated rows in <code>run_steps</code>.</span></li>
+          <li><b>4.0.0</b><span>The 2026-06-01 API version, workspaces, and the rewritten CLI.</span></li>
+        </ul>
+      </details>
+
+      <footer class="foot">
+        <p>Kestrel Platform · changelog maintained by the release team</p>
+        <p>Generated 4 Sep 2026, 09:12 UTC</p>
+      </footer>
+    </main>
+  </body>
+</html>
