@@ -14,13 +14,11 @@ describe('template API and promote flow', () => {
         body: JSON.stringify({
           slug: 'weekly-template-report',
           title: 'Week 34',
-          template: 'report',
+          template: 'one-pager',
           slots: {
             title: 'Week 34',
-            date: '2026-08-25',
-            summary: 'Shipped v2.1 and resolved queue drift.',
+            subtitle: 'Shipped v2.1 and resolved queue drift.',
             body: '## Highlights\n\n- Merged templates server-side.',
-            next_steps: '- Ship dashboard template controls.',
           },
           share: true,
         }),
@@ -33,9 +31,9 @@ describe('template API and promote flow', () => {
         title: 'Week 34',
         share: { url: `${ctx.config.baseUrl}/a/${(body.share as { share_id: string }).share_id}` },
       });
-      expect(body.content).toContain('> Shipped v2.1 and resolved queue drift.');
-      expect(body.content).toContain('## Body\n\n## Highlights');
-      expect(body.content).toContain('## Next steps\n\n- Ship dashboard template controls.');
+      expect(body.content).toContain('# Week 34');
+      expect(body.content).toContain('_Shipped v2.1 and resolved queue drift._');
+      expect(body.content).toContain('## Highlights\n\n- Merged templates server-side.');
       expect(body.content).not.toMatch(/\{\{[a-z0-9_]+\}\}/);
     } finally {
       await ctx.cleanup();
@@ -52,7 +50,7 @@ describe('template API and promote flow', () => {
         body: JSON.stringify({
           slug: 'missing-slots',
           title: 'Missing',
-          template: 'report',
+          template: 'one-pager',
           slots: {},
         }),
       });
@@ -61,8 +59,8 @@ describe('template API and promote flow', () => {
         error: {
           code: 'validation_failed',
           details: {
-            missing_slots: ['title', 'date', 'summary', 'body', 'next_steps'],
-            valid_slots: ['title', 'date', 'summary', 'body', 'next_steps'],
+            missing_slots: ['title', 'subtitle', 'body'],
+            valid_slots: ['title', 'subtitle', 'body'],
           },
         },
       });
@@ -73,14 +71,12 @@ describe('template API and promote flow', () => {
         body: JSON.stringify({
           slug: 'unknown-slot',
           title: 'Unknown',
-          template: 'report',
+          template: 'one-pager',
           slots: {
-            title: 'Unknown',
-            date: '2026-08-25',
-            summary: 'Summary',
-            body: 'Body',
-            next_steps: 'Next',
-            surprise: 'Nope',
+            title: 'Week 34',
+            subtitle: 'Shipped v2.1 and resolved queue drift.',
+            body: '## Highlights\n\n- Merged templates server-side.',
+            next_steps: 'A slot this template does not declare.',
           },
         }),
       });
@@ -89,8 +85,8 @@ describe('template API and promote flow', () => {
         error: {
           code: 'validation_failed',
           details: {
-            unknown_slots: ['surprise'],
-            valid_slots: ['title', 'date', 'summary', 'body', 'next_steps'],
+            unknown_slots: ['next_steps'],
+            valid_slots: ['title', 'subtitle', 'body'],
           },
         },
       });
@@ -338,7 +334,7 @@ describe('template categories', () => {
       const byslug = new Map(items.map((item) => [item.slug, item.category]));
       expect(byslug.get('daily-digest')).toBe('meetings');
       expect(byslug.get('metrics-dashboard')).toBe('status');
-      expect(byslug.get('report-html')).toBe('research');
+      expect(byslug.get('report')).toBe('research');
     } finally {
       await ctx.cleanup();
     }
@@ -508,7 +504,7 @@ describe('retired template slugs keep answering', () => {
     }
   });
 
-  it('names the retirement when a SLOTTED successor takes different slots', async () => {
+  it('names the retirement when the successor no longer takes the slots you saved', async () => {
     const ctx = await createApiTestContext();
 
     try {
@@ -534,9 +530,52 @@ describe('retired template slugs keep answering', () => {
       // Without this the agent reads "unknown slot: tldr" and concludes it made a typo. The point of
       // the retirement map is that the answer names what happened and where the template went.
       expect(body.error.details).toMatchObject({
-        retired_template: { requested: 'briefing', resolved_to: 'report' },
+        template_changed: { slug: 'report', requested: 'briefing', now: 'zero-slot html' },
       });
-      expect(body.error.details.valid_slots).toContain('next_steps');
+      expect(body.error.details.ignored_slots).toContain('tldr');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('answers report-html, the slug the HTML report used to live under', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/templates/report-html', {
+        headers: ctx.authHeaders,
+      });
+      // Zero-slot both sides, so this alias is fully transparent: an agent that saved
+      // `template: "report-html"` keeps publishing the same kind of document.
+      expect(response.status).toBe(200);
+      expect(await json(response)).toMatchObject({ slug: 'report', type: 'html' });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('refuses slots sent to dashboard, whose successor takes none', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'dashboard-with-the-old-slots',
+          title: 'Weekly numbers',
+          template: 'dashboard',
+          slots: { title: 'Weekly numbers', updated: 'today', metrics: '| a | b |', details: 'x' },
+        }),
+      });
+      // The alias lands on a zero-slot template, which would otherwise answer 201 and copy our
+      // demo dashboard under the caller's title. This is the derived arm of the guard, not the
+      // flipped-slug list: it fires because the slug resolved to a different one.
+      expect(response.status).toBe(400);
+      const body = (await json(response)) as { error: { details: Record<string, unknown> } };
+      expect(body.error.details).toMatchObject({
+        template_changed: { slug: 'metrics-dashboard', requested: 'dashboard' },
+      });
     } finally {
       await ctx.cleanup();
     }

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Do teams keep paying for AI meeting notes after month three?</title>
+<!--
+  Agent Artifacts template · research / research-brief
+  VOICE  editorial serif (ui-serif, Charter, Iowan Old Style, Georgia)
+  SCHEME warm paper #f0eae0 · rust accent #a8452a · petrol data hue #2c5670
+
+  REWRITING THIS ARTIFACT
+  · The title is the QUESTION. The answer block directly under it is the answer,
+    stated in the first sentence. Never bury it.
+  · DELETE, don't empty. No sources? Remove the rail. Nothing unknown? Remove
+    that section. Never a heading with nothing under it.
+  · Numbered evidence: three findings is a finished brief, eight is a long one.
+  · Never pin the root to the viewport height, and never give html or body a
+    percentage height; no fixed or sticky positioning. The host frame measures this
+    document and does not scroll.
+  · Nothing external: no web fonts, images, scripts or stylesheets.
+-->
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{
+  --bg:#f0eae0;--panel:#fbf7f1;--paper:#fffdf9;
+  --ink:#231e1a;--muted:#5b5249;--subtle:#72685f;
+  --line:#e2d9cc;--line2:#cfc3b3;
+  --rust:#a8452a;--rust-soft:#fbf0e9;--rust-line:#e8c6b5;
+  --data:#2c5670;--track:#ddd5c8;
+  --serif:ui-serif,Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:2.75rem;--s8:4rem;
+}
+body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
+  font-family:var(--serif);font-size:1.0625rem;line-height:1.62;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.012em;font-weight:600}
+p{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+.wrap{max-width:68rem;margin-inline:auto}
+.kicker{color:var(--subtle);font-family:var(--mono);font-size:.6875rem;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase}
+
+/* MASTHEAD */
+.mast{padding-bottom:var(--s5);border-bottom:2px solid var(--ink)}
+.eyebrow{display:inline-flex;align-items:center;gap:var(--s2);color:var(--rust);
+  font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+.eyebrow::before{content:"";width:.4375rem;height:.4375rem;border-radius:99px;background:var(--rust)}
+.q{max-width:24ch;margin-top:var(--s4);font-size:clamp(1.875rem,4.6vw,3rem);letter-spacing:-.024em;
+  line-height:1.14}
+.meta{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);margin-top:var(--s5);
+  color:var(--muted);font-size:.8125rem}
+.meta b{font-weight:600;color:var(--ink)}
+
+/* ANSWER — the one thing a reader is allowed to take away */
+.answer{margin-top:var(--s5);padding:var(--s5);border:1px solid var(--rust-line);
+  border-radius:.75rem;background:var(--rust-soft)}
+.answer h2{color:var(--rust);font-family:var(--mono);font-size:.6875rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase}
+.answer p{margin-top:var(--s3);font-size:1.25rem;line-height:1.45}
+.answer p+p{font-size:1.0625rem;line-height:1.6;color:var(--muted)}
+
+/* TWO-COLUMN BODY: evidence + a sources rail */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 16.5rem;gap:var(--s7);margin-top:var(--s7);
+  align-items:start}
+.h-sec{padding-bottom:var(--s2);border-bottom:1px solid var(--line2);
+  font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--subtle)}
+
+/* EVIDENCE — a serif numeral in the gutter, hairline between items */
+.ev{margin-top:var(--s5)}
+.ev li{display:grid;grid-template-columns:2.75rem minmax(0,1fr);gap:var(--s4);
+  padding-bottom:var(--s5)}
+.ev li+li{padding-top:var(--s5);border-top:1px solid var(--line)}
+.ev li:last-child{padding-bottom:0}
+.ev__n{color:var(--rust);font-family:var(--mono);font-size:.8125rem;font-weight:600;letter-spacing:.06em;
+  padding-top:.2rem}
+.ev h3{font-size:1.1875rem}
+.ev p{margin-top:var(--s2);color:var(--muted)}
+.cite{display:block;margin-top:var(--s3);color:var(--subtle);font-size:.8125rem;line-height:1.5}
+.cite code{font-family:var(--mono);font-size:.8125rem;color:var(--muted)}
+.pill{display:inline-block;margin-right:.4em;padding:0 .4em;border:1px solid var(--line2);
+  border-radius:.25rem;font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted)}
+.pill--p{border-color:var(--rust-line);background:var(--rust-soft);color:var(--rust)}
+
+/* RAIL */
+.rail{display:grid;gap:var(--s5)}
+.card{padding:var(--s5);border:1px solid var(--line);border-radius:.75rem;background:var(--panel)}
+.card>p.conf{margin-top:var(--s3);font-size:1.375rem;font-weight:600;color:var(--ink);line-height:1.3}
+.scale{display:flex;gap:3px;margin-top:var(--s3)}
+.scale span{flex:1 1 0;height:.5rem;border-radius:2px;background:var(--track)}
+.scale span.on{background:var(--data)}
+.card>p{margin-top:var(--s3);color:var(--muted);font-size:.875rem;line-height:1.5}
+.srcs{margin-top:var(--s4)}
+.srcs li{display:grid;grid-template-columns:2.2rem minmax(0,1fr);gap:var(--s2);
+  color:var(--muted);font-size:.8125rem;line-height:1.45}
+.srcs li+li{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
+.srcs b{color:var(--subtle);font-family:var(--mono);font-size:.8125rem;font-weight:600;white-space:nowrap}
+.srcs em{display:block;font-style:normal;color:var(--subtle);font-family:var(--mono);font-size:.75rem;
+  margin-top:.15rem}
+
+/* CLOSERS */
+.closers{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:var(--s5);
+  margin-top:var(--s7);padding-top:var(--s5);border-top:2px solid var(--ink)}
+.closers h2{font-size:1.1875rem}
+.bul{margin-top:var(--s4)}
+.bul li{position:relative;padding-left:var(--s5);color:var(--muted);font-size:.9375rem;line-height:1.55}
+.bul li+li{margin-top:var(--s3)}
+.bul li::before{content:"";position:absolute;top:.66rem;left:var(--s2);width:.3125rem;height:.3125rem;
+  border-radius:99px;background:var(--rust)}
+.bul strong{color:var(--ink);font-weight:600}
+.colophon{margin-top:var(--s6);padding-top:var(--s4);border-top:1px solid var(--line);
+  color:var(--subtle);font-size:.8125rem;line-height:1.55}
+
+@media (max-width:62rem){
+  .cols{grid-template-columns:minmax(0,1fr);gap:var(--s6)}
+  .rail{grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+}
+@media (max-width:34rem){
+  :root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
+  body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.46}
+  .q{line-height:1.1}
+  .mast{padding-bottom:var(--s4)}
+  .meta{margin-top:var(--s4);gap:var(--s1) var(--s4)}
+  .answer{padding:var(--s4)}
+  .answer p{margin-top:var(--s2);font-size:1.0625rem;line-height:1.34}
+  .answer p+p{margin-top:var(--s2)}
+  .cols{margin-top:var(--s5);gap:var(--s5)}
+  .h-sec{padding-bottom:var(--s1)}
+  .ev p,.bul li,.card>p,.srcs li,.cite{line-height:1.36}
+  .ev__n{padding-top:.1rem}
+  .ev h3{font-size:1rem;line-height:1.16}
+  .ev p{margin-top:var(--s1)}
+  .ev li{grid-template-columns:1.75rem minmax(0,1fr);gap:var(--s3);padding-bottom:var(--s3)}
+  .ev li+li{padding-top:var(--s3)}
+  .cite{margin-top:var(--s2)}
+  .card{padding:var(--s4)}
+  .card>p{margin-top:var(--s2)}
+  .conf{line-height:1.2}
+  .scale{margin-top:var(--s2)}
+  .srcs li+li{margin-top:var(--s2);padding-top:var(--s2)}
+  /* the rail stops being a rail: confidence and method pair up, sources runs full width */
+  .rail{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4)}
+  .rail>section:nth-child(2){grid-column:1/-1;order:1}
+  .closers{margin-top:var(--s5);padding-top:var(--s3);gap:var(--s4)}
+  .bul li+li{margin-top:var(--s2)}
+  .colophon{margin-top:var(--s5);padding-top:var(--s3)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <span class="eyebrow">Research brief</span>
+    <h1 class="q">Do teams keep paying for AI meeting notes after month three?</h1>
+    <p class="meta">
+      <span>Prepared for <b>Product leadership</b></span>
+      <span>Analyst <b>Sam Okonjo</b></span>
+      <span><b>14 September 2026</b></span>
+      <span><b>9 sources</b>, 4 primary</span>
+    </p>
+  </header>
+
+  <section class="answer" aria-labelledby="ans">
+    <h2 id="ans">Answer</h2>
+    <p>Not by default. Month-six retention for AI note-takers sits between 18% and 34% in every
+      cohort we could read — <strong>unless the notes are written somewhere the team already
+      works</strong>. Where a destination is connected in the first fortnight, month-six retention
+      is two to three times higher in all four datasets that report it.</p>
+    <p>The lever is onboarding, not summarisation quality: no source shows summary accuracy
+      predicting renewal once it clears roughly 90%.</p>
+  </section>
+
+  <div class="cols">
+    <main>
+      <h2 class="h-sec">Evidence</h2>
+      <ol class="ev">
+        <li>
+          <span class="ev__n">01</span>
+          <div>
+            <h3>Month-six retention clusters in the low twenties</h3>
+            <p>Across six vendors that disclose cohort curves, median month-six retention is 24%; best 34%,
+worst 18%. Month three is where the curve bends, not month one.</p>
+            <span class="cite"><span class="pill">Secondary</span>Bracken Research, <em>State of Meeting Intelligence 2026</em>, June 2026 · n=6
+              vendor cohorts · <code>bracken-research.com/smi-2026</code></span>
+          </div>
+        </li>
+        <li>
+          <span class="ev__n">02</span>
+          <div>
+            <h3>A connected destination is the single strongest correlate</h3>
+            <p>Workspaces that connected a CRM, tracker or wiki within fourteen days retained at 71% by month
+six, against 22% for those that never did — a gap that holds after controlling for seat count
+and plan.</p>
+            <span class="cite"><span class="pill pill--p">Primary</span>Internal cohort analysis,
+              4,182 workspaces activated Jan–Mar 2026 · queried 11 Sep 2026</span>
+          </div>
+        </li>
+        <li>
+          <span class="ev__n">03</span>
+          <div>
+            <h3>Summary quality is table stakes, not a differentiator</h3>
+            <p>Buyers rank accuracy in the top three reasons to <em>buy</em> and outside the top five
+              reasons to <em>renew</em>. Every product in the set was "good enough" on transcription.</p>
+            <span class="cite"><span class="pill pill--p">Primary</span>Buyer interviews, 22
+              accounts, 20–120 seats, Jul–Aug 2026 · transcripts on file</span>
+          </div>
+        </li>
+        <li>
+          <span class="ev__n">04</span>
+          <div>
+            <h3>Churn happens at the renewal date, not during the trial</h3>
+            <p>Trial-to-paid is stable at 38%, but 81% of lost revenue leaves at the first annual renewal —
+which is why quarterly dashboards read this market as healthier than it is.</p>
+            <span class="cite"><span class="pill pill--p">Primary</span>Internal billing extract,
+              FY2025–26 · plus two vendor disclosures reporting the same shape</span>
+          </div>
+        </li>
+        <li>
+          <span class="ev__n">05</span>
+          <div>
+            <h3>Price is not the stated reason — dormant seats are</h3>
+            <p>Three of twenty-two churned accounts named price. Fourteen named seats they paid for and never
+used — the same complaint under another name.</p>
+            <span class="cite"><span class="pill pill--p">Primary</span>Exit interviews, 22 accounts
+              · coded independently by two analysts, agreement 0.84</span>
+          </div>
+        </li>
+      </ol>
+    </main>
+
+    <aside class="rail">
+      <section class="card" aria-labelledby="cf">
+        <h2 class="kicker" id="cf">Confidence</h2>
+        <p class="conf">Moderate</p>
+        <p class="scale" role="img" aria-label="Confidence: moderate, 3 of 5">
+          <span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span>
+        </p>
+        <p>Three of five. The direction is consistent across nine sources; the size of the effect
+          rests on two vendor cohorts that are not audited.</p>
+      </section>
+
+      <section class="card" aria-labelledby="sr">
+        <h2 class="kicker" id="sr">Sources · 9</h2>
+        <ol class="srcs">
+          <li><b>01</b><div>Bracken Research, State of Meeting Intelligence 2026<em>Jun 2026 · secondary</em></div></li>
+          <li><b>02</b><div>Internal cohort analysis, 4,182 workspaces<em>Sep 2026 · primary</em></div></li>
+          <li><b>03</b><div>Buyer interviews, 22 accounts, 20–120 seats<em>Jul–Aug 2026 · primary</em></div></li>
+          <li><b>04–05</b><div>Internal billing extract FY2025–26; exit interviews, 22 accounts,
+            double-coded<em>Aug–Sep 2026 · primary</em></div></li>
+          <li><b>06–09</b><div>Four vendor investor updates and pricing pages, read 8–10 Sep<em>2026 · secondary</em></div></li>
+        </ol>
+      </section>
+
+      <section class="card" aria-labelledby="mt">
+        <h2 class="kicker" id="mt">Method</h2>
+        <p>Desk review of published cohort curves, then two internal datasets and twenty-two
+          interviews against our own base. Retention is measured on revenue, not logos.</p>
+      </section>
+    </aside>
+  </div>
+
+  <div class="closers">
+    <section aria-labelledby="ch">
+      <h2 id="ch">What would change this answer</h2>
+      <ul class="bul">
+        <li><strong>An audited cohort curve.</strong> Two of six are self-reported with no methodology note; if either is out by five points the
+spread widens enough to matter.</li>
+        <li><strong>A destination-connection experiment.</strong> The 71%/22% split is correlational; a forced-connection onboarding test settles it in one
+          quarter.</li>
+        <li><strong>A second renewal cycle.</strong> Every dataset stops at month six or the first renewal. Nothing here says what month eighteen
+looks like.</li>
+      </ul>
+    </section>
+    <section aria-labelledby="uk">
+      <h2 id="uk">Still unknown</h2>
+      <ul class="bul">
+        <li>Whether the destination effect survives when the destination is a wiki nobody reads.</li>
+        <li>How much of the month-three bend is meeting volume falling, not the tool failing.</li>
+        <li>Whether teams under twenty seats behave like the mid-market at all: 61 in the base, an interval
+too wide to quote.</li>
+      </ul>
+    </section>
+  </div>
+
+  <footer class="colophon">Compiled by Sam Okonjo for the product leadership review, 14 September 2026. Secondary sources
+were read 8–10 September; internal figures were queried on 11 September and will drift.
+Transcripts and the cohort query are on file with Research.</footer>
+
+</div>
+</body>
+</html>

@@ -77,7 +77,7 @@ describe('B-C5 · a revealed panel is somewhere the browser actually goes', () =
     const ctx = await makeContext();
     const { cookie } = await seed(ctx);
     const report = ctx.db.sqlite
-      .prepare("SELECT id FROM templates WHERE slug = 'report' AND account_id IS NULL")
+      .prepare("SELECT id FROM templates WHERE slug = 'one-pager' AND account_id IS NULL")
       .get() as { id: string };
 
     const listing = await (
@@ -115,7 +115,7 @@ describe('B-C6 · what can be opened can be closed', () => {
     const ctx = await makeContext();
     const { cookie } = await seed(ctx);
     const report = ctx.db.sqlite
-      .prepare("SELECT id FROM templates WHERE slug = 'report' AND account_id IS NULL")
+      .prepare("SELECT id FROM templates WHERE slug = 'one-pager' AND account_id IS NULL")
       .get() as { id: string };
 
     const html = await (

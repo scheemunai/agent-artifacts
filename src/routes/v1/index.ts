@@ -711,13 +711,13 @@ Do not send response-only fields such as \`id\`, \`version_num\`, \`share.url\`,
 ## 2. Publish with a template — consistent, on-brand output
 
 GET /v1/templates                       → list (each has a slots array)
-GET /v1/templates/report                → details incl. content, type and slots
+GET /v1/templates/one-pager             → details incl. content, type and slots
 
 curl -X POST ${config.baseUrl}/v1/artifacts \\
   -H "Authorization: Bearer aa_bot_YOUR_KEY" -H "Content-Type: application/json" \\
-  -d '{"slug":"weekly-report","title":"Week 34","template":"report",
-       "slots":{"title":"Week 34","date":"2026-08-25","summary":"Shipped v2.1 ...",
-                "body":"## Highlights\\n...","next_steps":"- Ship v2.2"},"share":true}'
+  -d '{"slug":"weekly-update","title":"Week 34","template":"one-pager",
+       "slots":{"title":"Week 34","subtitle":"Shipped v2.1",
+                "body":"## Highlights\\n..."},"share":true}'
 
 Send template + slots INSTEAD of type + content (server uses the template's type).
 For templates with slots, missing/unknown slot names come back as a 400 that
@@ -727,8 +727,8 @@ lists the valid slots. Templates with no slots are copied verbatim.
 
 Check the slots array before you reach for \`template:\`. The rule, so you do not
 have to memorise a list that grows: every HTML built-in ships with
-\`"slots": []\`, and only the three markdown built-ins — \`report\`, \`one-pager\`
-and \`dashboard\` — take slots. A zero-slot template is an EXAMPLE,
+\`"slots": []\`, and \`one-pager\` is the only markdown built-in left, so it is the
+only one that takes slots. A zero-slot template is an EXAMPLE,
 not a form. \`template:"daily-digest"\` copies that example VERBATIM and any
 \`slots\` you send are silently ignored, so you get a 201 and the demo content, not
 your content. That is working as designed, and it is not what you wanted.
@@ -750,11 +750,13 @@ rehash it, publish it as \`type\`+\`content\`.
 A slug is an API, so a retired template keeps its name even when its content goes. Two are retired
 so far and both still resolve, to the template that replaced them:
 
-  recap    → meeting-recap   (zero-slot HTML, as \`recap\` was — nothing changes for you)
-  briefing → report          (both markdown, but \`report\` takes DIFFERENT slots)
+  recap       → meeting-recap  (zero-slot HTML both sides — nothing changes for you)
+  report-html → report         (zero-slot HTML both sides — nothing changes for you)
+  briefing    → report         (\`briefing\` took slots; \`report\` no longer does — see below)
+  dashboard   → metrics-dashboard  (\`dashboard\` took slots; the successor does not)
 
-\`changelog\` is a different case again: same slug, but it became a zero-slot HTML
-document, so the six slots it used to take are gone. Sending them now answers 400
+\`changelog\` and \`report\` are a different case again: same slug, but each became a
+zero-slot HTML document, so the slots they used to take are gone. Sending them now answers 400
 with \`details.template_changed\` rather than a 201 carrying our demo release notes —
 a wrong 201 is the one failure nobody ever reports.
 
@@ -778,7 +780,7 @@ Request body:
 - artifact_id: existing artifact id in your account.
 - name: template display name (1..80 chars).
 - slug: lowercase letters/numbers/dashes, unique among your account templates AND
-  distinct from every built-in slug. Built-in slugs (report, changelog, briefing,
+  distinct from every built-in slug. Built-in slugs (report, changelog, one-pager,
   dashboard, one-pager, recap, metrics-dashboard, report-html) are RESERVED: you
   cannot create a template that shadows one.
 - description: optional short description (max 300 chars).

@@ -125,13 +125,11 @@ describe('V1 contract endpoint', () => {
     const templatePublishExample = {
       slug: 'weekly-report',
       title: 'Week 34',
-      template: 'report',
+      template: 'one-pager',
       slots: {
         title: 'Week 34',
-        date: '2026-08-25',
-        summary: 'Shipped v2.1 ...',
-        body: '## Highlights\n...',
-        next_steps: '- Ship v2.2',
+        subtitle: 'Shipped v2.1 and resolved queue drift.',
+        body: '## Highlights\n\n- Merged templates server-side.',
       },
       share: true,
     };
@@ -161,7 +159,7 @@ describe('V1 contract endpoint', () => {
         share: { url: expect.stringMatching(new RegExp(`^${ctx.config.baseUrl}/a/`)) },
       });
       expect(body.content).toContain('## Highlights');
-      expect(body.content).toContain('Ship v2.2');
+      expect(body.content).toContain('Merged templates server-side.');
     } finally {
       await ctx.cleanup();
     }
@@ -238,9 +236,9 @@ describe('V1 contract endpoint', () => {
 
       // A retirement the agent finds out about from a 400 is a retirement we never hear about.
       expect(contract).toContain('Retired template slugs still answer');
-      expect(contract).toContain('recap    → meeting-recap');
+      expect(contract).toContain('recap       → meeting-recap');
       expect(contract).toContain('details.retired_template');
-      for (const slug of ['report', 'one-pager', 'dashboard', 'daily-digest']) {
+      for (const slug of ['one-pager', 'daily-digest']) {
         expect(contract).toContain(slug);
       }
 
@@ -303,6 +301,7 @@ describe('V1 contract endpoint', () => {
         .map((item) => item.slug)
         .sort();
       expect(zeroSlotBuiltIns).toEqual([
+        'case-study',
         'changelog',
         'checklist',
         'daily-digest',
@@ -312,10 +311,14 @@ describe('V1 contract endpoint', () => {
         'meeting-recap',
         'metrics-dashboard',
         'migration-guide',
+        'postmortem',
         'project-plan',
+        'project-status',
         'proposal',
-        'report-html',
+        'report',
+        'research-brief',
         'runbook',
+        'service-health',
         'spec',
       ]);
     } finally {

@@ -36,6 +36,7 @@ export interface StarterTemplate {
   category: TemplateCategory;
   type: ArtifactType;
   thumbnail?: string | undefined;
+  thumbnailViewport?: number | undefined;
   content: string;
   slots: TemplateSlot[];
 }
@@ -98,6 +99,15 @@ const manifestEntrySchema = z
     type: artifactTypeSchema,
     thumbnail: z.string().min(1).optional(),
     content_file: z.string().min(1),
+    /**
+     * The viewport width the thumbnail is captured at, when the type default is wrong for this
+     * document. It lives HERE, on the manifest line, because it used to live in a lookup table
+     * inside `scripts/build-template-thumbs.mjs` keyed by slug — a second source of truth that
+     * fails SILENTLY: a key that stops matching falls through to the type default and produces a
+     * wrong-looking thumbnail rather than an error. `report-html` renaming to `report` was that
+     * trap, armed and pointing at a real rename. One place, travelling with the entry it describes.
+     */
+    thumbnail_viewport: z.number().int().min(320).max(1920).optional(),
     slots: z.array(templateSlotSchema).default([]),
   })
   .strict();
@@ -158,6 +168,9 @@ export function loadStarterTemplates(rootDir?: string): StarterTemplate[] {
       category: entry.category,
       type: entry.type,
       ...(entry.thumbnail !== undefined ? { thumbnail: entry.thumbnail } : {}),
+      ...(entry.thumbnail_viewport !== undefined
+        ? { thumbnailViewport: entry.thumbnail_viewport }
+        : {}),
       content,
       slots: entry.slots,
     };
@@ -237,14 +250,23 @@ export async function mergeTemplate(input: {
     // zero-slot HTML document, so a saved workflow would keep getting 201 — and the demo release
     // notes instead of its own. A silent 201 with the wrong content is worse than any error,
     // because nothing anywhere reports it.
+    // Two ways to arrive here holding slots that will be dropped, and both are silent:
+    //   - the slug FLIPPED under the caller (`changelog`), or
+    //   - the slug was RETIRED and its alias landed on a zero-slot successor. `briefing` → `report`
+    //     is slotted → slotted and already errors on slot names; an alias that points at a
+    //     zero-slot template would answer 201 and copy our demo document instead. Deriving that
+    //     case from `input.slug !== template.slug` means it is covered for every future alias
+    //     without anyone remembering to add one.
     const supplied = Object.keys(input.slots ?? {});
-    if (supplied.length > 0 && FLIPPED_TEMPLATE_SLUGS.has(template.slug)) {
+    const aliased = input.slug !== template.slug;
+    if (supplied.length > 0 && (aliased || FLIPPED_TEMPLATE_SLUGS.has(template.slug))) {
       throw new AppError(400, 'validation_failed', 'Template no longer takes slots', {
         template: template.slug,
         ignored_slots: supplied,
         valid_slots: [],
         template_changed: {
           slug: template.slug,
+          ...(aliased ? { requested: input.slug } : {}),
           now: `zero-slot ${template.type}`,
           what_to_do:
             'GET the template, rewrite its content in your own words, and publish it as type + content. Sending slots would have been ignored.',
@@ -598,10 +620,44 @@ function seedSqliteStarterTemplates(
   });
 
   seed();
+
+  const live = starterTemplates.map((template) => template.slug);
+  const retired = handle.sqlite
+    .prepare(
+      `DELETE FROM templates
+       WHERE account_id IS NULL AND slug NOT IN (${live.map(() => '?').join(', ')})
+       RETURNING slug`
+    )
+    .all(live) as Array<{ slug: string }>;
+  if (retired.length > 0) {
+    logger.info(
+      { slugs: retired.map((row) => row.slug) },
+      'database.templates.retired_built_ins_removed'
+    );
+  }
+
   logger.info({ count: starterTemplates.length }, 'database.templates.seeded');
   return { insertedOrUpdated: starterTemplates.length };
 }
 
+/**
+ * Built-in rows whose slug has left the manifest are DELETED, not left behind.
+ *
+ * Found by running a deploy rather than reasoning about one: seeded a database with the old
+ * eight-template lineup, then booted the new build against it. The upsert refreshed all 21 current
+ * built-ins correctly — and left `recap`, `briefing` and `report-html` sitting there with their old
+ * content, for 24 rows total.
+ *
+ * That is worse than three stale rows. `resolveTemplate` tries an EXACT match before it follows a
+ * retirement alias, so a surviving `recap` row means `template: "recap"` resolves to the ghost and
+ * the alias never fires — the entire retirement design, silently bypassed in production while
+ * passing every test, because tests start from an empty database and production does not.
+ * `GET /v1/templates` reads the database and `/templates` reads the manifest, so the API and the
+ * public page would have disagreed about what exists.
+ *
+ * Scoped to `account_id IS NULL`: an account's own template is never touched, including one that
+ * has taken a freed slug.
+ */
 async function seedPostgresStarterTemplates(
   handle: PostgresDatabaseHandle,
   logger: Logger,
@@ -644,6 +700,20 @@ async function seedPostgresStarterTemplates(
           record.slots,
           record.now,
         ]
+      );
+    }
+
+    const live = starterTemplates.map((template) => template.slug);
+    const retired = await client.query<{ slug: string }>(
+      `DELETE FROM templates
+       WHERE account_id IS NULL AND slug <> ALL($1::text[])
+       RETURNING slug`,
+      [live]
+    );
+    if (retired.rows.length > 0) {
+      logger.info(
+        { slugs: retired.rows.map((row) => row.slug) },
+        'database.templates.retired_built_ins_removed'
       );
     }
 
@@ -748,6 +818,8 @@ async function listTemplateRows(
 const RETIRED_TEMPLATE_SLUGS: Readonly<Record<string, string>> = {
   recap: 'meeting-recap',
   briefing: 'report',
+  'report-html': 'report',
+  dashboard: 'metrics-dashboard',
 };
 
 /**
@@ -785,7 +857,7 @@ export function retiredTemplateSuccessor(slug: string): string | null {
  * document with a 201 on it. Add a slug here in the same change that flips it; `report` joins when
  * its HTML replacement lands.
  */
-const FLIPPED_TEMPLATE_SLUGS = new Set(['changelog']);
+const FLIPPED_TEMPLATE_SLUGS = new Set(['changelog', 'report']);
 
 async function resolveTemplateExact(
   db: DatabaseHandle,

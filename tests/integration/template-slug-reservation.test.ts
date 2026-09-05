@@ -76,7 +76,8 @@ describe('built-in template slugs are reserved', () => {
       expect(detail.status).toBe(200);
       const template = await json(detail);
       expect(template).toMatchObject({ slug: 'report', built_in: true });
-      expect((template.slots as unknown[]).length).toBe(5);
+      // `report` is a zero-slot HTML document since wave 2; the reservation is what this asserts.
+      expect((template.slots as unknown[]).length).toBe(0);
     } finally {
       await ctx.cleanup();
     }
@@ -152,20 +153,18 @@ describe('built-in template slugs are reserved', () => {
         body: JSON.stringify({
           slug: 'uses-report',
           title: 'Week 35',
-          template: 'report',
+          template: 'one-pager',
           slots: {
-            title: 'Week 35',
-            date: '2026-08-30',
-            summary: 'Reserved built-in slugs.',
-            body: '## Highlights\n\n- Shadowing is refused.',
-            next_steps: '- Deploy.',
+            title: 'Week 34',
+            subtitle: 'Shipped v2.1 and resolved queue drift.',
+            body: '## Highlights\n\n- Merged templates server-side.',
           },
         }),
       });
       expect(publish.status).toBe(201);
       const body = await json(publish);
-      expect(body.content).toContain('Reserved built-in slugs.');
-      expect(body.content).toContain('- Shadowing is refused.');
+      expect(body.content).toContain('_Shipped v2.1 and resolved queue drift._');
+      expect(body.content).toContain('- Merged templates server-side.');
       expect(body.content).not.toMatch(/\{\{[a-z0-9_]+\}\}/);
     } finally {
       await ctx.cleanup();

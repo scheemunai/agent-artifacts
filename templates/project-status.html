@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SOC 2 Type II readiness — status, week of 8 September</title>
+<!--
+  Agent Artifacts template · status / project-status
+  VOICE  neo-grotesque ("Helvetica Neue", Helvetica, Arial, Liberation Sans), tabular figures
+  SCHEME light neutral #eef0f1 · slate-teal data #2f6d78 · state colours only, always with a word
+
+  REWRITING THIS ARTIFACT
+  · The verdict goes first and it is a JUDGEMENT, not a summary. On track / At risk /
+    Off track, then one sentence saying why, then what changed since last time.
+  · If the verdict is anything but "On track", the reason must be one of the blockers
+    below it. A verdict with no blocker behind it is a guess.
+  · "Needs a human" is the point of this artifact. Every entry names one person, one
+    decision and one date. If nothing needs a decision, delete the section.
+  · State ALWAYS carries a word and a shape, never colour alone.
+  · DELETE, don't empty. No blockers? Remove the section and say so in the verdict.
+  · Never pin the root to the viewport height, and never give html or body a
+    percentage height; no fixed or sticky positioning. The host frame measures this
+    document and does not scroll.
+  · Nothing external: no web fonts, images, scripts or stylesheets.
+-->
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{
+--bg:#eef0f1;--card:#fff;--tint:#f7f8f9;
+--ink:#14181b;--muted:#59646a;--subtle:#626c72;
+--line:#e4e8ea;--line2:#ccd3d6;
+--data:#2f6d78;--data3:#74a8b0;--track:#d8dfe1;
+--good:#1c6b4d;--good-bg:#e8f2ee;--warn:#8a5606;--warn-bg:#f8f0e2;--warn-line:#e6cfa4;
+--bad:#a52f26;--bad-bg:#f8ecea;
+--sans:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",sans-serif;
+--s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:2.75rem;--s8:4rem;
+--r:.625rem}
+body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
+font-family:var(--sans);font-size:1rem;line-height:1.5;font-variant-numeric:tabular-nums;
+-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.15;letter-spacing:-.02em}
+p{margin:0}ul,ol{margin:0;padding:0;list-style:none}
+.page{max-width:70rem;margin-inline:auto}
+h1,h2,h3,.lab,/* state chip — word + shape, never colour alone */.chip,.facts dd,.counts dt,.counts dd,.rail__d,.rail__s,.m__label,.m__val,.blk__need span,.ask__n{font-weight:700}
+.lab{font-size:.6875rem;letter-spacing:.09em;text-transform:uppercase}
+.h-sec{padding-bottom:var(--s2);border-bottom:1px solid var(--line2);color:var(--subtle)}
+.sec{margin-top:var(--s6)}
+
+/* state chip — word + shape, never colour alone */
+.chip{display:inline-flex;align-items:center;gap:.45em;padding:.2rem .55rem .2rem .5rem;
+border-radius:99px;font-size:.75rem;background:var(--good-bg);color:var(--good)}
+.chip::before{content:"";width:.5rem;height:.5rem;border-radius:99px;background:currentColor;flex:0 0 auto}
+.chip--warn{background:var(--warn-bg);color:var(--warn)}
+.chip--warn::before{border-radius:1px;transform:rotate(45deg);width:.45rem;height:.45rem}
+.chip--bad{background:var(--bad-bg);color:var(--bad)}
+.chip--bad::before{border-radius:1px;width:.55rem;height:.2rem}
+.chip--idle{background:var(--tint);color:var(--subtle)}
+.chip--idle::before{background:transparent;border:1.5px solid currentColor}
+
+/* HEADER */
+.head{padding-bottom:var(--s4);border-bottom:2px solid var(--ink)}
+.head h1{margin-top:var(--s2);font-size:clamp(1.5rem,3.4vw,2.125rem)}
+.eyebrow{color:var(--subtle)}
+.facts{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);margin:var(--s3) 0 0;
+color:var(--muted);font-size:.8125rem}
+.facts div{display:flex;gap:.4em}
+.facts dt{color:var(--subtle)}
+.facts dd{margin:0;color:var(--ink)}
+
+/* VERDICT — the signature block. A filled panel, not a stripe on one edge. */
+.verdict{margin-top:var(--s5);padding:var(--s5);border:1px solid var(--warn-line);
+border-radius:var(--r);background:var(--warn-bg)}
+.verdict__top{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3)}
+.verdict h2{color:var(--warn);font-size:clamp(1.5rem,3.6vw,2rem);letter-spacing:-.025em}
+.verdict__why{max-width:62ch;margin-top:var(--s3);font-size:1.0625rem;line-height:1.45}
+.verdict__since{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--warn-line);
+color:var(--muted);font-size:.875rem}
+.verdict__since b{color:var(--ink)}
+
+/* COUNTS */
+.counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(8rem,1fr));gap:var(--s4);
+margin-top:var(--s4);padding:var(--s4) 0;border-bottom:1px solid var(--line2)}
+.counts dt{color:var(--subtle);font-size:.6875rem;letter-spacing:.09em;
+text-transform:uppercase}
+.counts dd{margin:var(--s1) 0 0;font-size:1.5rem;letter-spacing:-.03em}
+.counts p{margin-top:var(--s1);color:var(--muted);font-size:.75rem}
+
+/* MILESTONE RAIL — horizontal on desktop, vertical below 62rem */
+.rail{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0;margin-top:var(--s5)}
+.rail li{position:relative;padding:var(--s4) var(--s3) 0 0;border-top:2px solid var(--line2)}
+.rail li.done{border-top-color:var(--data)}
+.rail li.now{border-top-color:var(--ink)}
+.rail li::before{content:"";position:absolute;top:-.3125rem;left:0;width:.625rem;height:.625rem;
+border-radius:99px;background:var(--bg);border:2px solid var(--line2)}
+.rail li.done::before{background:var(--data);border-color:var(--data)}
+.rail li.now::before{background:var(--ink);border-color:var(--ink);width:.875rem;height:.875rem;
+top:-.4375rem}
+.rail__d{color:var(--subtle);font-size:.6875rem;letter-spacing:.06em}
+.rail h3{margin-top:var(--s1);font-size:.875rem;line-height:1.25}
+.rail__s{display:inline-block;margin-top:var(--s2);font-size:.8125rem;
+color:var(--subtle)}
+.rail li.done .rail__s{color:var(--data)}
+.rail li.now .rail__s{color:var(--ink)}
+.rail li.risk .rail__s{color:var(--warn)}
+
+/* SCOPE METERS */
+.scope{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:var(--s5);
+margin-top:var(--s4)}
+.m__head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
+.m__label{font-size:.875rem}
+.m__val{font-size:.9375rem;letter-spacing:-.02em}
+.bar{display:grid;height:.5rem;margin-top:var(--s2);border-radius:99px;background:var(--track);overflow:hidden}
+.bar i{border-radius:99px;background:var(--data)}
+.m__foot{margin-top:var(--s2);color:var(--muted);font-size:.8125rem}
+
+/* BLOCKERS */
+.blk{margin-top:var(--s4)}
+.blk li{padding:var(--s4);border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+.blk li+li{margin-top:var(--s3)}
+.blk__top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2)}
+.blk h3{font-size:1rem;max-width:52ch}
+.blk__meta{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);margin-top:var(--s2);
+color:var(--muted);font-size:.8125rem}
+.blk__meta b{color:var(--ink)}
+.blk__need{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line);
+font-size:.875rem;line-height:1.45}
+.blk__need span{color:var(--subtle)}
+
+/* NEEDS A HUMAN */
+.ask{margin-top:var(--s4);font-size:.875rem}
+.ask li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s3) var(--s4);
+padding:var(--s4) 0}
+.ask li+li{border-top:1px solid var(--line2)}
+.ask__n{color:var(--data);font-size:1.25rem;letter-spacing:-.02em;line-height:1.1}
+.ask h3{font-size:1rem;max-width:56ch}
+.ask p{margin-top:var(--s2);color:var(--muted);max-width:62ch}
+.ask__who{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);margin-top:var(--s3);font-size:.8125rem}
+.ask__who span{color:var(--subtle)}
+.ask__who b{color:var(--ink)}
+.colophon{margin-top:var(--s6);padding-top:var(--s3);border-top:1px solid var(--line);
+color:var(--subtle);font-size:.8125rem;line-height:1.5}
+
+@media (max-width:62rem){
+.rail{grid-template-columns:minmax(0,1fr)}
+.rail li{padding:0 0 var(--s4) var(--s5);border-top:0;border-left:2px solid var(--line2)}
+.rail li.done{border-top-color:transparent;border-left-color:var(--data)}
+.rail li.now{border-top-color:transparent;border-left-color:var(--ink)}
+.rail li:last-child{border-left-color:transparent;padding-bottom:0}
+.rail li::before{top:0;left:-.375rem}
+.rail li.now::before{top:-.125rem;left:-.5rem}
+.rail h3{font-size:.9375rem}
+.rail__s{margin-top:var(--s1)}
+}
+@media (max-width:34rem){
+:root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
+body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.45}
+.sec{margin-top:var(--s5)}
+.h-sec{padding-bottom:var(--s1)}
+.verdict{padding:var(--s3) var(--s4)}
+.verdict__why{margin-top:var(--s2);font-size:1rem}
+.verdict__since{margin-top:var(--s2);padding-top:var(--s2)}
+.blk__need,.ask p,.verdict__why,.rail p{line-height:1.36}
+.counts{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:var(--s3);gap:var(--s3) var(--s4);padding-block:var(--s3)}
+.counts dd{font-size:1.1875rem}
+.rail li{padding-bottom:var(--s1)}
+.scope{gap:var(--s3)}
+.m__foot{margin-top:var(--s1)}
+.blk li{padding-block:var(--s2);padding-inline:var(--s4)}
+.blk li+li{margin-top:var(--s2)}
+.blk__meta{margin-top:var(--s1)}
+.blk__need{margin-top:var(--s2);padding-top:var(--s2)}
+.ask li{grid-template-columns:minmax(0,1fr);gap:var(--s1);padding-block:var(--s2)}
+.ask p{margin-top:var(--s1)}
+.ask__who{margin-top:var(--s2)}
+.ask__n{font-size:.6875rem;letter-spacing:.09em;text-transform:uppercase}
+.colophon{margin-top:var(--s4);padding-top:var(--s2)}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="head">
+    <span class="lab eyebrow">Project status · week 37</span>
+    <h1>SOC 2 Type II readiness</h1>
+    <dl class="facts">
+      <div><dt>Owner</dt><dd>Priya Raman</dd></div>
+      <div><dt>Reported</dt><dd>8 Sep 2026</dd></div>
+      <div><dt>Next review</dt><dd>15 Sep</dd></div>
+      <div><dt>Window opens</dt><dd>1 Nov 2026</dd></div>
+    </dl>
+  </header>
+
+  <section class="verdict" aria-labelledby="vd">
+    <div class="verdict__top">
+      <h2 id="vd">At risk</h2>
+      <span class="chip chip--warn">Changed from On track</span>
+    </div>
+    <p class="verdict__why">The penetration test is now the entire critical path. Our vendor
+      cannot start before 6 October and the 10 October readiness assessment needs their report, so
+      a two-week slip in the test is a two-week slip in the window. Everything else is on or ahead
+      of schedule.</p>
+    <p class="verdict__since"><b>Since last week:</b> evidence automation closed on 21 August and
+      the access review passed 60%. The pen test moved from 22 September to 6 October when the
+      vendor reassigned our team — that one change is why this is amber.</p>
+  </section>
+
+  <dl class="counts">
+    <div><dt>Milestones</dt><dd>3 of 7</dd><p>complete · 1 in progress</p></div>
+    <div><dt>Open blockers</dt><dd>3</dd><p>1 needs a decision this week</p></div>
+    <div><dt>Days to window</dt><dd>54</dd><p>opens 1 November</p></div>
+    <div><dt>Budget used</dt><dd>68%</dd><p>£61K of £90K</p></div>
+  </dl>
+
+  <section class="sec" aria-labelledby="ms">
+    <h2 class="lab h-sec" id="ms">Milestones</h2>
+    <ol class="rail">
+      <li class="done"><span class="rail__d">12 JUN</span><h3>Scope &amp; control mapping</h3>
+        <span class="rail__s">Done</span></li>
+      <li class="done"><span class="rail__d">24 JUL</span><h3>Policy set approved</h3>
+        <span class="rail__s">Done</span></li>
+      <li class="done"><span class="rail__d">21 AUG</span><h3>Evidence automation</h3>
+        <span class="rail__s">Done</span></li>
+      <li class="now"><span class="rail__d">19 SEP</span><h3>Q3 access review</h3>
+        <span class="rail__s">In progress · 60%</span></li>
+      <li class="risk"><span class="rail__d">6 OCT</span><h3>Penetration test</h3>
+        <span class="rail__s">At risk · slipped 14d</span></li>
+      <li><span class="rail__d">10 OCT</span><h3>Readiness assessment</h3>
+        <span class="rail__s">Planned</span></li>
+      <li><span class="rail__d">1 NOV</span><h3>Observation window opens</h3>
+        <span class="rail__s">Planned</span></li>
+    </ol>
+  </section>
+
+  <section class="sec" aria-labelledby="sc">
+    <h2 class="lab h-sec" id="sc">Scope</h2>
+    <div class="scope">
+      <div>
+        <p class="m__head"><span class="m__label">Controls implemented</span><span class="m__val">87 / 104</span></p>
+        <p class="bar"><i style="width:84%"></i></p>
+        <p class="m__foot">84% · the remaining 17 are all access-related</p>
+      </div>
+      <div>
+        <p class="m__head"><span class="m__label">Evidence collected automatically</span><span class="m__val">61 / 104</span></p>
+        <p class="bar"><i style="width:59%"></i></p>
+        <p class="m__foot">59% · target is 75 by the window opening</p>
+      </div>
+      <div>
+        <p class="m__head"><span class="m__label">Policies approved</span><span class="m__val">22 / 22</span></p>
+        <p class="bar"><i style="width:100%"></i></p>
+        <p class="m__foot">100% · signed off 24 July, no changes since</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="bl">
+    <h2 class="lab h-sec" id="bl">Blockers</h2>
+    <ol class="blk">
+      <li>
+        <div class="blk__top"><h3>Pen-test vendor cannot start before 6 October</h3>
+          <span class="chip chip--warn">Blocking</span></div>
+        <p class="blk__meta"><span>Owner <b>Dana Whitfield</b></span><span>Open <b>11 days</b></span>
+          <span>Blocks <b>2 milestones</b></span></p>
+        <p class="blk__need"><span>Needs:</span> approval to run the test with our second vendor at
+          +£9,400, or a decision to move the observation window to 15 November.</p>
+      </li>
+      <li>
+        <div class="blk__top"><h3>Nine engineers still hold standing production access</h3>
+          <span class="chip chip--warn">Blocking</span></div>
+        <p class="blk__meta"><span>Owner <b>Marcus Lee</b></span><span>Open <b>4 days</b></span>
+          <span>Blocks <b>Q3 access review</b></span></p>
+        <p class="blk__need"><span>Needs:</span> the standing-access model signed off. Break-glass
+          tooling has been built and tested since 2 September — this is waiting on a decision, not
+          on engineering.</p>
+      </li>
+      <li>
+        <div class="blk__top"><h3>Two subprocessors have no countersigned DPA</h3>
+          <span class="chip chip--idle">Watching</span></div>
+        <p class="blk__meta"><span>Owner <b>Legal</b></span><span>Open <b>23 days</b></span>
+          <span>Blocks <b>nothing yet</b></span></p>
+        <p class="blk__need"><span>Needs:</span> countersignature from both vendors. Chased three
+          times; escalate to their account teams if open on 22 September.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="sec" aria-labelledby="nh">
+    <h2 class="lab h-sec" id="nh">Needs a human</h2>
+    <ol class="ask">
+      <li>
+        <span class="ask__n">01</span>
+        <div>
+          <h3>Approve the second pen-test vendor, or accept the slip</h3>
+          <p>The second vendor can start 22 September for £9,400 more. Doing nothing moves the
+            window to 15 November, pushing the report past the two enterprise renewals that asked
+            for it.</p>
+          <p class="ask__who"><span>Decision by <b>Priya Raman</b></span>
+            <span>Needed by <b>12 September</b></span></p>
+        </div>
+      </li>
+      <li>
+        <span class="ask__n">02</span>
+        <div>
+          <h3>Sign off the standing-access model</h3>
+          <p>Break-glass only, or named exceptions with a quarterly review — both are built. The
+            access review cannot close until one is chosen, and it is the last thing between us and
+            104 of 104 controls.</p>
+          <p class="ask__who"><span>Decision by <b>Marcus Lee &amp; Security</b></span>
+            <span>Needed by <b>19 September</b></span></p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <footer class="colophon">Compiled 8 September 2026, 07:00 UTC from the compliance tracker, the
+    access-review export and the project ledger. Milestone dates are committed dates, not forecasts;
+    budget is spend to date against the approved £90,000.</footer>
+
+</div>
+</body>
+</html>

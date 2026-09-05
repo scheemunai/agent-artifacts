@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Northwind Freight cut invoice disputes by 71% in one quarter</title>
+<!--
+  Agent Artifacts template · research / case-study
+  VOICE  editorial serif (ui-serif, Charter, Iowan Old Style, Georgia); mono for labels and figures
+  SCHEME warm paper #f0eae0 · rust accent #a8452a · petrol data hue #2c5670
+
+  REWRITING THIS ARTIFACT
+  · The hero figure is ONE number — the outcome the customer would repeat out loud.
+    Say what it is measured against right under it, or it is a poster, not evidence.
+  · The ledger is the spine: the same metrics before and after, from the customer's own
+    system. Never invent a row you cannot source.
+  · Keep one honest paragraph about what went wrong or what it cost. A case study with
+    no friction in it reads as marketing and nobody believes the rest.
+  · DELETE, don't empty. One quote instead of two? Remove the second. No ledger?
+    Remove it. Never a heading with nothing under it.
+  · Never pin the root to the viewport height, and never give html or body a
+    percentage height; no fixed or sticky positioning. The host frame measures this
+    document and does not scroll.
+  · Nothing external: no web fonts, images, scripts or stylesheets.
+-->
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{
+--bg:#f0eae0;--paper:#fffdf9;--ink:#231e1a;--muted:#5b5249;--subtle:#72685f;
+--line:#e2d9cc;--line2:#cfc3b3;--rust:#a8452a;--rust-soft:#fbf0e9;--rust-line:#e8c6b5;
+--data:#2c5670;--track:#ddd5c8;
+--serif:ui-serif,Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
+--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+--s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:2.75rem;--s8:4rem}
+body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
+font-family:var(--serif);font-size:1.0625rem;line-height:1.58;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.012em;font-weight:600}
+p{margin:0}ul,ol{margin:0;padding:0;list-style:none}
+.wrap{max-width:62rem;margin-inline:auto}
+.lab,.ledger caption{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.12em;
+text-transform:uppercase}
+.h-sec{padding-bottom:var(--s2);border-bottom:1px solid var(--line2);color:var(--subtle)}
+
+/* MASTHEAD — a display figure is the hero. Nothing else on the page is this size. */
+.eyebrow{color:var(--rust)}
+.ttl{max-width:22ch;margin-top:var(--s3);font-size:clamp(1.75rem,4.2vw,2.625rem);
+letter-spacing:-.022em;line-height:1.13}
+.hero{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:var(--s3) var(--s5);
+align-items:center;margin-top:var(--s5);padding:var(--s5) 0;
+border-top:2px solid var(--ink);border-bottom:1px solid var(--line2)}
+.hero__fig{color:var(--rust);font-family:var(--mono);font-size:clamp(3.5rem,11vw,5.5rem);
+font-weight:700;letter-spacing:-.045em;line-height:.88;font-variant-numeric:tabular-nums}
+.hero__cap{max-width:34ch;color:var(--muted);font-size:1.0625rem;line-height:1.42}
+.hero__cap b{color:var(--ink);font-weight:600}
+.facts{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);margin:var(--s4) 0 0;
+color:var(--muted);font-size:.8125rem}
+.facts div{display:flex;gap:.4em}
+.facts dt{color:var(--subtle)}
+.facts dd{margin:0;color:var(--ink);font-weight:600}
+
+/* PULL QUOTE — second-largest thing on the page */
+.pq{margin:var(--s6) 0 0;padding-left:var(--s5);border-left:3px solid var(--rust)}
+.pq blockquote{margin:0;max-width:40ch;font-size:clamp(1.25rem,2.6vw,1.75rem);line-height:1.32;
+letter-spacing:-.014em}
+.pq figcaption{margin-top:var(--s3);color:var(--subtle);font-size:.875rem}
+.pq figcaption b{color:var(--ink);font-weight:600}
+
+/* LEDGER — the before/after spine */
+.ledger{width:100%;margin-top:var(--s4);border-collapse:collapse;text-align:left;font-size:.9375rem}
+.ledger caption{text-align:left;padding-bottom:var(--s2);margin-bottom:var(--s3);
+border-bottom:1px solid var(--line2);color:var(--subtle)}
+.ledger th{padding:0 var(--s4) var(--s2) 0;color:var(--subtle);font-family:var(--mono);
+font-size:.6875rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.ledger td{padding:var(--s3) var(--s4) var(--s3) 0;border-top:1px solid var(--line);
+vertical-align:baseline}
+.l-what{color:var(--ink);width:38%}
+.l-before{color:var(--muted);font-family:var(--mono);font-size:.875rem;
+font-variant-numeric:tabular-nums;white-space:nowrap}
+.l-after{color:var(--ink);font-family:var(--mono);font-size:1rem;font-weight:600;
+font-variant-numeric:tabular-nums;white-space:nowrap}
+.l-chg{width:26%;min-width:7rem}
+.l-chg b{display:block;color:var(--data);font-family:var(--mono);font-size:.8125rem;font-weight:600;
+font-variant-numeric:tabular-nums}
+.meter{display:grid;height:.375rem;margin-top:.35rem;border-radius:99px;background:var(--track);
+overflow:hidden}
+.meter i{border-radius:99px;background:var(--data)}
+.ledger tfoot td{border-top:1px solid var(--line2);color:var(--subtle);font-size:.8125rem;
+line-height:1.45}
+
+/* NARRATIVE */
+.sec{margin-top:var(--s6)}
+.body{max-width:64ch;margin-top:var(--s4)}
+.body p+p{margin-top:var(--s3)}
+.body h3{margin-top:var(--s5);font-size:1.0625rem}
+.body h3:first-child{margin-top:0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:var(--s6);
+margin-top:var(--s6)}
+.snag{padding:var(--s5);border:1px solid var(--rust-line);border-radius:.75rem;
+background:var(--rust-soft)}
+.snag h2{color:var(--rust)}
+.snag>p{margin-top:var(--s3);font-size:1em;line-height:1.5}
+.next{margin-top:var(--s4)}
+.next li{position:relative;padding-left:var(--s5);color:var(--muted);font-size:.9375rem;line-height:1.45}
+.next li+li{margin-top:var(--s2)}
+.next li::before{content:"";position:absolute;top:.58rem;left:var(--s2);width:.3125rem;height:.3125rem;
+border-radius:99px;background:var(--rust)}
+.next strong{color:var(--ink);font-weight:600}
+.rail{display:grid;align-content:start;gap:var(--s5)}
+.kicker{margin:0;padding:var(--s5);border:1px solid var(--line2);border-radius:.75rem;
+background:var(--paper)}
+.kicker blockquote{margin:0;max-width:52ch;font-size:1.1875rem;line-height:1.38}
+.kicker figcaption{margin-top:var(--s2);color:var(--subtle);font-size:.8125rem}
+.kicker figcaption b{color:var(--ink);font-weight:600}
+.colophon{margin-top:var(--s5);padding-top:var(--s3);border-top:1px solid var(--line);
+color:var(--subtle);font-size:.8125rem;line-height:1.5}
+
+@media (max-width:44rem){
+/* ledger -> card. caption MUST be re-declared: an anonymous table box collapses it. */
+.ledger,.ledger caption,.ledger tbody,.ledger tfoot,.ledger tr,.ledger td{display:block}
+.ledger thead{display:none}
+.ledger caption{margin-bottom:0}
+.ledger tbody tr{display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;
+gap:.1rem var(--s2);padding:var(--s3) 0;border-top:1px solid var(--line)}
+.ledger td{padding:0;border-top:0;width:auto}
+.l-what{grid-column:1/-1;grid-row:1}
+.l-before{grid-column:1;grid-row:2;margin-top:.2rem}
+.l-before::after{content:"→";margin-left:.45em;color:var(--line2)}
+.l-after{grid-column:2;grid-row:2;margin-top:.2rem}
+.l-chg{grid-column:3;grid-row:2;min-width:0;margin-top:.2rem;justify-self:end;text-align:right}
+.l-chg .meter{display:none}
+.ledger tfoot td{padding-top:var(--s3);border-top:1px solid var(--line2)}
+}
+@media (max-width:34rem){
+:root{--s5:1.125rem;--s6:1.5rem;--s7:1.625rem;--s8:2rem}
+body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.5}
+.ttl{line-height:1.1}
+.hero{grid-template-columns:minmax(0,1fr);gap:var(--s2);padding:var(--s4) 0}
+.hero__cap{font-size:1rem}
+.pq{padding-left:var(--s4)}
+.snag{padding:var(--s4)}
+.kicker{padding:var(--s4)}
+.kicker blockquote{font-size:1.0625rem}
+.two{gap:var(--s5)}
+.body p,.next li,.snag>p{line-height:1.45}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="lab eyebrow">Case study · Freight &amp; logistics</span>
+    <h1 class="ttl">Northwind Freight cut invoice disputes by 71% in one quarter</h1>
+    <div class="hero">
+      <p class="hero__fig">71%</p>
+      <p class="hero__cap">fewer disputed invoices in <b>Q2 2026</b>, measured against Northwind's
+        own twelve-month baseline — <b>19.4% of invoices down to 5.6%</b>.</p>
+    </div>
+    <dl class="facts">
+      <div><dt>Company</dt><dd>Northwind Freight</dd></div>
+      <div><dt>Business</dt><dd>Regional LTL carrier</dd></div>
+      <div><dt>Scale</dt><dd>1,200 trucks · 22 branches</dd></div>
+      <div><dt>Live since</dt><dd>March 2026</dd></div>
+    </dl>
+  </header>
+
+  <figure class="pq">
+    <blockquote>“We never had a disputes problem. We had a problem where nobody could see the weight
+      ticket and the invoice at the same time.”</blockquote>
+    <figcaption><b>Priya Raman</b>, VP Finance, Northwind Freight</figcaption>
+  </figure>
+
+  <section class="sec" aria-labelledby="ld">
+    <table class="ledger">
+      <caption id="ld">Before and after · Q2 2025 baseline vs Q2 2026</caption>
+      <thead><tr><th scope="col">Metric</th><th scope="col">Before</th><th scope="col">After</th>
+        <th scope="col">Change</th></tr></thead>
+      <tbody>
+        <tr><td class="l-what">Invoices disputed</td><td class="l-before">19.4%</td>
+          <td class="l-after">5.6%</td>
+          <td class="l-chg"><b>−71%</b><span class="meter"><i style="width:29%"></i></span></td></tr>
+        <tr><td class="l-what">Clerk hours spent on disputes</td><td class="l-before">854 / mo</td>
+          <td class="l-after">179 / mo</td>
+          <td class="l-chg"><b>−79%</b><span class="meter"><i style="width:21%"></i></span></td></tr>
+        <tr><td class="l-what">Days sales outstanding</td><td class="l-before">61 days</td>
+          <td class="l-after">43 days</td>
+          <td class="l-chg"><b>−30%</b><span class="meter"><i style="width:70%"></i></span></td></tr>
+        <tr><td class="l-what">Time to resolve one dispute</td><td class="l-before">22 min</td>
+          <td class="l-after">16 min</td>
+          <td class="l-chg"><b>−27%</b><span class="meter"><i style="width:73%"></i></span></td></tr>
+        <tr><td class="l-what">Unrecovered accessorial write-offs</td><td class="l-before">$310K / yr</td>
+          <td class="l-after">$88K / yr</td>
+          <td class="l-chg"><b>−72%</b><span class="meter"><i style="width:28%"></i></span></td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">Bars show the after figure as a share of the before figure —
+        shorter is better. Every row is pulled from Northwind's TMS and billing ledger, not from
+        our own telemetry.</td></tr></tfoot>
+    </table>
+  </section>
+
+  <div class="two">
+    <section aria-labelledby="st">
+      <h2 class="lab h-sec" id="st">What was happening</h2>
+      <div class="body">
+        <p>Northwind bills freight on weight, distance and accessorials — detention, liftgate,
+          inside delivery, redelivery. The accessorials arrived as paper tickets, keyed in at the
+          branch, and the invoice went out before anyone had compared the ticket to the rate
+          confirmation. One invoice in five came back disputed.</p>
+        <p>A dispute cost 22 minutes of a billing clerk's time and, far worse, stopped the clock on
+          the whole invoice. Average days sales outstanding sat at 61, against a target of 45, and
+          finance was writing off roughly <b>$310,000 a year</b> in accessorials nobody could
+          evidence by the time the customer pushed back.</p>
+        <h3>What changed</h3>
+        <p>A pre-bill audit now matches three documents — rate confirmation, weight ticket and
+          accessorial log — before an invoice is released, and holds anything that disagrees by more
+          than $25 or 200 lb. Held invoices go to a queue with the three documents side by side. It
+          reads the existing TMS feed; nothing about the rating engine changed.</p>
+        <p>Three branches went live on 9 March. All twenty-two were live by 17 April.</p>
+      </div>
+    </section>
+
+    <div class="rail">
+    <section class="snag" aria-labelledby="sn">
+      <h2 class="lab" id="sn">What it cost, honestly</h2>
+      <p>Six weeks from kickoff to the first live branch, most of it spent on one integration to a
+        TMS export that turned out to round weights to the nearest 50 lb.</p>
+      <p>The first fortnight was bad. The hold threshold shipped at $10, which held <b>31% of all
+        invoices</b> and made the queue worse than the disputes had been. Raising it to $25 on
+        23 March dropped holds to 7% and is the single change that made the numbers above possible.</p>
+      <p>Two branches still run a manual accessorial log and are excluded from the figures.</p>
+    </section>
+    <figure class="kicker">
+      <blockquote>“The first month I kept refreshing the dispute queue because I assumed it was
+        broken.”</blockquote>
+      <figcaption><b>Devon Marsh</b>, Billing Supervisor, Northwind Freight</figcaption>
+    </figure>
+    </div>
+  </div>
+
+  <section class="sec" aria-labelledby="nx">
+    <h2 class="lab h-sec" id="nx">What Northwind is doing next</h2>
+    <ul class="next">
+      <li><strong>Driver capture at the tailgate.</strong> Photographing the accessorial ticket in
+        the cab removes the branch keying step entirely — piloting at two terminals in October.</li>
+      <li><strong>Customer-facing evidence packets.</strong> Attaching the three matched documents
+        to the invoice itself, to test whether disputes fall further or simply resolve faster.</li>
+      <li><strong>The two manual branches.</strong> Both are on the March 2027 integration plan.</li>
+    </ul>
+  </section>
+
+  <footer class="colophon">Figures supplied by Northwind Freight from their TMS and billing ledger
+    on 14 July 2026 and reviewed with their finance team. Baseline is the twelve months to March
+    2026; the comparison quarter is April–June 2026. Two of twenty-two branches are excluded.
+    Published with permission.</footer>
+
+</div>
+</body>
+</html>

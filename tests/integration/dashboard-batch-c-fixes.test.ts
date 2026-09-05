@@ -198,7 +198,7 @@ describe('Batch C accepted dashboard fixes', () => {
     );
     const cookie = await login(ctx, account.email, 'password123');
     const report = ctx.db.sqlite
-      .prepare("SELECT id FROM templates WHERE slug = 'report' AND account_id IS NULL")
+      .prepare("SELECT id FROM templates WHERE slug = 'one-pager' AND account_id IS NULL")
       .get() as { id: string };
 
     const response = await ctx.app.request(`/dashboard/templates?preview=${report.id}`, {
@@ -206,10 +206,10 @@ describe('Batch C accepted dashboard fixes', () => {
     });
     const body = await response.text();
     expect(response.status).toBe(200);
-    expect(body).toContain('Template preview: Report');
+    expect(body).toContain('Template preview: One-pager');
     expect(body).toContain('Template source');
     expect(body).toContain('{{title}}');
-    expect(body).toContain('{{next_steps}}');
+    expect(body).toContain('{{subtitle}}');
   });
 
   it('dashboard share panel includes the reader count next to other counters', async () => {
