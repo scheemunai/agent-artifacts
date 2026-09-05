@@ -28,7 +28,7 @@ describe('viewer HTML sandbox isolation', () => {
       const pageHtml = await page.text();
       expect(page.status).toBe(200);
       expect(page.headers.get('content-security-policy')).toBe(
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-src https://usercontent.example.test; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-src https://usercontent.example.test; object-src 'none'; base-uri 'none'; form-action 'self' https://checkout.stripe.com https://billing.stripe.com; frame-ancestors 'none'"
       );
       expect(page.headers.get('permissions-policy')).toBe(
         'camera=(), microphone=(), geolocation=(), payment=()'

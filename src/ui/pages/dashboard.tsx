@@ -847,9 +847,15 @@ function BillingCard({ billing }: { billing: DashboardBillingView }) {
 
         {!isPro ? (
           <>
-            {/* Posts to our own endpoint, never to Stripe: the app's CSP sets `form-action 'self'`,
-                and the price is resolved server-side from this interval so a tampered form cannot
-                choose its own price. */}
+            {/* Posts to our own endpoint, never to Stripe, so the price is resolved server-side
+                from this interval and a tampered form cannot choose its own price.
+
+                POSTING SAME-ORIGIN IS NOT WHAT SATISFIES THE CSP, THOUGH IT LOOKS LIKE IT SHOULD.
+                This comment used to say the `form-action 'self'` directive was the reason the
+                action is same-origin. That inference is wrong and it cost a paid-checkout outage:
+                `form-action` is enforced against every hop of the redirect chain, and this handler
+                answers 303 to Stripe. The Stripe hosts are therefore named in `appOriginCsp`
+                (`src/app.ts`); without them this button is dead no matter where it posts. */}
             <form class="aa-stack" method="post" action="/dashboard/api/billing/checkout">
               <input type="hidden" name="interval" value="monthly" />
               <Button variant="primary" type="submit">

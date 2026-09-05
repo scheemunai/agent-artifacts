@@ -251,6 +251,13 @@ function requestPrincipalFromContext(
 }
 
 /**
+ * The Stripe origins the billing handlers 303 a submitted form to. Named here rather than imported
+ * from `src/billing/` so the policy has no dependency on the billing module, which is optional and
+ * absent on a self-host.
+ */
+const STRIPE_FORM_TARGETS = ['https://checkout.stripe.com', 'https://billing.stripe.com'] as const;
+
+/**
  * The app origin's policy. Widened for the analytics host ONLY while analytics is configured, so a
  * self-host and a developer's laptop keep the tight policy rather than carrying an allowance for a
  * third party they never load. The host is read from the same module the tag is, so the two cannot
@@ -262,6 +269,24 @@ function requestPrincipalFromContext(
  *
  * The FRAME policies in `src/lib/frame-policy.ts` are deliberately untouched. Sandboxed artifact
  * content must not be able to reach datafa.st, and nothing of ours runs in there to want to.
+ *
+ * `form-action` NAMES STRIPE BECAUSE THE DIRECTIVE IS CHECKED ON EVERY HOP OF A REDIRECT CHAIN,
+ * NOT ONLY ON THE URL THE FORM POSTS TO. The billing forms post to `/dashboard/api/billing/*` —
+ * same origin, which `'self'` allows — and those handlers answer 303 to a Stripe URL. Chrome
+ * applies `form-action` to that hop too, so `form-action 'self'` alone blocked the submission with
+ * "Sending form data to '…/billing/checkout' violates … form-action 'self'" and took upgrades and
+ * the billing portal down together. Posting same-origin is NOT a way around this directive; it was
+ * believed to be, and that belief is what shipped the outage.
+ *
+ * Two hosts because there are two flows: Checkout for an upgrade, the portal for managing a
+ * subscription. Both were read off the Stripe API rather than the docs —
+ * `checkout.sessions.create().url` is on `checkout.stripe.com`, `billingPortal.sessions.create()`
+ * on `billing.stripe.com`, confirmed against the live account as well as test mode.
+ *
+ * KEEP THIS EXACT. `https:` or a `*.stripe.com` wildcard would re-open form submission far past
+ * what billing needs. If Stripe custom domains are ever enabled the URLs move to a first-party host
+ * and these two stop covering them — that is a reason to make the hosts configurable, not to widen
+ * the directive.
  */
 export function appOriginCsp(frameOrigin: string, analyticsOrigin?: string | undefined): string {
   const scriptSrc = ["'self'", ...(analyticsOrigin ? [analyticsOrigin] : [])].join(' ');
@@ -277,7 +302,7 @@ export function appOriginCsp(frameOrigin: string, analyticsOrigin?: string | und
     `frame-src ${frameOrigin}`,
     "object-src 'none'",
     "base-uri 'none'",
-    "form-action 'self'",
+    `form-action 'self' ${STRIPE_FORM_TARGETS.join(' ')}`,
     "frame-ancestors 'none'",
   ].join('; ');
 }
