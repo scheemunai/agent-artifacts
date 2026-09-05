@@ -237,14 +237,23 @@ export async function mergeTemplate(input: {
     // zero-slot HTML document, so a saved workflow would keep getting 201 — and the demo release
     // notes instead of its own. A silent 201 with the wrong content is worse than any error,
     // because nothing anywhere reports it.
+    // Two ways to arrive here holding slots that will be dropped, and both are silent:
+    //   - the slug FLIPPED under the caller (`changelog`), or
+    //   - the slug was RETIRED and its alias landed on a zero-slot successor. `briefing` → `report`
+    //     is slotted → slotted and already errors on slot names; an alias that points at a
+    //     zero-slot template would answer 201 and copy our demo document instead. Deriving that
+    //     case from `input.slug !== template.slug` means it is covered for every future alias
+    //     without anyone remembering to add one.
     const supplied = Object.keys(input.slots ?? {});
-    if (supplied.length > 0 && FLIPPED_TEMPLATE_SLUGS.has(template.slug)) {
+    const aliased = input.slug !== template.slug;
+    if (supplied.length > 0 && (aliased || FLIPPED_TEMPLATE_SLUGS.has(template.slug))) {
       throw new AppError(400, 'validation_failed', 'Template no longer takes slots', {
         template: template.slug,
         ignored_slots: supplied,
         valid_slots: [],
         template_changed: {
           slug: template.slug,
+          ...(aliased ? { requested: input.slug } : {}),
           now: `zero-slot ${template.type}`,
           what_to_do:
             'GET the template, rewrite its content in your own words, and publish it as type + content. Sending slots would have been ignored.',

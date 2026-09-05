@@ -303,6 +303,7 @@ describe('V1 contract endpoint', () => {
         .map((item) => item.slug)
         .sort();
       expect(zeroSlotBuiltIns).toEqual([
+        'case-study',
         'changelog',
         'checklist',
         'daily-digest',
@@ -312,10 +313,14 @@ describe('V1 contract endpoint', () => {
         'meeting-recap',
         'metrics-dashboard',
         'migration-guide',
+        'postmortem',
         'project-plan',
+        'project-status',
         'proposal',
         'report-html',
+        'research-brief',
         'runbook',
+        'service-health',
         'spec',
       ]);
     } finally {

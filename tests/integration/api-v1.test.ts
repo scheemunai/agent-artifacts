@@ -38,7 +38,9 @@ describe('V1 API auth and errors', () => {
       });
       expect(malformedWithoutDatabase.status).toBe(401);
 
-      const valid = await ctx.app.request('/v1/templates', { headers: ctx.authHeaders });
+      // `?limit=50` because this test is about the key, not the page. The built-in lineup passed
+      // the default page size of 20 in wave 2, so a bare request now legitimately returns a cursor.
+      const valid = await ctx.app.request('/v1/templates?limit=50', { headers: ctx.authHeaders });
       expect(valid.status).toBe(200);
       expect(await json(valid)).toMatchObject({ next_cursor: null });
 
@@ -605,7 +607,7 @@ describe('V1 API artifacts, versions, shares, and templates', () => {
     const ctx = await createApiTestContext();
 
     try {
-      const templatesResponse = await ctx.app.request('/v1/templates', {
+      const templatesResponse = await ctx.app.request('/v1/templates?limit=50', {
         headers: ctx.authHeaders,
       });
       expect(templatesResponse.status).toBe(200);

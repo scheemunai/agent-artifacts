@@ -27,6 +27,7 @@ describe('starter template manifest seeding', () => {
       // Deliberately literal: this is the tripwire that says the built-in lineup changed. Deriving
       // it from the manifest would make it assert nothing.
       expect(starterTemplateManifest.map((template) => template.slug).sort()).toEqual([
+        'case-study',
         'changelog',
         'checklist',
         'daily-digest',
@@ -38,11 +39,15 @@ describe('starter template manifest seeding', () => {
         'metrics-dashboard',
         'migration-guide',
         'one-pager',
+        'postmortem',
         'project-plan',
+        'project-status',
         'proposal',
         'report',
         'report-html',
+        'research-brief',
         'runbook',
+        'service-health',
         'spec',
       ]);
       expect(report).toBeDefined();

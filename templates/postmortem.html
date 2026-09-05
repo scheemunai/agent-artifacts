@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Checkout was unavailable for 3 hours 47 minutes on 12 September</title>
+<!--
+  Agent Artifacts template · research / postmortem
+  VOICE  editorial serif (ui-serif, Charter, Iowan Old Style, Georgia); mono for labels, times, IDs
+  SCHEME warm paper #f0eae0 · rust accent #a8452a · petrol data hue #2c5670 · inked impact strip
+
+  REWRITING THIS ARTIFACT
+  · Blameless: name systems and decisions, never people. People appear only as owners.
+  · The impact strip is the headline: four measured numbers. Don't know one? Remove
+    the tile — never write "unknown" in it.
+  · Impact-start, detection and mitigation are the key timeline entries; their
+    timestamps must agree with the duration in the strip.
+  · DELETE, don't empty. No chart? Remove the figure. Never an empty heading.
+  · Never pin the root to the viewport height and never give html or body a percentage
+    height; no fixed or sticky positioning. The frame measures this document.
+  · Nothing external: no web fonts, images, scripts or stylesheets.
+-->
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{
+--bg:#f0eae0;--ink:#231e1a;--muted:#5b5249;--subtle:#72685f;
+--line:#e2d9cc;--line2:#cfc3b3;--rust:#a8452a;--rust-soft:#fbf0e9;--rust-line:#e8c6b5;
+--data:#2c5670;--oi:#f6f1e8;--od:#b3a698;--ol:#413a34;
+--serif:ui-serif,Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
+--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+--s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:2.75rem;--s8:4rem}
+body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
+font-family:var(--serif);font-size:1.0625rem;line-height:1.58;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.012em;font-weight:600}
+p{margin:0}ul,ol{margin:0;padding:0;list-style:none}
+.wrap{max-width:64rem;margin-inline:auto}
+.lab,.impact h2,.figs dt,.acts caption,.sev,.dl dd.mono,.figs dd,.chart__note b,.tl__t,.tag,.cause code,.fac b,.acts th,.a-id,.a-due,.st{font-family:var(--mono)}
+.lab,.impact h2,.figs dt,.acts caption{font-size:.6875rem;font-weight:600;
+letter-spacing:.12em;text-transform:uppercase}
+.h-sec{padding-bottom:var(--s2);border-bottom:1px solid var(--line2);color:var(--subtle)}
+.sec{margin-top:var(--s6)}
+
+/* MASTHEAD */
+.mast{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3)}
+.eyebrow{color:var(--rust)}
+.sev{padding:.15rem .5rem;border-radius:.25rem;background:var(--rust);color:#fff;
+font-size:.6875rem;font-weight:700;letter-spacing:.1em}
+.ttl{max-width:26ch;margin-top:var(--s4);font-size:clamp(1.75rem,4.4vw,2.75rem);
+letter-spacing:-.022em;line-height:1.13}
+.dl{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);margin:var(--s4) 0 0;padding-bottom:var(--s4);
+border-bottom:2px solid var(--ink);color:var(--muted);font-size:.8125rem}
+.dl div{display:flex;gap:.4em}
+.dl dt{color:var(--subtle)}
+.dl dd{margin:0;color:var(--ink);font-weight:600}
+.dl dd.mono{font-size:.8125rem}
+.summary{margin-top:var(--s4);font-size:1.125rem;line-height:1.45;max-width:56ch}
+
+/* IMPACT STRIP — the identity of this template */
+.impact{margin-top:var(--s5);padding:var(--s5);border-radius:.75rem;background:var(--ink);color:var(--oi)}
+.impact h2{color:var(--od)}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:var(--s5);margin-top:var(--s4)}
+.figs>div+div{padding-left:var(--s5);border-left:1px solid var(--ol)}
+.figs dt{color:var(--od);letter-spacing:.1em}
+.figs dd{margin:var(--s2) 0 0;font-size:1.625rem;font-weight:600;
+letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
+.figs p{margin-top:var(--s1);color:var(--od);font-size:.8125rem;line-height:1.35}
+
+/* CHART — plot in SVG, every label in HTML so nothing distorts */
+.chart{margin:var(--s6) 0 0}
+.chart svg{display:block;width:100%;height:120px;margin-top:var(--s3)}
+.chart__note{margin-top:var(--s2);color:var(--muted);font-size:.875rem;line-height:1.45}
+.chart__note b{color:var(--ink);font-size:.8125rem;font-weight:600;
+font-variant-numeric:tabular-nums}
+
+/* TIMELINE */
+.tl{margin-top:var(--s4)}
+.tl li{position:relative;display:grid;grid-template-columns:4.25rem minmax(0,1fr);gap:var(--s4)}
+.tl__t{padding-top:.1rem;color:var(--subtle);font-size:.8125rem;
+font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.tl__b{padding:0 0 var(--s4) var(--s5);border-left:1px solid var(--line2)}
+.tl li:last-child .tl__b{padding-bottom:0;border-left-color:transparent}
+.tl__b::before{content:"";position:absolute;left:calc(4.25rem + var(--s4));top:.34rem;
+width:.5rem;height:.5rem;margin-left:-.25rem;border:1px solid var(--line2);border-radius:99px;
+background:var(--bg)}
+.tl li.key .tl__b::before{border-color:var(--ink);background:var(--ink);width:.625rem;height:.625rem;
+margin-left:-.3125rem}
+.tl h3{font-size:1.0625rem}
+.tl li.key h3{font-size:1.1875rem}
+.tl p{margin-top:var(--s1);color:var(--muted);font-size:.9375rem;line-height:1.48}
+.tag{margin-left:.5em;color:var(--rust);font-size:.6875rem;font-weight:700;
+letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+
+/* CAUSE + FACTORS */
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(19rem,1fr));gap:var(--s6);margin-top:var(--s6)}
+.cause{align-self:start;padding:var(--s5);border:1px solid var(--rust-line);border-radius:.75rem;
+background:var(--rust-soft)}
+.cause h2{color:var(--rust)}
+.cause>p.lede{margin-top:var(--s3);font-size:1.1875rem;line-height:1.42}
+.cause>p+p{margin-top:var(--s3);font-size:1em;line-height:1.5}
+.cause code{font-size:.8125rem;padding:.05em .3em;border-radius:.2rem;background:#f6e2d8}
+.fac{margin-top:var(--s4)}
+.fac li{display:grid;grid-template-columns:1.75rem minmax(0,1fr);gap:var(--s3)}
+.fac li+li{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
+.fac b{color:var(--subtle);font-size:.8125rem;font-weight:600;padding-top:.15rem}
+.fac h3{font-size:1rem}
+.fac p{margin-top:var(--s1);color:var(--muted);font-size:.9375rem;line-height:1.45}
+.well{margin-top:var(--s4)}
+.well li{position:relative;padding-left:var(--s5);color:var(--muted);font-size:.9375rem;line-height:1.48}
+.well li+li{margin-top:var(--s2)}
+.well li::before{content:"";position:absolute;top:.58rem;left:var(--s2);width:.3125rem;height:.3125rem;
+border-radius:99px;background:var(--ink)}
+.well strong{color:var(--ink);font-weight:600}
+
+/* ACTIONS */
+.acts{width:100%;margin-top:var(--s4);border-collapse:collapse;text-align:left;font-size:.9375rem}
+.acts caption{text-align:left;padding-bottom:var(--s2);margin-bottom:var(--s3);
+border-bottom:1px solid var(--line2);color:var(--subtle)}
+.acts th{padding:0 var(--s4) var(--s2) 0;color:var(--subtle);font-size:.6875rem;
+font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.acts td{padding:var(--s3) var(--s4) var(--s3) 0;border-top:1px solid var(--line);vertical-align:top;
+line-height:1.45}
+.a-id{color:var(--subtle);font-size:.8125rem;font-weight:600;white-space:nowrap}
+.a-who,.a-due{color:var(--muted);font-size:.875rem;white-space:nowrap}
+.a-due{font-size:.8125rem;font-variant-numeric:tabular-nums}
+.st{display:inline-flex;align-items:center;gap:.4em;color:var(--muted);
+font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.st::before{content:"";width:.5rem;height:.5rem;border-radius:99px;border:1px solid var(--line2);flex:0 0 auto}
+.st--done{color:var(--ink)}
+.st--done::before{background:var(--ink);border-color:var(--ink)}
+.st--wip{color:var(--rust)}
+.st--wip::before{background:var(--rust);border-color:var(--rust)}
+.colophon{margin-top:var(--s5);padding-top:var(--s3);border-top:1px solid var(--line);
+color:var(--subtle);font-size:.8125rem;line-height:1.5}
+
+@media (max-width:44rem){
+/* table -> card. caption MUST be re-declared: an anonymous table box collapses it. */
+.acts,.acts caption,.acts tbody,.acts tr,.acts td{display:block}
+.acts thead{display:none}
+.acts caption{margin-bottom:0}
+.acts tr{display:grid;grid-template-columns:auto auto 1fr;gap:.15rem var(--s3);padding:var(--s3) 0;
+border-top:1px solid var(--line)}
+.acts td{padding:0;border-top:0}
+.a-id{grid-column:1;grid-row:1}
+.a-what{grid-column:1/-1;grid-row:2;margin-top:.1rem}
+.a-who{grid-column:1;grid-row:3;margin-top:.15rem}
+.a-due{grid-column:2;grid-row:3;margin-top:.15rem}
+.a-who::after{content:"·";margin-left:.5em;color:var(--line2)}
+.acts td:last-child{grid-column:2/-1;grid-row:1;justify-self:start}
+}
+@media (max-width:34rem){
+:root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
+body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.46}
+.ttl{font-size:1.625rem;line-height:1.1}
+.summary{margin-top:var(--s3);font-size:1.0625rem}
+.dl{padding-bottom:var(--s3)}
+.sec,.two,.chart{margin-top:var(--s5)}
+.two{gap:var(--s5)}
+.h-sec{padding-bottom:var(--s1)}
+.tl p,.fac p,.well li,.cause>p+p,.acts td{line-height:1.36}
+.impact{padding:var(--s3) var(--s4)}
+.figs{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2) var(--s4)}
+.figs>div+div{padding-left:0;border-left:0}
+.figs>div:nth-child(even){padding-left:var(--s4);border-left:1px solid var(--ol)}
+.figs dd{font-size:1.25rem}
+.figs p{font-size:.75rem;line-height:1.3}
+.chart svg{height:82px}
+.tl li{grid-template-columns:3.25rem minmax(0,1fr);gap:var(--s3)}
+.tl__b{padding-left:var(--s4);padding-bottom:var(--s1)}
+.tl__b::before{left:calc(3.25rem + var(--s3))}
+.tl__t{font-size:.8125rem}
+.tl li.key h3{font-size:1.0625rem}
+.cause{padding:var(--s3) var(--s4)}
+.cause>p.lede{font-size:1.0625rem}
+.fac li+li{margin-top:var(--s1);padding-top:var(--s1)}
+.well li+li{margin-top:var(--s1)}
+.acts tr{padding-block:var(--s1)}
+.acts caption{margin-bottom:var(--s2);padding-bottom:var(--s1)}
+.colophon{margin-top:var(--s4);padding-top:var(--s2)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="mast">
+      <span class="lab eyebrow">Incident postmortem</span>
+      <span class="sev">SEV-1</span>
+    </div>
+    <h1 class="ttl">Checkout was unavailable for 3 hours 47 minutes on 12 September</h1>
+    <dl class="dl">
+      <div><dt>Incident</dt><dd class="mono">INC-2026-041</dd></div>
+      <div><dt>Status</dt><dd>Resolved</dd></div>
+      <div><dt>Authors</dt><dd>D. Kaur, R. Idowu</dd></div>
+      <div><dt>Reviewed</dt><dd>18 Sep 2026</dd></div>
+    </dl>
+    <p class="summary">A dependency bump raised the payment-provider timeout from two seconds to thirty. When the
+provider slowed, every stuck request held its connection fifteen times longer and the pool
+saturated — three lines inside a forty-one file pull request.</p>
+  </header>
+
+  <section class="impact" aria-labelledby="imp">
+    <h2 id="imp">Impact</h2>
+    <dl class="figs">
+      <div><dt>Duration</dt><dd>3h 47m</dd><p>09:14 – 13:01 UTC</p></div>
+      <div><dt>Customers</dt><dd>12,400</dd><p>18% of active accounts</p></div>
+      <div><dt>Failed checkouts</dt><dd>41,900</dd><p>39,600 recovered by retry</p></div>
+      <div><dt>Data loss</dt><dd>None</dd><p>No double charges</p></div>
+    </dl>
+  </section>
+
+  <figure class="chart">
+    <figcaption class="lab">Checkout failure rate · 0–60% · 09:00–14:00 UTC</figcaption>
+      <svg viewBox="0 0 720 170" preserveAspectRatio="none" role="img" aria-labelledby="chd">
+        <title id="chd">Checkout failure rate rose from under 1% at 09:00 to a peak of 52% at 11:30, then fell below 2% by 13:15. Detection at 09:47 came when the rate was about 6%.</title>
+        <g stroke="#cfc3b3" stroke-width="1" vector-effect="non-scaling-stroke">
+          <line x1="0" y1="8" x2="720" y2="8"/><line x1="0" y1="81" x2="720" y2="81"/><line x1="0" y1="154" x2="720" y2="154"/>
+        </g>
+        <path d="M0,153 L48,149.6 L96,140.4 L144,119.9 L216,85.9 L288,54.2 L360,27.5 L432,34.8 L504,61.5 L576,132.1 L612,150.3 L720,153 L720,154 L0,154 Z" fill="#ccd8e0"/>
+        <path d="M0,153 L48,149.6 L96,140.4 L144,119.9 L216,85.9 L288,54.2 L360,27.5 L432,34.8 L504,61.5 L576,132.1 L612,150.3 L720,153" fill="none" stroke="#2c5670" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        <g stroke="#231e1a" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke">
+          <line x1="112.8" y1="8" x2="112.8" y2="154"/><line x1="578.4" y1="8" x2="578.4" y2="154"/>
+        </g>
+      </svg>
+    <p class="chart__note">Gridlines 0/30/60%. Dashed: detected <b>09:47</b> at 6%, mitigated
+      <b>13:01</b>. Peak <b>52%</b> — nine times worse than when the alert fired.</p>
+  </figure>
+
+  <section class="sec" aria-labelledby="tlh">
+    <h2 class="lab h-sec" id="tlh">Timeline · 12 September, UTC</h2>
+    <ol class="tl">
+      <li><span class="tl__t">09:02</span><div class="tl__b">
+        <h3>Release 2026.9.3 rolls out</h3>
+        <p>A dependency bump changes the payment-provider request timeout from 2s to 30s. All six regions
+by 09:11, no alarms.</p>
+      </div></li>
+      <li class="key"><span class="tl__t">09:14</span><div class="tl__b">
+        <h3>Impact begins<span class="tag">Impact start</span></h3>
+        <p>Provider p99 latency rises from 240ms to 4.8s. Each slow request now holds a connection for up
+to 30s and the 200-connection pool begins to queue in eu-west.</p>
+      </div></li>
+      <li class="key"><span class="tl__t">09:47</span><div class="tl__b">
+        <h3>Detected<span class="tag">33 min to detect</span></h3>
+        <p>The success-rate alert fires after five minutes below 95%. No latency alert ever fired: the SLO
+is measured at p50, which never moved.</p>
+      </div></li>
+      <li><span class="tl__t">10:26</span><div class="tl__b">
+        <h3>Scaling up makes it worse</h3>
+        <p>Per the runbook, on-call scales pods from 12 to 40. Each opens connections against the same
+provider-side ceiling; the failure rate climbs from 28% to 41%.</p>
+      </div></li>
+      <li class="key"><span class="tl__t">13:01</span><div class="tl__b">
+        <h3>Mitigated<span class="tag">3h 47m total</span></h3>
+        <p>A diff against 2026.9.2 surfaced the timeout constant at 11:38 and the rollback completes in the
+last region. Success rate returns above 99%; a retry job recovers 39,600 of 41,900 checkouts by
+          13:41.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <div class="two">
+    <section class="cause" aria-labelledby="rc">
+      <h2 class="lab" id="rc">Root cause</h2>
+      <p class="lede">A timeout raised from <code>2s</code> to <code>30s</code> turned a slow
+        dependency into an outage.</p>
+      <p>A pool's throughput is capacity divided by hold time. At two seconds a stuck request freed its
+connection fast enough that a slow provider cost latency and nothing more; at thirty it holds
+fifteen times longer, so the pool saturates at a fifteenth of the load it was sized for. The
+slowdown itself was ordinary — twice last quarter, neither an incident. What changed was our
+        tolerance.</p>
+    </section>
+
+    <section aria-labelledby="cf">
+      <h2 class="lab h-sec" id="cf">Contributing factors</h2>
+      <ol class="fac">
+        <li><b>01</b><div><h3>The latency SLO is measured at p50</h3>
+          <p>A p99 blowout raises no alert. Thirty-three minutes passed before a success-rate
+            alert caught it indirectly.</p></div></li>
+        <li><b>02</b><div><h3>A behaviour change hid inside a dependency bump</h3>
+          <p>Three lines in a forty-one file pull request, no note in the description, approved
+            in under four minutes.</p></div></li>
+        <li><b>03</b><div><h3>The runbook's first move is the wrong move here</h3>
+          <p>"Scale up" is right for CPU saturation and harmful for pool exhaustion. It cost
+            72 minutes and raised the failure rate.</p></div></li>
+      </ol>
+      <h2 class="lab h-sec" id="ww" style="margin-top:1.75rem">What went well</h2>
+      <ul class="well" aria-labelledby="ww">
+        <li><strong>Idempotency keys held.</strong> No double charges across 41,900 failures; the
+          retry job recovered 94% within 40 minutes.</li>
+        <li><strong>The rollback was clean.</strong> Six regions, 83 minutes, no manual steps.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="sec" aria-labelledby="ai">
+    <table class="acts">
+      <caption id="ai">Action items · 3 open, 1 complete</caption>
+      <thead><tr><th scope="col">ID</th><th scope="col">Action</th><th scope="col">Owner</th>
+        <th scope="col">Due</th><th scope="col">Status</th></tr></thead>
+      <tbody>
+        <tr><td class="a-id">AI-1</td>
+          <td class="a-what">Alert on p99 checkout latency and on success rate, not p50 alone.</td>
+          <td class="a-who">M. Halvorsen</td><td class="a-due">19 Sep</td>
+          <td><span class="st st--done">Done</span></td></tr>
+        <tr><td class="a-id">AI-2</td>
+          <td class="a-what">Add a circuit breaker to the provider client, opening at 25% errors over 30 seconds.</td>
+          <td class="a-who">R. Idowu</td><td class="a-due">26 Sep</td>
+          <td><span class="st st--wip">In progress</span></td></tr>
+        <tr><td class="a-id">AI-3</td>
+          <td class="a-what">Treat timeout, retry and pool constants as behaviour changes in review — CODEOWNERS plus a
+required note.</td>
+          <td class="a-who">Platform</td><td class="a-due">3 Oct</td>
+          <td><span class="st">Not started</span></td></tr>
+        <tr><td class="a-id">AI-4</td>
+          <td class="a-what">Rewrite the checkout runbook to diagnose saturation before scaling,
+            pool metrics first.</td>
+          <td class="a-who">D. Kaur</td><td class="a-due">10 Oct</td>
+          <td><span class="st">Not started</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer class="colophon">Blameless review held 18 September, sixteen attendees from Payments, Platform and Support.
+Timestamps come from the incident channel and the deploy log; failure rates are the per-minute
+success-rate metric.</footer>
+
+</div>
+</body>
+</html>

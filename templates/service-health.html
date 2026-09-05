@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Every service met its objective and the error budget is 71% gone</title>
+<!--
+  Agent Artifacts template · status / service-health
+  VOICE  neo-grotesque ("Helvetica Neue", Helvetica, Arial, Liberation Sans), tabular figures
+  SCHEME light neutral #eef0f1 · slate-teal data #2f6d78 · no brand accent
+
+  THE ARGUMENT — keep it. A status page answers "are we up?": a state, and the provider's
+  question. This answers "how much unreliability can we still afford, what did we spend it
+  on, and what is it costing us?" An objective is a FLOOR, a budget is a TOTAL — so every
+  service can meet its objective while the quarter's budget is gone. Lead with a CLAIM.
+
+  · Ledger sorts by BUDGET CONSUMED, never by date: one incident usually dwarfs the rest.
+  · "What it has already cost" is not optional. A budget with no consequence is a gauge,
+    and a gauge is what a status page already gives you.
+  · Strips are 90 bars, one per day. Healthy baseline is ONE tiled SVG <pattern>; add rects
+    only for a bad day — a knockout in the CARD colour (#fff) then the shorter state bar.
+    Day d sits at x = d * 4.
+  · Bar HEIGHT encodes availability, colour encodes state. Keep both, and keep the counts
+    in words: red and green are one colour to many readers.
+  · DELETE, don't empty. No incidents? Say so in the hero and drop the ledger.
+  · Never pin the root to the viewport height, never give html or body a percentage height,
+    no fixed or sticky positioning. Nothing external: no fonts, images, scripts, styles.
+-->
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+:root{
+--bg:#eef0f1;--card:#fff;--tn:#f7f8f9;
+--ink:#14181b;--mu:#59646a;--su:#626c72;
+--line:#e4e8ea;--l2:#ccd3d6;
+--data:#2f6d78;--d3:#74a8b0;--fl:#d3e0e4;--tk:#d8dfe1;
+--good:#1c6b4d;--gb:#e8f2ee;--warn:#8a5606;--wb:#f8f0e2;--wl:#e6cfa4;
+--bad:#a52f26;--bb:#f8ecea;
+--sans:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",sans-serif;
+--s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:2.75rem;--s8:4rem;
+--r:.625rem}
+body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
+font-family:var(--sans);font-size:1rem;line-height:1.5;font-variant-numeric:tabular-nums;
+-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;line-height:1.15;letter-spacing:-.02em;font-weight:700}
+p{margin:0}ul,ol{margin:0;padding:0;list-style:none}
+.page{max-width:68rem;margin-inline:auto}
+.lab,caption,.stats dt,.chart figcaption,.ledger thead th{color:var(--su);font-size:.6875rem;
+font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.h-sec{padding-bottom:var(--s2);border-bottom:1px solid var(--l2);color:var(--su)}
+.sec{margin-top:var(--s6)}
+
+/* chip — word + shape, never colour alone */
+.chip{display:inline-flex;align-items:center;gap:.45em;padding:.2rem .55rem .2rem .5rem;
+border-radius:99px;font-size:.75rem;font-weight:700;background:var(--gb);color:var(--good);
+white-space:nowrap}
+.chip::before{content:"";width:.5rem;height:.5rem;border-radius:99px;background:currentColor;flex:0 0 auto}
+.chip--warn{background:var(--wb);color:var(--warn)}
+.chip--warn::before{border-radius:1px;transform:rotate(45deg);width:.45rem;height:.45rem}
+.chip--bad{background:var(--bb);color:var(--bad)}
+.chip--bad::before{border-radius:1px;width:.55rem;height:.2rem}
+
+/* HEADER */
+.head{padding-bottom:var(--s4);border-bottom:2px solid var(--ink)}
+.head h1{max-width:26ch;margin-top:var(--s2);font-size:clamp(1.5rem,3.6vw,2.25rem)}
+.head__sub{max-width:70ch;margin-top:var(--s3);color:var(--mu);font-size:.9375rem}
+.head__sub b{color:var(--ink)}
+
+/* HERO — figure + descending burn-down: the identity */
+.burn{display:grid;grid-template-columns:minmax(0,15rem) minmax(0,1fr);gap:var(--s5) var(--s6);
+align-items:center;margin-top:var(--s5);padding:var(--s5);border:1px solid var(--line);
+border-radius:var(--r);background:var(--card)}
+.burn__fig{font-size:clamp(3rem,8vw,4.25rem);font-weight:700;letter-spacing:-.045em;line-height:.9;
+color:var(--warn)}
+.burn__cap{margin-top:var(--s2);color:var(--mu);font-size:.875rem;line-height:1.4}
+.burn__cap b{color:var(--ink)}
+.stats{display:flex;flex-wrap:wrap;gap:var(--s3) var(--s5);margin-top:var(--s4);
+padding-top:var(--s3);border-top:1px solid var(--line)}
+
+.stats dd{margin:.1rem 0 0;font-size:1.0625rem;font-weight:700;letter-spacing:-.02em}
+
+.chart{margin:0}
+.chart svg{display:block;width:100%;height:132px;margin-top:var(--s3)}
+.chart__note{margin-top:var(--s2);color:var(--mu);font-size:.8125rem;line-height:1.45}
+.chart__note b{color:var(--ink)}
+
+/* LEDGER — by budget consumed, not by date */
+.ledger{width:100%;margin-top:var(--s4);border-collapse:collapse;text-align:left;font-size:.875rem}
+caption{text-align:left;padding-bottom:var(--s2);border-bottom:1px solid var(--l2);color:var(--su)}
+.ledger th,.ledger td{padding:var(--s3) var(--s3) var(--s3) 0}
+.ledger thead th{padding:var(--s3) var(--s3) var(--s2) 0}
+.ledger tbody th{font-weight:400}
+.ledger tbody tr+tr th,.ledger tbody tr+tr td{border-top:1px solid var(--line)}
+.r{text-align:right;white-space:nowrap}
+.g-min{font-weight:700}
+.g-bar{width:8rem}
+.g-bar i{display:grid;height:.375rem;margin-top:.3rem;border-radius:99px;background:var(--tk);overflow:hidden}
+.g-bar i b{border-radius:99px;background:var(--data)}
+.ledger tfoot th,.ledger tfoot td{padding-top:var(--s3);border-top:2px solid var(--l2);font-weight:700}
+
+/* CONSEQUENCES */
+.cost{margin-top:var(--s4);font-size:.9375rem}
+.cost li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s3) var(--s4);
+padding:var(--s3) 0}
+.cost li+li{border-top:1px solid var(--line)}
+.cost__n{color:var(--data);font-size:1.125rem;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.cost h3{font-size:1rem}
+.cost p{margin-top:var(--s1);color:var(--mu);max-width:66ch}
+
+/* BY SERVICE — strips, demoted to evidence */
+.board{margin-top:var(--s4);padding:var(--s5);border:1px solid var(--line);border-radius:var(--r);
+background:var(--card)}
+.svc{margin-top:var(--s4)}
+.svc+.svc{padding-top:var(--s4);border-top:1px solid var(--line)}
+.svc__top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s2) var(--s3)}
+.svc__name{font-size:.9375rem;font-weight:700}
+.svc__slo{color:var(--mu);font-size:.8125rem}
+.svc__slo b{color:var(--ink)}
+.strip{display:block;width:100%;height:28px;margin-top:var(--s2)}
+.svc__foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s1) var(--s3);
+margin-top:var(--s2);color:var(--mu);font-size:.8125rem}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);margin-top:var(--s4);padding-top:var(--s3);
+border-top:1px solid var(--line);color:var(--mu);font-size:.8125rem}
+.legend span{display:inline-flex;align-items:center;gap:.45em}
+.key{display:inline-block;width:.375rem;background:var(--d3)}
+.key--ok{height:1rem}
+.key--deg{height:.625rem;background:var(--warn)}
+.key--out{height:.3125rem;background:var(--bad)}
+.kicker{margin-top:var(--s5);padding:var(--s5);border:1px solid var(--l2);border-radius:var(--r);
+background:var(--tn)}
+.kicker p{max-width:62ch;margin-top:var(--s3);font-size:1.0625em;line-height:1.45}
+.colophon{margin-top:var(--s5);padding-top:var(--s3);border-top:1px solid var(--line);
+color:var(--su);font-size:.8125rem;line-height:1.5}
+
+@media (max-width:52rem){
+.burn{grid-template-columns:minmax(0,1fr);gap:var(--s4)}
+}
+@media (max-width:44rem){
+/* ledger -> cards. caption MUST be re-declared or the anonymous table box collapses it. */
+.ledger,caption,.ledger thead,.ledger tbody,.ledger tfoot,.ledger tr,.ledger th,.ledger td{display:block}
+.ledger thead{display:none}
+.ledger tbody tr,.ledger tfoot tr{display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;
+gap:.15rem var(--s3);padding:var(--s3) 0;border-top:1px solid var(--line)}
+.ledger tbody th,.ledger tbody td,.ledger tfoot th,.ledger tfoot td{padding:0;border-top:0}
+.ledger tbody th,.ledger tfoot th{grid-column:1/3;grid-row:1;font-weight:700}
+.g-min{grid-column:3;grid-row:1;justify-self:end}
+.g-when{grid-column:1;grid-row:2;color:var(--mu);font-size:.8125rem;text-align:left}
+.g-down{grid-column:2;grid-row:2;color:var(--mu);font-size:.8125rem;text-align:left}
+.g-bar{grid-column:1/-1;grid-row:3;width:auto}
+.ledger tfoot tr{border-top:2px solid var(--l2)}
+}
+@media (max-width:34rem){
+:root{--s5:1.125rem;--s6:1.5rem;--s7:1.625rem;--s8:2rem}
+body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.48}
+.burn,.board,.kicker{padding:var(--s3) var(--s4)}
+.sec{margin-top:var(--s5)}
+.svc+.svc{margin-top:var(--s3);padding-top:var(--s3)}
+.cost li{grid-template-columns:minmax(0,1fr);gap:var(--s1);padding-block:var(--s2)}
+.cost__n{font-size:.6875rem;letter-spacing:.09em;text-transform:uppercase}
+.cost p,.chart__note,.head__sub{line-height:1.4}
+.legend{margin-top:var(--s3);padding-top:var(--s2)}
+.colophon{margin-top:var(--s4);padding-top:var(--s2)}
+.stats{margin-top:var(--s3);padding-top:var(--s2)}
+.ledger tbody tr,.ledger tfoot tr{padding-block:var(--s2)}
+.chart svg{height:104px}
+.strip{height:24px}
+.kicker p{font-size:1em}
+}
+</style>
+</head>
+<body>
+<div class="page">
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <defs><pattern id="day" width="4" height="28" patternUnits="userSpaceOnUse">
+    <rect width="2.6" height="28" fill="#74a8b0"/></pattern></defs>
+</svg>
+
+  <header class="head">
+    <span class="lab eyebrow">Reliability review · Q4 FY26 · 8 September</span>
+    <h1>Every service met its objective and the error budget is 71% gone</h1>
+    <p class="head__sub">Six weeks into a thirteen-week quarter. Nothing here is breaching an
+      SLO, and <b>1 hour 55 minutes</b> of unreliability is left to spend before 31 October.
+      An objective is a floor; a budget is a total.</p>
+  </header>
+
+  <section class="burn" aria-labelledby="bd">
+    <div>
+      <h2 class="lab" id="bd">Error budget spent</h2>
+      <p class="burn__fig">71%</p>
+      <p class="burn__cap"><b>278 of 393 minutes</b>, against a 99.7% quarterly objective
+        across all services.</p>
+      <dl class="stats">
+        <div><dt>Remaining</dt><dd>1h 55m</dd></div>
+        <div><dt>Burn rate</dt><dd>7.1 min/day</dd></div>
+        <div><dt>Runs out</dt><dd>24 Sep</dd></div>
+      </dl>
+    </div>
+    <figure class="chart">
+      <figcaption>Budget remaining · 1 Aug – 31 Oct · 393 min at full</figcaption>
+      <svg viewBox="0 0 560 148" preserveAspectRatio="none" role="img" aria-labelledby="bdd">
+        <title id="bdd">Budget falls from 393 minutes on 1 August to 115 today in three steps: webhook DNS 12 Aug, thumbnail worker 19 Aug, and the storage failover 4 Sep which alone took 134 minutes. At this burn rate it reaches zero on 24 September, five weeks before the quarter closes.</title>
+        <path d="M0,8 L67,11.5 L67,33.7 L110,35.9 L110,49.6 L207,54.8 L207,99.8 L231,101.4 L231,140 L0,140 Z" fill="#d3e0e4"/>
+        <path d="M0,8 L67,11.5 L67,33.7 L110,35.9 L110,49.6 L207,54.8 L207,99.8 L231,101.4" fill="none"
+          stroke="#2f6d78" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        <path d="M231,101.4 L329,140 L560,140" fill="none" stroke="#8a5606" stroke-width="2"
+          stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+        <line x1="0" y1="140" x2="560" y2="140" stroke="#ccd3d6" stroke-width="1" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <p class="chart__note">Each step down is an incident. The dashed tail is the projection at
+        today's burn rate: <b>budget gone 24 September</b>, then five weeks of quarter with nothing left to spend.</p>
+    </figure>
+  </section>
+
+  <section class="sec" aria-labelledby="lg">
+    <h2 class="lab h-sec" id="lg">Where it went</h2>
+    <table class="ledger">
+      <caption>Sorted by budget consumed, not by date · four events, 4h 38m total</caption>
+      <thead><tr><th scope="col">Event</th><th scope="col">When</th><th scope="col">Downtime</th>
+        <th class="r" scope="col">Budget</th><th scope="col">Share of spend</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Storage failover — publish pipeline</th>
+          <td class="g-when">4 Sep</td><td class="g-down">2h 14m</td>
+          <td class="r g-min">134 min</td>
+          <td class="g-bar">48%<i><b style="width:48%"></b></i></td></tr>
+        <tr><th scope="row">Webhook delivery — DNS in eu-west</th>
+          <td class="g-when">12 Aug</td><td class="g-down">1h 06m</td>
+          <td class="r g-min">66 min</td>
+          <td class="g-bar">24%<i><b style="width:24%"></b></i></td></tr>
+        <tr><th scope="row">Thumbnail worker rollout</th>
+          <td class="g-when">19 Aug</td><td class="g-down">41m</td>
+          <td class="r g-min">41 min</td>
+          <td class="g-bar">15%<i><b style="width:15%"></b></i></td></tr>
+        <tr><th scope="row">Sub-minute blips · 17 events</th>
+          <td class="g-when">ongoing</td><td class="g-down">37m</td>
+          <td class="r g-min">37 min</td>
+          <td class="g-bar">13%<i><b style="width:13%"></b></i></td></tr>
+      </tbody>
+      <tfoot><tr><th scope="row">Total</th><td class="g-when">6 weeks</td><td class="g-down">4h 38m</td>
+        <td class="r g-min">278 min</td><td class="g-bar">71% of budget</td></tr></tfoot>
+    </table>
+  </section>
+
+  <section class="sec" aria-labelledby="ct">
+    <h2 class="lab h-sec" id="ct">What the overspend has already cost</h2>
+    <ol class="cost">
+      <li><span class="cost__n">01</span><div>
+        <h3>The publish pipeline has been frozen since 5 September</h3>
+        <p>Three releases held, including the thumbnail rework — which needs the pipeline it is
+          not allowed to touch. The freeze lifts when the budget clears 40%.</p>
+      </div></li>
+      <li><span class="cost__n">02</span><div>
+        <h3>On-call is doubled until the circuit breaker lands</h3>
+        <p>The storage failover has no automatic recovery, so a second responder covers publish
+          out of hours until 26 September.</p>
+      </div></li>
+      <li><span class="cost__n">03</span><div>
+        <h3>The latency objective is unfundable this quarter</h3>
+        <p>Tightening p95 to 300 ms would spend budget we no longer have. It moves to Q1 —
+          recorded, not quietly dropped.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section class="board" aria-labelledby="bs">
+    <h2 class="lab" id="bs">By service · last 90 days, one bar per day</h2>
+
+    <div class="svc">
+      <div class="svc__top"><span class="svc__name">Publish pipeline</span>
+        <span class="svc__slo">objective <b>99.70%</b> · actual <b>99.76%</b></span></div>
+      <svg class="strip" viewBox="0 0 360 28" preserveAspectRatio="none" role="img" aria-label="Publish pipeline: 88 of 90 days operational; degraded 19 Aug, partial outage 4 Sep.">
+        <rect width="360" height="28" fill="url(#day)"/>
+        <rect x="276" width="2.6" height="28" fill="#fff"/><rect x="276" y="10" width="2.6" height="18" fill="#8a5606"/>
+        <rect x="340" width="2.6" height="28" fill="#fff"/><rect x="340" y="19" width="2.6" height="9" fill="#a52f26"/>
+      </svg>
+      <p class="svc__foot"><span>1 degraded day · 1 partial outage — <b>63% of the quarter's spend</b></span>
+        <span class="chip chip--warn">Met, barely</span></p>
+    </div>
+
+    <div class="svc">
+      <div class="svc__top"><span class="svc__name">Webhooks</span>
+        <span class="svc__slo">objective <b>99.50%</b> · actual <b>99.95%</b></span></div>
+      <svg class="strip" viewBox="0 0 360 28" preserveAspectRatio="none" role="img" aria-label="Webhooks: 89 of 90 days operational; degraded 12 Aug.">
+        <rect width="360" height="28" fill="url(#day)"/>
+        <rect x="248" width="2.6" height="28" fill="#fff"/><rect x="248" y="10" width="2.6" height="18" fill="#8a5606"/>
+      </svg>
+      <p class="svc__foot"><span>1 degraded day · 24% of the spend</span><span class="chip">Met</span></p>
+    </div>
+
+    <div class="svc">
+      <div class="svc__top"><span class="svc__name">API</span>
+        <span class="svc__slo">objective <b>99.90%</b> · actual <b>99.99%</b></span></div>
+      <svg class="strip" viewBox="0 0 360 28" preserveAspectRatio="none" role="img" aria-label="API: 89 of 90 days operational; degraded 4 Sep.">
+        <rect width="360" height="28" fill="url(#day)"/>
+        <rect x="340" width="2.6" height="28" fill="#fff"/><rect x="340" y="10" width="2.6" height="18" fill="#8a5606"/>
+      </svg>
+      <p class="svc__foot"><span>1 degraded day · 13% of the spend</span><span class="chip">Met</span></p>
+    </div>
+
+    <div class="svc">
+      <div class="svc__top"><span class="svc__name">Web app</span>
+        <span class="svc__slo">objective <b>99.90%</b> · actual <b>100%</b></span></div>
+      <svg class="strip" viewBox="0 0 360 28" preserveAspectRatio="none" role="img" aria-label="Web app: all 90 days operational.">
+        <rect width="360" height="28" fill="url(#day)"/>
+      </svg>
+      <p class="svc__foot"><span>No incidents · none of the spend</span><span class="chip">Met</span></p>
+    </div>
+
+
+    <p class="legend">
+      <span><i class="key key--ok"></i>Operational — full bar</span>
+      <span><i class="key key--deg"></i>Degraded — two-thirds bar</span>
+      <span><i class="key key--out"></i>Partial outage — short bar</span>
+      <span>Height and colour both encode the day; counts are written beside each strip.</span>
+    </p>
+  </section>
+
+  <section class="kicker" aria-labelledby="kk">
+    <h2 class="lab" id="kk">The thing this board is for</h2>
+    <p>Four services, four objectives met, and seventy-one per cent of the quarter spent in six
+      weeks. <b>Both are true and only one of them is on a status page.</b> The publish pipeline
+      cleared its floor by six hundredths of a point and took two-thirds of the money.</p>
+  </section>
+
+  <footer class="colophon">Uptime comes from external probes in five regions at 30-second
+    intervals; a day is degraded if any probe window falls below its objective. Budget is 0.3% of
+    the 92-day quarter — 393 minutes, pooled across all four services. Times UTC.</footer>
+
+</div>
+</body>
+</html>

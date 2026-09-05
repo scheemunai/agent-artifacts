@@ -87,6 +87,26 @@ export const starterTemplateManifest = [
         "slots": []
       },
       {
+        "slug": "case-study",
+        "category": "research",
+        "name": "Case Study",
+        "description": "A customer outcome told with the customer's own numbers: one display figure and what it is measured against, a before-and-after ledger with magnitude bars, the situation that caused it, an honest account of what the change cost, and quotes from the people who lived it.",
+        "type": "html",
+        "content_file": "case-study.html",
+        "thumbnail": "/assets/template-thumbs/case-study.png",
+        "slots": []
+      },
+      {
+        "slug": "postmortem",
+        "category": "research",
+        "name": "Incident Postmortem",
+        "description": "A blameless incident write-up: an inked impact strip carrying the four numbers that matter, a failure-rate chart with detection and mitigation marked, a timeline whose key beats are impact-start / detected / mitigated, the root cause stated in one sentence, contributing factors, what went well,…",
+        "type": "html",
+        "content_file": "postmortem.html",
+        "thumbnail": "/assets/template-thumbs/postmortem.png",
+        "slots": []
+      },
+      {
         "slug": "report",
         "category": "research",
         "name": "Report",
@@ -133,6 +153,16 @@ export const starterTemplateManifest = [
         "slots": []
       },
       {
+        "slug": "research-brief",
+        "category": "research",
+        "name": "Research Brief",
+        "description": "A question answered up front, then the evidence that earns it: numbered findings each carrying its own citation and a primary/secondary tag, a confidence rating with its reasoning, a source list, and an honest section on what is still unknown.",
+        "type": "html",
+        "content_file": "research-brief.html",
+        "thumbnail": "/assets/template-thumbs/research-brief.png",
+        "slots": []
+      },
+      {
         "slug": "dashboard",
         "category": "status",
         "name": "Dashboard",
@@ -166,11 +196,31 @@ export const starterTemplateManifest = [
       {
         "slug": "metrics-dashboard",
         "category": "status",
-        "name": "Metrics dashboard",
-        "description": "KPI status page: stat tiles with deltas, a comparison table, and labelled service-level meters. Rehash it for any weekly or monthly numbers review.",
+        "name": "Metrics Dashboard",
+        "description": "The recurring numbers review: one hero metric with a twelve-week trend, a row of KPI tiles carrying deltas and their comparisons, a channel breakdown, service levels metered against their targets, and a short note on what actually changed.",
         "type": "html",
         "content_file": "metrics-dashboard.html",
         "thumbnail": "/assets/template-thumbs/metrics-dashboard.png",
+        "slots": []
+      },
+      {
+        "slug": "project-status",
+        "category": "status",
+        "name": "Project Status",
+        "description": "Where a workstream actually stands: a verdict stated as a judgement with the reason behind it, a milestone rail with committed dates, scope metered against its totals, blockers with owners and ages, and a 'needs a human' section where every entry names one person, one decision and one date.",
+        "type": "html",
+        "content_file": "project-status.html",
+        "thumbnail": "/assets/template-thumbs/project-status.png",
+        "slots": []
+      },
+      {
+        "slug": "service-health",
+        "category": "status",
+        "name": "Service Health",
+        "description": "A reliability review that treats uptime as a budget rather than a state: how much unreliability is left this quarter, a burn-down showing where it went, the incidents ranked by budget consumed rather than by date, what the overspend has already cost in frozen releases and deferred work, and…",
+        "type": "html",
+        "content_file": "service-health.html",
+        "thumbnail": "/assets/template-thumbs/service-health.png",
         "slots": []
       },
       {
