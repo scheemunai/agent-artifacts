@@ -118,9 +118,9 @@ const typeTokens: TokenSpec[] = [
 const widthTokens: TokenSpec[] = [
   {
     name: '--width-aa-shell',
-    intent: 'The app shell: dashboard, style guide, every signed-in page.',
+    intent:
+      'The page measure. Every full-width surface — home, templates, legal, dashboard — and the header and footer band above and below them.',
   },
-  { name: '--width-aa-shell-marketing', intent: 'The marketing shell on the home page.' },
   {
     name: '--width-aa-panel',
     intent: 'Feature panels: the hero artifact card and the terms card.',

@@ -6,7 +6,10 @@ import { StyleGuidePage } from '../../src/ui/pages/style-guide.js';
 import { readClientSource } from '../support/client-assets.js';
 import {
   declarationValue,
+  type ElementSpec,
+  maxLength,
   parseStylesheet,
+  resolveVars,
   themeVariables,
   winningDeclaration,
 } from '../support/css-cascade.js';
@@ -53,6 +56,97 @@ describe('width tokens', () => {
         0
       );
     }
+  });
+});
+
+/**
+ * THE HEADER AND THE PAGE UNDER IT ARE ONE COLUMN, MEASURED RATHER THAN EYEballed.
+ *
+ * The defect this locks: `.aa-marketing-shell` carried a container width of its own — 66.5rem
+ * against the 72rem every page's own content used — so on /templates and the legal pages the
+ * header band was inset 44px further on the left and stopped 44px short on the right. The wordmark
+ * therefore started to the RIGHT of the page heading beneath it, and the header's right edge
+ * stopped before the card grid's. Nothing in the markup or the class names said the two had to
+ * agree, so nothing failed when they stopped agreeing.
+ *
+ * WHY THIS ASSERTS COMPUTED PIXELS AND NOT A TOKEN NAME. "Both use `--width-aa-shell`" is the fix
+ * as written today and would pass just as happily if one of them later moved to a same-valued
+ * alias, or if a media query gave one of them a different padding. The claim a reader actually has
+ * — the header starts where the content starts — is about resolved left and right edges, so that
+ * is what is compared: same width expression AND same inline padding, at every breakpoint the
+ * sheet distinguishes.
+ *
+ * Both are centred by `margin-inline: auto`, so equal outer width plus equal inline padding is
+ * equal left and right edges at any viewport. The end-to-end check that they land there in a real
+ * browser is smoke.spec's business; this is the sheet-level guarantee that they cannot diverge.
+ */
+describe('the marketing chrome and the page it wraps share one measure', () => {
+  const shell = (classes: string[], tag = 'div'): ElementSpec[] => [{ tag, classes }];
+
+  /** Every surface that renders the marketing header and footer, plus those two bands. */
+  const surfaces: Record<string, ElementSpec[]> = {
+    'marketing header inner': [
+      { tag: 'header', classes: ['aa-app-header'] },
+      { tag: 'div', classes: ['aa-shell', 'aa-marketing-shell', 'aa-app-nav'] },
+    ],
+    'marketing footer inner': [
+      { tag: 'footer', classes: ['aa-marketing-footer'] },
+      { tag: 'div', classes: ['aa-shell', 'aa-marketing-shell'] },
+    ],
+    'home main': [
+      { tag: 'main', classes: ['aa-main', 'aa-marketing-main'] },
+      { tag: 'div', classes: ['aa-shell', 'aa-marketing-shell'] },
+    ],
+    'templates main': shell(['aa-main', 'aa-shell', 'aa-templates'], 'main'),
+    'legal main': shell(['aa-main', 'aa-shell', 'aa-legal'], 'main'),
+  };
+
+  // The sheet's own breakpoints plus the four widths the founder's report was measured at.
+  const viewports = [390, 480, 560, 720, 768, 760, 1280, 1440, 1920];
+
+  /**
+   * `maxLength` has no notion of a containing block, so `100%` is substituted here rather than
+   * taught to the resolver. Every surface below is a child of a viewport-wide box — `body`, the
+   * sticky header, `main` — so for these five, and only these five, `100%` IS the viewport. Written
+   * as a local narrowing on purpose: a general `100% = viewport` rule in the shared resolver would
+   * be wrong for the majority of elements that use it.
+   */
+  const pixels = (value: string, viewport: number) =>
+    maxLength(resolveVars(value, variables).replaceAll('100%', `${viewport}px`), viewport);
+
+  const resolvedWidth = (path: ElementSpec[], viewport: number) => {
+    const declared = winningDeclaration(appRules, path, 'width', viewport);
+    expect(declared, `no width resolves for ${JSON.stringify(path)}`).toBeDefined();
+    return pixels(declared?.value ?? '', viewport);
+  };
+
+  const resolvedPadding = (path: ElementSpec[], viewport: number) => {
+    const declared = winningDeclaration(appRules, path, 'padding-inline', viewport);
+    expect(declared, `no padding-inline resolves for ${JSON.stringify(path)}`).toBeDefined();
+    return pixels(declared?.value ?? '', viewport);
+  };
+
+  it.each(viewports)('puts every marketing surface on identical bounds at %ipx', (viewport) => {
+    const entries = Object.entries(surfaces);
+    const [, reference] = entries[0] as [string, ElementSpec[]];
+    const referenceWidth = resolvedWidth(reference, viewport);
+    const referencePadding = resolvedPadding(reference, viewport);
+
+    for (const [name, path] of entries) {
+      expect(resolvedWidth(path, viewport), `${name} width at ${viewport}`).toBe(referenceWidth);
+      expect(resolvedPadding(path, viewport), `${name} padding-inline at ${viewport}`).toBe(
+        referencePadding
+      );
+    }
+  });
+
+  it('keeps exactly one page-width token in the scale', () => {
+    // A second one is how the two drifted. `--width-aa-panel` and `--width-aa-measure` are columns
+    // laid INSIDE a page, which is a composition; a second full-page measure is a fork.
+    expect(widthTokens.filter((token) => token.startsWith('--width-aa-shell'))).toEqual([
+      '--width-aa-shell',
+      '--width-aa-shell-narrow',
+    ]);
   });
 });
 

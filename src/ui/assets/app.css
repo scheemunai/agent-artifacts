@@ -121,8 +121,17 @@
   /* Width tokens: one named container scale. Before these, seven container widths shipped as raw
      rem literals under seven class names, so no two sections could be coordinated without finding
      and editing every literal. Every container width in this sheet resolves to a step here. */
+
+  /* THE PAGE MEASURE, AND THERE IS ONLY ONE OF IT. A second container width — 66.5rem, under
+     `--width-aa-shell-marketing` — used to sit on this line, and it was the bug rather than a
+     variant: the marketing header and footer resolved to it while /templates and the legal pages
+     laid their own content out on `--width-aa-shell`, so on those pages the wordmark started 44px
+     right of the page heading and the header's right edge stopped 44px short of the card grid.
+     Nothing in the markup said the two measures had to agree, so nothing noticed when they did
+     not. One token, and the header cannot leave the content again. Elements that genuinely want a
+     narrower column say so with `--width-aa-panel` or `--width-aa-measure`, which is a composition
+     rather than a second page width. */
   --width-aa-shell: 72rem;
-  --width-aa-shell-marketing: 66.5rem;
   --width-aa-panel: 48.75rem;
   /* Auth, setup, verify and placeholder: a single card that is the whole page. One measure
      draws the card and its contents — they were 46rem and 30rem, which is how 186px of dead
@@ -1709,10 +1718,6 @@
     white-space: nowrap;
   }
 
-  .aa-marketing-shell {
-    width: min(100%, var(--width-aa-shell-marketing));
-  }
-
   .aa-marketing-main {
     padding-block: clamp(var(--spacing-aa-5), 4vw, var(--spacing-aa-10)) 0;
   }
@@ -2676,7 +2681,12 @@
        with even breathing room. The shared `.aa-app-nav` above top-aligns because the AUTHENTICATED
        account block can be tall; scoping this to the marketing shell keeps that intact while fixing
        the home header, which was pinned to the top (no space above) with the nav's min-height left
-       as a gap below. */
+       as a gap below.
+
+       `.aa-marketing-shell` IS A HOOK, NOT A WIDTH — this rule and the footer band are all it
+       selects now. It used to carry a container width of its own, which is what let the marketing
+       chrome and the page under it disagree about where the page starts; the width lives on
+       `.aa-shell` alone. */
     .aa-app-nav.aa-marketing-shell {
       align-items: center;
       padding-block: var(--spacing-aa-3);
