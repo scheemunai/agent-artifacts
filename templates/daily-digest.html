@@ -110,7 +110,10 @@ summary span{color:var(--subtle);font-weight:400;font-size:.8125rem}
   .rail__sec{border-left:0;border-top:1px solid var(--line)}
   .rail__sec:first-child{border-top:0}
   .toc small{display:none}
-  .toc a{min-height:0;padding-block:.3125rem}
+  /* The 44px touch target is a MOBILE requirement, so it must not be relaxed here — an earlier
+     tightening pass set min-height:0 at exactly the width where the rule applies. Flex centres the
+     label inside the target rather than leaving it stranded at the top of a 44px box. */
+  .toc a{min-height:2.75rem;display:flex;align-items:center;padding-block:.25rem}
 
   .item__top{grid-template-columns:1.75rem minmax(0,1fr);gap:.625rem}
   .item__n{width:1.75rem;height:1.75rem;font-size:.75rem}
