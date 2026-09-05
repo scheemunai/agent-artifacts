@@ -136,7 +136,15 @@ export function loadStarterTemplates(rootDir?: string): StarterTemplate[] {
   return manifest.map((entry) => {
     const contentPath = resolveTemplateFile(templatesDir, entry.content_file);
     if (!existsSync(contentPath)) {
-      throw new Error(`Starter template file not found: ${entry.content_file}`);
+      // The RESOLVED path, not the manifest value. Three builders wrote `templates/<slug>.html`,
+      // `templates/thumbs/…` and `templates/thumbnails/…` for `content_file`, each of which
+      // resolves under `templates/` again and throws at seed time — and "not found:
+      // templates/spec.html" reads like the file is missing rather than like the path is doubled.
+      // Printing where it actually looked retires the whole class; documenting the convention only
+      // helps whoever reads the documentation.
+      throw new Error(
+        `Starter template file not found for "${entry.slug}": content_file ${JSON.stringify(entry.content_file)} resolved to ${contentPath}. content_file is a BARE FILENAME relative to templates/ — "<slug>.html", no directory prefix.`
+      );
     }
 
     const content = readFileSync(contentPath, 'utf8');
