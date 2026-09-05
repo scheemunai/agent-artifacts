@@ -310,3 +310,149 @@ describe('template API and promote flow', () => {
     }
   });
 });
+
+/**
+ * Category is the axis the whole browse experience turns on: the public page groups by it, the
+ * dashboard groups by it, and an agent looking for a starting point narrows by it. So the thing
+ * worth guarding is not that a column exists — it is that the filter means the same thing to all
+ * three, across BOTH populations, including for rows that predate the column.
+ */
+describe('template categories', () => {
+  it('labels every template, built-in and account alike', async () => {
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/templates?limit=50', {
+        headers: ctx.authHeaders,
+      });
+      expect(response.status).toBe(200);
+      const body = await json(response);
+      const items = body.items as Array<Record<string, unknown>>;
+
+      expect(items.length).toBeGreaterThan(0);
+      for (const item of items) {
+        expect(item.category, `${String(item.slug)} has no category`).toBeDefined();
+        expect(typeof item.category).toBe('string');
+      }
+      // The manifest's own answers, so a mislabelled built-in fails here rather than on the page.
+      const byslug = new Map(items.map((item) => [item.slug, item.category]));
+      expect(byslug.get('recap')).toBe('meetings');
+      expect(byslug.get('metrics-dashboard')).toBe('status');
+      expect(byslug.get('report-html')).toBe('research');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('narrows to one category across built-ins and the account together', async () => {
+    // The founder's requirement in one assertion: an agent browsing for a starting point should see
+    // the blueprints AND its own work in one answer, and should not have to ask twice and merge.
+    const ctx = await createApiTestContext();
+
+    try {
+      const created = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'my-standup',
+          type: 'html',
+          title: 'My standup',
+          content: '<!doctype html><html lang="en"><body><h1>Standup</h1></body></html>',
+        }),
+      });
+      expect(created.status).toBe(201);
+      const artifactId = (await json(created)).id as string;
+
+      const promoted = await ctx.app.request('/v1/templates', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          artifact_id: artifactId,
+          slug: 'my-standup-template',
+          name: 'My standup',
+          category: 'meetings',
+        }),
+      });
+      expect(promoted.status).toBe(201);
+      expect((await json(promoted)).category).toBe('meetings');
+
+      const response = await ctx.app.request('/v1/templates?limit=50&category=meetings', {
+        headers: ctx.authHeaders,
+      });
+      const items = (await json(response)).items as Array<Record<string, unknown>>;
+      const slugs = items.map((item) => item.slug);
+
+      expect(slugs, 'the account template is missing from its own category').toContain(
+        'my-standup-template'
+      );
+      expect(slugs, 'the built-in blueprint is missing from the category').toContain('recap');
+      for (const item of items) {
+        expect(item.category).toBe('meetings');
+      }
+      expect(slugs).not.toContain('metrics-dashboard');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('defaults a template promoted without one, and still finds it under that default', async () => {
+    // A row can be uncategorised two ways: promoted before the column existed, or promoted without
+    // naming one. Both read as the default — and the filter has to agree, or the browse page shows
+    // a template the API cannot return.
+    const ctx = await createApiTestContext();
+
+    try {
+      const created = await ctx.app.request('/v1/artifacts', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          slug: 'unlabelled',
+          type: 'html',
+          title: 'Unlabelled',
+          content: '<!doctype html><html lang="en"><body><h1>Unlabelled</h1></body></html>',
+        }),
+      });
+      const artifactId = (await json(created)).id as string;
+
+      const promoted = await ctx.app.request('/v1/templates', {
+        method: 'POST',
+        headers: { ...ctx.authHeaders, ...jsonContent },
+        body: JSON.stringify({
+          artifact_id: artifactId,
+          slug: 'unlabelled-template',
+          name: 'Unlabelled',
+        }),
+      });
+      expect(promoted.status).toBe(201);
+      expect((await json(promoted)).category).toBe('research');
+
+      const response = await ctx.app.request('/v1/templates?limit=50&category=research', {
+        headers: ctx.authHeaders,
+      });
+      const slugs = ((await json(response)).items as Array<Record<string, unknown>>).map(
+        (item) => item.slug
+      );
+      expect(slugs, 'a defaulted template is invisible to the category it reads as').toContain(
+        'unlabelled-template'
+      );
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('refuses a category that is not one of the six', async () => {
+    // A closed set, because an open one would let a typo create a category with one template in it
+    // that no page renders and no agent can guess.
+    const ctx = await createApiTestContext();
+
+    try {
+      const response = await ctx.app.request('/v1/templates?category=miscellaneous', {
+        headers: ctx.authHeaders,
+      });
+      expect(response.status).toBe(400);
+      expect(JSON.stringify(await json(response))).toContain('validation_failed');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+});

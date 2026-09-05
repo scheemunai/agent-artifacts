@@ -118,6 +118,9 @@ describe('starter template manifest seeding', () => {
           slug,
           name: `Example ${index}`,
           description: `Example ${index}`,
+          // Every manifest entry declares the job it does; the schema is a closed set precisely so a
+          // typo cannot produce an empty section on the public browse page.
+          category: 'research',
           type: index === 0 ? 'html' : 'markdown',
           ...(index === 0 ? { thumbnail: '/assets/templates/html-example.png' } : {}),
           content_file: contentFile,

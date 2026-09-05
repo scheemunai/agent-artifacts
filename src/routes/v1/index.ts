@@ -397,6 +397,7 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
         options: {
           limit: query.limit,
           ...(query.cursor ? { cursor: query.cursor } : {}),
+          ...(query.category ? { category: query.category } : {}),
         },
       })
     );
@@ -416,6 +417,7 @@ export function registerV1Routes<E extends Env>(app: Hono<E>, ctx: V1RoutesConte
         name: body.name,
         slug: body.slug,
         ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.category !== undefined ? { category: body.category } : {}),
       }),
       201
     );
@@ -654,7 +656,7 @@ Documented endpoints:
 - PATCH /v1/artifacts/:id_or_slug/share
 - DELETE /v1/artifacts/:id_or_slug/share
 - POST /v1/artifacts/:id_or_slug/share/revoke
-- GET /v1/templates
+- GET /v1/templates            (?category= to narrow; built-ins and your own together)
 - POST /v1/templates
 - GET /v1/templates/:slug
 - DELETE /v1/templates/:slug

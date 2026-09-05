@@ -19,7 +19,10 @@ const documentedPublishFields = [
   'password',
 ];
 
-const documentedPromoteTemplateFields = ['artifact_id', 'name', 'slug', 'description'];
+// `category` is the axis the public browse page groups by and the one an agent filters on, so a
+// promoted template that cannot name its own is a template nobody finds. Optional on the wire and
+// defaulted on read, which is why it is documented rather than required.
+const documentedPromoteTemplateFields = ['artifact_id', 'name', 'slug', 'description', 'category'];
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 

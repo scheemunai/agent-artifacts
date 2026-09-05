@@ -2,6 +2,7 @@
 export const starterTemplateManifest = [
   {
     "slug": "report",
+    "category": "research",
     "name": "Report",
     "description": "General-purpose report: title, date, summary, body, next steps.",
     "type": "markdown",
@@ -17,6 +18,7 @@ export const starterTemplateManifest = [
   },
   {
     "slug": "changelog",
+    "category": "releases",
     "name": "Changelog",
     "description": "Release-notes layout with Added, Changed, and Fixed sections.",
     "type": "markdown",
@@ -33,6 +35,7 @@ export const starterTemplateManifest = [
   },
   {
     "slug": "briefing",
+    "category": "meetings",
     "name": "Briefing",
     "description": "Morning briefing with a TL;DR callout and free-form sections.",
     "type": "markdown",
@@ -47,6 +50,7 @@ export const starterTemplateManifest = [
   },
   {
     "slug": "dashboard",
+    "category": "status",
     "name": "Dashboard",
     "description": "Status page with markdown-table metrics and details.",
     "type": "markdown",
@@ -61,6 +65,7 @@ export const starterTemplateManifest = [
   },
   {
     "slug": "one-pager",
+    "category": "decisions",
     "name": "One-pager",
     "description": "Clean single-column document for proposals and memos.",
     "type": "markdown",
@@ -74,6 +79,7 @@ export const starterTemplateManifest = [
   },
   {
     "slug": "recap",
+    "category": "meetings",
     "name": "Recap",
     "description": "Summary-of-many-items page: an index rail plus per-item cards with TL;DR and key points. Rehash it for a daily video, news, or reading recap.",
     "type": "html",
@@ -83,6 +89,7 @@ export const starterTemplateManifest = [
   },
   {
     "slug": "metrics-dashboard",
+    "category": "status",
     "name": "Metrics dashboard",
     "description": "KPI status page: stat tiles with deltas, a comparison table, and labelled service-level meters. Rehash it for any weekly or monthly numbers review.",
     "type": "html",
@@ -92,6 +99,7 @@ export const starterTemplateManifest = [
   },
   {
     "slug": "report-html",
+    "category": "research",
     "name": "Executive report",
     "description": "Editorial single-column document: cover header, executive summary callout, numbered sections, key figures, and owned next steps.",
     "type": "html",

@@ -344,6 +344,7 @@ export const templates = sqliteTable(
     name: text('name').notNull(),
     description: text('description'),
     thumbnailUrl: text('thumbnail_url'),
+    category: text('category'),
     type: text('type').notNull(),
     content: text('content').notNull(),
     slots: text('slots').notNull(),

@@ -13,7 +13,13 @@ import {
   artifactTypeSchema,
   slugSchema,
 } from '../lib/schemas/artifacts.js';
-import { promoteTemplateSchema, templateSlotSchema } from '../lib/schemas/templates.js';
+import {
+  DEFAULT_TEMPLATE_CATEGORY,
+  promoteTemplateSchema,
+  type TemplateCategory,
+  templateCategorySchema,
+  templateSlotSchema,
+} from '../lib/schemas/templates.js';
 import { validationFailed } from '../lib/validation.js';
 import type { Logger } from '../logger.js';
 
@@ -27,6 +33,7 @@ export interface StarterTemplate {
   slug: string;
   name: string;
   description: string;
+  category: TemplateCategory;
   type: ArtifactType;
   thumbnail?: string | undefined;
   content: string;
@@ -40,6 +47,7 @@ export interface TemplateRow {
   name: string;
   description: string | null;
   thumbnail_url: string | null;
+  category: string | null;
   type: ArtifactType;
   content: string;
   slots: string;
@@ -57,6 +65,7 @@ export interface TemplateMergeResult {
 export interface ListTemplatesOptions {
   limit: number;
   cursor?: string;
+  category?: TemplateCategory;
 }
 
 export interface PromoteArtifactToTemplateInput {
@@ -66,6 +75,7 @@ export interface PromoteArtifactToTemplateInput {
   name: string;
   slug: string;
   description?: string | null;
+  category?: TemplateCategory | undefined;
 }
 
 interface ArtifactForPromotion {
@@ -84,6 +94,7 @@ const manifestEntrySchema = z
     slug: slugSchema,
     name: z.string().min(1).max(80),
     description: z.string().max(300),
+    category: templateCategorySchema,
     type: artifactTypeSchema,
     thumbnail: z.string().min(1).optional(),
     content_file: z.string().min(1),
@@ -136,6 +147,7 @@ export function loadStarterTemplates(rootDir?: string): StarterTemplate[] {
       slug: entry.slug,
       name: entry.name,
       description: entry.description,
+      category: entry.category,
       type: entry.type,
       ...(entry.thumbnail !== undefined ? { thumbnail: entry.thumbnail } : {}),
       content,
@@ -163,7 +175,13 @@ export async function listTemplatesResponse(input: {
   options: ListTemplatesOptions;
 }): Promise<Record<string, unknown>> {
   const cursor = decodeSortCursor(input.options.cursor);
-  const rows = await listTemplateRows(input.db, input.accountId, input.options.limit + 1, cursor);
+  const rows = await listTemplateRows(
+    input.db,
+    input.accountId,
+    input.options.limit + 1,
+    cursor,
+    input.options.category
+  );
   const pageRows = rows.slice(0, input.options.limit);
   return {
     items: pageRows.map((row) => formatTemplate(row, false)),
@@ -269,6 +287,7 @@ export async function promoteArtifactToTemplate(
     ...(input.description !== undefined && input.description !== null
       ? { description: input.description }
       : {}),
+    ...(input.category !== undefined ? { category: input.category } : {}),
   });
   if (!parsed.success) {
     throw validationFailed(parsed.error.issues);
@@ -304,6 +323,7 @@ export async function promoteArtifactToTemplate(
       name: parsed.data.name,
       description: parsed.data.description ?? null,
       thumbnailUrl: null,
+      category: parsed.data.category ?? DEFAULT_TEMPLATE_CATEGORY,
       type: artifact.type,
       content: artifact.content,
       slots,
@@ -405,6 +425,18 @@ export function parseSlots(slots: string): TemplateSlot[] {
   return Array.isArray(parsed) ? validateSlots(parsed) : [];
 }
 
+/**
+ * The category a row is browsed under.
+ *
+ * Read rather than backfilled. A row can only be uncategorised if it was promoted before the column
+ * existed, and putting somebody's old template into a category we guessed is a decision about their
+ * content; defaulting on read is the same answer and stays wrong only until they set one.
+ */
+export function templateCategory(row: TemplateRow): TemplateCategory {
+  const parsed = templateCategorySchema.safeParse(row.category);
+  return parsed.success ? parsed.data : DEFAULT_TEMPLATE_CATEGORY;
+}
+
 export function formatTemplate(row: TemplateRow, includeContent: boolean): Record<string, unknown> {
   return {
     id: row.id,
@@ -412,6 +444,7 @@ export function formatTemplate(row: TemplateRow, includeContent: boolean): Recor
     name: row.name,
     description: row.description,
     thumbnail_url: row.thumbnail_url,
+    category: templateCategory(row),
     type: row.type,
     built_in: row.account_id === null,
     ...(includeContent
@@ -502,17 +535,18 @@ function seedSqliteStarterTemplates(
   const seed = handle.sqlite.transaction(() => {
     const upsert = handle.sqlite.prepare(`
       INSERT INTO templates (
-        id, account_id, slug, name, description, thumbnail_url, type, content, slots,
+        id, account_id, slug, name, description, thumbnail_url, category, type, content, slots,
         created_from_artifact, created_at, updated_at
       )
       VALUES (
-        @id, NULL, @slug, @name, @description, @thumbnailUrl, @type, @content, @slots,
+        @id, NULL, @slug, @name, @description, @thumbnailUrl, @category, @type, @content, @slots,
         NULL, @now, @now
       )
       ON CONFLICT(slug) WHERE account_id IS NULL DO UPDATE SET
         name = excluded.name,
         description = excluded.description,
         thumbnail_url = excluded.thumbnail_url,
+        category = excluded.category,
         type = excluded.type,
         content = excluded.content,
         slots = excluded.slots,
@@ -545,14 +579,15 @@ async function seedPostgresStarterTemplates(
       await client.query(
         `
           INSERT INTO templates (
-            id, account_id, slug, name, description, thumbnail_url, type, content, slots,
+            id, account_id, slug, name, description, thumbnail_url, category, type, content, slots,
             created_from_artifact, created_at, updated_at
           )
-          VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, NULL, $9, $9)
+          VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, $9, NULL, $10, $10)
           ON CONFLICT (slug) WHERE account_id IS NULL DO UPDATE SET
             name = excluded.name,
             description = excluded.description,
             thumbnail_url = excluded.thumbnail_url,
+            category = excluded.category,
             type = excluded.type,
             content = excluded.content,
             slots = excluded.slots,
@@ -564,6 +599,7 @@ async function seedPostgresStarterTemplates(
           record.name,
           record.description,
           record.thumbnailUrl,
+          record.category,
           record.type,
           record.content,
           record.slots,
@@ -591,6 +627,7 @@ function templateRecord(template: StarterTemplate, now: number) {
     name: template.name,
     description: template.description,
     thumbnailUrl: template.thumbnail ?? null,
+    category: template.category,
     type: template.type,
     content: template.content,
     slots: JSON.stringify(template.slots),
@@ -598,13 +635,35 @@ function templateRecord(template: StarterTemplate, now: number) {
   };
 }
 
+/**
+ * One query for both populations, and that is the point of the feature.
+ *
+ * `account_id = ? OR account_id IS NULL` is the built-ins and this account's own templates in one
+ * result — an agent browsing for a starting point should not have to ask twice and then merge, and
+ * the category filter has to mean the same thing across both or filtering is a trap.
+ *
+ * The uncategorised case is carried in SQL rather than filtered in JS after paging, because
+ * filtering a page after it has been cut is how a caller ends up with an empty page and a cursor
+ * that still has rows behind it. A row promoted before the column existed reads as the default
+ * category (`templateCategory`), so it must MATCH that category here too — the browse page and the
+ * API cannot disagree about where somebody's old template lives.
+ */
 async function listTemplateRows(
   db: DatabaseHandle,
   accountId: string,
   limit: number,
-  cursor: { u: number; id: string } | null
+  cursor: { u: number; id: string } | null,
+  category?: TemplateCategory
 ): Promise<TemplateRow[]> {
   const params: unknown[] = [accountId];
+  let categoryClause = '';
+  if (category) {
+    categoryClause =
+      category === DEFAULT_TEMPLATE_CATEGORY
+        ? 'AND (category = ? OR category IS NULL)'
+        : 'AND category = ?';
+    params.push(category);
+  }
   const cursorClause = cursor ? 'AND (updated_at < ? OR (updated_at = ? AND id < ?))' : '';
   if (cursor) {
     params.push(cursor.u, cursor.u, cursor.id);
@@ -615,7 +674,7 @@ async function listTemplateRows(
     `
       SELECT *
       FROM templates
-      WHERE (account_id = ? OR account_id IS NULL) ${cursorClause}
+      WHERE (account_id = ? OR account_id IS NULL) ${categoryClause} ${cursorClause}
       ORDER BY updated_at DESC, id DESC
       LIMIT ?
     `,
@@ -701,6 +760,7 @@ async function insertAccountTemplate(
     name: string;
     description: string | null;
     thumbnailUrl: string | null;
+    category: TemplateCategory;
     type: ArtifactType;
     content: string;
     slots: TemplateSlot[];
@@ -712,10 +772,10 @@ async function insertAccountTemplate(
     db,
     `
       INSERT INTO templates (
-        id, account_id, slug, name, description, thumbnail_url, type, content, slots,
+        id, account_id, slug, name, description, thumbnail_url, category, type, content, slots,
         created_from_artifact, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       input.id,
@@ -724,6 +784,7 @@ async function insertAccountTemplate(
       input.name,
       input.description,
       input.thumbnailUrl,
+      input.category,
       input.type,
       input.content,
       JSON.stringify(input.slots),
