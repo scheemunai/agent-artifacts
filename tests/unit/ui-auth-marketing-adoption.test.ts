@@ -269,9 +269,15 @@ describe('A-31 · the marketing page runs on three measures, not four', () => {
     /(?:^|\s)width:[^;]*var\((--width-aa-[a-z-]+)\)/.exec(marketingBlock(selector))?.[1];
 
   it('maps every marketing section to one of exactly three width tokens', () => {
+    // The outermost of the three is `.aa-shell`, not a marketing-only container. It was
+    // `.aa-marketing-shell` on `--width-aa-shell-marketing`, and that fourth-measure-in-hiding is
+    // what put the header's wordmark 44px right of the page heading on /templates and /terms:
+    // marketing chrome on one measure, the page's own content on another, with nothing to make
+    // them agree. Still three measures — the page width, the panel, the reading column — and now
+    // the page width is the one the rest of the product already uses.
     const measures = new Set(
       [
-        'aa-marketing-shell',
+        'aa-shell',
         'aa-marketing-artifact',
         'aa-marketing-features',
         'aa-marketing-origin',
@@ -280,7 +286,7 @@ describe('A-31 · the marketing page runs on three measures, not four', () => {
     );
 
     expect(measures).toEqual(
-      new Set(['--width-aa-shell-marketing', '--width-aa-panel', '--width-aa-measure'])
+      new Set(['--width-aa-shell', '--width-aa-panel', '--width-aa-measure'])
     );
   });
 

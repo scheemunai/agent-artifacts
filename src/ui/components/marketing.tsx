@@ -74,6 +74,54 @@ export function MarketingExampleCard({ number, children }: MarketingExampleCardP
   );
 }
 
+export interface MarketingStepSpec {
+  /**
+   * The ordinal a reader sees. The `<ol>` carries the real order for assistive technology; this is
+   * the one on the page, and it is kept in the accessibility tree rather than `aria-hidden` because
+   * "1" read aloud before the step title is the same sentence a sighted reader gets.
+   */
+  label: string;
+  title: string;
+  body: string;
+}
+
+/**
+ * A three-step row: how something gets done, in the fewest words that still say something.
+ *
+ * A THREE-ACROSS ROW, and three is the layout rather than a coincidence — the grid declares three
+ * columns and stacks to one below 721px. Pass four and the fourth wraps onto a second row on its
+ * own; pass two and a column stands empty. That is stated rather than defended with `auto-fit`,
+ * which trades the certainty for an orphan band: with three items, every `auto-fit` minimum this
+ * page could take leaves some viewport range rendering two across and one below, and 768 was
+ * inside it.
+ *
+ * NOT MORE CARDS. The home page already raises example cards, borders plan cards and tints the
+ * origin note; a fourth boxed treatment would say "another list of things" where this has to say
+ * "three moves, in order". So the steps sit open on the page under one hairline rule each — which
+ * on a row reads as a single rail broken by the gaps, and when stacked reads as a divider between
+ * steps. The rule is `--color-aa-line`, the same hairline as every other divider in this product:
+ * a coloured edge on one side of a block is decoration wearing structure's clothes.
+ *
+ * THE NUMERAL IS MUTED, NOT ACCENT, and that follows this sheet's own rule rather than the nearest
+ * precedent. `.aa-page-kicker` states it: the accent marks an action, a state or a link, and an
+ * accent that appears everywhere marks nothing. `.aa-marketing-example__number` spends it on an
+ * index already; a second numbered group directly below it, in the same colour, would have made
+ * two unrelated sections rhyme and cost the accent the last of its scarcity.
+ */
+export function MarketingSteps({ steps }: { steps: readonly MarketingStepSpec[] }) {
+  return (
+    <ol class="aa-marketing-steps">
+      {steps.map((step) => (
+        <li class="aa-marketing-step">
+          <span class="aa-marketing-step__number">{step.label}</span>
+          <h3 class="aa-marketing-step__title">{step.title}</h3>
+          <p class="aa-marketing-step__body">{step.body}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export interface MarketingApiBlockProps {
   id: string;
   label: string;

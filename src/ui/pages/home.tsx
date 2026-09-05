@@ -8,10 +8,13 @@ import {
   MarketingApiBlock,
   MarketingExampleCard,
   MarketingFeatureLine,
+  MarketingFinalCta,
   MarketingFooter,
   MarketingHeader,
   MarketingOriginNote,
   MarketingSection,
+  type MarketingStepSpec,
+  MarketingSteps,
   MarketingWaitlist,
   MarketingWorksWith,
 } from '../components/marketing.js';
@@ -124,6 +127,42 @@ export const HOME_EXAMPLES: readonly HomeExample[] = [
     body: '"Which of these newsletters do I actually read?" The agent does the analysis and hands back a page you skim, flag, and reply to — and it revises the list from your feedback in place.',
     exampleLabel: 'See a decision list',
     examplePath: undefined,
+  },
+];
+
+/**
+ * The templates section: three moves, in order, ending at the gallery.
+ *
+ * It answers the question the examples above raise. "What people use it for" says what a good page
+ * looks like; the honest next thought is "mine will not look like that", and this is the answer —
+ * you do not start from an empty document, you start from one of nineteen and overwrite the parts
+ * that were ours.
+ *
+ * The wording is the templates gallery's, deliberately. `/templates` already says "fetches,
+ * rewrites in your words, and publishes as a page you can send to someone" and "the templates you
+ * keep are the ones you have made yours"; a home page that pitches the same feature in a different
+ * vocabulary makes them read as two features.
+ */
+export const HOME_TEMPLATES_TITLE = 'Start with a template. Make it yours.';
+export const HOME_TEMPLATES_CTA_LABEL = 'Browse the templates';
+export const HOME_TEMPLATES_CTA_NOTE = 'Grouped by the job they do. No account needed to look.';
+export const HOME_TEMPLATES_HREF = '/templates';
+
+export const HOME_TEMPLATE_STEPS: readonly MarketingStepSpec[] = [
+  {
+    label: '1',
+    title: 'Your agent picks one.',
+    body: 'It lists what is here, opens the one that fits the job, and gets the whole document back — layout, styling and all.',
+  },
+  {
+    label: '2',
+    title: 'It makes the template yours.',
+    body: 'Your words, your colours, your structure. The layout survives the rewrite; everything that made the page ours does not.',
+  },
+  {
+    label: '3',
+    title: 'You keep the result.',
+    body: 'Save it back as a template of your own. It returns in the same list your agents already read: a private library of your pages.',
   },
 ];
 
@@ -358,6 +397,18 @@ export function HomePage({
                 </MarketingExampleCard>
               ))}
             </div>
+          </MarketingSection>
+
+          {/* Directly after the examples, because it answers what they raise: the reader has just
+              seen four pages that look better than the blank document they were imagining. Not
+              rendered on the coming-soon page, which keeps exactly one thing to do. */}
+          <MarketingSection id="home-templates" label="Templates" title={HOME_TEMPLATES_TITLE}>
+            <MarketingSteps steps={HOME_TEMPLATE_STEPS} />
+            <MarketingFinalCta
+              href={HOME_TEMPLATES_HREF}
+              label={HOME_TEMPLATES_CTA_LABEL}
+              note={HOME_TEMPLATES_CTA_NOTE}
+            />
           </MarketingSection>
 
           <MarketingSection id="home-features" label="Features">
