@@ -102,7 +102,7 @@ ul,ol{margin:0;padding:0;list-style:none}
   margin-top:.15rem}
 
 /* CLOSERS */
-.closers{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:var(--s5);
+.closers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(17rem,100%),1fr));gap:var(--s5);
   margin-top:var(--s7);padding-top:var(--s5);border-top:2px solid var(--ink)}
 .closers h2{font-size:1.1875rem}
 .bul{margin-top:var(--s4)}
@@ -116,7 +116,7 @@ ul,ol{margin:0;padding:0;list-style:none}
 
 @media (max-width:62rem){
   .cols{grid-template-columns:minmax(0,1fr);gap:var(--s6)}
-  .rail{grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+  .rail{grid-template-columns:repeat(auto-fit,minmax(min(15rem,100%),1fr))}
 }
 @media (max-width:34rem){
   :root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
