@@ -3,6 +3,7 @@ import { getCookie } from 'hono/cookie';
 import type { AppConfig } from '../config.js';
 import { publicArtifactFrameHeaders } from '../lib/frame-policy.js';
 import { clientIp, FixedWindowLimiter, rateLimitKey } from '../lib/rate-limit.js';
+import { templateFrameUrl } from '../lib/template-frame.js';
 import type { Logger } from '../logger.js';
 import { getLiveArtifactMeta, heroArtifactUrl } from '../services/live-artifact-meta.js';
 import { SESSION_COOKIE_NAME, unsignedSessionToken } from '../services/sessions.js';
@@ -216,7 +217,13 @@ function registerRemainingWebRoutes(
     const slug = context.req.param('slug');
     const template = starterTemplates().find((candidate) => candidate.slug === slug);
     if (template) {
-      return context.html(TemplateDetailPage({ template }));
+      // Built here, from config, rather than spelled into the page: on a deployment with a sandbox
+      // host the app origin's `frame-src` names that host and nothing else, so a same-origin frame
+      // is refused by the browser. Unconditional because there is nothing to mint — unlike the
+      // owner preview this URL carries no token, and a markdown template simply renders no frame.
+      return context.html(
+        TemplateDetailPage({ template, frameUrl: templateFrameUrl(config, template.slug) })
+      );
     }
     // A retired slug is a moved page, not a missing one. The API resolves the alias transparently
     // because an agent's saved workflow must keep working; a human following an old link gets the

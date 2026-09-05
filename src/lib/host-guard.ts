@@ -1,6 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 import type { AppConfig } from '../config.js';
 import { OWNER_PREVIEW_TOKEN_PATTERN } from './preview-token.js';
+import { TEMPLATE_FRAME_PATH } from './template-frame.js';
 
 const SHARE_FRAME_PATH = /^\/a\/[A-Za-z0-9_-]{22}\/frame$/;
 /**
@@ -47,9 +48,21 @@ export function isSandboxHostRequest(
   return Boolean(sandboxHost && requestHost && sandboxHost === requestHost);
 }
 
+/**
+ * Third entry, and the one with no token in it: the public template gallery's preview.
+ *
+ * It needs none. Every other frame here carries somebody's content and is reached by a URL that
+ * proves the reader may see it; a starter template is ours, is already served in full to any
+ * authenticated agent through `GET /v1/templates/:slug`, and is linked from a page with no account
+ * behind it. The pattern is imported from where the URL is built, so the host that must answer and
+ * the page that embeds cannot end up describing different paths.
+ */
 export function isSandboxAllowedPath(path: string): boolean {
   return (
-    path === '/robots.txt' || SHARE_FRAME_PATH.test(path) || OWNER_PREVIEW_FRAME_PATH.test(path)
+    path === '/robots.txt' ||
+    SHARE_FRAME_PATH.test(path) ||
+    OWNER_PREVIEW_FRAME_PATH.test(path) ||
+    TEMPLATE_FRAME_PATH.test(path)
   );
 }
 
