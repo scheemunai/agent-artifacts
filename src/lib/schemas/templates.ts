@@ -62,12 +62,35 @@ export const templateObjectSchema = z.object({
   updated_at: z.string(),
 });
 
+/**
+ * The template name and description limits, declared ONCE.
+ *
+ * They were declared twice — here and again as literals inside `manifestEntrySchema` in
+ * `services/templates.ts`, which imports this file and then wrote its own numbers anyway. They
+ * agreed, and already differed on optionality, with nothing asserting they stayed equal.
+ *
+ * That matters more here than almost anywhere else: the description cap is enforced by the seeder
+ * at start-up, so a disagreement between the two does not surface as a validation error on a
+ * request — it stops the application booting. `report` reached 328 characters during a redesign
+ * and would have done exactly that. Raising one cap and not the other is a one-character change
+ * with a deploy-shaped failure behind it.
+ */
+export const TEMPLATE_NAME_MAX = 80;
+export const TEMPLATE_DESCRIPTION_MAX = 300;
+
+/**
+ * Aim for 285 or less. A rewritten description is the single most likely thing an agent changes
+ * about a template, and fifteen characters of headroom on a boot failure is the same argument as
+ * the height budget's.
+ */
+export const TEMPLATE_DESCRIPTION_TARGET = 285;
+
 export const promoteTemplateSchema = z
   .object({
     artifact_id: z.string().regex(ARTIFACT_ID_PATTERN),
     slug: slugSchema,
-    name: z.string().min(1).max(80),
-    description: z.string().max(300).optional(),
+    name: z.string().min(1).max(TEMPLATE_NAME_MAX),
+    description: z.string().max(TEMPLATE_DESCRIPTION_MAX).optional(),
     category: templateCategorySchema.optional(),
   })
   .strict();

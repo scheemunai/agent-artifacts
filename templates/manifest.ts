@@ -44,7 +44,7 @@ export const starterTemplateManifest = [
         "slug": "one-pager",
         "category": "decisions",
         "name": "One-pager",
-        "description": "Clean single-column document for proposals and memos.",
+        "description": "The markdown starter, and the only built-in that takes slots: send `template` plus `title`, `subtitle` and `body` and the server merges them. Deliberately plain — it is a form to fill, not a page to rewrite.",
         "type": "markdown",
         "content_file": "one-pager.md",
         "thumbnail": "/assets/template-thumbs/one-pager.png",
