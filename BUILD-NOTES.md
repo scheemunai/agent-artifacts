@@ -532,8 +532,18 @@ of shipping the preview-only “Alternative A/B” labels. Their resulting canon
 `2d2222c8596c0560ebb816370b358ca262bde5e6431c52ca47e08f3ee943fa39`. The public frames at the
 branch point matched the previous canonical files exactly through `</html>` plus the final newline;
 the frame server's appended height reporter is not template source. Proposal's catalog description
-is updated because the approved design leads with a dated ask rather than a hero number. The other
-catalog metadata remains unchanged.
+is updated because the approved design leads with a dated ask rather than a hero number. Report's
+description now names its finding → recommendation → evidence opening instead of the superseded
+summary/figures split, and Project plan's now names the phase/gate/dependency ledger rather than
+stage cards. Names, slugs, categories, formats and slots are unchanged.
+
+The gallery crops are also part of the review contract, not an incidental screenshot. Proposal and
+Report use a 1280px thumbnail viewport so their signature dated ask and finding/recommendation/
+evidence band appear inside the 16:10 crop. Project plan uses 1440px so the crop includes all four
+schedule rows and the today marker without shrinking the ledger to an illegible overview. Checklist
+and Service health keep their existing framing. `thumbnail_viewport` changes only the Chromium
+canvas used to derive the committed 1000×625 PNG; it does not alter the template source or runtime
+frame layout.
 
 After modifying a template, build browser assets first and regenerate thumbnails with the canonical
 tooling:

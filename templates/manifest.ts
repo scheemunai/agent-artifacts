@@ -75,7 +75,7 @@ export const starterTemplateManifest = [
         "content_file": "proposal.html",
         "thumbnail": "/assets/template-thumbs/proposal.png",
         "slots": [],
-        "thumbnail_viewport": 768
+        "thumbnail_viewport": 1280
       },
       {
         "slug": "spec",
@@ -111,11 +111,11 @@ export const starterTemplateManifest = [
         "slug": "report",
         "category": "research",
         "name": "Report",
-        "description": "The serious long document: a masthead over a two-column opening band — executive summary left, the quarter's headline figures right — then numbered sections carrying a ranked magnitude figure, a pull quote, and owned next steps with dates.",
+        "description": "The serious long document: an editorial masthead followed by a briefing band that puts the finding beside its recommendation and quarter evidence, then numbered sections with a ranked magnitude figure, a customer quote, and owned next steps with dates.",
         "type": "html",
         "content_file": "report.html",
         "thumbnail": "/assets/template-thumbs/report.png",
-        "thumbnail_viewport": 768,
+        "thumbnail_viewport": 1280,
         "slots": []
       },
       {
@@ -202,11 +202,12 @@ export const starterTemplateManifest = [
         "slug": "project-plan",
         "category": "plans",
         "name": "Project plan",
-        "description": "Phases, owners, dates and dependencies on one page: a seventeen-week rail with a today line and a part-filled bar for the phase in flight, a phase card per stage with its deliverables and exit criterion, what the plan depends on other teams for, and the risks with mitigations.",
+        "description": "Phases, owners, dates and dependencies on one page: a seventeen-week phase-and-gate ledger with a today line and all four phases, followed by each phase's deliverables and exit criterion, cross-team dependencies, and risks with mitigations.",
         "type": "html",
         "content_file": "project-plan.html",
         "thumbnail": "/assets/template-thumbs/project-plan.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1440
       },
       {
         "slug": "runbook",
