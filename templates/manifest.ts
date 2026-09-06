@@ -70,7 +70,7 @@ export const starterTemplateManifest = [
         "slug": "proposal",
         "category": "decisions",
         "name": "Proposal",
-        "description": "A single argument, led by the number that carries it: the problem, what you propose, what it costs, what it buys, and the decision you are asking for.",
+        "description": "A single argument with the dated decision first, then the problem, cost, payoff, trade-off and evidence in a numbered decision spine.",
         "type": "html",
         "content_file": "proposal.html",
         "thumbnail": "/assets/template-thumbs/proposal.png",
