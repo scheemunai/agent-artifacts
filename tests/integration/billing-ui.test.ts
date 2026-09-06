@@ -10,7 +10,8 @@ function billing(overrides: Partial<DashboardBillingView> = {}): DashboardBillin
     comped: false,
     status: null,
     currentPeriodEnd: null,
-    cancelAtPeriodEnd: false,
+    accessEndsAt: null,
+    cancelScheduled: false,
     hasCustomer: false,
     paymentAttention: false,
     priceMonthly: '€9',
@@ -96,13 +97,32 @@ describe('dashboard billing card', () => {
       billing({
         plan: 'pro',
         hasCustomer: true,
-        cancelAtPeriodEnd: true,
+        cancelScheduled: true,
         currentPeriodEnd: Date.UTC(2026, 2, 14),
+        accessEndsAt: Date.UTC(2026, 2, 14),
       })
     );
     expect(html).toContain('set to cancel');
     expect(html).toContain('14 March 2026');
     expect(html).not.toContain('Renews on');
+  });
+
+  it('shows the cancellation date, not the next invoice date, when they differ', () => {
+    // Stripe's `cancel_at` does not have to fall on a period end — a cancellation set for a
+    // specific date, or one further out than the current period, makes the two disagree. The card
+    // is the only place the customer sees this date, so it must be the day access ACTUALLY stops.
+    const html = settings(
+      billing({
+        plan: 'pro',
+        hasCustomer: true,
+        cancelScheduled: true,
+        currentPeriodEnd: Date.UTC(2026, 2, 14),
+        accessEndsAt: Date.UTC(2026, 5, 30),
+      })
+    );
+    expect(html).toContain('set to cancel');
+    expect(html).toContain('30 June 2026');
+    expect(html).not.toContain('14 March 2026');
   });
 
   it('asks a past-due customer to act WITHOUT claiming access was removed', () => {

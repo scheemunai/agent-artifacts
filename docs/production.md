@@ -198,7 +198,15 @@ of billing entirely. Enabling it requires the full key set or the process refuse
    `STRIPE_SECRET_KEY=sk_live_... node scripts/stripe-setup-products.mjs`. It is idempotent and
    prints the two price ids.
 4. Configure the Customer Portal in live mode: payment-method updates, invoice history, switching
-   between the two Pro prices, and cancellation via `cancel_at_period_end`.
+   between the two Pro prices, and cancellation at the end of the period.
+
+   **The portal does not report that cancellation in `cancel_at_period_end`.** On API version
+   `2026-08-26.dahlia` the `customer.subscription.updated` event it sends leaves that flag `false`
+   and puts the end date in `cancel_at`, with `canceled_at` stamped at the moment the customer
+   clicked. A reader that trusts the boolean sees a healthy renewing subscription — which is exactly
+   what this app did until the mapping was fixed to read both. If you add a consumer of these
+   events, read `cancel_at` too; a real payload is kept at
+   `tests/fixtures/stripe/live-cancellation-2026-09-06.json`.
 4a. Set the **Terms of Service URL** (Settings → Public details) to `https://<app-origin>/terms`, so
    Checkout can collect terms acceptance. Not settable via the API; see "Legal pages" below.
 4b. Set the **tax head office address** and add **tax registrations** (home country + OSS Union for
