@@ -1,215 +1,37 @@
+<!-- biome-ignore-all lint/a11y/noRedundantRoles: Explicit table roles retain semantics when mobile CSS uses block/grid display. -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Checkout was unavailable for 3 hours 47 minutes on 12 September</title>
-<!--
-  Agent Artifacts template · research / postmortem
-  VOICE  editorial serif (ui-serif, Charter, Iowan Old Style, Georgia); mono for labels, times, IDs
-  SCHEME warm paper #f0eae0 · rust accent #a8452a · petrol data hue #2c5670 · inked impact strip
-
-  REWRITING THIS ARTIFACT
-  · Blameless: name systems and decisions, never people. People appear only as owners.
-  · The impact strip is the headline: four measured numbers. Don't know one? Remove
-    the tile — never write "unknown" in it.
-  · Impact-start, detection and mitigation are the key timeline entries; their
-    timestamps must agree with the duration in the strip.
-  · DELETE, don't empty. No chart? Remove the figure. Never an empty heading.
-  · Never pin the root to the viewport height and never give html or body a percentage
-    height; no fixed or sticky positioning. The frame measures this document.
-  · Nothing external: no web fonts, images, scripts or stylesheets.
--->
+<!-- Preview-only redesign. Frozen sample content and source SVG data preserved.
+Standalone system fonts; no runtime dependencies or fixed document height. -->
 <style>
-*,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-:root{
---bg:#f0eae0;--ink:#231e1a;--muted:#5b5249;--subtle:#72685f;
---line:#e2d9cc;--line2:#cfc3b3;--rust:#a8452a;--rust-soft:#fbf0e9;--rust-line:#e8c6b5;
---data:#2c5670;--oi:#f6f1e8;--od:#b3a698;--ol:#413a34;
---serif:ui-serif,Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
---mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
---s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:2.75rem;--s8:4rem}
-body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
-font-family:var(--serif);font-size:1.0625rem;line-height:1.58;-webkit-font-smoothing:antialiased}
-h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.012em;font-weight:600}
-p{margin:0}ul,ol{margin:0;padding:0;list-style:none}
-.wrap{max-width:64rem;margin-inline:auto}
-.lab,.impact h2,.figs dt,.acts caption,.sev,.dl dd.mono,.figs dd,.chart__note b,.tl__t,.tag,.cause code,.fac b,.acts th,.a-id,.a-due,.st{font-family:var(--mono)}
-.lab,.impact h2,.figs dt,.acts caption{font-size:.6875rem;font-weight:600;
-letter-spacing:.12em;text-transform:uppercase}
-.h-sec{padding-bottom:var(--s2);border-bottom:1px solid var(--line2);color:var(--subtle)}
-.sec{margin-top:var(--s6)}
+*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}:root{--paper:#f8fafb;--ink:#202b30;--muted:#506168;--line:#c7d0d4;--soft:#edf1f2;--rust:#9b3929;--data:#2c5670;--human:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--sans:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}body{margin:0;padding:32px 32px 56px;background:var(--paper);color:var(--ink);font:16px/1.65 var(--sans);overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}.wrap{max-width:1184px;margin:auto}h1,h2,h3,p,figure{margin:0}h1,h2,h3{font-family:var(--human);line-height:1.3;letter-spacing:-.025em;font-weight:650}ul,ol{list-style:none;padding:0;margin:0}.lab{font-size:14px;line-height:1.5;font-weight:650}.identity{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-bottom:20px;border-bottom:2px solid var(--ink)}.mast{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.eyebrow{color:var(--muted);font:650 13px/1.6 var(--mono);letter-spacing:.04em;text-transform:uppercase}.sev{background:var(--rust);color:white;padding:4px 9px;font:700 13px/1.5 var(--mono);letter-spacing:.03em}.dl{display:flex;flex-wrap:wrap;gap:14px 26px;margin:0;font-size:14px;line-height:1.6}.dl dt{color:var(--muted)}.dl dd{margin:0;font-weight:650}.dl dd.mono{font-family:var(--mono);font-size:14px}.ttl{font-size:clamp(28px,3.2vw,40px);max-width:47ch;line-height:1.18;letter-spacing:-.035em;margin-top:24px}.incident-evidence{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(0,2fr);gap:46px;margin-top:32px;padding-bottom:32px;border-bottom:2px solid var(--ink);align-items:start}.incident-evidence>*{min-width:0}.impact h2{font:650 22px/1.3 var(--human);letter-spacing:-.02em}.figs{margin:18px 0 0;display:grid;gap:19px}.figs>div{padding-bottom:19px;border-bottom:1px solid var(--line)}.figs>div:last-child{padding-bottom:0;border:0}.figs dt{font-size:14px;font-weight:600;color:var(--muted)}.figs dd{font:600 34px/1.2 var(--mono);letter-spacing:-.055em;margin:6px 0;font-variant-numeric:tabular-nums}.figs p{font-size:16px;line-height:1.6;color:var(--muted)}.summary{font-size:17px;line-height:1.65;max-width:80ch}.chart{margin-top:28px}.chart figcaption{font-size:16px;font-weight:650;line-height:1.6}.chart svg{display:block;width:100%;height:204px;margin-top:18px}.chart__note{font-size:16px;line-height:1.65;color:var(--muted);margin-top:18px}.chart__note b{font-family:var(--mono);font-weight:600;color:var(--ink);font-size:15px}.sec{margin-top:34px}.h-sec{font:650 23px/1.3 var(--human);letter-spacing:-.025em;padding-bottom:16px;border-bottom:1px solid var(--line)}.tl{margin-top:4px}.tl li{display:grid;grid-template-columns:92px minmax(0,1fr);gap:28px;padding:22px 0;border-bottom:1px solid var(--line);align-items:start}.tl li:last-child{border-bottom:0;padding-bottom:0}.tl__t{font:600 21px/1.3 var(--mono);letter-spacing:-.05em;padding:6px 8px;width:fit-content;max-width:100%;color:var(--muted)}.tl li.key .tl__t{background:var(--ink);color:var(--paper)}.tl h3{font-size:21px;line-height:1.4}.tl p{color:var(--muted);font-size:16px;line-height:1.65;margin-top:10px;max-width:91ch}.tag{display:inline-block;margin:0 0 0 14px;font:600 13px/1.5 var(--mono);color:var(--muted);padding:3px 7px;border:1px solid var(--line);vertical-align:middle;letter-spacing:0}.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:38px;margin-top:38px;align-items:start}.cause{background:var(--soft);border:1px solid var(--line);padding:28px}.cause h2{font:650 23px/1.3 var(--human);letter-spacing:-.025em}.cause>p{margin-top:20px;font-size:17px;line-height:1.65}.cause>p.lede{font-family:var(--human);font-size:23px;font-weight:500;line-height:1.5;letter-spacing:-.025em}.cause code{font:600 .88em/1.5 var(--mono);padding:1px 5px;background:#dde5e8;color:var(--ink);overflow-wrap:anywhere}.fac{margin-top:18px}.fac li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:18px}.fac li+li{margin-top:20px;padding-top:20px;border-top:1px solid var(--line)}.fac b{font:600 16px/1.6 var(--mono);color:var(--muted)}.fac h3{font-size:18px;line-height:1.4}.fac p{font-size:16px;line-height:1.65;color:var(--muted);margin-top:8px}.well{margin-top:18px}.well li{font-size:16px;line-height:1.65;color:var(--muted);padding-left:18px;position:relative}.well li+li{margin-top:14px}.well li::before{content:"";position:absolute;left:0;top:.67em;width:5px;height:5px;background:var(--ink)}.well strong{font-weight:650;color:var(--ink)}.acts{border-collapse:collapse;width:100%;text-align:left;font-size:16px;line-height:1.65}.acts caption{text-align:left;font:650 23px/1.4 var(--human);letter-spacing:-.025em;padding:0 0 18px}.acts thead th{font:650 14px/1.5 var(--sans);color:var(--muted);padding:12px 18px 12px 0;border-block:1px solid var(--line)}.acts td,.acts tbody th{padding:18px 18px 18px 0;border-bottom:1px solid var(--line);vertical-align:top;font-size:16px;line-height:1.65;font-weight:400}.acts td:last-child,.acts th:last-child{padding-right:0;min-width:120px}.a-id{font-family:var(--mono);font-size:14px!important;font-weight:600!important;white-space:nowrap;color:var(--muted)}.a-what{width:53%}.a-who{min-width:135px;color:var(--muted)}.a-due{min-width:90px;font-family:var(--mono);color:var(--muted);font-size:14px!important}.st{white-space:nowrap;display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:14px;font-weight:600;line-height:1.5}.st::before{content:"";width:8px;height:8px;border:1.5px solid currentColor;border-radius:50%;flex:none}.st--done{color:var(--ink)}.st--done::before{background:currentColor}.st--wip{color:var(--rust)}.st--wip::before{border-radius:0;transform:rotate(45deg);background:currentColor}.colophon{font-size:16px;line-height:1.65;max-width:100ch;color:var(--muted);border-top:1px solid var(--line);margin-top:36px;padding-top:20px}a{color:var(--ink);text-underline-offset:3px}a:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
+@media(max-width:1040px){body{padding:28px 24px 44px}.identity{display:block}.dl{margin-top:18px;gap:14px 26px}.ttl{font-size:34px;max-width:none}.incident-evidence{grid-template-columns:1fr;gap:26px;margin-top:28px}.figs{grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}.figs>div{border:0;padding:0}.figs dd{font-size:27px}.figs p{font-size:16px}.summary{max-width:80ch}.chart{margin-top:22px}.chart svg{height:190px}.two{grid-template-columns:1fr;gap:30px}.cause>p{max-width:85ch}.fac li{grid-template-columns:32px minmax(0,1fr)}.acts td,.acts tbody th{padding-right:12px}.a-what{width:auto}.a-who{min-width:116px}.a-due{min-width:80px}}
+@media(max-width:680px){body{padding:22px 16px 36px}.mast{gap:12px}.dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px}.dl dd{font-size:16px}.dl dd.mono{font-size:14px}.identity{padding-bottom:22px}.ttl{font-size:29px;line-height:1.2;margin-top:22px}.incident-evidence{margin-top:28px;gap:26px;padding-bottom:28px}.figs{grid-template-columns:1fr;gap:0;margin-top:12px}.figs>div{display:grid;grid-template-columns:104px minmax(0,1fr);gap:4px 16px;align-items:baseline;padding:15px 0;border-bottom:1px solid var(--line)}.figs>div:last-child{padding-top:15px}.figs dt{font-size:15px;line-height:1.5}.figs dd{font-size:28px;margin:0}.figs p{grid-column:2;font-size:16px}.summary{font-size:17px}.chart figcaption{font-size:16px}.chart svg{height:134px;margin-top:16px}.chart__note{margin-top:14px}.sec{margin-top:28px}.h-sec{font-size:22px;padding-bottom:14px}.tl li{grid-template-columns:1fr;gap:12px;padding:22px 0}.tl__t{font-size:20px;padding:5px 8px}.tl h3{font-size:20px;line-height:1.4}.tag{display:block;width:fit-content;max-width:100%;margin:8px 0 0;font-size:13px}.tl p{margin-top:10px}.two{margin-top:30px;gap:28px}.cause{padding:22px 20px}.cause>p.lede{font-size:21px}.cause>p{font-size:17px;margin-top:18px}.fac li{grid-template-columns:28px minmax(0,1fr);gap:14px}.fac h3{font-size:18px}.acts,.acts caption,.acts tbody,.acts tr,.acts td,.acts tbody th{display:block}.acts caption{font-size:22px;padding-bottom:16px}.acts thead{position:absolute;width:1px;height:1px;margin:-1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap}.acts tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 18px;padding:20px 0;border-top:1px solid var(--line)}.acts td,.acts tbody th{padding:0;border:0;min-width:0}.a-id{grid-column:1;grid-row:1;font-size:15px!important}.a-what{grid-column:1/-1;grid-row:2;width:auto}.a-who{grid-column:1;grid-row:3}.a-due{grid-column:2;grid-row:3;font-size:16px!important;font-family:var(--sans)}.a-who::before,.a-due::before{content:attr(data-mobile-label);display:block;font:14px/1.5 var(--sans);margin-bottom:3px;color:var(--muted)}.acts td:last-child{min-width:0;grid-column:2;grid-row:1;justify-self:start}.st{font-size:14px}.colophon{margin-top:30px}}
 
-/* MASTHEAD */
-.mast{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3)}
-.eyebrow{color:var(--rust)}
-.sev{padding:.15rem .5rem;border-radius:.25rem;background:var(--rust);color:#fff;
-font-size:.6875rem;font-weight:700;letter-spacing:.1em}
-.ttl{max-width:26ch;margin-top:var(--s4);font-size:clamp(1.75rem,4.4vw,2.75rem);
-letter-spacing:-.022em;line-height:1.13}
-.dl{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);margin:var(--s4) 0 0;padding-bottom:var(--s4);
-border-bottom:2px solid var(--ink);color:var(--muted);font-size:.8125rem}
-.dl div{display:flex;gap:.4em}
-.dl dt{color:var(--subtle)}
-.dl dd{margin:0;color:var(--ink);font-weight:600}
-.dl dd.mono{font-size:.8125rem}
-.summary{margin-top:var(--s4);font-size:1.125rem;line-height:1.45;max-width:56ch}
-
-/* IMPACT STRIP — the identity of this template */
-.impact{margin-top:var(--s5);padding:var(--s5);border-radius:.75rem;background:var(--ink);color:var(--oi)}
-.impact h2{color:var(--od)}
-.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:var(--s5);margin-top:var(--s4)}
-.figs>div+div{padding-left:var(--s5);border-left:1px solid var(--ol)}
-.figs dt{color:var(--od);letter-spacing:.1em}
-.figs dd{margin:var(--s2) 0 0;font-size:1.625rem;font-weight:600;
-letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
-.figs p{margin-top:var(--s1);color:var(--od);font-size:.8125rem;line-height:1.35}
-
-/* CHART — plot in SVG, every label in HTML so nothing distorts */
-.chart{margin:var(--s6) 0 0}
-.chart svg{display:block;width:100%;height:120px;margin-top:var(--s3)}
-.chart__note{margin-top:var(--s2);color:var(--muted);font-size:.875rem;line-height:1.45}
-.chart__note b{color:var(--ink);font-size:.8125rem;font-weight:600;
-font-variant-numeric:tabular-nums}
-
-/* TIMELINE */
-.tl{margin-top:var(--s4)}
-.tl li{position:relative;display:grid;grid-template-columns:4.25rem minmax(0,1fr);gap:var(--s4)}
-.tl__t{padding-top:.1rem;color:var(--subtle);font-size:.8125rem;
-font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
-.tl__b{padding:0 0 var(--s4) var(--s5);border-left:1px solid var(--line2)}
-.tl li:last-child .tl__b{padding-bottom:0;border-left-color:transparent}
-.tl__b::before{content:"";position:absolute;left:calc(4.25rem + var(--s4));top:.34rem;
-width:.5rem;height:.5rem;margin-left:-.25rem;border:1px solid var(--line2);border-radius:99px;
-background:var(--bg)}
-.tl li.key .tl__b::before{border-color:var(--ink);background:var(--ink);width:.625rem;height:.625rem;
-margin-left:-.3125rem}
-.tl h3{font-size:1.0625rem}
-.tl li.key h3{font-size:1.1875rem}
-.tl p{margin-top:var(--s1);color:var(--muted);font-size:.9375rem;line-height:1.48}
-.tag{margin-left:.5em;color:var(--rust);font-size:.6875rem;font-weight:700;
-letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
-
-/* CAUSE + FACTORS */
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(19rem,100%),1fr));gap:var(--s6);margin-top:var(--s6)}
-.cause{align-self:start;padding:var(--s5);border:1px solid var(--rust-line);border-radius:.75rem;
-background:var(--rust-soft)}
-.cause h2{color:var(--rust)}
-.cause>p.lede{margin-top:var(--s3);font-size:1.1875rem;line-height:1.42}
-.cause>p+p{margin-top:var(--s3);font-size:1em;line-height:1.5}
-.cause code{font-size:.8125rem;padding:.05em .3em;border-radius:.2rem;background:#f6e2d8}
-.fac{margin-top:var(--s4)}
-.fac li{display:grid;grid-template-columns:1.75rem minmax(0,1fr);gap:var(--s3)}
-.fac li+li{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line)}
-.fac b{color:var(--subtle);font-size:.8125rem;font-weight:600;padding-top:.15rem}
-.fac h3{font-size:1rem}
-.fac p{margin-top:var(--s1);color:var(--muted);font-size:.9375rem;line-height:1.45}
-.well{margin-top:var(--s4)}
-.well li{position:relative;padding-left:var(--s5);color:var(--muted);font-size:.9375rem;line-height:1.48}
-.well li+li{margin-top:var(--s2)}
-.well li::before{content:"";position:absolute;top:.58rem;left:var(--s2);width:.3125rem;height:.3125rem;
-border-radius:99px;background:var(--ink)}
-.well strong{color:var(--ink);font-weight:600}
-
-/* ACTIONS */
-.acts{width:100%;margin-top:var(--s4);border-collapse:collapse;text-align:left;font-size:.9375rem}
-.acts caption{text-align:left;padding-bottom:var(--s2);margin-bottom:var(--s3);
-border-bottom:1px solid var(--line2);color:var(--subtle)}
-.acts th{padding:0 var(--s4) var(--s2) 0;color:var(--subtle);font-size:.6875rem;
-font-weight:600;letter-spacing:.1em;text-transform:uppercase}
-.acts td{padding:var(--s3) var(--s4) var(--s3) 0;border-top:1px solid var(--line);vertical-align:top;
-line-height:1.45}
-.a-id{color:var(--subtle);font-size:.8125rem;font-weight:600;white-space:nowrap}
-.a-who,.a-due{color:var(--muted);font-size:.875rem;white-space:nowrap}
-.a-due{font-size:.8125rem;font-variant-numeric:tabular-nums}
-.st{display:inline-flex;align-items:center;gap:.4em;color:var(--muted);
-font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.st::before{content:"";width:.5rem;height:.5rem;border-radius:99px;border:1px solid var(--line2);flex:0 0 auto}
-.st--done{color:var(--ink)}
-.st--done::before{background:var(--ink);border-color:var(--ink)}
-.st--wip{color:var(--rust)}
-.st--wip::before{background:var(--rust);border-color:var(--rust)}
-.colophon{margin-top:var(--s5);padding-top:var(--s3);border-top:1px solid var(--line);
-color:var(--subtle);font-size:.8125rem;line-height:1.5}
-
-@media (max-width:44rem){
-/* table -> card. caption MUST be re-declared: an anonymous table box collapses it. */
-.acts,.acts caption,.acts tbody,.acts tr,.acts td{display:block}
-.acts thead{display:none}
-.acts tr{display:grid;grid-template-columns:auto auto 1fr;gap:.15rem var(--s3);padding:var(--s3) 0;
-border-top:1px solid var(--line)}
-.acts td{padding:0;border-top:0}
-.a-id{grid-column:1;grid-row:1}
-.a-what{grid-column:1/-1;grid-row:2;margin-top:.1rem}
-.a-who{grid-column:1;grid-row:3;margin-top:.15rem}
-.a-due{grid-column:2;grid-row:3;margin-top:.15rem}
-.a-who::after{content:"·";margin-left:.5em;color:var(--line2)}
-.acts td:last-child{grid-column:2/-1;grid-row:1;justify-self:start}
-
-:root{--s3:.625rem;--s4:.875rem;--s5:1rem;--s6:1.125rem;--s7:1.25rem;--s8:1.5rem}
-body{padding:var(--s5) var(--s4) var(--s8)}
-.summary{margin-top:var(--s3)}
-.dl{padding-bottom:var(--s3)}
-.sec,.two,.chart{margin-top:var(--s5)}
-.two{gap:var(--s5)}
-.h-sec{padding-bottom:var(--s1)}
-.impact{padding:var(--s3) var(--s4)}
-.figs{gap:var(--s2) var(--s4)}
-.figs>div+div{padding-left:0}
-.figs>div:nth-child(even){padding-left:var(--s4)}
-.tl li{gap:var(--s3)}
-.tl__b{padding-left:var(--s4);padding-bottom:var(--s1)}
-.cause{padding:var(--s3) var(--s4)}
-.fac li+li{margin-top:var(--s1);padding-top:var(--s1)}
-.well li+li{margin-top:var(--s1)}
-.acts tr{padding-block:var(--s1)}
-.acts caption{margin-bottom:var(--s2);padding-bottom:var(--s1)}
-.colophon{margin-top:var(--s4);padding-top:var(--s2)}
-}
-@media (max-width:34rem){
-/* Spacing compaction now starts where the layout becomes one column, not here: between
-   the two, the document jumped hundreds of px across one pixel of viewport. Same
-   values, earlier start; type stays here. */
-body{font-size:.9375rem;line-height:1.46}
-.ttl{font-size:1.625rem;line-height:1.1}
-.summary{font-size:1.0625rem}
-.tl p,.fac p,.well li,.cause>p+p,.acts td{line-height:1.36}
-.figs{grid-template-columns:repeat(2,minmax(0,1fr))}
-.figs>div+div{border-left:0}
-.figs>div:nth-child(even){border-left:1px solid var(--ol)}
-.figs dd{font-size:1.25rem}
-.figs p{font-size:.75rem;line-height:1.3}
-.chart svg{height:82px}
-.tl li{grid-template-columns:3.25rem minmax(0,1fr)}
-.tl__b::before{left:calc(3.25rem + var(--s3))}
-.tl__t{font-size:.8125rem}
-.tl li.key h3{font-size:1.0625rem}
-.cause>p.lede{font-size:1.0625rem}
-}
 </style>
 </head>
 <body>
-<div class="wrap">
+<main class="wrap">
 
   <header>
-    <div class="mast">
+    <div class="identity"><div class="mast">
       <span class="lab eyebrow">Incident postmortem</span>
       <span class="sev">SEV-1</span>
     </div>
-    <h1 class="ttl">Checkout was unavailable for 3 hours 47 minutes on 12 September</h1>
     <dl class="dl">
       <div><dt>Incident</dt><dd class="mono">INC-2026-041</dd></div>
       <div><dt>Status</dt><dd>Resolved</dd></div>
       <div><dt>Authors</dt><dd>D. Kaur, R. Idowu</dd></div>
       <div><dt>Reviewed</dt><dd>18 Sep 2026</dd></div>
     </dl>
-    <p class="summary">A dependency bump raised the payment-provider timeout from two seconds to thirty. When the
-provider slowed, every stuck request held its connection fifteen times longer and the pool
-saturated — three lines inside a forty-one file pull request.</p>
-  </header>
+    </div><h1 class="ttl">Checkout was unavailable for 3 hours 47 minutes on 12 September</h1>
+    </header>
 
-  <section class="impact" aria-labelledby="imp">
+  <div class="incident-evidence"><section class="impact" aria-labelledby="imp">
     <h2 id="imp">Impact</h2>
     <dl class="figs">
       <div><dt>Duration</dt><dd>3h 47m</dd><p>09:14 – 13:01 UTC</p></div>
@@ -219,6 +41,9 @@ saturated — three lines inside a forty-one file pull request.</p>
     </dl>
   </section>
 
+  <div class="trace"><p class="summary">A dependency bump raised the payment-provider timeout from two seconds to thirty. When the
+provider slowed, every stuck request held its connection fifteen times longer and the pool
+saturated — three lines inside a forty-one file pull request.</p>
   <figure class="chart">
     <figcaption class="lab">Checkout failure rate · 0–60% · 09:00–14:00 UTC</figcaption>
       <svg viewBox="0 0 720 170" preserveAspectRatio="none" role="img" aria-labelledby="chd">
@@ -236,7 +61,7 @@ saturated — three lines inside a forty-one file pull request.</p>
       <b>13:01</b>. Peak <b>52%</b> — nine times worse than when the alert fired.</p>
   </figure>
 
-  <section class="sec" aria-labelledby="tlh">
+  </div></div><section class="sec" aria-labelledby="tlh">
     <h2 class="lab h-sec" id="tlh">Timeline · 12 September, UTC</h2>
     <ol class="tl">
       <li><span class="tl__t">09:02</span><div class="tl__b">
@@ -303,29 +128,29 @@ slowdown itself was ordinary — twice last quarter, neither an incident. What c
   </div>
 
   <section class="sec" aria-labelledby="ai">
-    <table class="acts">
+    <table class="acts" role="table">
       <caption id="ai">Action items · 3 open, 1 complete</caption>
-      <thead><tr><th scope="col">ID</th><th scope="col">Action</th><th scope="col">Owner</th>
-        <th scope="col">Due</th><th scope="col">Status</th></tr></thead>
-      <tbody>
-        <tr><td class="a-id">AI-1</td>
-          <td class="a-what">Alert on p99 checkout latency and on success rate, not p50 alone.</td>
-          <td class="a-who">M. Halvorsen</td><td class="a-due">19 Sep</td>
-          <td><span class="st st--done">Done</span></td></tr>
-        <tr><td class="a-id">AI-2</td>
-          <td class="a-what">Add a circuit breaker to the provider client, opening at 25% errors over 30 seconds.</td>
-          <td class="a-who">R. Idowu</td><td class="a-due">26 Sep</td>
-          <td><span class="st st--wip">In progress</span></td></tr>
-        <tr><td class="a-id">AI-3</td>
-          <td class="a-what">Treat timeout, retry and pool constants as behaviour changes in review — CODEOWNERS plus a
+      <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">ID</th><th scope="col" role="columnheader">Action</th><th scope="col" role="columnheader">Owner</th>
+        <th scope="col" role="columnheader">Due</th><th scope="col" role="columnheader">Status</th></tr></thead>
+      <tbody role="rowgroup">
+        <tr role="row"><th class="a-id" scope="row" role="rowheader" data-mobile-label="ID">AI-1</th>
+          <td class="a-what" role="cell" data-mobile-label="Action">Alert on p99 checkout latency and on success rate, not p50 alone.</td>
+          <td class="a-who" role="cell" data-mobile-label="Owner">M. Halvorsen</td><td class="a-due" role="cell" data-mobile-label="Due">19 Sep</td>
+          <td role="cell" data-mobile-label="Status"><span class="st st--done">Done</span></td></tr>
+        <tr role="row"><th class="a-id" scope="row" role="rowheader" data-mobile-label="ID">AI-2</th>
+          <td class="a-what" role="cell" data-mobile-label="Action">Add a circuit breaker to the provider client, opening at 25% errors over 30 seconds.</td>
+          <td class="a-who" role="cell" data-mobile-label="Owner">R. Idowu</td><td class="a-due" role="cell" data-mobile-label="Due">26 Sep</td>
+          <td role="cell" data-mobile-label="Status"><span class="st st--wip">In progress</span></td></tr>
+        <tr role="row"><th class="a-id" scope="row" role="rowheader" data-mobile-label="ID">AI-3</th>
+          <td class="a-what" role="cell" data-mobile-label="Action">Treat timeout, retry and pool constants as behaviour changes in review — CODEOWNERS plus a
 required note.</td>
-          <td class="a-who">Platform</td><td class="a-due">3 Oct</td>
-          <td><span class="st">Not started</span></td></tr>
-        <tr><td class="a-id">AI-4</td>
-          <td class="a-what">Rewrite the checkout runbook to diagnose saturation before scaling,
+          <td class="a-who" role="cell" data-mobile-label="Owner">Platform</td><td class="a-due" role="cell" data-mobile-label="Due">3 Oct</td>
+          <td role="cell" data-mobile-label="Status"><span class="st">Not started</span></td></tr>
+        <tr role="row"><th class="a-id" scope="row" role="rowheader" data-mobile-label="ID">AI-4</th>
+          <td class="a-what" role="cell" data-mobile-label="Action">Rewrite the checkout runbook to diagnose saturation before scaling,
             pool metrics first.</td>
-          <td class="a-who">D. Kaur</td><td class="a-due">10 Oct</td>
-          <td><span class="st">Not started</span></td></tr>
+          <td class="a-who" role="cell" data-mobile-label="Owner">D. Kaur</td><td class="a-due" role="cell" data-mobile-label="Due">10 Oct</td>
+          <td role="cell" data-mobile-label="Status"><span class="st">Not started</span></td></tr>
       </tbody>
     </table>
   </section>
@@ -334,6 +159,6 @@ required note.</td>
 Timestamps come from the incident channel and the deploy log; failure rates are the per-minute
 success-rate metric.</footer>
 
-</div>
+</main>
 </body>
 </html>

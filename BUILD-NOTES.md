@@ -565,3 +565,91 @@ Do not hand-edit thumbnail PNGs or treat them as template source. The approved s
 keeps distinct document voices rather than applying one shared dashboard shell: decisions use a
 humanist decision spine, plans use phase/gate and readiness-ledger forms, status uses budget
 accounting, and research uses an editorial broadsheet.
+
+## Accepted operational templates — Batch03 integration (Astra)
+
+This is the separate three-template adoption after PR40, based on main
+`661501182a82bcdd25e478bf965aa24452fb6c8f`. It does not replace or redesign the first
+five approved templates. It does not complete the remaining gallery revamp.
+
+- **Metrics dashboard / Performance Sheet:** broad twelve-week trend with a compact
+  metric ledger, commentary, channel accounting and metered service levels.
+- **Project status / Decision Dispatch:** changed verdict and two owned, dated asks
+  before milestones, scope and blockers.
+- **Postmortem / Incident Atlas:** impact accounting alongside the failure trace,
+  then the complete chronology, causes, factors and owned action items.
+
+The accepted standalone sources remain immutable in the design evidence. Catalog
+copy now describes these actual compositions. Each canonical thumbnail uses the
+unchanged generator with an explicit 1280px viewport: the chart/ledger, two decisions,
+and impact/trace remain visible in actual 1440px and 390px gallery cards. No global
+capture changes or other template/thumbnail churn. All twenty options, nineteen HTML
+plus Markdown, keep their existing slugs, categories, slots and API contracts.
+
+### Source provenance and the bounded semantic exception
+
+| Template | Accepted SHA-256 | Integrated SHA-256 |
+| --- | --- | --- |
+| metrics-dashboard | `696deb41eba35235f401244d909a1505f3b5424a35e578ade883a55c6fcc1730` | `7305ae47ce611cbf81cd39a230b10542a46d2d1eb97de399a78b43718ec59ea4` |
+| project-status | `d8f0db0a085f20cf58bcdff20c04b1525e4e41f19fb17218cbfd7d41c16f484f` | same, byte-for-byte |
+| postmortem | `791e91c086761ac21825ceca2ccb13d86699209e9533ec91e179b96dd38815a9` | `2b4660e588413516dd26f01e32123256911ac2cefd9bc3428809d533f78512b3` |
+
+Project Status is exact. The only accepted-source changes elsewhere are one
+justified `noRedundantRoles`-only HTML file directive in Metrics and Postmortem,
+and exactly four Postmortem action IDs changed from `td` to native `th scope="row"`,
+retaining their class, explicit role and mobile-label attributes. No title changes,
+CSS changes, text/data/link/code/SVG changes or other rule suppressions.
+
+The table-family roles are intentionally retained: responsive CSS uses block/grid
+display and visually clips, rather than removes, column headings. [MDN's display
+accessibility guidance](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/display)
+warns that changing table display can alter accessibility representation in some
+browsers. This is a compatibility exception, not a general permission to add redundant
+roles. The scoped regression fixes its inventory:
+
+| Explicit role | Metrics | Postmortem |
+| --- | ---: | ---: |
+| table | 1 | 1 |
+| rowgroup | 3 | 2 |
+| row | 7 | 5 |
+| columnheader | 5 | 5 |
+| rowheader | 6 | 4 |
+| cell | 24 | 16 |
+
+Each also retains one unchanged named SVG `img` role. Any expansion needs a new
+justification. Native scoped row-header tests fail against the accepted pre-fix
+Postmortem. Browser tests verify native scope, accessible names, row membership,
+column order and matching mobile labels at all seven existing viewport projects.
+Eight paired accepted/final captures (both tables at 1440/768/390/320) have identical
+PNG bytes and Chromium accessibility snapshots. Native HTML header association plus
+Chromium table/row hierarchy is verified; this is **not** a Safari/Firefox or screen
+reader navigation claim.
+
+### Validation and known warnings
+
+All 301 original text nodes, 251 numeric occurrences and 47 keyed comparison groups
+remain intact, including action relationships, SVG bytes and meter data. The old
+Postmortem tag-bucket parity check normalizes only the four authorized ID tags;
+independent action-record checks and exact allowed-transform equality remain strict.
+
+Initial lint: **87 errors → 0**. Four native IDs fix twelve semantic errors; the
+approved compatibility directives account for 75 redundant-role diagnostics.
+Warnings: **22 → 31**, not an unexplained baseline pass. Fifteen elsewhere are
+unchanged; old Metrics seven specificity warnings are replaced by two in its new
+CSS; Project Status adds nine specificity warnings; Postmortem adds five important
+style warnings. These are sixteen warnings in accepted new CSS minus seven removed,
+net nine. Contextual verdict/section and keyed-column overrides retain their approved
+cascade. Postmortem's explicit ID/due font sizes and ID weight retain approved native
+header/mobile presentation. No warning suppression or CSS reorder was applied;
+current/prior breakpoint checks and pixel parity show no observed rendering defect.
+
+Final evidence includes check/build/full unit and browser suites, three frames at
+four main widths plus 36 boundary captures, all nineteen HTML and Markdown smoke,
+no-JS and growth checks, actual gallery cards, full-gallery interim variety, exact
+source/thumbnail hashes and first-five live preservation. The integration remains
+**unmerged and undeployed pending project-lead integrated review**.
+
+[Integrated review and machine-readable evidence](https://anacreon.ai/downloads/aa-template-revamp-1788686289312/integrated-batch03/index.html)
+retain the original design approval provenance and distinguish fresh final-source
+checks from reused unchanged-source evidence. No runtime, schema, billing, sandbox,
+launch, infrastructure or dependency change is included.
