@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   createViewerTestContext,
   publishSharedArtifact,
@@ -258,6 +258,9 @@ describe('who the reader is, without knowing who they are', () => {
   });
 
   it('counts a returning reader as another view but the same visitor', async () => {
+    // This scenario promises the same UTC day. Real time after 23:00 plus one hour is tomorrow,
+    // when the privacy salt correctly rotates; anchor the fixture without changing production time.
+    vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 8, 6, 12));
     const ctx = await createViewerTestContext({ trustProxy: 1 });
 
     try {

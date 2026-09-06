@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 const source = (slug: string) =>
   readFileSync(new URL(`../../templates/${slug}.html`, import.meta.url), 'utf8');
 
-// These two responsive tables intentionally retain explicit roles when CSS changes their display.
+// These four responsive tables intentionally retain explicit roles when CSS changes their display.
 // Bound the exception to the known table inventory, rather than silencing future unrelated roles.
-describe('responsive operational table semantics', () => {
+describe('responsive template table semantics', () => {
   it('uses four native scoped Postmortem row headers, not interactive roles on td', () => {
     const html = source('postmortem');
     expect(
@@ -17,12 +17,19 @@ describe('responsive operational table semantics', () => {
     expect(html).not.toMatch(/<td[^>]*role="rowheader"/);
   });
 
-  for (const [slug, inventory] of [
+  for (const [slug, inventory, imageRoles] of [
     [
       'metrics-dashboard',
       { table: 1, rowgroup: 3, row: 7, columnheader: 5, rowheader: 6, cell: 24 },
+      1,
     ],
-    ['postmortem', { table: 1, rowgroup: 2, row: 5, columnheader: 5, rowheader: 4, cell: 16 }],
+    ['postmortem', { table: 1, rowgroup: 2, row: 5, columnheader: 5, rowheader: 4, cell: 16 }, 1],
+    ['meeting-recap', { table: 1, rowgroup: 2, row: 7, columnheader: 4, cell: 24 }, 0],
+    [
+      'decision-brief',
+      { table: 1, rowgroup: 2, row: 6, columnheader: 4, rowheader: 5, cell: 15 },
+      0,
+    ],
   ] as const) {
     it(`${slug} limits its compatibility exception to the documented role inventory`, () => {
       const html = source(slug);
@@ -39,8 +46,8 @@ describe('responsive operational table semantics', () => {
       }
       expect(counts).toEqual(inventory);
       expect(html.match(/role="[^"]+"/g)).toHaveLength(
-        Object.values(inventory).reduce((sum, count) => sum + count, 0) + 1
-      ); // One unchanged named SVG image, outside the table.
+        Object.values(inventory).reduce((sum, count) => sum + count, 0) + imageRoles
+      ); // The two operational examples also have one unchanged named SVG image.
     });
   }
 });

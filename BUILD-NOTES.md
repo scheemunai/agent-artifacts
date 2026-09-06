@@ -653,3 +653,107 @@ source/thumbnail hashes and first-five live preservation. The integration remain
 retain the original design approval provenance and distinguish fresh final-source
 checks from reused unchanged-source evidence. No runtime, schema, billing, sandbox,
 launch, infrastructure or dependency change is included.
+
+## Accepted decision-oriented templates — Batch02 integration (Astra)
+
+This separate four-template adoption is based on the deployed PR41 merge
+`1b48644469a8a392263482cd31ceb8db8ac7ab2a`. The first eight redesigned HTML sources
+and their thumbnails remain byte-for-byte unchanged. Seven additional accepted
+technical/editorial designs are still queued; this PR does not finish the section.
+
+- **Meeting recap:** six owned action rows lead beside the complete decision minutes,
+  followed by the explicit deferral, open questions and meeting handover.
+- **Decision brief:** a compact recommendation above the complete five-criterion
+  option bench, then alternatives, explicit asks and the deadline.
+- **Spec:** scope pairing and ruled native requirement records, keeping every ID,
+  priority, acceptance clause and blocking question relationship.
+- **Research Brief:** the answer qualified by confidence and method, an evidence and
+  provenance register, grouped sources, answer-changing conditions and unknowns.
+
+Catalog descriptions reflect these compositions. The unchanged canonical thumbnail
+pipeline uses 1600px source viewports for Meeting recap and Decision brief (all six
+owned actions / all five comparison criteria visible), and 1440px for Spec and
+Research Brief (scope/requirements and answer/confidence/evidence visible). The
+actual gallery cards were reviewed at 1440px and 390px. No global capture hack,
+manual PNG edit, other thumbnail change, slug/category/slot or API contract change.
+The catalog stays at nineteen HTML examples plus the Markdown One-pager.
+
+### Exact accepted-source mapping
+
+| Template | Accepted SHA-256 | Canonical SHA-256 |
+| --- | --- | --- |
+| meeting-recap | `e8ff4f5203c169c60bd559eea0c8998bd4a629a5904e58c3d4915d2a4d1c8b28` | `be10b99a09fa0e589619bf5f2b07f3027722e0e9f8ad5c5e9e01c50416fee495` |
+| decision-brief | `18b8f4f8bf9eddc649e17de08bd932257f5da7163654a69cc1e3eded1b26eda6` | `77da9c704f717c821792d30f2276742f277d3a13f57977a43fa1040e6cc9d68f` |
+| spec | `1cc6c161b5e158ea6692f5b4219fa1f9e1077127e6272a2953a2a2df8e601451` | same, byte-for-byte |
+| research-brief | `2ba837d4421fffb84c551813e3462e7bc67c25c041e139f02677ec4175316945` | same, byte-for-byte |
+
+The only source differences are one approved `noRedundantRoles`-only compatibility
+comment at the beginning of Meeting recap and Decision brief. No CSS, body, title,
+tag, ID, scope, role, headers reference, text, data, code, link or SVG change. Both
+already have native scoped headers; there is no cell-tag correction in this batch.
+The accepted previews and the earlier public evidence remain immutable.
+
+These two responsive tables retain explicit table roles because their mobile CSS
+uses block/grid display and visually clips column headings. [MDN's table display
+accessibility warning](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/display#tables)
+provides the compatibility rationale. This adds only these two named files to the
+local exception list; it is not permission for other files, rules or global config.
+
+| Explicit role | Meeting recap | Decision brief |
+| --- | ---: | ---: |
+| table | 1 | 1 |
+| rowgroup | 2 | 2 |
+| row | 7 | 6 |
+| columnheader | 4 | 4 |
+| rowheader | 0 | 5 |
+| cell | 24 | 15 |
+
+The existing scoped unit test now bounds all four approved exception inventories.
+Its two new cases fail against the accepted pre-comment files and pass with the
+exact approved candidates. Existing browser tests are extended, not duplicated:
+the new cases traverse the real app sandbox and verify native `headers` IDs, scope,
+correct table/row/column membership, accessible names and phone overflow. Disposable
+DOM red controls must reject dangling IDs and existing-but-wrong row/column headers,
+then recover when original references are restored. No production data is involved.
+
+Eight accepted/candidate pairs at 1440/768/390/320 have equal PNG bytes and ARIA
+snapshots; their candidate hashes equal the final canonical hashes. Eight real
+local app sandbox measurements record table hierarchy and header associations with
+actual child-frame widths. Evidence is Chromium-only: not a Safari/Firefox or
+screen-reader navigation certification. Case-insensitive accessible-name comparison
+accounts only for visual CSS uppercase versus authored ARIA snapshot case; IDs,
+scopes, relationships and original names remain recorded without normalization.
+
+### Validation, provenance and warning disposition
+
+Independent content parity retains all 298 text nodes, 159 numeric occurrences,
+70 keyed groups and the link/code/ordinal relationships. Final source identity is
+proved by the exact allowed transform, not by screenshots alone. The earlier
+16 main plus 24 actual/prior breakpoint captures, 58 detailed semantic width checks,
+12 fixtures, no-JS/growth checks and actual gallery images remain valid evidence of
+unchanged rendered source, explicitly labelled as reused where appropriate. Final
+checks, build, complete unit/browser suites and final-head CI are reported separately.
+
+Accepted-source lint: **71 errors → 0** through only the two approved comments.
+Warnings: **31 → 37**, with all 31 baseline warnings unchanged. Meeting recap adds
+five specificity diagnostics (`caption b`, two `.open-section`, two `.opens`) and
+one mobile `.num` spacing `!important` warning. The caption and facts selectors
+address different elements; scoped meeting-grid rules intentionally outrank generic
+section/list fallbacks. The `!important` priority appears unnecessary in the current
+stylesheet, but no rendering/accessibility defect was observed. Accepted CSS is
+preserved rather than rewritten merely to quiet diagnostics; no warnings suppressed.
+
+[Final integrated review and source-bound evidence](https://anacreon.ai/downloads/aa-template-revamp-1788686289312/integrated-batch02/final/index.html)
+links to the immutable earlier approval/candidate evidence and separates fresh tests
+from unchanged-source reuse. This PR is **not merged or deployed** pending internal
+integrated review. No runtime, dependencies, schema, billing, sandbox, launch,
+credentials or infrastructure change is included.
+
+A separate **test-fixture-only** correction was necessary for reliable full-suite
+validation: the existing returning-reader analytics test used real time plus one
+hour while promising the same UTC day. It fails on unchanged main after 23:00 UTC,
+when the production privacy salt correctly rotates. This one test now fixes
+`Date.now()` at noon using Vitest's automatically restored spy. Its assertions,
+tomorrow/rotation coverage and all production analytics code remain unchanged.
+The unchanged-base failure and corrected fourteen-test pass are recorded in the
+review; no runtime clock, customer data, analytics behavior or financial change.

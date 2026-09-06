@@ -1,178 +1,19 @@
+<!-- biome-ignore-all lint/a11y/noRedundantRoles: Explicit table roles retain semantics when mobile CSS uses block/grid display. -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Q4 platform priorities — meeting recap</title>
-<!--
-  TEMPLATE: meeting-recap  ·  CATEGORY: meetings
-  VOICE: humanist sans (system-ui stack)   SCHEME: cool grey-blue paper, teal accent
-  Rewriting this? Replace the content, keep the structure and the styling.
-  STATUS = A WORD AND A SHAPE, never colour alone: filled disc = done, diamond = in progress,
-  hollow ring = not started. Green and amber are the pair deutan vision collapses, so the shape
-  is what carries the state in greyscale and when read aloud. Do not "simplify" them to dots.
-  DELETE, DON'T EMPTY: if you have no open questions, remove the whole <section>,
-  heading included. Never leave a heading with nothing under it. A short recap
-  should be a short page — do not pad it.
--->
 <style>
-:root{
-  --bg:#eef1f5; --card:#fff; --tint:#f7f9fb;
-  --ink:#18242f; --muted:#4c5b69; --subtle:#5c6a78;
-  --line:#e2e7ec; --line-2:#cbd4dd;
-  --teal:#0d6a68; --teal-soft:#e2efee;
-  --done:#1f6f43; --wip:#8a5a00; --todo:#5c6a78;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --shadow:0 1px 2px rgb(24 36 47/.04),0 12px 32px -16px rgb(24 36 47/.28);
-}
-*,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
-h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
-p,ul,ol,dl,dd{margin:0}
-ul{padding:0;list-style:none}
-a{color:var(--teal)}
-.page{max-width:64rem;margin-inline:auto;padding:2.75rem 1.5rem 3.5rem}
-
-/* masthead */
-.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--teal);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
-.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--teal)}
-.mast h1{margin:.75rem 0 0;font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700}
-.mast p{margin-top:.625rem;max-width:44rem;color:var(--muted);font-size:1.0625rem}
-.facts{display:flex;flex-wrap:wrap;gap:.375rem 1.25rem;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--line-2);font-size:.8125rem;color:var(--subtle)}
-.facts b{color:var(--muted);font-weight:600}
-
-/* count strip */
-.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));gap:.75rem;margin-top:1.5rem}
-.strip>li{padding:.875rem 1rem;background:var(--card);border:1px solid var(--line);border-radius:.625rem}
-.strip .n{display:block;font-size:1.75rem;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.strip .k{display:block;margin-top:.125rem;color:var(--subtle);font-size:.8125rem}
-
-h2.sec{margin-top:2.5rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
-h2.sec+*{margin-top:.875rem}
-
-/* decision ledger */
-.ledger>li{display:grid;grid-template-columns:2.75rem minmax(0,1fr);gap:1rem;padding-block:1.125rem;border-top:1px solid var(--line-2)}
-.ledger>li:first-child{border-top:0;padding-top:.25rem}
-.ledger .num{color:var(--teal);font-size:1.5rem;font-weight:700;line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.ledger h3{font-size:1.125rem;font-weight:650}
-.ledger .why{margin-top:.375rem;color:var(--muted);font-size:.9375rem}
-.ledger .why b{color:var(--ink);font-weight:600}
-.tags{display:flex;flex-wrap:wrap;gap:.375rem .5rem;margin-top:.625rem;font-size:.8125rem;color:var(--subtle)}
-.tags span{padding:.125rem .5rem;background:var(--tint);border:1px solid var(--line);border-radius:999px}
-.tags .dissent{background:#fdf0ed;border-color:#f3cfc7;color:#8f2f22}
-
-/* actions table */
-.tablecard{background:var(--card);border:1px solid var(--line);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
-table{width:100%;border-collapse:collapse;font-size:.9375rem}
-caption{text-align:left;padding:.875rem 1.125rem;border-bottom:1px solid var(--line);color:var(--subtle);font-size:.8125rem}
-.tablecard caption b{color:var(--ink);font-weight:650;font-size:.9375rem}
-th{text-align:left;font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);padding:.625rem 1.125rem;background:var(--tint);border-bottom:1px solid var(--line)}
-td{padding:.875rem 1.125rem;border-top:1px solid var(--line);vertical-align:top;color:var(--muted)}
-tbody tr:first-child td{border-top:0}
-.who{display:flex;align-items:center;gap:.625rem;min-width:0}
-.av{flex:none;display:grid;place-items:center;width:2rem;height:2rem;border-radius:999px;background:#dde4ec;color:#33424f;font-size:.75rem;font-weight:700;letter-spacing:.02em}
-.who span{color:var(--ink);font-weight:600;white-space:nowrap}
-td.task{color:var(--ink)}
-td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
-.st{display:inline-flex;align-items:center;gap:.4375rem;white-space:nowrap;font-size:.8125rem;font-weight:600}
-.st::before{content:"";width:.5rem;height:.5rem;border-radius:999px;background:currentColor}
-.st.done{color:var(--done)}
-.st.wip{color:var(--wip)}
-.st.todo{color:var(--todo)}
-.st.wip::before{width:.4375rem;height:.4375rem;border-radius:1px;transform:rotate(45deg)}
-.st.todo::before{background:none;box-shadow:inset 0 0 0 1.5px currentColor}
-
-/* open questions */
-.opens{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:.75rem}
-.opens{font-size:.8125rem}
-.opens li{padding:1rem 1.125rem;background:var(--card);border:1px solid var(--line);border-radius:.625rem}
-.opens h3{font-size:1rem;font-weight:650}
-.opens p{margin-top:.375rem;color:var(--subtle)}
-.opens p b{color:var(--muted);font-weight:600}
-
-/* deferred note */
-.note{margin-top:.75rem;padding:.875rem 1.125rem;background:var(--teal-soft);border-radius:.5rem;color:#0b4f4d;font-size:.9375rem}
-.note b{font-weight:650}
-
-/* footer */
-.foot{margin-top:2.5rem;padding-top:1.125rem;border-top:1px solid var(--line-2);display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.75rem 2rem;color:var(--subtle);font-size:.8125rem}
-.foot b{display:block;color:var(--muted);font-weight:600;margin-bottom:.125rem}
-
-@media (max-width:40rem){
-  .page{padding:1.875rem 1rem 1.75rem}
-  .mast p{font-size:1rem}
-  .ledger h3{font-size:1.0625rem}
-
-
-
-
-
-  .note{padding:.75rem .875rem}
-  .ledger>li{grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem}
-  .ledger .num{font-size:1.0625rem;line-height:1.45}
-  .strip{gap:.5rem;grid-template-columns:repeat(auto-fit,minmax(8rem,1fr))}
-  .strip>li{padding:.625rem .75rem}
-  .strip .n{font-size:1.375rem}
-  caption{display:block}
-  thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-  table,tbody{display:block;width:100%}
-  tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem .75rem;border-top:1px solid var(--line)}
-  tbody tr:first-child{border-top:0}
-  td{display:block;padding:0;border-top:0}
-  td.owner{grid-column:1;grid-row:1;align-self:center}
-  td.status{grid-column:2;grid-row:1;justify-self:end;align-self:center}
-  td.task{grid-column:1/-1}
-  td.due{grid-column:1/-1;font-size:.8125rem;color:var(--subtle)}
-  td.due::before{content:"Due ";font-weight:600}
-  /* height tightening — spacing only, no content removed */
-  .facts{margin-top:.75rem;padding-top:.625rem}
-  h2.sec{margin-top:1.125rem}
-  h2.sec+*{margin-top:.75rem}
-  .ledger>li{padding-block:.6875rem}
-  .tags{margin-top:.375rem}
-  .note{margin-top:.625rem}
-  caption{padding:.625rem 1rem}
-  tr{padding:.625rem .875rem}
-  td.task{margin-top:.3125rem}
-  .opens{gap:.625rem}
-  .opens li{padding:.625rem .75rem}
-  .foot{margin-top:1.25rem;padding-top:.875rem}
-}
-
-@media (max-width:24rem){
-  /* 320-384: the card collapse is already on, and the document is still over budget because every
-     line wraps more. Spend width and spacing, never content: drop the numeral gutter so the decision
-     text gets the full measure, and tighten the vertical rhythm. */
-  .page{padding:1rem .625rem 1.125rem}
-  /* The h1 clamp floors at 1.75rem, which is three lines at 320. 1.5rem is still far above every
-     type floor in the contract (13px prose / 12px metadata / 11px labels) and buys a line. */
-  .mast h1{font-size:1.5rem;line-height:1.2}
-  .mast p{margin-top:.5rem}
-  .ledger>li{grid-template-columns:minmax(0,1fr);gap:.1875rem;padding-block:.5rem}
-  .ledger .num{font-size:1rem;line-height:1.3}
-  .ledger .why{margin-top:.25rem}
-  .tags{margin-top:.3125rem}
-  .strip{margin-top:.875rem;gap:.375rem}
-  .strip>li{padding:.4375rem .5rem}
-  .facts{margin-top:.625rem;padding-top:.5rem}
-  .opens li{padding:.5rem .625rem}
-  .note{margin-top:.4375rem;padding:.5rem .625rem}
-  .foot{margin-top:1.125rem;padding-top:.75rem}
-  /* the action table is 7 collapsed cards; every row pays the same padding, so this is the
-     largest spacing lever in the document at this width. Nothing structural is removed. */
-  tr{padding:.5rem .75rem;gap:.125rem .5rem}
-  td.task{margin-top:.1875rem}
-  caption{padding:.5rem .75rem}
-  h2.sec{margin-top:1rem}
-  h2.sec+*{margin-top:.625rem}
-  .opens{gap:.5rem}
-}
+*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}:root{--paper:#f6f9fa;--white:#fff;--ink:#172e35;--muted:#4e636b;--line:#bacbd0;--light:#dbe4e6;--teal:#125b60;--tint:#eaf1f2;--done:#1d6843;--wip:#845300;--todo:#52636a;--human:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--grotesque:"Helvetica Neue",Helvetica,Arial,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}body{margin:0;padding:32px 32px 48px;background:var(--paper);color:var(--ink);font:16px/1.65 var(--human);overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}.page{max-width:1240px;margin:auto}h1,h2,h3,p,ul,ol{margin:0}ul,ol{padding:0;list-style:none}h1,h2,h3{line-height:1.3}h1{font:700 clamp(30px,3.2vw,40px)/1.12 var(--grotesque);letter-spacing:-.04em}.mast{display:grid;grid-template-columns:minmax(0,1fr) 380px;column-gap:40px;padding-bottom:24px;border-bottom:3px solid var(--teal)}.eyebrow{font:700 13px/1.5 var(--grotesque);text-transform:uppercase;letter-spacing:.13em;color:var(--teal);margin-bottom:12px}.mast h1{grid-column:1}.mast>p{grid-column:1;margin-top:14px;max-width:66ch;font-size:17px;line-height:1.6;color:var(--muted)}.facts{grid-column:2;grid-row:1/4;align-self:end;display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:16px;line-height:1.6}.facts b{color:var(--ink);font-weight:650}.strip{display:flex;flex-wrap:wrap;gap:20px 38px;padding:22px 0;border-bottom:1px solid var(--line)}.strip>li{display:flex;align-items:baseline;gap:10px}.n{font:650 24px/1.2 var(--grotesque);font-variant-numeric:tabular-nums;letter-spacing:-.03em}.k{font-size:15px;color:var(--muted)}.meeting-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:40px;align-items:start;margin-top:32px}.meeting-grid{grid-template-rows:auto 1fr}.actions{grid-column:1;grid-row:1}.minutes{grid-column:2;grid-row:1/3}.meeting-grid>.open-section{grid-column:1;grid-row:2;margin-top:0}.meeting-grid>.open-section .opens,.meeting-grid>.open-section .opens{grid-template-columns:1fr;gap:24px}.meeting-grid>.open-section .opens li+li{padding-top:24px;border-top:1px solid var(--line)}.meeting-grid>.open-section .opens li+li{padding-top:22px;border-top:1px solid var(--line)}.meeting-grid>.actions:last-child{grid-column:1/-1}.sec{font:700 23px/1.25 var(--grotesque);letter-spacing:-.025em;margin-bottom:18px}.actions,.minutes{min-width:0}.minutes{background:var(--tint);padding:22px 24px}.ledger>li{padding:24px 0;border-top:1px solid var(--line)}.ledger>li:first-child{padding-top:0;border:0}.ledger>li:last-child{padding-bottom:0}.num{font:600 15px/1.5 var(--mono);color:var(--teal);display:block;margin-bottom:8px}.ledger h3{font-size:19px;font-weight:650;line-height:1.4}.why{font-size:16px;color:var(--muted);line-height:1.65;margin-top:12px}.why b{color:var(--ink)}.tags{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:14px;font-size:16px;line-height:1.6}.tags span:first-child{font-weight:650;color:var(--ink)}.tags .dissent{color:#8b302c}.note{padding-top:22px;border-top:1px solid var(--line);margin-top:26px;color:var(--teal);font-size:16px;line-height:1.65}.note b{display:block;font-weight:700;margin-bottom:8px}.tablecard{min-width:0;background:var(--white)}table{width:100%;border-collapse:collapse;table-layout:fixed}caption{text-align:left;font-size:16px;line-height:1.6;padding:0 0 18px;background:var(--paper);color:var(--muted)}caption b{color:var(--ink)}th{text-align:left;padding:12px 10px;background:var(--teal);color:var(--white);font-size:14px;line-height:1.5;font-weight:650}th:first-child{width:25%}th:nth-child(2){width:44%}th:nth-child(3){width:11%}th:nth-child(4){width:20%}td{padding:20px 10px;vertical-align:top;border-bottom:1px solid var(--light);font-size:16px;line-height:1.65}.who{display:flex;align-items:flex-start;gap:8px}.who>span:last-child{font-weight:650;min-width:0}.av{flex:none;font:600 11px/1.5 var(--mono);padding:3px;background:var(--tint);color:var(--muted);margin-top:2px}.due{font-family:var(--mono);font-size:14px;line-height:1.65;font-weight:600}.st{display:inline-flex;gap:7px;align-items:center;max-width:100%;font-size:14px;line-height:1.5;font-weight:650}.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}.done{color:var(--done)}.wip{color:var(--wip)}.todo{color:var(--todo)}.wip::before{border-radius:0;transform:rotate(45deg)}.todo::before{background:none;border:1.5px solid currentColor}.open-section{margin-top:34px;border-top:2px solid var(--ink);padding-top:24px}.opens{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px}.opens h3{font-size:20px;font-weight:650}.opens p{font-size:16px;line-height:1.65;color:var(--muted);margin-top:12px}.opens b{color:var(--ink)}.foot{margin-top:36px;padding-top:24px;border-top:1px solid var(--line);display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:32px;color:var(--muted);font-size:16px;line-height:1.65}.foot b{display:block;color:var(--ink);margin-bottom:8px}a{color:var(--teal)}a:focus-visible{outline:3px solid var(--teal);outline-offset:4px}
+@media(max-width:1080px){body{padding:28px 24px 40px}.mast{grid-template-columns:minmax(0,1fr) 280px;gap:0 28px}.meeting-grid{display:flex;flex-direction:column;gap:30px}.meeting-grid>section{width:100%}.meeting-grid>.open-section .opens{grid-template-columns:repeat(2,minmax(0,1fr))}.meeting-grid>.open-section .opens li+li{border:0;padding-top:0}.minutes{padding:26px}.ledger>li{display:grid;grid-template-columns:36px minmax(0,1fr);gap:20px}.ledger .num{margin:0}.ledger h3{font-size:20px}.tags{flex-direction:row;flex-wrap:wrap;gap:8px 24px}.ledger .why{max-width:85ch}.note{max-width:90ch}.foot{grid-template-columns:1fr 1fr}.foot>p:first-child{grid-column:1/-1}.strip{gap:16px 28px}}
+@media(max-width:640px){body{padding:22px 16px 36px}.mast{display:block;padding-bottom:22px}.eyebrow{display:block;margin-bottom:12px}.mast>p{font-size:17px;margin-top:14px}.facts{margin-top:20px;gap:5px}.strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;padding:20px 0}.strip>li{align-items:flex-start;gap:8px}.n{font-size:23px}.k{font-size:14px;line-height:1.5}.meeting-grid{margin-top:26px}.sec{font-size:23px}.tablecard{background:transparent}caption{display:block;padding-bottom:16px}table,tbody{display:block;width:100%}thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 16px;padding:22px 0;border-top:1px solid var(--line)}tbody tr:last-child{border-bottom:1px solid var(--line)}td{display:block;padding:0;border:0}.owner{grid-column:1;grid-row:1}.task{grid-column:1/-1;grid-row:2}.due{grid-column:2;grid-row:1;font-size:15px;white-space:nowrap;color:var(--muted)}.due::before{content:"Due ";font:600 14px/1.5 var(--human)}.status{grid-column:1/-1;grid-row:3}.st{font-size:15px}.who{align-items:baseline}.av{padding:2px 3px}.minutes{padding:22px 20px}.ledger>li{display:block;padding:24px 0}.num{margin-bottom:10px!important}.ledger h3{font-size:20px}.tags{font-size:16px;display:flex;flex-direction:column}.note{margin-top:24px}.opens,.meeting-grid>.open-section .opens{grid-template-columns:1fr;gap:24px}.meeting-grid>.open-section .opens li+li{padding-top:24px;border-top:1px solid var(--line)}.opens li+li{padding-top:24px;border-top:1px solid var(--line)}.foot{grid-template-columns:1fr;gap:22px;margin-top:28px}.foot>p:first-child{grid-column:auto}.open-section{margin-top:30px}}
 
 </style>
 </head>
 <body>
-<div class="page">
+<main class="page">
 
   <header class="mast">
     <span class="eyebrow">Meeting recap</span>
@@ -193,7 +34,62 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
     <li><span class="n">1</span><span class="k">deferred to 11 Sep</span></li>
   </ul>
 
-  <section>
+  <div class="meeting-grid"><section class="actions">
+    <h2 class="sec">Who owes what</h2>
+    <div class="tablecard">
+      <table role="table">
+        <caption><b>Action items</b> — 6 assigned, 2 closed. Dates are end of day.</caption>
+        <thead role="rowgroup">
+          <tr role="row">
+            <th scope="col" id="action-col-0" role="columnheader">Owner</th>
+            <th scope="col" id="action-col-1" role="columnheader">Action</th>
+            <th scope="col" id="action-col-2" role="columnheader">Due</th>
+            <th scope="col" id="action-col-3" role="columnheader">Status</th>
+          </tr>
+        </thead>
+        <tbody role="rowgroup">
+          <tr role="row">
+            <td class="owner" headers="action-col-0" role="cell"><span class="who"><span class="av" aria-hidden="true">PR</span><span>Priya Raman</span></span></td>
+            <td class="task" headers="action-col-1" role="cell">Write the tracing rollout plan: one request id across four log systems.</td>
+            <td class="due" headers="action-col-2" role="cell">11 Sep</td>
+            <td class="status" headers="action-col-3" role="cell"><span class="st wip">In progress</span></td>
+          </tr>
+          <tr role="row">
+            <td class="owner" headers="action-col-0" role="cell"><span class="who"><span class="av" aria-hidden="true">MF</span><span>Marcus Feld</span></span></td>
+            <td class="task" headers="action-col-1" role="cell">Post the go/no-go once the error budget number is in.</td>
+            <td class="due" headers="action-col-2" role="cell">8 Sep</td>
+            <td class="status" headers="action-col-3" role="cell"><span class="st todo">Not started</span></td>
+          </tr>
+          <tr role="row">
+            <td class="owner" headers="action-col-0" role="cell"><span class="who"><span class="av" aria-hidden="true">DW</span><span>Dana Whitfield</span></span></td>
+            <td class="task" headers="action-col-1" role="cell">Send Northwind the SAML timeline and the assertions it covers.</td>
+            <td class="due" headers="action-col-2" role="cell">5 Sep</td>
+            <td class="status" headers="action-col-3" role="cell"><span class="st done">Done</span></td>
+          </tr>
+          <tr role="row">
+            <td class="owner" headers="action-col-0" role="cell"><span class="who"><span class="av" aria-hidden="true">TL</span><span>Tomas Lindqvist</span></span></td>
+            <td class="task" headers="action-col-1" role="cell">Write down the conditions under which scoped SAML gets replaced.</td>
+            <td class="due" headers="action-col-2" role="cell">18 Sep</td>
+            <td class="status" headers="action-col-3" role="cell"><span class="st todo">Not started</span></td>
+          </tr>
+          <tr role="row">
+            <td class="owner" headers="action-col-0" role="cell"><span class="who"><span class="av" aria-hidden="true">NO</span><span>Nadia Osei</span></span></td>
+            <td class="task" headers="action-col-1" role="cell">Add ingest ownership to the 11 September agenda.</td>
+            <td class="due" headers="action-col-2" role="cell">5 Sep</td>
+            <td class="status" headers="action-col-3" role="cell"><span class="st done">Done</span></td>
+          </tr>
+          <tr role="row">
+            <td class="owner" headers="action-col-0" role="cell"><span class="who"><span class="av" aria-hidden="true">SK</span><span>Sofia Kaur</span></span></td>
+            <td class="task" headers="action-col-1" role="cell">Cost the read-replica work for a Q1 re-proposal.</td>
+            <td class="due" headers="action-col-2" role="cell">25 Sep</td>
+            <td class="status" headers="action-col-3" role="cell"><span class="st todo">Not started</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="minutes">
     <h2 class="sec">What we decided</h2>
     <ol class="ledger">
       <li>
@@ -224,62 +120,7 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
     <p class="note"><b>Deferred.</b> Who owns ingest was raised twice and settled neither time. Moved to the architecture review on 11 September.</p>
   </section>
 
-  <section>
-    <h2 class="sec">Who owes what</h2>
-    <div class="tablecard">
-      <table>
-        <caption><b>Action items</b> — 6 assigned, 2 closed. Dates are end of day.</caption>
-        <thead>
-          <tr>
-            <th scope="col">Owner</th>
-            <th scope="col">Action</th>
-            <th scope="col">Due</th>
-            <th scope="col">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="owner"><span class="who"><span class="av" aria-hidden="true">PR</span><span>Priya Raman</span></span></td>
-            <td class="task">Write the tracing rollout plan: one request id across four log systems.</td>
-            <td class="due">11 Sep</td>
-            <td class="status"><span class="st wip">In progress</span></td>
-          </tr>
-          <tr>
-            <td class="owner"><span class="who"><span class="av" aria-hidden="true">MF</span><span>Marcus Feld</span></span></td>
-            <td class="task">Post the go/no-go once the error budget number is in.</td>
-            <td class="due">8 Sep</td>
-            <td class="status"><span class="st todo">Not started</span></td>
-          </tr>
-          <tr>
-            <td class="owner"><span class="who"><span class="av" aria-hidden="true">DW</span><span>Dana Whitfield</span></span></td>
-            <td class="task">Send Northwind the SAML timeline and the assertions it covers.</td>
-            <td class="due">5 Sep</td>
-            <td class="status"><span class="st done">Done</span></td>
-          </tr>
-          <tr>
-            <td class="owner"><span class="who"><span class="av" aria-hidden="true">TL</span><span>Tomas Lindqvist</span></span></td>
-            <td class="task">Write down the conditions under which scoped SAML gets replaced.</td>
-            <td class="due">18 Sep</td>
-            <td class="status"><span class="st todo">Not started</span></td>
-          </tr>
-          <tr>
-            <td class="owner"><span class="who"><span class="av" aria-hidden="true">NO</span><span>Nadia Osei</span></span></td>
-            <td class="task">Add ingest ownership to the 11 September agenda.</td>
-            <td class="due">5 Sep</td>
-            <td class="status"><span class="st done">Done</span></td>
-          </tr>
-          <tr>
-            <td class="owner"><span class="who"><span class="av" aria-hidden="true">SK</span><span>Sofia Kaur</span></span></td>
-            <td class="task">Cost the read-replica work for a Q1 re-proposal.</td>
-            <td class="due">25 Sep</td>
-            <td class="status"><span class="st todo">Not started</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section>
+  <section class="open-section">
     <h2 class="sec">Still open</h2>
     <ul class="opens">
       <li>
@@ -293,12 +134,12 @@ td.due{white-space:nowrap;font-variant-numeric:tabular-nums}
     </ul>
   </section>
 
-  <footer class="foot">
+  </div><footer class="foot">
     <p><b>Present</b>Nadia Osei (chair), Priya Raman, Marcus Feld, Dana Whitfield, Tomas Lindqvist, Sofia Kaur, Ben Achterberg</p>
     <p><b>Apologies</b>Grace Lim — written comments on decision 03, read into the record</p>
     <p><b>Next</b>Architecture review, 11 September, 15:00 UTC</p>
   </footer>
 
-</div>
+</main>
 </body>
 </html>
