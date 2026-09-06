@@ -507,3 +507,61 @@ of 578 rules with the same at-rule nesting, and only those four change position.
 resolved cascade moves — the qualified selectors already won on specificity — only the order the
 file reads in. `noSvgWithoutTitle` is fixed with a real `<title>` in each logo; both render through
 `<img alt="">`, so the title serves anyone who opens the file on its own.
+
+## 2026-09-06 — Approved five-template visual revamp (review branch)
+
+This branch integrates five designs selected after a side-by-side review. It does not alter routes,
+slugs, categories, template types, slots, CSP, migrations or runtime behavior:
+
+- `proposal.html`: **Decision Spine (A)** — approved source SHA-256
+  `410f6432ae72556ff5f234b7ca682bb06fadb18ab9ff684827cdc5b59e64fdd5`.
+- `project-plan.html`: **Phase & gate map (A)** — approved source SHA-256
+  `731edb7f5e6c8d4fdce7b6b6ef9c37279affacd42a278f12caf312930775c143`.
+- `checklist.html`: **Gate Ledger (A)** — approved source SHA-256
+  `11af6b493836d125e2f5f30fb67b637332f4aad90e9d8c5de061d2c6f5d6675f`.
+- `service-health.html`: **Budget accounting board (A)** — approved source SHA-256
+  `994adadd14891263c23e61a0a8912b16608307abc4ccac1c31a3d4cb5d93f1a8`.
+- `report.html`: **Briefing Broadsheet (B)** — approved source SHA-256
+  `05f82a6a39026c7570a6b7df523ef01d77bc10ba4401c75581df08a851f2baac`.
+
+The listed hashes bind the approved preview inputs. Production preserves their `<style>` and `<body>`
+bytes exactly; Proposal, Checklist and Report reuse their previous reader-facing `<title>` text instead
+of shipping the preview-only “Alternative A/B” labels. Their resulting canonical SHA-256 values are
+`7279fefcd7c01dcca7f214d6d3267ea0d2ca894b59adab53a29a7e694ca1dfdb`,
+`19a86a131daeab7e95e34f0d4da358effc9606362e85d03f32359f2e335150b1` and
+`2d2222c8596c0560ebb816370b358ca262bde5e6431c52ca47e08f3ee943fa39`. The public frames at the
+branch point matched the previous canonical files exactly through `</html>` plus the final newline;
+the frame server's appended height reporter is not template source. Proposal's catalog description
+is updated because the approved design leads with a dated ask rather than a hero number. Report's
+description now names its finding → recommendation → evidence opening instead of the superseded
+summary/figures split, and Project plan's now names the phase/gate/dependency ledger rather than
+stage cards. Names, slugs, categories, formats and slots are unchanged.
+
+The gallery crops are also part of the review contract, not an incidental screenshot. Proposal and
+Report use a 1280px thumbnail viewport so their signature dated ask and finding/recommendation/
+evidence band appear inside the 16:10 crop. Project plan uses 1440px so the crop includes all four
+schedule rows and the today marker without shrinking the ledger to an illegible overview. Checklist
+and Service health keep their existing framing. `thumbnail_viewport` changes only the Chromium
+canvas used to derive the committed 1000×625 PNG; it does not alter the template source or runtime
+frame layout.
+
+After modifying a template, build browser assets first and regenerate thumbnails with the canonical
+tooling:
+
+```sh
+pnpm run build:assets
+pnpm run build:template-thumbs
+```
+
+The generator rewrites every committed thumbnail. Review the working tree and keep only image
+changes whose source template or thumbnail framing was intentionally changed. For an additional
+full-page review set, use:
+
+```sh
+pnpm run build:template-thumbs -- --review-dir /absolute/review/directory
+```
+
+Do not hand-edit thumbnail PNGs or treat them as template source. The approved set deliberately
+keeps distinct document voices rather than applying one shared dashboard shell: decisions use a
+humanist decision spine, plans use phase/gate and readiness-ledger forms, status uses budget
+accounting, and research uses an editorial broadsheet.
