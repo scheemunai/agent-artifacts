@@ -169,7 +169,7 @@ export const starterTemplateManifest = [
         "slug": "changelog",
         "category": "releases",
         "name": "Changelog",
-        "description": "Release notes as a reading document: breaking changes hoisted above the fold, versions set in the margin, entries tagged Added / Changed / Fixed / Removed, and older releases collapsed behind one line. Rehash it for any product's release history.",
+        "description": "A release ledger: the latest version and date beside two complete breaking-action records, followed by version, change type and release notes, with a native archive.",
         "type": "html",
         "content_file": "changelog.html",
         "thumbnail": "/assets/template-thumbs/changelog.png",
@@ -189,7 +189,7 @@ export const starterTemplateManifest = [
         "slug": "migration-guide",
         "category": "releases",
         "name": "Migration guide",
-        "description": "A version-to-version upgrade guide built around before/after code pairs: a dated deadline callout, an effort strip, every breaking change shown as old code beside new code, a three-command upgrade path with real terminal output, and a collapsed troubleshooting list.",
+        "description": "A conversion workbench: version and deadline context above paired before/after code, followed by three execution steps with exact commands and output, troubleshooting and support dates.",
         "type": "html",
         "content_file": "migration-guide.html",
         "thumbnail": "/assets/template-thumbs/migration-guide.png",
@@ -220,10 +220,11 @@ export const starterTemplateManifest = [
         "slug": "runbook",
         "category": "plans",
         "name": "Runbook",
-        "description": "A procedure somebody follows at 3am: preconditions as runnable checks with a stop rule, five numbered steps each with the command and its real output, a verification gate placed between the two steps that matter, a rollback with its safe window stated.",
+        "description": "An operator’s bench: static preconditions beside the procedure, labelled command/output records and a complete verification check between steps four and five, followed by rollback and escalation.",
         "type": "html",
         "content_file": "runbook.html",
         "thumbnail": "/assets/template-thumbs/runbook.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1920
       }
     ] as const;
