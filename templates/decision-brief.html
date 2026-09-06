@@ -1,132 +1,19 @@
+<!-- biome-ignore-all lint/a11y/noRedundantRoles: Explicit table roles retain semantics when mobile CSS uses block/grid display. -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Decision brief — how we bill for overage from January</title>
-<!--
-  TEMPLATE: decision-brief  ·  CATEGORY: decisions
-  VOICE: humanist sans (system-ui stack), tight measure   SCHEME: near-white paper, deep amber accent
-  Rewriting this? Replace the content, keep the structure and the styling.
-  THE RULE THIS TEMPLATE EXISTS FOR: every option is scored on the SAME criteria, in the same
-  order, with real values. An option with a blank cell has not been evaluated — either fill it
-  or drop the option. Two to four options; past four this is a survey, not a decision.
-  DELETE, DON'T EMPTY: nothing to say against the alternatives? remove "Why not the others"
-  entirely, heading included. Never leave a heading with nothing under it.
--->
 <style>
-:root{
-  --bg:#faf9f7; --card:#fff; --tint:#f4f2ee;
-  --ink:#1c1a16; --muted:#55504a; --subtle:#6a645c;
-  --line:#e8e4de; --line-2:#d6d0c7;
-  --amber:#96560a; --amber-soft:#fdf1e0; --amber-line:#eed6ae;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --shadow:0 1px 2px rgb(28 26 22/.05),0 12px 32px -16px rgb(28 26 22/.3);
-}
-*,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
-h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
-p,dl,dd{margin:0}
-ul,ol{margin:0;padding:0;list-style:none}
-.page{max-width:56rem;margin-inline:auto;padding:2.5rem 1.5rem 3rem}
-.measure{max-width:40rem}
+*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}:root{--paper:#fcfaf5;--ink:#30281d;--muted:#665b49;--line:#c9beab;--light:#e1d9cc;--amber:#83500e;--tint:#f2e5c9;--sans:"Helvetica Neue",Helvetica,Arial,sans-serif;--serif:Georgia,"Times New Roman",serif;--mono:ui-monospace,Menlo,Consolas,"Liberation Mono",monospace}body{margin:0;padding:30px 32px 48px;background:var(--paper);color:var(--ink);font:16px/1.65 var(--sans);overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}.page{max-width:1180px;margin:auto}h1,h2,h3,p,ol,ul{margin:0}ul,ol{padding:0;list-style:none}h1,h2,h3{line-height:1.25}.mast{display:grid;grid-template-columns:minmax(0,1fr) 315px;gap:0 46px;padding-bottom:24px;border-bottom:1px solid var(--line)}.eyebrow{grid-column:1;display:block;font-size:13px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--amber);margin-bottom:12px}.mast h1{grid-column:1;font:400 clamp(30px,3.2vw,39px)/1.16 var(--serif);letter-spacing:-.028em;max-width:30ch}.lead{grid-column:1;margin-top:16px;color:var(--muted);font-size:17px;line-height:1.6;max-width:72ch}.facts{grid-column:2;grid-row:1/4;align-self:end;display:flex;flex-direction:column;gap:14px;font-size:16px;line-height:1.6;color:var(--muted)}.facts b{display:block;font-size:14px;line-height:1.5;color:var(--ink);font-weight:700}.rec{display:grid;grid-template-columns:155px minmax(0,1fr);gap:22px;align-items:start;margin-top:26px}.badge{font:700 12px/1.5 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--amber);padding:6px 10px;border:1px solid var(--amber);width:fit-content}.rec h2{font:600 21px/1.35 var(--sans);letter-spacing:-.025em}.rec p{margin-top:9px;max-width:84ch;font-size:16px;line-height:1.65;color:var(--muted)}.option-section{margin-top:28px}.sec{font:600 23px/1.3 var(--serif);letter-spacing:-.018em;margin-bottom:18px}.matrix{min-width:0}table{width:100%;border-collapse:collapse;table-layout:fixed}caption{text-align:left}caption .sec{font:600 19px/1.3 var(--sans);margin-bottom:18px;letter-spacing:-.015em}thead th{text-align:left;vertical-align:top;font-size:17px;line-height:1.45;font-weight:650;padding:17px 20px;background:#e9e4da;border-top:2px solid var(--ink);border-bottom:1px solid var(--line)}thead th:first-child{width:23%;font-size:14px;font-weight:600;color:var(--muted)}thead th.pick{background:var(--tint);border-top-color:var(--amber)}.tag{display:block;font:700 12px/1.5 var(--sans);text-transform:uppercase;letter-spacing:.07em;color:var(--amber);margin-top:8px}tbody th,tbody td{border-bottom:1px solid var(--light);padding:20px;vertical-align:top;text-align:left}tbody th{font-size:16px;line-height:1.6;font-weight:600;color:var(--muted)}tbody td{font:500 17px/1.6 var(--mono);font-variant-numeric:tabular-nums}tbody tr:first-child td{font-size:28px;font-weight:650;line-height:1.4;letter-spacing:-.04em}tbody td.pick{background:var(--tint)}.risk{display:flex;align-items:center;gap:10px}.risk b{font-size:18px;font-family:var(--sans);font-weight:650}.risk i{display:flex;gap:3px;flex:none}.risk i span{display:block;width:6px;height:14px;border:1px solid var(--muted)}.risk i span.on{background:var(--muted)}.risk-note{display:block;font:400 16px/1.5 var(--sans);color:var(--muted);margin-top:6px}.tnote{font-size:16px;line-height:1.65;color:var(--muted);padding:18px 0;border-bottom:1px solid var(--line);max-width:100ch}.rejections{margin-top:34px}.why{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:38px}.why h3{font-size:19px;font-weight:700;line-height:1.4}.why h3 span{font-weight:500}.why p{font-size:16px;line-height:1.65;color:var(--muted);margin-top:12px}.why p b{color:var(--ink);font-weight:650}.request-section{margin-top:34px;padding-top:24px;border-top:2px solid var(--ink)}.ask{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:44px}.ask ol{list-style:decimal;padding-left:25px}.ask li{padding-left:9px;font-size:16px;line-height:1.65}.ask li+li{margin-top:14px}.ask li::marker{font:500 16px/1.5 var(--mono);color:var(--amber)}.deadline{align-self:start;display:flex;flex-direction:column;gap:10px;padding:20px 24px;background:var(--tint)}.deadline .k{font-size:14px;font-weight:600;color:var(--muted)}.deadline .v{font:400 30px/1.25 var(--serif);color:var(--amber)}.deadline .n{font-size:16px;line-height:1.65;color:var(--muted)}.colophon{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);font-size:16px;line-height:1.65;color:var(--muted);max-width:100ch}a{color:var(--amber)}a:focus-visible{outline:3px solid var(--amber);outline-offset:4px}
+@media(max-width:900px){body{padding:26px 24px 40px}.mast{display:block}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:22px}.facts b{margin-bottom:5px}.rec{grid-template-columns:135px minmax(0,1fr);gap:20px}thead th{padding:16px 12px;font-size:16px}tbody th,tbody td{padding:18px 12px}tbody td{font-size:16px}tbody tr:first-child td{font-size:23px}.why{gap:28px}.ask{gap:30px;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}}
+@media(max-width:640px){body{padding:22px 16px 36px}.mast{padding-bottom:22px}.mast h1{font-size:32px}.facts{display:flex;gap:12px;margin-top:20px}.facts b{display:inline;margin:0}.rec{display:block;margin-top:24px}.badge{display:block;margin-bottom:12px}.rec h2{font-size:21px}.rec p{margin-top:12px}.option-section{margin-top:26px}table,tbody{display:block}caption{display:block}thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}tbody tr{display:block;border-top:2px solid var(--line);padding:20px 0}tbody th{display:block;border:0;padding:0;font-size:18px;font-weight:700;color:var(--ink);margin-bottom:14px}tbody td{display:block;border:0;padding:12px 14px;font-size:17px}tbody td+td{margin-top:8px}tbody tr:first-child td{font-size:26px}tbody td::before{content:attr(data-label);display:block;font:600 14px/1.5 var(--sans);color:var(--muted);letter-spacing:0;margin-bottom:6px}tbody td.pick::before{color:var(--amber)}.tnote{padding:20px 0;border-top:1px solid var(--line)}.risk-note{font-size:16px}.why{grid-template-columns:1fr;gap:24px}.why li+li{border-top:1px solid var(--line);padding-top:24px}.rejections{margin-top:28px}.request-section{margin-top:30px}.ask{display:block}.deadline{margin-top:24px;padding:20px}.sec{font-size:24px}.colophon{margin-top:28px}}
 
-.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--amber);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
-.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--amber)}
-.mast h1{margin:.625rem 0 0;font-size:clamp(1.75rem,3.6vw,2.375rem);font-weight:700}
-.mast .lead{margin-top:.5rem;color:var(--muted);font-size:1.0625rem}
-.facts{display:flex;flex-wrap:wrap;gap:.375rem 1.25rem;margin-top:1.125rem;padding-top:.875rem;border-top:1px solid var(--line-2);font-size:.8125rem;color:var(--subtle)}
-.facts b{color:var(--muted);font-weight:600}
-
-/* recommendation */
-.rec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.75rem 1rem;align-items:start;margin-top:1.25rem;padding:1rem 1.125rem;background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:.625rem}
-.rec{font-size:.9375rem}
-.rec .badge{padding:.125rem .5rem;background:var(--amber);color:#fff;border-radius:999px;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
-.rec h2{font-size:1.125rem;font-weight:700;color:#5c3403}
-.rec p{margin-top:.25rem;color:#6b3e04}
-
-h2.sec{margin-top:2.25rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
-h2.sec+*{margin-top:.75rem}
-
-/* comparison matrix */
-.matrix{background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
-table{width:100%;border-collapse:collapse;font-size:.9375rem}
-thead th{padding:.75rem .875rem;background:var(--tint);border-bottom:1px solid var(--line-2);text-align:left;vertical-align:top;font-size:.8125rem;font-weight:700;color:var(--ink)}
-thead th:first-child{font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);width:9.5rem}
-thead th.pick{background:var(--amber-soft);border-bottom-color:var(--amber-line);color:#5c3403}
-thead th .tag{display:block;margin-top:.1875rem;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
-tbody th{padding:.75rem .875rem;border-top:1px solid var(--line);text-align:left;vertical-align:top;font-weight:600;color:var(--muted);font-size:.875rem}
-tbody td{padding:.75rem .875rem;border-top:1px solid var(--line);vertical-align:top;color:var(--ink);font-variant-numeric:tabular-nums}
-tbody td.pick{background:var(--amber-soft)}
-tbody tr:first-child th,tbody tr:first-child td{border-top:0}
-.risk{display:flex;align-items:center;gap:.4375rem}
-.risk i{display:flex;gap:.125rem;flex:none}
-.risk i span{width:.375rem;height:.75rem;border-radius:1px;box-shadow:inset 0 0 0 1px #b8b0a2}
-.risk i span.on{background:var(--muted);box-shadow:none}
-.risk b{font-weight:650}
-.risk-note{display:block;margin-top:.1875rem;color:var(--subtle);font-size:.8125rem}
-.tnote{padding:.75rem .875rem;border-top:1px solid var(--line);background:var(--tint);color:var(--subtle);font-size:.8125rem}
-
-/* why not */
-.why li{padding-block:1rem;border-top:1px solid var(--line-2);font-size:.9375rem}
-.why li:first-child{border-top:0;padding-top:.25rem}
-.why h3{font-size:1rem;font-weight:650}
-.why h3 span{color:var(--subtle);font-weight:600}
-.why p{margin-top:.25rem;color:var(--muted);max-width:42rem}
-.why p b{color:var(--ink);font-weight:650}
-
-/* the ask */
-.ask{padding:1.125rem 1.25rem;background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow)}
-.ask ol{counter-reset:a}
-.ask li{position:relative;counter-increment:a;padding-block:.5rem .5rem;padding-left:1.75rem;color:var(--ink);font-size:.9375rem}
-.ask li+li{border-top:1px solid var(--line)}
-.ask li::before{content:counter(a);position:absolute;left:0;top:.5rem;color:var(--amber);font-size:.8125rem;font-weight:700;font-variant-numeric:tabular-nums}
-.deadline{display:flex;flex-wrap:wrap;align-items:baseline;gap:.375rem .75rem;margin-top:.875rem;padding-top:.875rem;border-top:1px solid var(--line-2)}
-.deadline .k{color:var(--subtle);font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.deadline .v{color:var(--amber);font-size:1.25rem;font-weight:700;letter-spacing:-.02em}
-.deadline .n{color:var(--muted);font-size:.875rem;flex:1 1 16rem}
-
-.colophon{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--line-2);color:var(--subtle);font-size:.8125rem}
-
-@media (max-width:34rem){
-  .page{padding:1.875rem 1rem 2rem}
-
-  .mast .lead{font-size:1rem}
-  .rec{grid-template-columns:minmax(0,1fr);gap:.5rem}
-  .rec .badge{justify-self:start}
-  .matrix{border-radius:.625rem}
-  table,tbody{display:block}
-  caption{display:block}
-  thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-  tbody tr{display:block;border-top:1px solid var(--line-2)}
-  tbody tr:first-child{border-top:0}
-  tbody th,tbody td{display:block;padding:0;border-top:0}
-  tbody th{color:var(--ink);font-size:.9375rem;font-weight:700}
-  tbody td{border-radius:.3125rem;font-size:.9375rem}
-  tbody td::before{content:attr(data-label);display:block;color:var(--subtle);font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-  tbody td.pick::before{color:var(--amber)}
-  .ask{padding:1rem}
-  /* height tightening — spacing only, no content removed */
-  .facts{margin-top:1rem;padding-top:.75rem}
-  .rec{margin-top:1rem;padding:.875rem 1rem}
-  h2.sec{margin-top:1.375rem}
-  h2.sec+*{margin-top:.625rem}
-  tbody tr{padding:.625rem .875rem}
-  tbody th{margin-bottom:.3125rem}
-  tbody td{padding:.25rem .5rem}
-  tbody td+td{margin-top:.1875rem}
-  .tnote{padding:.625rem .875rem}
-  .why li{padding-block:.875rem}
-  .ask li{padding-block:.4375rem .4375rem;padding-left:1.75rem}
-  .ask li::before{top:.4375rem}
-  .deadline{margin-top:.75rem;padding-top:.75rem}
-  .colophon{margin-top:1.25rem;padding-top:.875rem}
-}
 </style>
 </head>
 <body>
-<div class="page">
+<main class="page">
 
   <header class="mast">
     <span class="eyebrow">Decision brief</span>
@@ -147,56 +34,56 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
     </div>
   </div>
 
-  <section>
-    <h2 class="sec">The options, on the same criteria</h2>
+  <section class="option-section">
     <div class="matrix">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Criterion</th>
-            <th scope="col">A · Hard cap with upgrade prompt</th>
-            <th scope="col" class="pick">B · Metered overage<span class="tag">Recommended</span></th>
-            <th scope="col">C · Soft cap with 7-day grace</th>
+      <table role="table" aria-describedby="model-note">
+        <caption><h2 class="sec">The options, on the same criteria</h2>
+    </caption><thead role="rowgroup">
+          <tr role="row">
+            <th scope="col" id="option-col-0" role="columnheader">Criterion</th>
+            <th scope="col" id="option-col-1" role="columnheader">A · Hard cap with upgrade prompt</th>
+            <th scope="col" class="pick" id="option-col-2" role="columnheader">B · Metered overage<span class="tag">Recommended</span></th>
+            <th scope="col" id="option-col-3" role="columnheader">C · Soft cap with 7-day grace</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <th scope="row">Modelled revenue, FY27</th>
-            <td data-label="A · Hard cap">+$180k</td>
-            <td class="pick" data-label="B · Metered overage">+$310k</td>
-            <td data-label="C · Soft cap">+$240k</td>
+        <tbody role="rowgroup">
+          <tr role="row">
+            <th scope="row" id="criterion-0" role="rowheader">Modelled revenue, FY27</th>
+            <td data-label="A · Hard cap" headers="criterion-0 option-col-1" role="cell">+$180k</td>
+            <td class="pick" data-label="B · Metered overage · Recommended" headers="criterion-0 option-col-2" role="cell">+$310k</td>
+            <td data-label="C · Soft cap" headers="criterion-0 option-col-3" role="cell">+$240k</td>
           </tr>
-          <tr>
-            <th scope="row">Support load</th>
-            <td data-label="A · Hard cap">+40 tickets / month</td>
-            <td class="pick" data-label="B · Metered overage">+12 tickets / month</td>
-            <td data-label="C · Soft cap">+25 tickets / month</td>
+          <tr role="row">
+            <th scope="row" id="criterion-1" role="rowheader">Support load</th>
+            <td data-label="A · Hard cap" headers="criterion-1 option-col-1" role="cell">+40 tickets / month</td>
+            <td class="pick" data-label="B · Metered overage · Recommended" headers="criterion-1 option-col-2" role="cell">+12 tickets / month</td>
+            <td data-label="C · Soft cap" headers="criterion-1 option-col-3" role="cell">+25 tickets / month</td>
           </tr>
-          <tr>
-            <th scope="row">Time to ship</th>
-            <td data-label="A · Hard cap">3 weeks</td>
-            <td class="pick" data-label="B · Metered overage">5 weeks</td>
-            <td data-label="C · Soft cap">4 weeks</td>
+          <tr role="row">
+            <th scope="row" id="criterion-2" role="rowheader">Time to ship</th>
+            <td data-label="A · Hard cap" headers="criterion-2 option-col-1" role="cell">3 weeks</td>
+            <td class="pick" data-label="B · Metered overage · Recommended" headers="criterion-2 option-col-2" role="cell">5 weeks</td>
+            <td data-label="C · Soft cap" headers="criterion-2 option-col-3" role="cell">4 weeks</td>
           </tr>
-          <tr>
-            <th scope="row">Churn risk</th>
-            <td data-label="A · Hard cap"><span class="risk"><i aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span></i><b>High</b></span><span class="risk-note">Stops work mid-task</span></td>
-            <td class="pick" data-label="B · Metered overage"><span class="risk"><i aria-hidden="true"><span class="on"></span><span></span><span></span></i><b>Low</b></span><span class="risk-note">Nothing is interrupted</span></td>
-            <td data-label="C · Soft cap"><span class="risk"><i aria-hidden="true"><span class="on"></span><span class="on"></span><span></span></i><b>Medium</b></span><span class="risk-note">The grace period ends</span></td>
+          <tr role="row">
+            <th scope="row" id="criterion-3" role="rowheader">Churn risk</th>
+            <td data-label="A · Hard cap" headers="criterion-3 option-col-1" role="cell"><span class="risk"><i aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span></i><b>High</b></span><span class="risk-note">Stops work mid-task</span></td>
+            <td class="pick" data-label="B · Metered overage · Recommended" headers="criterion-3 option-col-2" role="cell"><span class="risk"><i aria-hidden="true"><span class="on"></span><span></span><span></span></i><b>Low</b></span><span class="risk-note">Nothing is interrupted</span></td>
+            <td data-label="C · Soft cap" headers="criterion-3 option-col-3" role="cell"><span class="risk"><i aria-hidden="true"><span class="on"></span><span class="on"></span><span></span></i><b>Medium</b></span><span class="risk-note">The grace period ends</span></td>
           </tr>
-          <tr>
-            <th scope="row">Time to revert</th>
-            <td data-label="A · Hard cap">1 week</td>
-            <td class="pick" data-label="B · Metered overage">2 weeks</td>
-            <td data-label="C · Soft cap">3 weeks</td>
+          <tr role="row">
+            <th scope="row" id="criterion-4" role="rowheader">Time to revert</th>
+            <td data-label="A · Hard cap" headers="criterion-4 option-col-1" role="cell">1 week</td>
+            <td class="pick" data-label="B · Metered overage · Recommended" headers="criterion-4 option-col-2" role="cell">2 weeks</td>
+            <td data-label="C · Soft cap" headers="criterion-4 option-col-3" role="cell">3 weeks</td>
           </tr>
         </tbody>
       </table>
-      <p class="tnote">Revenue is modelled on the June–August usage distribution and carries ±18% at the 80% interval. Support estimates scale from the 2025 seat-cap launch, our closest comparable.</p>
+      <p class="tnote" id="model-note">Revenue is modelled on the June–August usage distribution and carries ±18% at the 80% interval. Support estimates scale from the 2025 seat-cap launch, our closest comparable.</p>
     </div>
   </section>
 
-  <section>
+  <section class="rejections">
     <h2 class="sec">Why not the others</h2>
     <ul class="why">
       <li>
@@ -210,7 +97,7 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
     </ul>
   </section>
 
-  <section>
+  <section class="request-section">
     <h2 class="sec">What we are asking for</h2>
     <div class="ask">
       <ol>
@@ -223,6 +110,6 @@ tbody tr:first-child th,tbody tr:first-child td{border-top:0}
   </section>
 
   <footer class="colophon">Prepared by Ines Arriaga, Pricing. Modelling reviewed by Sam Oyelaran, Data. Sources: usage export 1 June – 31 August 2026; 2025 seat-cap retrospective.</footer>
-</div>
+</main>
 </body>
 </html>

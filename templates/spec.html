@@ -1,111 +1,18 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spec — saved views for the ticket queue (1.9)</title>
-<!--
-  TEMPLATE: spec  ·  CATEGORY: decisions
-  VOICE: humanist sans (system-ui stack), tight measure   SCHEME: near-white paper, deep amber accent
-  Rewriting this? Replace the content, keep the structure and the styling.
-  THE OUT COLUMN IS NOT DECORATION. A spec with goals and no non-goals has not been written yet —
-  the non-goals are what stop the scope moving, so give them the same care as the goals.
-  EVERY REQUIREMENT NEEDS AN ACCEPTANCE LINE. If you cannot say how you would know it was met,
-  it is a wish, not a requirement: cut it or move it to the open questions.
-  DELETE, DON'T EMPTY: no open questions left? remove the section, heading included. Renumber
-  requirements so the IDs stay contiguous.
--->
 <style>
-:root{
-  --bg:#faf9f7; --card:#fff; --tint:#f4f2ee;
-  --ink:#1c1a16; --muted:#55504a; --subtle:#6a645c;
-  --line:#e8e4de; --line-2:#d6d0c7;
-  --amber:#96560a; --amber-soft:#fdf1e0; --amber-line:#eed6ae;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --shadow:0 1px 2px rgb(28 26 22/.05),0 12px 32px -16px rgb(28 26 22/.3);
-}
-*,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
-h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
-p,dl,dd{margin:0}
-ul,ol{margin:0;padding:0;list-style:none}
-.page{max-width:54rem;margin-inline:auto;padding:2.5rem 1.5rem 3rem}
-.measure{max-width:40rem}
+*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}:root{--paper:#f8f7f2;--white:#fff;--ink:#242722;--muted:#586052;--line:#bec4b7;--light:#dfe2d9;--tint:#eeefe7;--amber:#835218;--pale:#f2e7d5;--human:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}body{margin:0;padding:28px 32px 48px;background:var(--paper);color:var(--ink);font:16px/1.65 var(--human);overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}.page{max-width:1170px;margin:auto}h1,h2,h3,p,ol,ul{margin:0}ul,ol{list-style:none;padding:0}h1,h2,h3{line-height:1.35}.mast{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:0 48px;padding-bottom:28px;border-bottom:2px solid var(--ink)}.eyebrow{font:600 13px/1.5 var(--mono);letter-spacing:.06em;margin-bottom:14px;display:block}.mast h1{font:600 clamp(27px,2.65vw,34px)/1.25 var(--mono);letter-spacing:-.05em;max-width:30ch;grid-column:1}.lead{grid-column:1;max-width:62ch;font-size:17px;line-height:1.65;color:var(--muted);margin-top:18px}.facts{grid-column:2;grid-row:1/4;align-self:start;display:grid;gap:9px;padding:18px 20px;border:1px solid var(--line);background:var(--white);font-size:15px;line-height:1.6;color:var(--muted)}.facts b{color:var(--ink);font-weight:650}.state{display:flex;align-items:center;gap:8px;font:600 13px/1.5 var(--mono);color:var(--amber);background:var(--pale);padding:5px 8px;width:fit-content;margin-bottom:4px}.state::before{content:"";width:7px;height:7px;border:1.5px solid currentColor;border-radius:50%;flex:none}.sec{font:600 20px/1.4 var(--mono);letter-spacing:-.025em;margin:28px 0 18px}.count{font:400 16px/1.6 var(--human);color:var(--muted);letter-spacing:0}.scope{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:38px}.scope>.in:last-child{grid-column:1/-1}.scope>div{min-width:0}.scope h3{font:600 15px/1.5 var(--mono);padding:9px 14px;margin-bottom:14px;border:1px solid var(--line)}.in h3{color:var(--ink);background:var(--tint)}.out h3{color:var(--muted);background:transparent}.scope li{position:relative;padding-left:19px;font-size:16px;line-height:1.6}.scope li+li{margin-top:12px}.scope li::before{content:"";position:absolute;left:0;top:9px;width:6px;height:6px;flex:none}.in li::before{background:var(--ink)}.out li::before{border:1px solid var(--muted)}.out li{color:var(--muted)}.reqs{border-top:2px solid var(--ink)}.reqs>li{display:grid;grid-template-columns:94px minmax(0,1fr) minmax(0,1.12fr);gap:30px;padding:24px 0;border-bottom:1px solid var(--line)}.r-head{display:flex;flex-direction:column;align-items:flex-start;gap:12px}.rid{font:650 15px/1.5 var(--mono)}.pri{width:fit-content;padding:3px 6px;font:600 12px/1.5 var(--mono);letter-spacing:.02em}.must{background:var(--ink);color:var(--white)}.should{border:1px solid var(--muted);color:var(--muted)}.could{color:var(--muted);border:1px dashed var(--line)}.req{font-size:17px;line-height:1.6;font-weight:600}.acc{color:var(--muted);font-size:16px;line-height:1.65}.acc b{display:block;color:var(--muted);font:600 12px/1.5 var(--mono);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}.question-register{margin-top:32px;padding:24px 26px;border:1px solid var(--line);background:var(--white)}.question-register .sec{margin:0 0 18px}.open>li{display:grid;grid-template-columns:minmax(0,1fr) 295px;gap:38px;padding:22px 0;border-top:1px solid var(--light)}.open>li:last-child{padding-bottom:0}.open h3{font-size:20px;font-weight:650;line-height:1.4}.q-copy>p{font-size:16px;line-height:1.65;color:var(--muted);margin-top:12px}.needs{font-size:16px;line-height:1.65;color:var(--muted);align-self:start}.needs b{font:600 13px/1.5 var(--mono);display:block;margin-bottom:8px;color:var(--amber)}.colophon{font-size:16px;line-height:1.65;color:var(--muted);margin-top:30px;max-width:100ch;padding-top:20px;border-top:1px solid var(--line)}a{color:var(--amber)}a:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
+@media(max-width:960px){body{padding:26px 24px 40px}.mast{display:block}.mast h1{max-width:35ch}.facts{display:flex;flex-wrap:wrap;gap:10px 24px;margin-top:22px;align-items:baseline}.state{margin:0}.scope{gap:26px}.reqs>li{grid-template-columns:82px minmax(0,1fr) minmax(0,1.1fr);gap:22px}.open>li{grid-template-columns:minmax(0,1fr) 220px;gap:26px}.question-register{padding:22px}}
+@media(max-width:680px){body{padding:22px 16px 36px}.mast{padding-bottom:22px}.mast h1{font-size:27px;letter-spacing:-.045em}.lead{font-size:17px;margin-top:16px}.facts{display:flex;flex-direction:column;align-items:flex-start;padding:16px;gap:9px;font-size:16px}.sec{font-size:19px;margin-top:26px;margin-bottom:16px}.count{display:block;margin-top:6px;font-size:16px}.scope{grid-template-columns:1fr;gap:22px}.scope h3{padding:9px 12px}.scope li+li{margin-top:10px}.reqs>li{display:block;padding:22px 0}.r-head{flex-direction:row;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.rid{font-size:16px}.pri{font-size:13px}.req{font-size:17px}.acc{margin-top:16px}.acc b{margin-bottom:7px}.question-register{margin-top:28px;padding:20px 18px}.question-register .count{margin-top:8px}.open>li{display:block;padding:22px 0}.open h3{font-size:19px}.needs{margin-top:18px}.needs b{margin-bottom:6px}.colophon{margin-top:28px}}
 
-.eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:var(--amber);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
-.eyebrow::before{content:"";width:1.25rem;height:.1875rem;background:var(--amber)}
-.mast h1{margin:.625rem 0 0;font-size:clamp(1.75rem,3.6vw,2.375rem);font-weight:700}
-.mast .lead{margin-top:.5rem;color:var(--muted);font-size:1.0625rem}
-.facts{display:flex;flex-wrap:wrap;gap:.375rem 1.25rem;margin-top:1.125rem;padding-top:.875rem;border-top:1px solid var(--line-2);font-size:.8125rem;color:var(--subtle)}
-.facts b{color:var(--muted);font-weight:600}
-.state{display:inline-flex;align-items:center;gap:.4375rem;padding:.0625rem .5rem;border:1px solid var(--amber-line);background:var(--amber-soft);border-radius:999px;color:var(--amber);font-size:.8125rem;font-weight:700}
-.state::before{content:"";width:.4375rem;height:.4375rem;border-radius:999px;background:var(--amber)}
-
-/* SCOPE BAND — the opening move, directly under the metadata row.
-   Two columns, in beside out, so the scope boundary is a vertical rule you read across rather
-   than a line you read down. This is the template's own best idea hoisted to the top: the shape
-   and the promise ("goals beside non-goals") are the same object again.
-   The marker is filled vs hollow AND the column carries the word, so neither colour nor position
-   is doing the work alone. */
-.scope{display:grid;grid-template-columns:1fr 1fr;margin-top:.75rem;background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
-.scope>div{padding:.875rem 1.125rem}
-.scope .out{background:var(--tint);border-left:1px solid var(--line-2)}
-.scope h3{font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem}
-.scope .in h3{color:var(--amber)}
-.scope .out h3{color:var(--subtle)}
-.scope li{position:relative;padding-left:1.0625rem;font-size:.9375rem;line-height:1.5}
-.scope li+li{margin-top:.4375rem}
-.scope li::before{content:"";position:absolute;left:0;top:.4375rem;width:.5rem;height:.5rem;border-radius:.125rem}
-.scope .in li{color:var(--ink)}
-.scope .in li::before{background:var(--amber)}
-.scope .out li{color:var(--muted)}
-.scope .out li::before{box-shadow:inset 0 0 0 1.5px var(--line-2)}
-h2.sec{margin-top:2.25rem;font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--subtle)}
-h2.sec .count{color:var(--muted);font-weight:600;letter-spacing:0;text-transform:none;font-size:.8125rem}
-h2.sec+*{margin-top:.75rem}
-
-/* requirements */
-.reqs{background:var(--card);border:1px solid var(--line-2);border-radius:.75rem;box-shadow:var(--shadow);overflow:hidden}
-.reqs>li{display:grid;grid-template-columns:3.5rem minmax(0,1fr) auto;gap:.375rem 1rem;padding:.9375rem 1.125rem;border-top:1px solid var(--line)}
-.reqs>li:first-child{border-top:0}
-.rid{grid-row:span 2;color:var(--ink);font-size:.8125rem;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;line-height:1.5}
-.req{color:var(--ink);font-size:.9375rem;font-weight:600}
-.acc{grid-column:2;color:var(--muted);font-size:.875rem}
-.acc b{color:var(--subtle);font-weight:700;font-size:.6875rem;letter-spacing:.08em;text-transform:uppercase}
-.pri{grid-row:span 2;align-self:start;justify-self:end;padding:.0625rem .4375rem;border-radius:.25rem;font-size:.6875rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-.pri.must{background:var(--ink);color:#fff}
-.pri.should{border:1px solid var(--line-2);color:var(--muted)}
-.pri.could{color:var(--subtle)}
-
-/* open questions */
-.open li{padding-block:.875rem;border-top:1px solid var(--line-2);font-size:.9375rem}
-.open li:first-child{border-top:0;padding-top:.25rem}
-.open h3{font-size:1rem;font-weight:650}
-.open p{margin-top:.25rem;color:var(--muted);max-width:42rem}
-.open .needs{margin-top:.3125rem;color:var(--subtle);font-size:.8125rem}
-.open .needs b{color:var(--muted);font-weight:600}
-
-.colophon{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--line-2);color:var(--subtle);font-size:.8125rem}
-
-@media (max-width:34rem){
-  .page{padding:1.875rem 1rem 2rem}
-  .mast .lead{font-size:1rem}
-  h2.sec{margin-top:1.625rem}
-  .colophon{margin-top:1.5rem}
-  .scope{grid-template-columns:minmax(0,1fr)}
-  .scope>div{padding:.75rem 1rem}
-  .scope .out{border-left:0;border-top:1px solid var(--line-2)}
-  .reqs>li{grid-template-columns:minmax(0,1fr) auto;gap:.25rem .75rem;padding:.8125rem 1rem}
-  .rid{grid-row:auto;grid-column:1;font-size:.8125rem;color:var(--subtle)}
-  .req{grid-column:1/-1}
-  .acc{grid-column:1/-1}
-  .pri{grid-row:1;grid-column:2}
-}
 </style>
 </head>
 <body>
-<div class="page">
+<main class="page">
 
   <header class="mast">
     <span class="eyebrow">Product spec · 1.9</span>
@@ -147,66 +54,66 @@ h2.sec+*{margin-top:.75rem}
     <h2 class="sec">Requirements <span class="count">— 6, three of them must-have</span></h2>
     <ol class="reqs">
       <li>
-        <span class="rid">R-01</span>
-        <p class="req">An agent can save the current filter state as a named view.</p>
+        <div class="r-head"><span class="rid">R-01</span>
         <span class="pri must">Must</span>
+        </div><p class="req">An agent can save the current filter state as a named view.</p>
         <p class="acc"><b>Accepts when</b> — a view reproduces an identical result set on reload, sort included.</p>
       </li>
       <li>
-        <span class="rid">R-02</span>
-        <p class="req">Views list by last used: five shown, the rest behind "All views".</p>
+        <div class="r-head"><span class="rid">R-02</span>
         <span class="pri must">Must</span>
+        </div><p class="req">Views list by last used: five shown, the rest behind "All views".</p>
         <p class="acc"><b>Accepts when</b> — an agent with twelve views sees their five most recent without opening a menu.</p>
       </li>
       <li>
-        <span class="rid">R-03</span>
-        <p class="req">A view can be shared with a team and is read-only to everyone but its owner.</p>
+        <div class="r-head"><span class="rid">R-03</span>
         <span class="pri must">Must</span>
+        </div><p class="req">A view can be shared with a team and is read-only to everyone but its owner.</p>
         <p class="acc"><b>Accepts when</b> — a non-owner can duplicate a shared view and edit the copy, but not save over it.</p>
       </li>
       <li>
-        <span class="rid">R-04</span>
-        <p class="req">Every view has a stable URL that anyone with queue access can open.</p>
+        <div class="r-head"><span class="rid">R-04</span>
         <span class="pri should">Should</span>
+        </div><p class="req">Every view has a stable URL that anyone with queue access can open.</p>
         <p class="acc"><b>Accepts when</b> — the URL in a fresh session lands on the same queue, or a clear "no access" state.</p>
       </li>
       <li>
-        <span class="rid">R-05</span>
-        <p class="req">Deleting a shared view warns with the number of people who used it recently.</p>
+        <div class="r-head"><span class="rid">R-05</span>
         <span class="pri should">Should</span>
+        </div><p class="req">Deleting a shared view warns with the number of people who used it recently.</p>
         <p class="acc"><b>Accepts when</b> — the confirmation names the 30-day count and requires a second action.</p>
       </li>
       <li>
-        <span class="rid">R-06</span>
-        <p class="req">Up to three views can be pinned to the sidebar.</p>
+        <div class="r-head"><span class="rid">R-06</span>
         <span class="pri could">Could</span>
+        </div><p class="req">Up to three views can be pinned to the sidebar.</p>
         <p class="acc"><b>Accepts when</b> — pinning a fourth asks which pin to replace rather than failing silently.</p>
       </li>
     </ol>
   </section>
 
-  <section>
+  <section class="question-register">
     <h2 class="sec">Open questions <span class="count">— 3, all blocking the build start</span></h2>
     <ul class="open">
       <li>
-        <h3>What happens to a shared view when its owner leaves?</h3>
+        <div class="q-copy"><h3>What happens to a shared view when its owner leaves?</h3>
         <p>Transfer to the team, or archive. Archiving is safer and will annoy people; transfer needs an owner-election rule we do not have.</p>
-        <p class="needs"><b>Needs:</b> Mira Halvorsen with Legal — before the build starts, not before beta.</p>
+        </div><p class="needs"><b>Needs:</b> Mira Halvorsen with Legal — before the build starts, not before beta.</p>
       </li>
       <li>
-        <h3>Do saved views count against the 200-request filter rate limit?</h3>
+        <div class="q-copy"><h3>Do saved views count against the 200-request filter rate limit?</h3>
         <p>Five pinned views refreshing on queue open is five requests where there is one. At 400 agents that is a different traffic shape.</p>
-        <p class="needs"><b>Needs:</b> Platform — by 12 September.</p>
+        </div><p class="needs"><b>Needs:</b> Platform — by 12 September.</p>
       </li>
       <li>
-        <h3>Does "ordered by last used" leak activity between teammates?</h3>
+        <div class="q-copy"><h3>Does "ordered by last used" leak activity between teammates?</h3>
         <p>A view's position tells you when a colleague last worked the queue. Fine internally, probably; not obviously fine for regulated accounts.</p>
-        <p class="needs"><b>Needs:</b> Security review — before beta.</p>
+        </div><p class="needs"><b>Needs:</b> Security review — before beta.</p>
       </li>
     </ul>
   </section>
 
   <footer class="colophon">Draft 3, updated 4 September 2026 by Mira Halvorsen. The 90-second baseline comes from queue instrumentation added in 1.7, over 4,100 sessions in August. Comments close 11 September; anything unresolved becomes an open question above, not a silent assumption.</footer>
-</div>
+</main>
 </body>
 </html>

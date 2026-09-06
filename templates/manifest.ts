@@ -24,21 +24,23 @@ export const starterTemplateManifest = [
         "slug": "meeting-recap",
         "category": "meetings",
         "name": "Meeting recap",
-        "description": "What was decided, who owes what by when, and what is still open. A numbered decision ledger over an owned action table with per-item status.",
+        "description": "A working meeting handover: six owned actions lead beside complete decision minutes, with compact outcome counts, explicit deferrals and open questions that keep their owners and deadlines.",
         "type": "html",
         "content_file": "meeting-recap.html",
         "thumbnail": "/assets/template-thumbs/meeting-recap.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1600
       },
       {
         "slug": "decision-brief",
         "category": "decisions",
         "name": "Decision brief",
-        "description": "Two to four options scored on identical criteria, a recommendation up front, an honest account of why the alternatives lose, and the ask with a dated deadline.",
+        "description": "An evidence-first option bench: a compact recommendation above the full five-criterion comparison, the selected option marked in words, then rejected alternatives, explicit asks and the decision deadline.",
         "type": "html",
         "content_file": "decision-brief.html",
         "thumbnail": "/assets/template-thumbs/decision-brief.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1600
       },
       {
         "slug": "one-pager",
@@ -81,11 +83,12 @@ export const starterTemplateManifest = [
         "slug": "spec",
         "category": "decisions",
         "name": "Spec",
-        "description": "A PRD that opens on scope itself — what the release does, beside what it deliberately does not — then numbered requirements each carrying a priority and an acceptance line, and the open questions still blocking the build.",
+        "description": "A technical requirements folio: in-and-out scope, ruled ID and priority records pairing each requirement with its acceptance clause, then blocking questions with their owners and timings.",
         "type": "html",
         "content_file": "spec.html",
         "thumbnail": "/assets/template-thumbs/spec.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1440
       },
       {
         "slug": "case-study",
@@ -123,11 +126,12 @@ export const starterTemplateManifest = [
         "slug": "research-brief",
         "category": "research",
         "name": "Research Brief",
-        "description": "A question answered up front, then the evidence that earns it: numbered findings each carrying its own citation and a primary/secondary tag, a confidence rating with its reasoning, a source list, and an honest section on what is still unknown.",
+        "description": "An evidence register: the question and answer qualified immediately by confidence and method, five claims beside their provenance, a grouped source register, and the conditions and unknowns that could change the answer.",
         "type": "html",
         "content_file": "research-brief.html",
         "thumbnail": "/assets/template-thumbs/research-brief.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1440
       },
       {
         "slug": "metrics-dashboard",
