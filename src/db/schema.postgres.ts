@@ -49,7 +49,21 @@ export const accounts = pgTable(
     /** Raw Stripe status, kept verbatim for support and the past-due banner. */
     subscriptionStatus: text('subscription_status'),
     currentPeriodEnd: timestampMs('current_period_end'),
+    /**
+     * Stripe's `cancel_at_period_end`, verbatim. NOT the answer to "is this ending" on its own —
+     * see `cancelAt`.
+     */
     cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    /**
+     * Stripe's `cancel_at`: the instant a scheduled cancellation takes effect. Stored rather than
+     * inferred from `currentPeriodEnd`, because the two are only equal for the common case.
+     *
+     * A cancellation through the billing portal sets THIS and leaves `cancelAtPeriodEnd` false, so
+     * reading only the boolean makes an ending subscription look like a renewing one. It is also
+     * the date the customer is shown: a `cancel_at` set to a specific day, or beyond the current
+     * period, differs from the period end and inferring it would print the wrong day.
+     */
+    cancelAt: timestampMs('cancel_at'),
     /** `event.created` of the last applied webhook. Powers the out-of-order guard. */
     billingUpdatedAt: timestampMs('billing_updated_at'),
     createdAt: timestampMs('created_at').notNull(),

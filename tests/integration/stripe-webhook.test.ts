@@ -9,7 +9,12 @@ import Stripe from 'stripe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BillingModule } from '../../src/billing/module.js';
 import { registerStripeWebhookRoute } from '../../src/billing/routes.js';
-import { BillingStore } from '../../src/billing/store.js';
+import {
+  accessEndsAt,
+  type BillingState,
+  BillingStore,
+  isCancellationScheduled,
+} from '../../src/billing/store.js';
 import { handleStripeEvent } from '../../src/billing/webhook.js';
 import type { BillingConfig } from '../../src/config.js';
 import { initializeDatabase, type SqliteDatabaseHandle } from '../../src/db/client.js';
@@ -57,6 +62,7 @@ function subscriptionEvent(options: {
   status: string;
   priceId?: string;
   cancelAtPeriodEnd?: boolean;
+  cancelAt?: number | null;
   periodEnd?: number;
 }) {
   return {
@@ -72,6 +78,7 @@ function subscriptionEvent(options: {
         customer: CUSTOMER_ID,
         status: options.status,
         cancel_at_period_end: options.cancelAtPeriodEnd ?? false,
+        cancel_at: options.cancelAt ?? null,
         metadata: { account_id: ACCOUNT_ID },
         items: {
           object: 'list',
@@ -284,6 +291,102 @@ describe('stripe webhook', () => {
     const state = await store.findByAccountId(ACCOUNT_ID);
     expect(state?.plan).toBe('pro');
     expect(state?.cancelAtPeriodEnd).toBe(true);
+    // The boolean alone still counts as scheduled. It is the path Stripe uses when a cancellation
+    // carries no explicit instant, and it must keep working now that a second field is read too.
+    expect(isCancellationScheduled(state as BillingState)).toBe(true);
+    expect(accessEndsAt(state as BillingState)).toBe(1_800_100_000_000);
+  });
+
+  it('records a cancel_at that Stripe set WITHOUT cancel_at_period_end', async () => {
+    // The billing-portal shape, in miniature. The real payload it was found in is replayed in
+    // tests/integration/stripe-live-cancellation.test.ts; this asserts the mapping directly.
+    await handleStripeEvent(
+      subscriptionEvent({
+        id: 'evt_cancel_at_only',
+        type: 'customer.subscription.updated',
+        created: 1_800_000_100,
+        status: 'active',
+        cancelAtPeriodEnd: false,
+        cancelAt: 1_800_100_000,
+      }) as never,
+      deps()
+    );
+
+    const state = await store.findByAccountId(ACCOUNT_ID);
+    expect(state?.plan).toBe('pro');
+    // Stripe's own flag is cached verbatim — false, because that is what Stripe sent.
+    expect(state?.cancelAtPeriodEnd).toBe(false);
+    expect(state?.cancelAt).toBe(1_800_100_000_000);
+    expect(isCancellationScheduled(state as BillingState)).toBe(true);
+  });
+
+  it('does not leave a cancellation date on a subscription that has already ended', async () => {
+    await handleStripeEvent(
+      subscriptionEvent({
+        id: 'evt_scheduled',
+        type: 'customer.subscription.updated',
+        created: 1_800_000_100,
+        status: 'active',
+        cancelAt: 1_800_100_000,
+      }) as never,
+      deps()
+    );
+    expect((await store.findByAccountId(ACCOUNT_ID))?.cancelAt).toBe(1_800_100_000_000);
+
+    // Stripe keeps sending `cancel_at` on the final `deleted` event. Nothing is scheduled any more,
+    // and a leftover future date would read as an end that has not happened yet.
+    await handleStripeEvent(
+      subscriptionEvent({
+        id: 'evt_now_gone',
+        type: 'customer.subscription.deleted',
+        created: 1_800_000_400,
+        status: 'canceled',
+        cancelAt: 1_800_100_000,
+      }) as never,
+      deps()
+    );
+
+    const state = await store.findByAccountId(ACCOUNT_ID);
+    expect(state?.plan).toBe('free');
+    expect(state?.cancelAt).toBeNull();
+    expect(isCancellationScheduled(state as BillingState)).toBe(false);
+  });
+
+  it('an invoice does not erase a cancellation that is already scheduled', async () => {
+    await handleStripeEvent(
+      subscriptionEvent({
+        id: 'evt_sched_then_invoice',
+        type: 'customer.subscription.updated',
+        created: 1_800_000_100,
+        status: 'active',
+        cancelAt: 1_800_100_000,
+      }) as never,
+      deps()
+    );
+
+    // `applySubscription` writes every column in its SET list, so an invoice handler that did not
+    // carry these through would quietly un-cancel the subscription.
+    await handleStripeEvent(
+      {
+        id: 'evt_invoice_after_cancel',
+        object: 'event',
+        created: 1_800_000_200,
+        type: 'invoice.paid',
+        data: {
+          object: {
+            id: 'in_after_cancel',
+            object: 'invoice',
+            customer: CUSTOMER_ID,
+            lines: { object: 'list', data: [{ period: { end: 1_800_200_000 } }] },
+          },
+        },
+      } as never,
+      deps()
+    );
+
+    const state = await store.findByAccountId(ACCOUNT_ID);
+    expect(state?.cancelAt).toBe(1_800_100_000_000);
+    expect(isCancellationScheduled(state as BillingState)).toBe(true);
   });
 
   it('acknowledges an unhandled event type without touching state', async () => {

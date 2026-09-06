@@ -227,7 +227,11 @@ async function applyEvent(
         subscriptionId: state.stripeSubscriptionId,
         status: state.subscriptionStatus === 'past_due' ? 'active' : state.subscriptionStatus,
         currentPeriodEnd: periodEnd ?? state.currentPeriodEnd,
+        // Carried through, not recomputed. `applySubscription` writes every column in its SET list,
+        // so an invoice that omitted these would silently erase a scheduled cancellation — and the
+        // renewal invoice of a cancelling subscriber is exactly when that would happen.
         cancelAtPeriodEnd: state.cancelAtPeriodEnd,
+        cancelAt: state.cancelAt,
         eventCreated: state.billingUpdatedAt ?? clock.eventCreated,
         now: clock.now,
       });
@@ -244,6 +248,7 @@ async function applyEvent(
         status: 'past_due',
         currentPeriodEnd: state.currentPeriodEnd,
         cancelAtPeriodEnd: state.cancelAtPeriodEnd,
+        cancelAt: state.cancelAt,
         eventCreated: state.billingUpdatedAt ?? clock.eventCreated,
         now: clock.now,
       });
@@ -260,29 +265,82 @@ async function applyEvent(
   }
 }
 
+/**
+ * A Stripe subscription, reduced to the columns this app stores.
+ *
+ * Deliberately PURE and deliberately EXPORTED. It is the whole mapping in one place, so the repair
+ * path (`scripts/billing-resync.ts`) re-derives a row through exactly the code a webhook would run
+ * rather than a hand-written UPDATE that agrees with it only until one of them is edited.
+ */
+export interface SubscriptionSnapshot {
+  plan: PlanId;
+  subscriptionId: string | null;
+  status: string;
+  currentPeriodEnd: number | null;
+  cancelAtPeriodEnd: boolean;
+  cancelAt: number | null;
+}
+
+export function subscriptionSnapshot(
+  subscription: Stripe.Subscription,
+  prices: { monthly: string; annual: string }
+): SubscriptionSnapshot {
+  const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
+  const pricePlan = planForPriceId(priceId, prices);
+  const ended = subscription.status === 'canceled' || subscription.status === 'incomplete_expired';
+
+  return {
+    plan: planForSubscriptionStatus(subscription.status, pricePlan),
+    // Forget the subscription id once it has genuinely ended, so a later upgrade starts clean.
+    subscriptionId: ended ? null : subscription.id,
+    status: subscription.status,
+    currentPeriodEnd: subscriptionPeriodEnd(subscription),
+    // Both cancellation fields are cached VERBATIM, and neither is interpreted here. What "this is
+    // ending" means is decided in one place — `isCancellationScheduled` in `store.ts` — so the row
+    // stays a faithful copy of Stripe and a support question can be answered from it directly.
+    cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+    // Cleared once the subscription has actually ended: at that point nothing is scheduled any
+    // more, and a leftover date would read as a future end on an account that already has none.
+    cancelAt: ended ? null : subscriptionCancelAt(subscription),
+  };
+}
+
 async function applySubscriptionObject(
   subscription: Stripe.Subscription,
   state: BillingState,
   deps: WebhookDeps,
   clock: { now: number; eventCreated: number }
 ): Promise<void> {
-  const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
-  const pricePlan = planForPriceId(priceId, deps.prices);
-  const plan: PlanId = planForSubscriptionStatus(subscription.status, pricePlan);
-  const periodEnd = subscriptionPeriodEnd(subscription);
-  const ended = subscription.status === 'canceled' || subscription.status === 'incomplete_expired';
-
   await deps.store.applySubscription({
     accountId: state.accountId,
-    plan,
-    // Forget the subscription id once it has genuinely ended, so a later upgrade starts clean.
-    subscriptionId: ended ? null : subscription.id,
-    status: subscription.status,
-    currentPeriodEnd: periodEnd,
-    cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+    ...subscriptionSnapshot(subscription, deps.prices),
     eventCreated: clock.eventCreated,
     now: clock.now,
   });
+}
+
+/**
+ * `cancel_at`, in ms — the instant Stripe will end this subscription, or null if none is scheduled.
+ *
+ * THIS IS THE FIELD A BILLING-PORTAL CANCELLATION ACTUALLY SETS. The event that exposed it is kept
+ * verbatim at `tests/fixtures/stripe/live-cancellation-2026-09-06.json`:
+ *
+ *     status                 active
+ *     cancel_at_period_end   false        <- the only field this mapping used to read
+ *     cancel_at              1791263432
+ *     canceled_at            1788671506
+ *     previous_attributes    { cancel_at: null, canceled_at: null, ... }
+ *
+ * `previous_attributes` does not name `cancel_at_period_end`, so Stripe did not set it false — it
+ * never touched it. The account went on being told "Renews on 6 October 2026" for a subscription
+ * that ends on 6 October 2026.
+ *
+ * NOT `canceled_at`, which is when the customer PRESSED cancel and is already in the past by the
+ * time this runs. Reading that one would say access ended the moment they asked to leave.
+ */
+function subscriptionCancelAt(subscription: Stripe.Subscription): number | null {
+  const cancelAt = subscription.cancel_at;
+  return typeof cancelAt === 'number' ? cancelAt * 1000 : null;
 }
 
 /**

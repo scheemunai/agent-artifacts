@@ -15,8 +15,40 @@ export interface BillingState {
   grandfatheredAt: number | null;
   subscriptionStatus: string | null;
   currentPeriodEnd: number | null;
+  /**
+   * Stripe's `cancel_at_period_end`, verbatim. On its own it does NOT answer "is this ending" —
+   * use `isCancellationScheduled`.
+   */
   cancelAtPeriodEnd: boolean;
+  /** Stripe's `cancel_at`, in ms: when a scheduled cancellation takes effect. */
+  cancelAt: number | null;
   billingUpdatedAt: number | null;
+}
+
+/**
+ * Is this subscription scheduled to end?
+ *
+ * TWO FIELDS, BECAUSE STRIPE USES TWO. Reading only `cancel_at_period_end` is the defect this
+ * function exists to make unrepeatable: a cancellation through the billing portal leaves that flag
+ * FALSE and records the end in `cancel_at` instead, so an account that had just cancelled kept
+ * being told it would renew. The boolean is still read because the API sets it on subscriptions
+ * cancelled through other paths, and dropping it would trade one blind spot for another.
+ */
+export function isCancellationScheduled(state: BillingState): boolean {
+  return state.cancelAtPeriodEnd || state.cancelAt !== null;
+}
+
+/**
+ * The date to show a customer whose subscription is ending.
+ *
+ * `cancelAt` first: it is the instant Stripe will actually end the subscription, and it is not
+ * always the period end. A cancellation scheduled for a specific date, or one that spans more than
+ * the current period, leaves `currentPeriodEnd` describing the next INVOICE rather than the last
+ * day of access — showing it would be the same class of wrong answer as the boolean, one field
+ * over. The period end remains the fallback for a `cancelAtPeriodEnd` with no explicit instant.
+ */
+export function accessEndsAt(state: BillingState): number | null {
+  return state.cancelAt ?? state.currentPeriodEnd;
 }
 
 interface BillingRow {
@@ -30,11 +62,13 @@ interface BillingRow {
   subscription_status: string | null;
   current_period_end: number | string | null;
   cancel_at_period_end: number | boolean | null;
+  cancel_at: number | string | null;
   billing_updated_at: number | string | null;
 }
 
 const SELECT_COLUMNS = `id, email, stripe_customer_id, stripe_subscription_id, plan, comp_plan,
-  grandfathered_at, subscription_status, current_period_end, cancel_at_period_end, billing_updated_at`;
+  grandfathered_at, subscription_status, current_period_end, cancel_at_period_end, cancel_at,
+  billing_updated_at`;
 
 function num(value: number | string | null): number | null {
   return value === null || value === undefined ? null : Number(value);
@@ -52,6 +86,7 @@ function toState(row: BillingRow): BillingState {
     subscriptionStatus: row.subscription_status,
     currentPeriodEnd: num(row.current_period_end),
     cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
+    cancelAt: num(row.cancel_at),
     billingUpdatedAt: num(row.billing_updated_at),
   };
 }
@@ -112,6 +147,7 @@ export class BillingStore {
     status: string | null;
     currentPeriodEnd: number | null;
     cancelAtPeriodEnd: boolean;
+    cancelAt: number | null;
     eventCreated: number;
     now: number;
   }): Promise<void> {
@@ -124,15 +160,17 @@ export class BillingStore {
          subscription_status = ${this.p(3)},
          current_period_end = ${this.p(4)},
          cancel_at_period_end = ${this.p(5)},
-         billing_updated_at = ${this.p(6)},
-         updated_at = ${this.p(7)}
-       WHERE id = ${this.p(8)}`,
+         cancel_at = ${this.p(6)},
+         billing_updated_at = ${this.p(7)},
+         updated_at = ${this.p(8)}
+       WHERE id = ${this.p(9)}`,
       [
         input.plan,
         input.subscriptionId,
         input.status,
         input.currentPeriodEnd,
         cancelValue,
+        input.cancelAt,
         input.eventCreated,
         input.now,
         input.accountId,
@@ -146,6 +184,7 @@ export class BillingStore {
       `UPDATE accounts SET stripe_customer_id = NULL, stripe_subscription_id = NULL,
          plan = 'free', subscription_status = NULL, current_period_end = NULL,
          cancel_at_period_end = ${this.db.dialect === 'sqlite' ? '0' : 'FALSE'},
+         cancel_at = NULL,
          updated_at = ${this.p(1)}
        WHERE id = ${this.p(2)}`,
       [now, accountId]

@@ -10,6 +10,7 @@ import {
   PRO_PRICE_MONTHLY_CENTS,
 } from '../billing/plans.js';
 import { registerBillingDashboardRoutes } from '../billing/routes.js';
+import { accessEndsAt, isCancellationScheduled } from '../billing/store.js';
 import type { AppConfig } from '../config.js';
 import type { DatabaseHandle } from '../db/client.js';
 import type { Account, CloudModule, QuotaAction } from '../extension/cloud-module.js';
@@ -1309,7 +1310,8 @@ async function billingView(
     comped: state.compPlan !== null,
     status: state.subscriptionStatus,
     currentPeriodEnd: state.currentPeriodEnd,
-    cancelAtPeriodEnd: state.cancelAtPeriodEnd,
+    accessEndsAt: accessEndsAt(state),
+    cancelScheduled: isCancellationScheduled(state),
     hasCustomer: state.stripeCustomerId !== null,
     paymentAttention: isPaymentAttentionStatus(state.subscriptionStatus),
     priceMonthly: formatPrice(PRO_PRICE_MONTHLY_CENTS),

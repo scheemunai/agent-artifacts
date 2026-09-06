@@ -759,9 +759,21 @@ export interface DashboardBillingView {
   /** True when an operator granted the plan rather than Stripe. Changes the copy, not the access. */
   comped: boolean;
   status: string | null;
-  /** Epoch ms. Renders as the renewal date, or the access-ends date when cancelling. */
+  /** Epoch ms. The next renewal date. Only rendered when nothing is scheduled to cancel. */
   currentPeriodEnd: number | null;
-  cancelAtPeriodEnd: boolean;
+  /**
+   * Epoch ms. The last day of access when a cancellation is scheduled.
+   *
+   * Its own field rather than a second reading of `currentPeriodEnd`: Stripe's `cancel_at` need not
+   * fall on the period end, and this card is the only place a customer ever sees that date.
+   */
+  accessEndsAt: number | null;
+  /**
+   * Whether Stripe has scheduled this subscription to end. Derived by `isCancellationScheduled`
+   * from BOTH of Stripe's cancellation fields — the page must not be handed `cancel_at_period_end`
+   * alone, which is false for a billing-portal cancellation.
+   */
+  cancelScheduled: boolean;
   /** True once the account has a Stripe customer — i.e. the portal has something to manage. */
   hasCustomer: boolean;
   /** Payment needs attention: past_due, unpaid, or incomplete. */
@@ -832,14 +844,18 @@ function BillingCard({ billing }: { billing: DashboardBillingView }) {
           </Notice>
         ) : null}
 
-        {isPro && billing.cancelAtPeriodEnd ? (
+        {/* These two branches are mutually exclusive and always have been; what used to be wrong is
+            the flag they read. `cancelScheduled` is the derived answer, and the ending branch shows
+            `accessEndsAt` rather than the period end, because a cancellation does not have to land
+            on one. */}
+        {isPro && billing.cancelScheduled ? (
           <p class="aa-hint">
             Your subscription is set to cancel. Pro stays active until{' '}
-            <strong>{formatPeriodDate(billing.currentPeriodEnd)}</strong>.
+            <strong>{formatPeriodDate(billing.accessEndsAt)}</strong>.
           </p>
         ) : null}
 
-        {isPro && !billing.cancelAtPeriodEnd && billing.currentPeriodEnd ? (
+        {isPro && !billing.cancelScheduled && billing.currentPeriodEnd ? (
           <p class="aa-hint">
             Renews on <strong>{formatPeriodDate(billing.currentPeriodEnd)}</strong>.
           </p>

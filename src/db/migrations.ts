@@ -39,6 +39,7 @@ async function applyForwardMigrations(handle: DatabaseHandle, logger: Logger): P
   await ensureTemplateCategory(handle, logger);
   await ensureShareVisibility(handle, logger);
   await ensureBillingColumns(handle, logger);
+  await ensureSubscriptionCancelAt(handle, logger);
   await ensureStripeEventsTable(handle, logger);
   await ensureAnalyticsTables(handle, logger);
 }
@@ -155,6 +156,57 @@ async function ensureBillingColumns(handle: DatabaseHandle, logger: Logger): Pro
       migration: 'accounts.billing',
       grandfathered_accounts: stamped.rowCount ?? 0,
     },
+    'database.forward_migration.applied'
+  );
+}
+
+/**
+ * `accounts.cancel_at` — where Stripe actually puts a scheduled cancellation.
+ *
+ * A SEPARATE forward migration rather than a tenth entry in `ensureBillingColumns`, and that is not
+ * tidiness: that function returns early the moment `plan` exists, so on every database that has
+ * already taken the billing migration — which is all of them — adding a column to its list adds a
+ * column nowhere. A later change must bring its own guard.
+ *
+ * NO BACKFILL IS POSSIBLE, and it is worth saying why rather than leaving the absence to be read as
+ * an oversight. The value lives in Stripe, not in anything we hold: `current_period_end` is the
+ * right answer only for subscriptions cancelled at the end of their period, and writing it into
+ * every row would invent an end date for accounts that are not ending at all. Rows that were
+ * mis-mapped before this shipped are repaired by re-deriving them from Stripe — see
+ * `scripts/billing-resync.ts` — which is also the path the next webhook takes anyway.
+ */
+async function ensureSubscriptionCancelAt(handle: DatabaseHandle, logger: Logger): Promise<void> {
+  if (handle.dialect === 'sqlite') {
+    const columns = handle.sqlite.prepare("PRAGMA table_info('accounts')").all() as Array<{
+      name: string;
+    }>;
+    if (columns.some((column) => column.name === 'cancel_at')) {
+      return;
+    }
+    try {
+      handle.sqlite.prepare('ALTER TABLE accounts ADD COLUMN cancel_at INTEGER').run();
+    } catch (error) {
+      if (!isDuplicateColumnError(error)) {
+        throw error;
+      }
+    }
+    logger.info(
+      { dialect: handle.dialect, migration: 'accounts.cancel_at' },
+      'database.forward_migration.applied'
+    );
+    return;
+  }
+
+  const existing = await handle.pool.query(
+    `SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'accounts' AND column_name = 'cancel_at'`
+  );
+  if ((existing.rowCount ?? 0) > 0) {
+    return;
+  }
+  await handle.pool.query('ALTER TABLE accounts ADD COLUMN IF NOT EXISTS cancel_at BIGINT');
+  logger.info(
+    { dialect: handle.dialect, migration: 'accounts.cancel_at' },
     'database.forward_migration.applied'
   );
 }
