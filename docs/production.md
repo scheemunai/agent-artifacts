@@ -179,9 +179,40 @@ They live in the `agent-artifacts-cloud` app's `env:` block in `ecosystem.config
 gitignored and untracked, alongside `SESSION_SECRET` and the Resend key. **The self-hosted app on
 :4600 gets no Stripe variables at all.** Reload with `pm2 reload agent-artifacts-cloud`.
 
-> When running the Stripe CLI on a shared host, pass the key as `STRIPE_API_KEY` in the environment
-> rather than `--api-key`. A CLI argument is visible to every user in the process table for as long
-> as the command runs.
+#### Never put the key in a command argument
+
+On a shared host, argv is world-readable: `ps` shows every other user on the box the full command
+line of a running process. A secret passed as an argument is therefore public for as long as the
+command runs, whether or not anyone was looking.
+
+This note used to name only the Stripe CLI, which is not where the mistake gets made. **The tool
+anyone reaches for to poke at the Stripe API is `curl`**, and `curl -u "$KEY:"` puts an `sk_live_...`
+in argv exactly the way `--api-key` does. Both forms:
+
+```bash
+# Stripe CLI — environment, not an argument
+STRIPE_API_KEY="$KEY" stripe listen --forward-to localhost:3000/stripe/webhook
+
+# curl — stdin, not an argument
+printf 'user = "%s:"\n' "$KEY" | curl -sS --config - \
+  https://api.stripe.com/v1/webhook_endpoints/we_xxx
+```
+
+`--config -` reads the credential from stdin, so it never reaches curl's own argv.
+
+Two details that decide whether that actually holds:
+
+- **`printf` must be the shell builtin**, which it is in bash and zsh. A builtin forks no process, so
+  its arguments never appear in `ps`. Call `/usr/bin/printf` explicitly and the key is back in argv,
+  in the one command that was supposed to keep it out.
+- **Read the key from a variable, not typed inline.** `KEY=$(...)` keeps the literal out of
+  `~/.bash_history`; pasting the key into the command puts it there whatever else you do.
+
+The environment is weaker than stdin but far better than an argument: `/proc/<pid>/environ` is
+readable only by the same user and root, while `ps` is readable by everyone.
+
+The rule is not about Stripe. It covers anything holding a live credential — `psql`, `gh`, `aws`, and
+any script written in a hurry. **If a secret was on a command line, assume it was seen.**
 
 ## 3a. Billing
 
