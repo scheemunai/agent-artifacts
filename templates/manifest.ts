@@ -101,11 +101,12 @@ export const starterTemplateManifest = [
         "slug": "postmortem",
         "category": "research",
         "name": "Incident Postmortem",
-        "description": "A blameless incident write-up: an inked impact strip carrying the four numbers that matter, a failure-rate chart with detection and mitigation marked, a timeline whose key beats are impact-start / detected / mitigated, the root cause stated in one sentence, contributing factors.",
+        "description": "A blameless incident atlas: impact accounting beside the failure trace, a time-indexed incident record, the complete root cause and contributing factors, then owned action items with due dates and states.",
         "type": "html",
         "content_file": "postmortem.html",
         "thumbnail": "/assets/template-thumbs/postmortem.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1280
       },
       {
         "slug": "report",
@@ -132,21 +133,23 @@ export const starterTemplateManifest = [
         "slug": "metrics-dashboard",
         "category": "status",
         "name": "Metrics Dashboard",
-        "description": "The recurring numbers review: one hero metric with a twelve-week trend, a row of KPI tiles carrying deltas and their comparisons, a channel breakdown, service levels metered against their targets, and a short note on what actually changed.",
+        "description": "A recurring performance sheet: a broad twelve-week trend beside a compact metric ledger, change commentary directly below, then a channel breakdown and service levels metered against their targets.",
         "type": "html",
         "content_file": "metrics-dashboard.html",
         "thumbnail": "/assets/template-thumbs/metrics-dashboard.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1280
       },
       {
         "slug": "project-status",
         "category": "status",
         "name": "Project Status",
-        "description": "Where a workstream actually stands: a verdict stated as a judgement with the reason behind it, a milestone rail with committed dates, scope metered against its totals, blockers with owners and ages, and a 'needs a human' section where every entry names one person.",
+        "description": "A decisions-first sponsor dispatch: the changed verdict beside two owned, dated asks, followed by committed milestones, scope totals, and blockers with their owners, ages and next decisions.",
         "type": "html",
         "content_file": "project-status.html",
         "thumbnail": "/assets/template-thumbs/project-status.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1280
       },
       {
         "slug": "service-health",
