@@ -212,15 +212,24 @@ of billing entirely. Enabling it requires the full key set or the process refuse
 4b. Set the **tax head office address** and add **tax registrations** (home country + OSS Union for
    the EU). Without a registration Stripe computes tax and collects zero — see "Stripe Tax" below.
 5. Enable Smart Retries and automatic card updates (Billing → Revenue Recovery). Both are free.
-6. Create the live webhook endpoint at `https://<app-origin>/stripe/webhook` subscribed to:
+6. Create the live webhook endpoint at `https://<app-origin>/stripe/webhook` subscribed to the
+   **eleven** types in `HANDLED_EVENTS` — the seven that move entitlement:
    `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`,
-   `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `customer.deleted`.
+   `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `customer.deleted`;
+   and the four that are recorded and applied to nothing: `charge.refunded`,
+   `charge.refund.updated`, `charge.dispute.created`, `charge.dispute.closed`.
    Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+   **This list and `HANDLED_EVENTS` are one setting kept in two places.** `handleStripeEvent`
+   returns `ignored` *before* it records anything, so a type subscribed here but absent from the set
+   is answered 200 and dropped — it logs nothing while the Dashboard shows a healthy endpoint. Adding
+   an event type means both halves, or neither.
 7. `pm2 reload agent-artifacts-cloud`, then **send a test event from the Stripe Dashboard and
    confirm a 200 before enabling the UI**. An upgrade that charges a card while webhooks 404 is the
    worst possible first-customer experience.
 8. Set `AA_BILLING_ENABLED=true` and reload. Buy Pro once with a real card, confirm the plan flips
-   and the footer disappears, then refund it.
+   and the footer disappears, then refund it. The refund must leave the plan alone and appear in
+   `stripe_events` as `charge.refunded` — see "Refunds and chargebacks" below.
 
 Because the flag is separate from the deploy, a bad go-live is reverted by flipping one variable and
 reloading — not by rolling back code.
@@ -324,6 +333,40 @@ Keep that list exact. `https:` or a `*.stripe.com` wildcard would re-open form s
 what billing needs. If you ever enable **Stripe custom domains**, `session.url` moves to your own
 host, these two entries stop covering it, and checkout breaks in precisely the same way — make the
 hosts configurable at that point rather than widening the directive.
+
+### Refunds and chargebacks
+
+Money leaving is recorded, and changes nothing else. `charge.refunded`, `charge.refund.updated`,
+`charge.dispute.created` and `charge.dispute.closed` are written to `stripe_events` and applied to no
+column of `accounts` — `RECORD_ONLY_EVENTS` in `src/billing/webhook.ts` is the list, and the reason
+for each type is written next to it there.
+
+That is a product decision, not an oversight:
+
+- **A refund does not cancel a subscription.** Stripe does not end a subscription when you refund an
+  invoice, and neither does this. Refunding someone's first month while they keep paying for the
+  second is a normal thing to do, and a refund that silently revoked Pro would be a support ticket
+  every time.
+- **A chargeback does not suspend an account.** It is a row for a human to look at before the
+  evidence deadline. Automating a suspension off it locks out a customer who may turn out to be
+  right, on a signal that is reversed roughly half the time.
+
+Changing either is a decision to make deliberately, and it belongs in `applyEvent` rather than in the
+Dashboard.
+
+**Reading these rows for a revenue figure:** `charge.refunded` is the money-out event.
+`charge.refund.updated` is a restatement of the same refund — it exists so a refund the bank later
+*rejected* (`status: failed`, money back with us) does not leave the ledger asserting the money left.
+A chargeback is provisional until `charge.dispute.closed`, whose `status` is `won` or `lost`; counting
+`created` as a loss overstates what actually went out.
+
+**Disputes carry no customer.** A `dispute` object has no `customer` field at all, so it cannot be
+resolved to an account the way every other event is. The handler makes one extra API call to read the
+charge and take the customer from there; if Stripe cannot be reached, the row is still written with
+`account_id` NULL rather than dropped. Grep `billing.webhook.charge_lookup_failed` for those.
+
+A real refund and a real chargeback, captured verbatim from Stripe in test mode, are kept at
+`tests/fixtures/stripe/test-refund-dispute-2026-09-06.json`.
 
 ### Free-tier retention — read before arming
 
