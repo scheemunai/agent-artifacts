@@ -3,12 +3,8 @@ import type { Logger } from '../logger.js';
 import { type PlanId, planForPriceId, planForSubscriptionStatus } from './plans.js';
 import type { BillingState, BillingStore } from './store.js';
 
-/**
- * Events that move entitlement. Anything not in here is acknowledged with 200 and ignored — a
- * handler that 500s on an unrecognised type turns "someone enabled a new event in the Dashboard"
- * into a three-day retry storm.
- */
-export const HANDLED_EVENTS = new Set([
+/** Events that move entitlement. Every one of these writes to `accounts`. */
+export const ENTITLEMENT_EVENTS = new Set([
   'checkout.session.completed',
   'customer.subscription.created',
   'customer.subscription.updated',
@@ -17,6 +13,64 @@ export const HANDLED_EVENTS = new Set([
   'invoice.payment_failed',
   'customer.deleted',
 ]);
+
+/**
+ * Events written to `stripe_events` and applied to NOTHING. Money going out, recorded the way money
+ * coming in already was.
+ *
+ * `invoice.paid` was in the ledger and no refund or chargeback was, and that asymmetry is worse than
+ * recording neither: anything reading these rows for a revenue figure counted every euro in and
+ * missed every euro back out.
+ *
+ * Why each one, checked against real payloads captured on `2026-08-26.dahlia`
+ * (tests/fixtures/stripe/test-refund-dispute-2026-09-06.json):
+ *
+ *  - `charge.refunded`      the money-out fact. Its object is the CHARGE, so it is the only one of
+ *                          the refund events that also carries `invoice` — the link back to the
+ *                          `invoice.paid` row that recorded the money going in. That link is the
+ *                          symmetry this set exists for.
+ *  - `charge.refund.updated`  a refund's status AFTER creation. On the happy path this is noise one
+ *                          second behind `charge.refunded`; the case it is here for is
+ *                          `status: failed` — a refund the bank rejected, where the money came back
+ *                          to us. Without it the ledger says the money left and never corrects
+ *                          itself, which is the original asymmetry one level down. NOTE for anyone
+ *                          summing amounts: this is a restatement of `charge.refunded`, not a
+ *                          second refund.
+ *  - `charge.dispute.created`  a chargeback. Stripe debits the amount and the fee immediately, so
+ *                          this is money out, and it is also the row a human has to act on before
+ *                          the evidence deadline.
+ *  - `charge.dispute.closed`   how it ended. `created` alone cannot tell a dispute we WON (the funds
+ *                          came back) from one we LOST (they did not), so without this every
+ *                          chargeback reads as permanently lost revenue. It is the difference
+ *                          between a provisional figure and a final one.
+ *
+ * Deliberately NOT here:
+ *
+ *  - `refund.created` / `refund.updated` — the same two facts as the `charge.*` pair above. A real
+ *    refund fires all four; subscribing to both families logs every refund twice.
+ *  - `charge.dispute.funds_withdrawn` / `funds_reinstated` — the balance-transaction restatement of
+ *    `created` and `closed`. Same money, more rows.
+ *  - `charge.dispute.updated` — evidence submission churn, no money meaning.
+ */
+export const RECORD_ONLY_EVENTS = new Set([
+  'charge.refunded',
+  'charge.refund.updated',
+  'charge.dispute.created',
+  'charge.dispute.closed',
+]);
+
+/**
+ * The gate. Anything not in here is acknowledged with 200 and ignored — a handler that 500s on an
+ * unrecognised type turns "someone enabled a new event in the Dashboard" into a three-day retry
+ * storm.
+ *
+ * BOTH HALVES OR NEITHER. `handleStripeEvent` returns `ignored` BEFORE `recordEvent`, so a type
+ * subscribed on the Stripe endpoint but missing from this set is acknowledged and silently dropped —
+ * it logs nothing while appearing to work. Deriving this set from the two above is what makes that
+ * impossible to get half-right here; the other half lives in the Stripe Dashboard and is listed in
+ * docs/production.md.
+ */
+export const HANDLED_EVENTS = new Set([...ENTITLEMENT_EVENTS, ...RECORD_ONLY_EVENTS]);
 
 export interface WebhookDeps {
   store: BillingStore;
@@ -92,6 +146,9 @@ export async function handleStripeEvent(
    * `invoice.*` events are exempt because they are not the writer of subscription status — they
    * refresh the period end and the payment-attention flag only, and their ordering relative to
    * subscription events carries no entitlement meaning.
+   *
+   * `RECORD_ONLY_EVENTS` are exempt for a stronger reason: they write nothing, so there is nothing
+   * an out-of-order delivery could invert. Dropping one as stale would lose the money instead.
    */
   const isSubscriptionEvent =
     event.type.startsWith('customer.subscription.') || event.type === 'checkout.session.completed';
@@ -158,10 +215,47 @@ async function resolveAccount(
   const metaAccountId =
     metadata && typeof metadata.account_id === 'string' ? metadata.account_id : null;
   if (metaAccountId) {
-    return deps.store.findByAccountId(metaAccountId);
+    const byMetadata = await deps.store.findByAccountId(metaAccountId);
+    if (byMetadata) {
+      return byMetadata;
+    }
+  }
+
+  /**
+   * LAST RESORT, and the reason it exists: a `dispute` object has no `customer` — not a null field,
+   * no field at all. Verified against the bytes Stripe actually sent, not the docs. Every one of the
+   * three routes above therefore misses on a chargeback, and without this hop every dispute would be
+   * recorded with `account_id` NULL: a row saying somebody, somewhere, took nine euros back.
+   *
+   * One extra API call, only on the path where the account is otherwise unknown, and only for the
+   * objects that carry a charge — which today is disputes and refunds.
+   */
+  const chargeId = typeof object.charge === 'string' ? object.charge : null;
+  if (chargeId) {
+    const chargeCustomerId = await customerIdFromCharge(chargeId, deps);
+    if (chargeCustomerId) {
+      return deps.store.findByCustomerId(chargeCustomerId);
+    }
   }
 
   return null;
+}
+
+/**
+ * The charge's customer, or null if Stripe could not be asked.
+ *
+ * It MUST NOT throw. This runs before `recordEvent`, so an exception escaping here would drop the
+ * refund or chargeback row entirely and hand Stripe a 500 to retry — and an unlinked row is far
+ * better than no row. A failure degrades to `unresolved`, which is recorded, logged and acknowledged.
+ */
+async function customerIdFromCharge(chargeId: string, deps: WebhookDeps): Promise<string | null> {
+  try {
+    const charge = await deps.stripe.charges.retrieve(chargeId);
+    return extractCustomerId(charge as unknown as Record<string, unknown>);
+  } catch (error) {
+    deps.logger.warn({ err: error, charge_id: chargeId }, 'billing.webhook.charge_lookup_failed');
+    return null;
+  }
 }
 
 function extractCustomerId(object: Record<string, unknown>): string | null {
@@ -182,6 +276,18 @@ async function applyEvent(
   deps: WebhookDeps,
   clock: { now: number; eventCreated: number }
 ): Promise<void> {
+  /**
+   * RECORD ONLY, and this is the whole behaviour rather than an omission.
+   *
+   * A refund is a financial fact, not a subscription one: Stripe does not cancel a subscription when
+   * you refund it, and neither do we. A chargeback is a signal for a human to look at, not a trigger
+   * to cut off access — a wrongly automated suspension locks out a customer who may well be right.
+   * Both stay decisions a person makes, off the back of the rows written above.
+   */
+  if (RECORD_ONLY_EVENTS.has(event.type)) {
+    return;
+  }
+
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
