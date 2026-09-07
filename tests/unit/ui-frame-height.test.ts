@@ -107,19 +107,13 @@ describe('the frame-height handshake', () => {
     );
   });
 
-  it('caps the measurement high enough that real documents never meet it', () => {
+  it('uses the approved finite ceiling with headroom above the 14745px Daily fixture', () => {
     const ceiling = Number(
       /const FRAME_MAX_HEIGHT = ([\d_]+);/.exec(viewerJs)?.[1]?.replace(/_/g, '')
     );
-    expect(ceiling, 'FRAME_MAX_HEIGHT not found').toBeGreaterThan(0);
-
-    // The cap is a circuit breaker against a broken or hostile measurement, not a limit on how long
-    // a document may be. At 2400 it was doing the second job too: the shipped `report-html`
-    // measures 3344px at 1440 and 4972px at 390, and both were clamped into a nested scrollbar. A
-    // ceiling that fires on this product's own output is not protecting anyone.
-    expect(ceiling, 'the cap fires on ordinary product output').toBeGreaterThan(6000);
-    // And it still has to be a ceiling. An unbounded number is laid out in the reader's browser.
-    expect(ceiling).toBeLessThanOrEqual(40_000);
+    // An operating choice, not a universal document maximum or browser resource-safety proof.
+    // Above it, content stays reachable by nested scrolling rather than being removed.
+    expect(ceiling).toBe(32_768);
   });
 
   it('still clamps rather than trusts, so an absurd measurement cannot run away', () => {

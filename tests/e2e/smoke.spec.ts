@@ -1225,3 +1225,248 @@ test('a retired template slug redirects instead of 404ing', async ({ page }) => 
   expect(new URL(page.url()).pathname).toBe('/templates/meeting-recap');
   await expect(page.locator('.aa-templates__frame')).toBeVisible();
 });
+
+// Final editorial regression: publish synthetic content through the existing API seed and run the
+// actual repository viewer asset + appended reporter. No asset interception or production fixture.
+test('Daily long edition resizes through archive open AND close without feedback', async ({
+  page,
+  request,
+}, testInfo) => {
+  const width =
+    testInfo.project.name === 'chromium-375'
+      ? 320
+      : testInfo.project.name === 'chromium-480'
+        ? 390
+        : (testInfo.project.use.viewport?.width ?? 1440);
+  await page.setViewportSize({ width, height: 844 });
+  const original = await readFile('templates/daily-digest.html', 'utf8');
+  const content = await page.evaluate((html) => {
+    const document = new DOMParser().parseFromString(html, 'text/html');
+    const get = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(`Missing fixture component ${selector}`);
+      return element;
+    };
+    const articles = [...document.querySelectorAll('.item')];
+    const links = [...document.querySelectorAll('.toc > li')];
+    const words =
+      'This synthetic quotation is a layout stress test only. It describes an extended conversation with repeated detail so the text must keep its natural reading order and its full attribution without clipping or collapsing. '
+        .trim()
+        .split(/\s+/);
+    for (let index = 4; index < 12; index += 1) {
+      const article = articles[index % 4]?.cloneNode(true) as HTMLElement;
+      const link = links[index % 4]?.cloneNode(true) as HTMLElement;
+      if (!article || !link) throw new Error('Missing fixture seed');
+      article.id = `i${index + 1}`;
+      const number = article.querySelector('.item__n');
+      const linkNumber = link.querySelector('span');
+      const anchor = link.querySelector('a');
+      if (!number || !linkNumber || !anchor) throw new Error('Missing fixture relationship');
+      number.textContent = linkNumber.textContent = String(index + 1).padStart(2, '0');
+      anchor.setAttribute('href', `#i${index + 1}`);
+      get('.stream').append(article);
+      get('.toc').append(link);
+    }
+    for (const article of document.querySelectorAll('.item')) {
+      const caveat = document.createElement('li');
+      caveat.textContent = `Synthetic longer caveat: ${Array.from({ length: 45 }, (_, i) => words[i % words.length]).join(' ')}.`;
+      article.querySelector('.pts')?.append(caveat);
+    }
+    const notice = document.createElement('p');
+    notice.setAttribute(
+      'style',
+      'margin:0;padding:12px 18px;background:#fff3cd;color:#473c10;font:700 14px/1.5 system-ui,sans-serif'
+    );
+    notice.textContent = 'SYNTHETIC FIXTURE — GROWTH — not sample content';
+    document.body.prepend(notice);
+    get('.lead').textContent =
+      'Twelve synthetic lead stories remain visible in full; the archive is unchanged.';
+    return `<!doctype html>\n${document.documentElement.outerHTML}`;
+  }, original);
+  const published = await publishArtifact(request, seed.apiKey, {
+    slug: `e2e-daily-long-${width}`,
+    type: 'html',
+    title: 'Synthetic Daily long edition',
+    content,
+    share: true,
+  });
+  await page.goto(requiredShare(published).url);
+  const embed = page.locator('[data-aa-frame]');
+  const frame = page.frameLocator('[data-aa-frame]');
+  await expect(embed).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(embed).toHaveAttribute('data-aa-frame-height', 'measured');
+  await expect(frame.locator('.item')).toHaveCount(12);
+  await expect(frame.locator('.rest > li')).toHaveCount(6);
+  expect(
+    await frame
+      .locator('.item')
+      .evaluateAll((items) =>
+        items.every((item) => item.getBoundingClientRect().height > 0 && !item.closest('details'))
+      )
+  ).toBe(true);
+  const height = () =>
+    frame.locator('html').evaluate((element) => Math.ceil(element.getBoundingClientRect().height));
+  const inlineHeight = () => embed.evaluate((element) => Number.parseFloat(element.style.height));
+  await expect.poll(inlineHeight).toBe(await height());
+  const closed = await height();
+  if (width === 320) expect(closed).toBeGreaterThan(13_000);
+  const summary = frame.locator('summary');
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(frame.locator('details')).toHaveAttribute('open', '');
+  await expect.poll(height).toBeGreaterThan(closed);
+  const opened = await height();
+  if (width <= 390) expect(opened).toBeGreaterThan(12_000);
+  await expect.poll(inlineHeight).toBe(opened);
+  await frame.locator('footer').scrollIntoViewIfNeeded();
+  await expect(frame.locator('footer')).toBeInViewport();
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(frame.locator('details')).not.toHaveAttribute('open', '');
+  await expect.poll(height).toBe(closed);
+  await expect.poll(inlineHeight).toBe(closed);
+  // Read several independent settled samples; the outer size must not create a resize feedback loop.
+  for (let sample = 0; sample < 3; sample += 1) {
+    await page.waitForTimeout(150);
+    expect(await height()).toBe(closed);
+    expect(await inlineHeight()).toBe(closed);
+  }
+  await frame.locator('footer').scrollIntoViewIfNeeded();
+  await expect(frame.locator('footer')).toBeInViewport();
+});
+
+test('viewer ceiling guards and keyboard fallback survive short and very tall documents', async ({
+  page,
+  request,
+}) => {
+  const content =
+    '<!doctype html><html><body style="margin:0"><main style="height:80px;position:relative"><button type="button" style="position:absolute;bottom:0">Synthetic footer</button></main></body></html>';
+  const published = await publishArtifact(request, seed.apiKey, {
+    slug: 'e2e-editorial-height-guards',
+    type: 'html',
+    title: 'Synthetic height guards',
+    content,
+    share: true,
+  });
+  await page.goto(requiredShare(published).url);
+  const embed = page.locator('[data-aa-frame]');
+  const frame = page.frameLocator('[data-aa-frame]');
+  await expect(embed).toHaveAttribute('sandbox', 'allow-scripts');
+  const height = () => embed.evaluate((element) => Number.parseFloat(element.style.height));
+  await expect.poll(height).toBe(80);
+  await frame.locator('main').evaluate((element) => {
+    element.style.height = '160px';
+  });
+  await expect.poll(height).toBe(160);
+  await frame.locator('main').evaluate((element) => {
+    element.style.height = '24px';
+  });
+  await expect.poll(height).toBe(48);
+  const send = async (value: number) => {
+    await frame.locator('html').evaluate((_element, value) => {
+      parent.postMessage({ type: 'aa:frame-height', height: value }, '*');
+    }, value);
+  };
+  await send(15_000);
+  await expect.poll(height).toBe(15_000);
+  for (const invalid of [Number.NaN, Number.POSITIVE_INFINITY, 0, -10]) {
+    await send(invalid);
+    await page.waitForTimeout(30);
+    expect(await height()).toBe(15_000);
+  }
+  await page.evaluate(() => window.postMessage({ type: 'aa:frame-height', height: 20_000 }, '*'));
+  await page.waitForTimeout(30);
+  expect(await height()).toBe(15_000);
+  await frame
+    .locator('html')
+    .evaluate(() => parent.postMessage({ type: 'wrong-type', height: 20_000 }, '*'));
+  await page.waitForTimeout(30);
+  expect(await height()).toBe(15_000);
+  for (const [requested, expected] of [
+    [32_768, 32_768],
+    [32_769, 32_768],
+    [1e9, 32_768],
+    [1, 48],
+    [60, 60],
+  ]) {
+    if (requested === undefined || expected === undefined) throw new Error('Missing guard case');
+    await send(requested);
+    await expect.poll(height).toBe(expected);
+  }
+  // Real content, not just a claimed number. The actual reporter reaches the ceiling at each edge.
+  for (const requested of [32_768, 32_769, 65_536]) {
+    await frame.locator('main').evaluate((element, value) => {
+      element.style.height = `${value}px`;
+    }, requested);
+    await expect.poll(height).toBe(32_768);
+    expect(
+      await frame
+        .locator('html')
+        .evaluate((element) => Math.ceil(element.getBoundingClientRect().height))
+    ).toBe(requested);
+  }
+  // Publish the very tall fixture too, then navigate afresh: guard-message mutations are not its seed.
+  const tall = await publishArtifact(request, seed.apiKey, {
+    slug: 'e2e-editorial-tall-fallback',
+    type: 'html',
+    title: 'Synthetic tall fallback',
+    content: content.replace('height:80px', 'height:65536px'),
+    share: true,
+  });
+  await page.goto(requiredShare(tall).url);
+  await expect.poll(height).toBe(32_768);
+  await frame.locator('body').click({ position: { x: 3, y: 3 } });
+  await page.keyboard.press('Control+End');
+  await expect.poll(() => frame.locator('html').evaluate(() => scrollY)).toBeGreaterThan(0);
+  // Finish End before focusing the footer; checking only >0 sees the start of its animation.
+  await expect
+    .poll(() =>
+      frame
+        .locator('html')
+        .evaluate(() => document.documentElement.scrollHeight - innerHeight - scrollY)
+    )
+    .toBe(0);
+  // End -> Tab is the actual keyboard journey to the footer; do not race it with a reverse Home.
+  await page.keyboard.press('Tab');
+  await expect(frame.getByRole('button', { name: 'Synthetic footer' })).toBeFocused();
+  await expect(frame.getByRole('button', { name: 'Synthetic footer' })).toBeInViewport();
+});
+
+test('Launch long command remains keyboard-accessible in the actual published viewer', async ({
+  page,
+  request,
+}) => {
+  const source = await readFile('templates/launch-announcement.html', 'utf8');
+  const content = source.replace(
+    '<b>fieldnote</b> sites pull --week current',
+    'SYNTHETIC_COMMAND_SEGMENT'.repeat(10)
+  );
+  const published = await publishArtifact(request, seed.apiKey, {
+    slug: 'e2e-launch-long-command',
+    type: 'html',
+    title: 'Synthetic Launch command',
+    content,
+    share: true,
+  });
+  await page.goto(requiredShare(published).url);
+  const frame = page.frameLocator('[data-aa-frame]');
+  await expect(page.locator('[data-aa-frame]')).toHaveAttribute('sandbox', 'allow-scripts');
+  const command = frame.getByRole('region', { name: 'Command', exact: true });
+  await expect(command).toHaveCount(1);
+  expect(await command.evaluate((element) => element.tagName)).toBe('CODE');
+  await frame.locator('body').click({ position: { x: 3, y: 3 } });
+  await page.keyboard.press('Control+Home');
+  let reached = false;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await page.keyboard.press('Tab');
+    if (await command.evaluate((element) => element === document.activeElement)) {
+      reached = true;
+      break;
+    }
+  }
+  expect(reached).toBe(true);
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => command.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await frame.locator('footer').scrollIntoViewIfNeeded();
+  await expect(frame.locator('footer')).toBeInViewport();
+});
