@@ -1861,6 +1861,79 @@
     line-height: 1;
   }
 
+  /* The film owns its own reserved geometry. No change to hero, page shell or existing sections. */
+  .aa-marketing-video {
+    width: min(100%, var(--width-aa-panel));
+    margin: var(--spacing-aa-12) auto 0;
+  }
+
+  .aa-marketing-video__frame {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: var(--radius-aa-lg);
+    background: var(--color-aa-surface-raised);
+    box-shadow: var(--shadow-aa-card);
+  }
+
+  .aa-marketing-video__frame picture,
+  .aa-marketing-video__frame img,
+  .aa-marketing-video__frame video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .aa-marketing-video__frame picture {
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .aa-marketing-video__frame video:focus-visible {
+    outline: 3px solid var(--color-aa-accent);
+    outline-offset: -3px;
+  }
+
+  .aa-marketing-video__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-aa-3) var(--spacing-aa-4);
+    margin-top: var(--spacing-aa-4);
+  }
+
+  .aa-marketing-video__status {
+    min-height: 3em;
+    margin: var(--spacing-aa-2) 0;
+    color: var(--color-aa-muted);
+    font-size: var(--text-aa-sm);
+    line-height: 1.5;
+  }
+
+  .aa-marketing-video__transcript summary {
+    width: fit-content;
+    cursor: pointer;
+    color: var(--color-aa-muted);
+  }
+
+  .aa-marketing-video__transcript-body {
+    display: grid;
+    gap: var(--spacing-aa-3);
+    margin-top: var(--spacing-aa-4);
+    line-height: 1.6;
+  }
+
+  .aa-marketing-video__transcript-body ol {
+    padding-left: var(--spacing-aa-6);
+    list-style: decimal;
+  }
+
+  .aa-marketing-video__transcript-body :where(li + li) {
+    margin-top: var(--spacing-aa-2);
+  }
+
   .aa-marketing-section {
     display: grid;
     justify-items: center;

@@ -17,7 +17,13 @@ const BUILD_COMMAND = 'pnpm run build:assets';
  * Every hashed asset a page may ask for. The names match the keys `scripts/build-assets.mjs`
  * writes, and the union is what stops a page naming an asset the build does not produce.
  */
-export type AssetKey = 'app.css' | 'ui-foundation.js' | 'viewer.js' | 'dashboard.js' | 'viewer.css';
+export type AssetKey =
+  | 'app.css'
+  | 'ui-foundation.js'
+  | 'viewer.js'
+  | 'dashboard.js'
+  | 'viewer.css'
+  | 'marketing-video.js';
 
 /** Mirrors the static root `src/app.ts` serves `/assets/*` from. Both resolve from the install. */
 const servedPublicRoot = (): string => appPath('public');
@@ -40,6 +46,11 @@ export const HASHED_ASSET_PATTERN = /^\/assets\/[a-z-]+-[a-f0-9]{12}\.(?:js|css)
  */
 export function isHashedAssetPath(path: string): boolean {
   return HASHED_ASSET_PATTERN.test(path);
+}
+
+/** Selected, content-addressed marketing media only; never a blanket /assets cache policy. */
+export function isHashedMediaPath(path: string): boolean {
+  return /^\/assets\/media\/[a-z0-9-]+\.[a-f0-9]{16}\.(?:mp4|webp|vtt)$/.test(path);
 }
 
 export interface AssetResolverOptions {

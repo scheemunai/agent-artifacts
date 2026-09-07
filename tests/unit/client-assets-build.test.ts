@@ -29,6 +29,7 @@ const SOURCES = {
   'ui-foundation.js': 'src/ui/client/ui-foundation.js',
   'viewer.js': 'src/ui/client/viewer.js',
   'dashboard.js': 'src/ui/client/dashboard.js',
+  'marketing-video.js': 'src/ui/client/marketing-video.js',
   'viewer.css': 'src/ui/assets/viewer.css',
 } as const;
 

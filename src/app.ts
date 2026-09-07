@@ -19,7 +19,7 @@ import { createWebRoute } from './routes/web.js';
 import type { AnalyticsRecorder } from './services/analytics.js';
 import { SESSION_COOKIE_NAME } from './services/sessions.js';
 import { analyticsTag, configureAnalytics } from './ui/analytics.js';
-import { isHashedAssetPath } from './ui/assets.js';
+import { isHashedAssetPath, isHashedMediaPath } from './ui/assets.js';
 import { ErrorPage } from './ui/pages/error-page.js';
 
 interface AppVariables {
@@ -118,6 +118,19 @@ export function createApp({
   // and a year of immutable caching on those would strand the old copy in every CDN and browser.
   app.use('/assets/*', async (context, next) => {
     await next();
+    // serveStatic already supplies real byte-range streams. Cache successful hashed media ranges
+    // too, and advertise range support on full/HEAD responses; no homepage or CSP policy change.
+    const media = isHashedMediaPath(context.req.path);
+    if (media && [200, 206, 304].includes(context.res.status)) {
+      context.header('Cache-Control', 'public, max-age=31536000, immutable');
+      if (context.req.path.endsWith('.mp4')) {
+        context.header('Accept-Ranges', 'bytes');
+      }
+      if (context.req.path.endsWith('.vtt')) {
+        // The static adapter otherwise falls back to octet-stream; tracks require WebVTT MIME.
+        context.header('Content-Type', 'text/vtt; charset=utf-8');
+      }
+    }
     if (isHashedAssetPath(context.req.path) && [200, 304].includes(context.res.status)) {
       context.header('Cache-Control', 'public, max-age=31536000, immutable');
     }

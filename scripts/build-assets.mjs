@@ -30,6 +30,11 @@ const ASSETS = [
   { key: 'ui-foundation.js', source: 'src/ui/client/ui-foundation.js', name: 'ui-foundation' },
   { key: 'viewer.js', source: 'src/ui/client/viewer.js', name: 'viewer' },
   { key: 'dashboard.js', source: 'src/ui/client/dashboard.js', name: 'dashboard' },
+  {
+    key: 'marketing-video.js',
+    source: 'src/ui/client/marketing-video.js',
+    name: 'marketing-video',
+  },
   { key: 'viewer.css', source: 'src/ui/assets/viewer.css', name: 'viewer' },
 ];
 

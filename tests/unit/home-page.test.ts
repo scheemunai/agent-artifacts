@@ -308,3 +308,23 @@ describe('cloud marketing homepage', () => {
     });
   });
 });
+
+describe('explicitly activated marketing demo', () => {
+  it('places one reserved demo after setup and before examples, with a real no-JS link', () => {
+    const html = renderToString(HomePage({ baseUrl: 'https://example.test' }));
+    const start = html.indexOf('data-aa-marketing-video');
+    expect(start).toBeGreaterThan(html.indexOf('Set up with your agent'));
+    expect(start).toBeLessThan(html.indexOf('id="home-examples-title"'));
+    const player = html.slice(start, html.indexOf('</figure>', start));
+    expect(player).toContain('Watch the 46-second demo');
+    expect(player).toContain('Read the demo transcript');
+    expect(player).toContain('preload="none"');
+    expect(player).toContain('loading="eager"');
+    expect(player).toContain('480w, /assets/media/');
+    expect(player).toContain('playsinline');
+    expect(player).not.toMatch(/<(?:video|source|track)[^>]*\ssrc=/);
+    expect(player).not.toMatch(/\s(?:autoplay|loop)(?:=|\s|>)/);
+    expect(player).toMatch(/<a[^>]+href="\/assets\/media\/[^" ]+\.mp4"/);
+    expect(renderToString(StyleGuidePage())).toContain('data-aa-marketing-video');
+  });
+});
