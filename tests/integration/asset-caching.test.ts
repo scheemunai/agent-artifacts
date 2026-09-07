@@ -1,11 +1,19 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { createHash, randomBytes } from 'node:crypto';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pino from 'pino';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/app.js';
 import { loadConfig } from '../../src/config.js';
-import { type AssetKey, assetHref, isHashedAssetPath } from '../../src/ui/assets.js';
+import { appPath } from '../../src/lib/runtime-paths.js';
+import {
+  type AssetKey,
+  assetHref,
+  isHashedAssetPath,
+  isHashedMediaPath,
+} from '../../src/ui/assets.js';
+import { LAUNCH_VIDEO } from '../../src/ui/marketing-video-media.js';
 
 /**
  * Caching a file forever is only honest when its URL changes with its contents. That became true
@@ -47,16 +55,20 @@ function hashedPath(key: AssetKey): string {
 }
 
 describe('hashed assets', () => {
-  it.each<AssetKey>(['app.css', 'ui-foundation.js', 'viewer.js', 'viewer.css', 'dashboard.js'])(
-    'lets a browser keep %s forever',
-    async (key) => {
-      const path = hashedPath(key);
-      const response = await testApp().request(`${ORIGIN}${path}`);
+  it.each<AssetKey>([
+    'app.css',
+    'ui-foundation.js',
+    'viewer.js',
+    'viewer.css',
+    'dashboard.js',
+    'marketing-video.js',
+  ])('lets a browser keep %s forever', async (key) => {
+    const path = hashedPath(key);
+    const response = await testApp().request(`${ORIGIN}${path}`);
 
-      expect(response.status).toBe(200);
-      expect(response.headers.get('cache-control')).toBe(IMMUTABLE);
-    }
-  );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe(IMMUTABLE);
+  });
 });
 
 describe('everything else under /assets', () => {
@@ -116,5 +128,78 @@ describe('the shape that qualifies', () => {
     ]) {
       expect(isHashedAssetPath(path), path).toBe(false);
     }
+  });
+});
+
+describe('content-addressed marketing media', () => {
+  // HTTP fixture only, not an encoded movie. Real rendition decoding and seeking belong to the
+  // browser suite. Unique bytes keep parallel tests from touching one another's temporary asset.
+  const bytes = randomBytes(4096);
+  const hash = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
+  const path = `/assets/media/range-fixture.${hash}.mp4`;
+  const disk = appPath(`public${path}`);
+  beforeAll(() => {
+    mkdirSync(appPath('public/assets/media'), { recursive: true });
+    writeFileSync(disk, bytes, { flag: 'wx' });
+  });
+  afterAll(() => rmSync(disk));
+
+  it('serves a real exact 206 range with length, type and immutable cache headers', async () => {
+    const response = await testApp().request(`${ORIGIN}${path}`, {
+      headers: { Range: 'bytes=0-1023' },
+    });
+    expect(response.status).toBe(206);
+    expect(response.headers.get('content-range')).toBe('bytes 0-1023/4096');
+    expect(response.headers.get('content-length')).toBe('1024');
+    expect(response.headers.get('content-type')).toBe('video/mp4');
+    expect(response.headers.get('accept-ranges')).toBe('bytes');
+    expect(response.headers.get('cache-control')).toBe(IMMUTABLE);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes.subarray(0, 1024));
+  });
+
+  it('advertises ranges on HEAD and full GET without caching 416 errors', async () => {
+    for (const method of ['HEAD', 'GET']) {
+      const response = await testApp().request(`${ORIGIN}${path}`, { method });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-length')).toBe('4096');
+      expect(response.headers.get('accept-ranges')).toBe('bytes');
+      expect(response.headers.get('cache-control')).toBe(IMMUTABLE);
+      const actual = Buffer.from(await response.arrayBuffer());
+      expect(actual).toEqual(method === 'HEAD' ? Buffer.alloc(0) : bytes);
+    }
+    const response = await testApp().request(`${ORIGIN}${path}`, {
+      headers: { Range: 'bytes=4096-8191' },
+    });
+    expect(response.status).toBe(416);
+    expect(response.headers.get('content-range')).toBe('bytes */4096');
+    expect(response.headers.get('cache-control') ?? '').not.toContain('immutable');
+  });
+
+  it('serves the timed visual transcript as WebVTT, not an octet-stream fallback', async () => {
+    const response = await testApp().request(`${ORIGIN}${LAUNCH_VIDEO.captions}`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/vtt; charset=utf-8');
+    expect(response.headers.get('cache-control')).toBe(IMMUTABLE);
+    expect(await response.text()).toMatch(/^WEBVTT/);
+  });
+
+  it('keeps media caching isolated from canonical thumbnails, unhashed files and misses', async () => {
+    for (const extension of ['mp4', 'webp', 'vtt']) {
+      expect(isHashedMediaPath(`/assets/media/launch-phone.${hash}.${extension}`)).toBe(true);
+    }
+    for (const path of [
+      '/assets/media/launch.mp4',
+      '/assets/media/launch-pending.mp4',
+      '/assets/media/launch-0000000000000.mp4',
+      '/assets/template-thumbs/report.png',
+      '/assets/launch-000000000000.mp4',
+      '/assets/media/launch-000000000000.js',
+      '/',
+    ]) {
+      expect(isHashedMediaPath(path), path).toBe(false);
+    }
+    const response = await testApp().request(`${ORIGIN}/assets/media/absent.0000000000000000.mp4`);
+    expect(response.status).toBe(404);
+    expect(response.headers.get('cache-control') ?? '').not.toContain('immutable');
   });
 });

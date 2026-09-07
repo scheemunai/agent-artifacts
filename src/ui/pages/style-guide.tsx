@@ -12,6 +12,7 @@ import {
   MarketingWaitlist,
   MarketingWorksWith,
 } from '../components/marketing.js';
+import { MarketingVideo } from '../components/marketing-video.js';
 import {
   Avatar,
   Badge,
@@ -215,6 +216,7 @@ export function StyleGuidePage() {
   return (
     <Layout
       title="Style Guide · Agent Artifacts"
+      scripts={['marketing-video.js']}
       description="Agent Artifacts design tokens, components, and markdown content theme."
     >
       <NavShell
@@ -595,9 +597,10 @@ function marketingComponentsSection() {
     <StyleGuideSection
       id="marketing-components"
       title="Fresh Air marketing components"
-      note="Home page components are registered here first: artifact embed, example card, three-step row, API block, feature line, works-with line, waitlist form, origin note, terms copy, and the closing call to action."
+      note="Home page components are registered here first: click-to-play video, artifact embed, example card, three-step row, API block, feature line, works-with line, waitlist form, origin note, terms copy, and the closing call to action."
     >
       <div class="aa-stack">
+        <MarketingVideo id="guide-launch-demo" />
         <MarketingArtifactEmbed
           href="/style-guide#marketing-components"
           agentLabel="demo-showcase-agent"

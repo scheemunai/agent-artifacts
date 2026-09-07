@@ -18,6 +18,7 @@ import {
   MarketingWaitlist,
   MarketingWorksWith,
 } from '../components/marketing.js';
+import { MarketingVideo } from '../components/marketing-video.js';
 import { Button } from '../components/primitives.js';
 import { LegalFooterLinks } from './legal.js';
 
@@ -290,7 +291,7 @@ export function HomePage({
   const pricingCtaLabel = authenticated ? HOME_AUTHENTICATED_CTA_LABEL : HOME_CTA_LABEL;
 
   return (
-    <Layout title="Agent Artifacts" description={HOME_SUBLINE}>
+    <Layout title="Agent Artifacts" description={HOME_SUBLINE} scripts={['marketing-video.js']}>
       {/*
         The header carries one action per state below 560px. The authenticated state already did
         (Dashboard) and renders cleanly on one row; the anonymous state carried three, which is what
@@ -381,6 +382,8 @@ export function HomePage({
               </div>
             </article>
           </section>
+
+          <MarketingVideo />
 
           <MarketingSection id="home-examples" label="Examples" title="What people use it for">
             <div class="aa-marketing-grid">

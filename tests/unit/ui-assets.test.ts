@@ -164,6 +164,7 @@ describe('the real build script and the resolver', () => {
     'viewer.js',
     'dashboard.js',
     'viewer.css',
+    'marketing-video.js',
   ];
 
   it('agree on every key the pages can ask for', () => {
