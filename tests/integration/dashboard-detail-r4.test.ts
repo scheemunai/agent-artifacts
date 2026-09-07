@@ -159,3 +159,35 @@ describe('B-D4 · the risk ladder stops being inverted', () => {
     expect(refused.headers.get('location')).toContain('notice=restore_confirm_mismatch');
   });
 });
+
+describe('limited detail arrangement preserves the real panels', () => {
+  it('orders document/sharing before intact Audience, history and promotion with focusable anchors', async () => {
+    const ctx = await makeContext();
+    const { cookie, artifactId } = await seed(ctx, { versions: 3, share: true });
+    const html = await (
+      await ctx.app.request(`/dashboard/artifacts/${artifactId}`, { headers: { Cookie: cookie } })
+    ).text();
+    expect(html).toContain('class="aa-artifact-detail__columns"');
+    let previous = -1;
+    for (const id of ['document', 'sharing', 'audience', 'history', 'save-template']) {
+      expect(html).toContain(`href="#${id}"`);
+      expect(html).toContain(`id="${id}" tabindex="-1"`);
+      const position = html.indexOf(`id="${id}"`);
+      expect(position).toBeGreaterThan(previous);
+      previous = position;
+    }
+    for (const action of [
+      'download',
+      'share/password',
+      'share/revoke',
+      'restore',
+      'promote-template',
+      'delete',
+    ]) {
+      expect(html).toContain(`/artifacts/${artifactId}/${action}`);
+    }
+    expect(html).toContain('data-aa-dashboard-preview="markdown"');
+    expect(html).toContain('data-aa-confirm-match="v1"');
+    expect(html).toContain('id="aa-audience-title"');
+  });
+});

@@ -112,7 +112,7 @@ describe('the templates listing shows the example instead of describing its fiel
     const { cookie, promotedId } = await seed(ctx);
 
     const html = await (
-      await ctx.app.request('/dashboard/templates', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/templates?library=mine', { headers: { Cookie: cookie } })
     ).text();
 
     const card = cardFor(html, promotedId);
@@ -232,5 +232,60 @@ describe('the template frame is gated the way the artifact frame is', () => {
     // No frame at all rather than a frame that 404s: markdown previews are rendered inline.
     expect(panel).not.toContain('/preview/');
     expect(panel).not.toContain('<iframe');
+  });
+});
+
+describe('limited library navigation and image/title/tags cards', () => {
+  it('keeps built-ins as the default and makes personal items an explicit native destination', async () => {
+    const ctx = await makeContext();
+    const { cookie, digestId, promotedId } = await seed(ctx);
+    const read = async (query = '') =>
+      (
+        await ctx.app.request(`/dashboard/templates${query}`, { headers: { Cookie: cookie } })
+      ).text();
+    const builtin = await read();
+    expect(builtin).toContain('href="/dashboard/templates?library=builtin" aria-current="page"');
+    expect(builtin).toContain(`preview=${digestId}#template-preview`);
+    expect(builtin).not.toContain(`preview=${promotedId}#template-preview`);
+    const mine = await read('?library=mine');
+    expect(mine).toContain('href="/dashboard/templates?library=mine" aria-current="page"');
+    expect(mine).toContain(`library=mine&amp;preview=${promotedId}#template-preview`);
+    expect(mine).not.toContain(`preview=${digestId}#template-preview`);
+    expect(await read('?notice=template_promoted')).toContain(
+      `preview=${promotedId}#template-preview`
+    );
+    expect(await read('?library=invalid')).toContain(
+      'href="/dashboard/templates?library=builtin" aria-current="page"'
+    );
+  });
+
+  it('omits description and redundant actions from cards without deleting preview or stored copy', async () => {
+    const ctx = await makeContext();
+    const { cookie, promotedId } = await seed(ctx);
+    const listing = await (
+      await ctx.app.request('/dashboard/templates?library=mine', { headers: { Cookie: cookie } })
+    ).text();
+    const card = cardFor(listing, promotedId);
+    expect(card).not.toContain('Promoted from my own artifact.');
+    expect(card).not.toMatch(/<p[ >]/);
+    expect(card).not.toContain('<button');
+    expect(card.match(/<a /g)).toHaveLength(1);
+    expect(
+      ctx.db.sqlite.prepare('SELECT description FROM templates WHERE id=?').get(promotedId)
+    ).toEqual({ description: 'Promoted from my own artifact.' });
+    const preview = await (
+      await ctx.app.request(`/dashboard/templates?preview=${promotedId}`, {
+        headers: { Cookie: cookie },
+      })
+    ).text();
+    expect(preview).toContain('Promoted from my own artifact.');
+    expect(preview).toContain('href="/dashboard/templates?library=mine"');
+    expect(preview).toContain('aria-current="page">My templates');
+    const mismatched = await (
+      await ctx.app.request(`/dashboard/templates?library=builtin&preview=${promotedId}`, {
+        headers: { Cookie: cookie },
+      })
+    ).text();
+    expect(mismatched).not.toContain('id="template-preview"');
   });
 });

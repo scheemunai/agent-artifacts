@@ -131,7 +131,8 @@ describe('B-T1 · tables drop their least-important columns instead of hiding co
     // assertion is actually about is unchanged: a labelled CARD list rather than a scroll region.
     expect(html).toContain('aria-label="Meetings &amp; recaps"');
     expect(html).toContain('aa-dashboard-card-list');
-    expect(html).toContain('Preview');
+    expect(html).toContain('aa-template-card__link');
+    expect(html).toContain('#template-preview');
   });
 
   it('never marks an Actions column secondary anywhere in the dashboard', async () => {
@@ -155,7 +156,7 @@ describe('B-M1 · an empty template table says its state, not its title twice', 
     const { cookie } = await seedAll(ctx);
 
     const html = await (
-      await ctx.app.request('/dashboard/templates', { headers: { Cookie: cookie } })
+      await ctx.app.request('/dashboard/templates?library=mine', { headers: { Cookie: cookie } })
     ).text();
 
     expect(html.split('Your templates').length - 1).toBe(1);

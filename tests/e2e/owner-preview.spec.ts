@@ -280,3 +280,74 @@ async function readMagicLink(since: number): Promise<string> {
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
 }
+
+test('detail grouping gives the document room without replacing owner controls', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto(`${CLOUD_BASE_URL}/dashboard/artifacts/${seed.artifactId}`);
+  const documentPane = page.locator('#document');
+  const sharing = page.locator('#sharing');
+  const d = await documentPane.boundingBox();
+  const s = await sharing.boundingBox();
+  expect(d).not.toBeNull();
+  expect(s).not.toBeNull();
+  if (!d || !s) throw new Error('Document or sharing layout missing');
+  if ((page.viewportSize()?.width ?? 0) >= 760) {
+    expect(d.width).toBeGreaterThan(s.width);
+    expect(Math.abs(d.y - s.y)).toBeLessThan(1);
+  } else {
+    expect(s.y).toBeGreaterThan(d.y + d.height);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  for (const id of ['document', 'sharing', 'audience', 'history', 'save-template']) {
+    await page.locator(`nav[aria-label="Artifact sections"] a[href="#${id}"]`).click();
+    await expect(page.locator(`#${id}`)).toBeInViewport();
+    await expect(page.locator(`#${id}`)).toBeFocused();
+  }
+  await expect(page.locator('#document iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(page.getByRole('button', { name: 'Save as template', exact: true })).toBeVisible();
+});
+
+test('template library links and one-link cards retain URL selection without JavaScript', async ({
+  page,
+  browser,
+}) => {
+  await signIn(page);
+  const context = await browser.newContext({
+    storageState: await page.context().storageState(),
+    javaScriptEnabled: false,
+    viewport: page.viewportSize() ?? { width: 1440, height: 1000 },
+  });
+  const plain = await context.newPage();
+  try {
+    await plain.goto(`${CLOUD_BASE_URL}/dashboard/templates`);
+    const nav = plain.getByRole('navigation', { name: 'Template library', exact: true });
+    await expect(nav.getByRole('link', { name: 'Built-in templates' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    await expect(plain.locator('.aa-template-card')).toHaveCount(20);
+    await expect(plain.locator('.aa-template-card p, .aa-template-card button')).toHaveCount(0);
+    await expect(plain.locator('.aa-template-card a')).toHaveCount(20);
+    await nav.getByRole('link', { name: 'My templates' }).focus();
+    await plain.keyboard.press('Enter');
+    await expect(plain).toHaveURL(/library=mine/);
+    await plain.reload();
+    await expect(plain.getByRole('link', { name: 'My templates', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    await plain.getByRole('link', { name: 'Built-in templates', exact: true }).click();
+    await plain.locator('.aa-template-card a').first().click();
+    await expect(plain.locator('#template-preview')).toBeInViewport();
+    await plain.getByRole('link', { name: 'Close preview' }).click();
+    await expect(plain).toHaveURL(/library=builtin$/);
+    await expect(plain.locator('#template-preview')).toHaveCount(0);
+    expect(await plain.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true
+    );
+  } finally {
+    await context.close();
+  }
+});

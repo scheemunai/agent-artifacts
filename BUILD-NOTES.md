@@ -878,3 +878,15 @@ separates fresh final checks, applied-asset viewer proof and final sandbox check
 unchanged-source16main/48boundary/no-JS/growth/contrast/fallback evidence. Private fixture databases,
 authentication, logs and backup material are excluded. No analytics, customer/financial data,
 launch, billing, schema, infrastructure or unrelated runtime behavior changes.
+
+## Limited customer UI approval: artifact detail and template library
+
+The user rejected broad admin redesign adoption. This change adopts only the artifact-detail **arrangement**, keeping the current product shell, type, palette, red Sparkline and StatCard/Audience implementations. The document/sharing pair uses a scoped 2:1 layout at the existing 760px breakpoint and stacks in DOM order below it; native focusable anchors lead to Document, Sharing, Audience, History and Save as template. Real forms, confirmation dialogs, preview security and domain behavior are unchanged.
+
+Only the authenticated `/dashboard/templates` cards are simplified to image, linked title and tags. The separate public catalog renderer is unchanged. Stored/API/preview descriptions and all 20 canonical template/source/thumbnail options are untouched. The redundant Preview button is removed, not the preview action: the existing stretched title link opens it from the whole card.
+
+Library navigation uses native links, styled as tabs, with `library=mine|builtin` and `aria-current=page`; Tab/Enter, reload, back and no-JavaScript navigation work without a new client script. Built-in remains the default because it was the first group before this change, including for accounts with personal templates. Legacy preview URLs select the preview's library; explicit mismatched library/preview pairs show only the chosen library, not a confusing cross-library preview. Successful promotion's existing notice selects My templates. Preview/close preserve the library; switching library clears preview. There was no template-list filter or pagination to replace.
+
+Scoped integration red controls fail on the previous source for missing detail groups, missing library selection and visible card descriptions. Existing assertions move to the explicit personal destination / new query-preserving preview URLs. Browser regressions exercise the existing seven responsive projects, real sandboxed owner preview and JavaScript-disabled library navigation. The style guide documents these two targeted patterns using current primitives; no global redesign, dependency, schema, provider or launch-flag change is included.
+
+Homepage activation is separately authorized after this UI rollout is verified: existing `AA_COMING_SOON=false` selects the already-built HomePage. This PR does not merge/deploy or change that runtime flag. Existing production deployment and rollback safeguards remain required.
