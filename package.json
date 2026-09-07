@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",
-    "@hono/zod-openapi": "1.6.1",
+    "@hono/zod-openapi": "1.6.2",
     "@resvg/resvg-js": "2.6.2",
     "@types/nodemailer": "8.0.1",
     "argon2": "0.45.1",
@@ -38,12 +38,12 @@
     "isomorphic-dompurify": "3.23.0",
     "marked": "18.0.11",
     "nanoid": "6.0.1",
-    "nodemailer": "9.0.6",
+    "nodemailer": "9.1.1",
     "pg": "8.23.0",
     "pino": "10.3.1",
     "satori": "0.33.4",
-    "stripe": "^22.6.0",
-    "zod": "4.4.3"
+    "stripe": "^22.6.1",
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.11",
