@@ -100,7 +100,7 @@ describe('M4 dashboard screens and actions', () => {
       }
     );
     expect(promoted.status).toBe(303);
-    const templates = await ctx.app.request('/dashboard/templates', {
+    const templates = await ctx.app.request('/dashboard/templates?library=mine', {
       headers: { Cookie: cookie },
     });
     expect(templates.status).toBe(200);

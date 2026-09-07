@@ -534,35 +534,67 @@ export function DashboardArtifactPage({
           </ButtonRow>
         </section>
 
-        <div class="aa-grid aa-grid--2">
-          <Card
-            title="Rendered preview"
-            description="Owner previews use the same sanitizing/sandboxing posture as public pages."
-          >
-            {artifact.type === 'markdown' && artifact.htmlPreview ? (
-              <div
-                data-aa-dashboard-preview="markdown"
-                dangerouslySetInnerHTML={{ __html: artifact.htmlPreview }}
-              />
-            ) : previewUrl ? (
-              /*
-               * Absolute and cross-origin on cloud, absolute and same-origin self-hosted — the URL
-               * the route handed down, never one built here. A relative `src` is what broke this
-               * card: it resolves to the dashboard origin, and the dashboard's own CSP admits only
-               * the sandbox host to `frame-src`, so on cloud the browser refused the load and the
-               * "Rendered preview" was blank. `sandbox="allow-scripts"` stays: the attribute keeps
-               * the document in an opaque origin whichever host served it.
-               */
-              <iframe title={artifact.title} sandbox="allow-scripts" src={previewUrl}></iframe>
+        <nav aria-label="Artifact sections">
+          <ButtonRow>
+            <Button variant="ghost" href="#document">
+              Document
+            </Button>
+            <Button variant="ghost" href="#sharing">
+              Sharing
+            </Button>
+            {stats ? (
+              <Button variant="ghost" href="#audience">
+                Audience
+              </Button>
             ) : null}
-          </Card>
-          <SharePanel artifact={artifact} />
-          {stats ? <ArtifactAudience artifact={artifact} stats={stats} /> : null}
+            <Button variant="ghost" href="#history">
+              History
+            </Button>
+            <Button variant="ghost" href="#save-template">
+              Save as template
+            </Button>
+          </ButtonRow>
+        </nav>
+        <div class="aa-artifact-detail__columns">
+          <section id="document" tabindex={-1} aria-label="Document preview">
+            <Card
+              title="Rendered preview"
+              description="Owner previews use the same sanitizing/sandboxing posture as public pages."
+            >
+              {artifact.type === 'markdown' && artifact.htmlPreview ? (
+                <div
+                  data-aa-dashboard-preview="markdown"
+                  dangerouslySetInnerHTML={{ __html: artifact.htmlPreview }}
+                />
+              ) : previewUrl ? (
+                /*
+                 * Absolute and cross-origin on cloud, absolute and same-origin self-hosted — the URL
+                 * the route handed down, never one built here. A relative `src` is what broke this
+                 * card: it resolves to the dashboard origin, and the dashboard's own CSP admits only
+                 * the sandbox host to `frame-src`, so on cloud the browser refused the load and the
+                 * "Rendered preview" was blank. `sandbox="allow-scripts"` stays: the attribute keeps
+                 * the document in an opaque origin whichever host served it.
+                 */
+                <iframe title={artifact.title} sandbox="allow-scripts" src={previewUrl}></iframe>
+              ) : null}
+            </Card>
+          </section>
+          <section id="sharing" tabindex={-1} aria-label="Sharing">
+            <SharePanel artifact={artifact} />
+          </section>
         </div>
-
-        <VersionHistory artifact={artifact} versions={versions} />
+        {stats ? (
+          <div id="audience" tabindex={-1}>
+            <ArtifactAudience artifact={artifact} stats={stats} />
+          </div>
+        ) : null}
+        <div id="history" tabindex={-1}>
+          <VersionHistory artifact={artifact} versions={versions} />
+        </div>
         {diff ? <VersionDiff diff={diff} artifactId={artifact.id} /> : null}
-        <PromotePanel artifact={artifact} errorCode={promoteError ?? null} />
+        <div id="save-template" tabindex={-1}>
+          <PromotePanel artifact={artifact} errorCode={promoteError ?? null} />
+        </div>
       </div>
     </DashboardChrome>
   );
@@ -661,7 +693,10 @@ export function DashboardBotsPage({
   );
 }
 
+export type TemplateLibrary = 'builtin' | 'mine';
+
 export interface DashboardTemplatesPageProps {
+  library?: TemplateLibrary | undefined;
   account: DashboardAccountView;
   templates: DashboardTemplateView[];
   previewTemplate?: DashboardTemplatePreview | null | undefined;
@@ -671,6 +706,7 @@ export interface DashboardTemplatesPageProps {
 
 export function DashboardTemplatesPage({
   account,
+  library,
   templates,
   previewTemplate,
   extensionNavItems,
@@ -678,6 +714,12 @@ export function DashboardTemplatesPage({
 }: DashboardTemplatesPageProps) {
   const starters = templates.filter((template) => template.builtIn);
   const personal = templates.filter((template) => !template.builtIn);
+
+  // Keep the old first group as the default. Legacy preview links open their own library;
+  // a successful promotion opens My templates so the saved result is not hidden on arrival.
+  const selected = library ?? (previewTemplate && !previewTemplate.builtIn ? 'mine' : 'builtin');
+  const visiblePreview =
+    previewTemplate?.builtIn === (selected === 'builtin') ? previewTemplate : null;
 
   return (
     <DashboardChrome
@@ -702,6 +744,22 @@ export function DashboardTemplatesPage({
             </p>
           </header>
         </section>
+        <nav class="aa-tabs__list aa-template-tabs" aria-label="Template library">
+          <a
+            class="aa-tab"
+            href="/dashboard/templates?library=mine"
+            aria-current={selected === 'mine' ? 'page' : undefined}
+          >
+            My templates
+          </a>
+          <a
+            class="aa-tab"
+            href="/dashboard/templates?library=builtin"
+            aria-current={selected === 'builtin' ? 'page' : undefined}
+          >
+            Built-in templates
+          </a>
+        </nav>
         {/* GROUPED BY THE JOB, not listed by name.
             The same six categories the public gallery and `GET /v1/templates?category=` use, so a
             person browsing here and an agent filtering there are looking at one taxonomy. A flat
@@ -709,40 +767,49 @@ export function DashboardTemplatesPage({
             has is "what do I start from for the thing I am doing".
             Empty categories are not rendered — a heading over nothing is a heading that has to be
             read to discover it says nothing. */}
-        {TEMPLATE_CATEGORY_ORDER.map((category) => {
-          const group = starters.filter((template) => template.category === category);
-          return group.length === 0 ? null : (
-            <TemplateGroup
-              id={`templates-starter-${category}`}
-              title={TEMPLATE_CATEGORY_COPY[category].label}
-              templates={group}
-              emptyTitle="No starter templates are installed."
-              empty="Starter templates seed at boot, so this is usually a sign the seed has not run yet."
-            />
-          );
-        })}
-        {starters.length === 0 ? (
+        {selected === 'builtin'
+          ? TEMPLATE_CATEGORY_ORDER.map((category) => {
+              const group = starters.filter((template) => template.category === category);
+              return group.length === 0 ? null : (
+                <TemplateGroup
+                  id={`templates-starter-${category}`}
+                  title={TEMPLATE_CATEGORY_COPY[category].label}
+                  templates={group}
+                  library={selected}
+                  emptyTitle="No starter templates are installed."
+                  empty="Starter templates seed at boot, so this is usually a sign the seed has not run yet."
+                />
+              );
+            })
+          : null}
+        {selected === 'builtin' && starters.length === 0 ? (
           <TemplateGroup
             id="templates-starter"
             title="Starter templates"
             templates={starters}
+            library={selected}
             emptyTitle="No starter templates are installed."
             empty="Starter templates seed at boot, so this is usually a sign the seed has not run yet."
           />
         ) : null}
-        <TemplateGroup
-          id="templates-personal"
-          title="Your templates"
-          templates={personal}
-          emptyTitle="No templates of your own yet."
-          empty="Any artifact you have published — HTML or markdown — can become one: choose Promote on its detail page, and your agent can rehash it into new work."
-          emptyAction={
-            <Button variant="primary" href="/dashboard/artifacts">
-              Pick an artifact to promote →
-            </Button>
-          }
-        />
-        {previewTemplate ? <TemplatePreviewPanel template={previewTemplate} /> : null}
+        {selected === 'mine' ? (
+          <TemplateGroup
+            id="templates-personal"
+            title="Your templates"
+            templates={personal}
+            library={selected}
+            emptyTitle="No templates of your own yet."
+            empty="Any artifact you have published — HTML or markdown — can become one: choose Promote on its detail page, and your agent can rehash it into new work."
+            emptyAction={
+              <Button variant="primary" href="/dashboard/artifacts">
+                Pick an artifact to promote →
+              </Button>
+            }
+          />
+        ) : null}
+        {visiblePreview ? (
+          <TemplatePreviewPanel template={visiblePreview} library={selected} />
+        ) : null}
       </div>
     </DashboardChrome>
   );
@@ -2083,7 +2150,13 @@ function BotActions({ bot }: { bot: DashboardBotView }) {
  * Slots are listed only when there are any. "Slots: none" on the three HTML examples that declare
  * none was a field-form frame on something that is not a form.
  */
-function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview }) {
+function TemplatePreviewPanel({
+  template,
+  library,
+}: {
+  template: DashboardTemplatePreview;
+  library: TemplateLibrary;
+}) {
   const isHtml = template.type === 'html';
   return (
     <section id="template-preview" tabindex={-1}>
@@ -2132,7 +2205,7 @@ function TemplatePreviewPanel({ template }: { template: DashboardTemplatePreview
             value={template.content}
           />
           <ButtonRow>
-            <Button variant="secondary" href="/dashboard/templates">
+            <Button variant="secondary" href={`/dashboard/templates?library=${library}`}>
               Close preview
             </Button>
           </ButtonRow>
@@ -2154,6 +2227,7 @@ function TemplateGroup({
   id,
   title,
   templates,
+  library,
   emptyTitle,
   empty,
   emptyAction,
@@ -2161,6 +2235,7 @@ function TemplateGroup({
   id: string;
   title: string;
   templates: DashboardTemplateView[];
+  library: TemplateLibrary;
   emptyTitle: string;
   empty: string;
   emptyAction?: Child | undefined;
@@ -2179,7 +2254,7 @@ function TemplateGroup({
       </h2>
       <DashboardCardList label={title} class="aa-template-grid">
         {templates.map((template) => (
-          <TemplateCard template={template} />
+          <TemplateCard template={template} library={library} />
         ))}
       </DashboardCardList>
     </section>
@@ -2199,8 +2274,14 @@ function TemplateGroup({
  * It is a template-specific card rather than `DashboardCard` because the cover image changes the
  * card's shape, not its trim, and Artifacts and Bots must not inherit that.
  */
-function TemplateCard({ template }: { template: DashboardTemplateView }) {
-  const href = `/dashboard/templates?preview=${template.id}#template-preview`;
+function TemplateCard({
+  template,
+  library,
+}: {
+  template: DashboardTemplateView;
+  library: TemplateLibrary;
+}) {
+  const href = `/dashboard/templates?library=${library}&preview=${template.id}#template-preview`;
   return (
     <li class="aa-template-card">
       {/* The cover is the card's own link target via the stretched pseudo-element below, so it
@@ -2224,14 +2305,6 @@ function TemplateCard({ template }: { template: DashboardTemplateView }) {
             {template.builtIn ? 'starter' : 'yours'}
           </Badge>
           <Badge tone="neutral">{template.type === 'markdown' ? 'md' : 'html'}</Badge>
-        </div>
-        <p class="aa-template-card__subline">
-          {template.description ?? 'No description yet — open the preview to see the example.'}
-        </p>
-        <div class="aa-template-card__actions">
-          <Button size="sm" variant="secondary" href={href}>
-            Preview
-          </Button>
         </div>
       </div>
     </li>

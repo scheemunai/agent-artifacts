@@ -573,6 +573,26 @@
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   }
 
+  /* Artifact detail only: the document leads, sharing sits beside it when there is room.
+     Audience keeps its existing widgets and chart below this pair, not a third narrow column. */
+  .aa-artifact-detail__columns {
+    display: grid;
+    min-width: 0;
+    gap: var(--spacing-aa-4);
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aa-artifact-detail__columns > * {
+    min-width: 0;
+  }
+
+  @media (min-width: 760px) {
+    .aa-artifact-detail__columns {
+      grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+    }
+  }
+
   .aa-grid--3 {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   }
@@ -3511,10 +3531,7 @@
     height: 3rem;
   }
 
-  /* A column, so the actions row can be pushed to the bottom edge of the tallest card in the row.
-     Cards already stretch to a common height; without this the Preview buttons sat wherever each
-     description happened to end, and a one-line description next to a two-line one put two
-     identical buttons on two different baselines. */
+  /* Listing cards show only their image, linked title and tags. Full copy stays in the preview. */
   .aa-template-card__body {
     display: flex;
     min-width: 0;
@@ -3539,8 +3556,7 @@
     text-decoration: none;
   }
 
-  /* The whole card opens the preview; the Preview button is the same destination, named out loud
-     for a reader scanning for a control. The button sits above this overlay on its own z-index. */
+  /* One link opens the preview from the whole card; no duplicate Preview control. */
   .aa-template-card__link::after {
     position: absolute;
     inset: 0;
@@ -3573,26 +3589,16 @@
     gap: var(--spacing-aa-2);
   }
 
-  .aa-template-card__subline {
-    min-width: 0;
-    margin: 0;
-    color: var(--color-aa-muted);
-    font-size: var(--text-aa-sm);
-    overflow-wrap: anywhere;
+  /* Native page links, not script-dependent tabs: reload/back/no-JS retain the library. */
+  .aa-template-tabs .aa-tab {
+    text-decoration: none;
+    white-space: normal;
+    text-align: center;
   }
 
-  .aa-template-card__actions {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    /* The pin: whatever the description's length, the button sits on the card's bottom edge. */
-    margin-top: auto;
-    padding-top: var(--spacing-aa-3);
-    gap: var(--spacing-aa-2);
+  .aa-template-tabs .aa-tab[aria-current="page"] {
+    color: var(--color-aa-accent);
+    border-bottom-color: var(--color-aa-accent);
   }
 
   /* The template preview frame. A framed document has no intrinsic size, so without this it falls

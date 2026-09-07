@@ -1092,57 +1092,87 @@ function dangerCardSection() {
 
 function cardTableSection() {
   return (
-    <div class="aa-grid aa-grid--2">
-      <Card
-        title="Card"
-        description="Default, raised, empty, and error states are content patterns on the same primitive."
-        footer={
-          <ButtonRow>
-            <Button
-              variant="primary"
-              size="sm"
-              dataAttrs={specimenToastData(
-                'Card action specimen. Production cards wire a real action.'
-              )}
-            >
-              Continue
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              dataAttrs={specimenToastData(
-                'Card cancel specimen. Production cards close or reset state.'
-              )}
-            >
-              Cancel
-            </Button>
-          </ButtonRow>
-        }
-      >
-        <p class="aa-hint">Use cards for grouped forms, setup steps, and dashboard side panels.</p>
-      </Card>
-      <Card
-        title="Table"
-        description="Scrolls horizontally without widening the page, and says so — but only when there is something past the edge."
-        raised
-      >
-        <Table
-          id="style-guide-artifact-rows"
-          caption="Artifact rows"
-          columns={['Title', 'Type', 'Share state', 'Updated', 'Views']}
-          rows={[
-            ['Weekly Ops Report', <Badge tone="accent">md</Badge>, 'Shared', '{relative}', '142'],
-            ['Launch Notes', <Badge tone="info">html</Badge>, 'Private', 'Yesterday', '0'],
-            ['Incident Retro', <Badge tone="warn">md</Badge>, 'Password protected', 'Aug 25', '38'],
-          ]}
-        />
-        <div class="aa-usage">
-          The region is focusable, named from its caption, and carries an inline-end fade plus a
-          hint whenever <code>scrollWidth &gt; clientWidth</code> — measured, never assumed, and
-          re-measured on resize. A table that fits shows neither.
-        </div>
-      </Card>
-      {tableColumnPrioritySection()}
+    <div class="aa-stack">
+      <div class="aa-artifact-detail__columns">
+        <Card title="Document">
+          <p class="aa-hint">Primary preview. Existing Audience widgets follow the pair.</p>
+        </Card>
+        <Card title="Sharing">
+          <p class="aa-hint">Adjacent on desktop; follows the document on mobile.</p>
+        </Card>
+      </div>
+      <nav class="aa-tabs__list aa-template-tabs" aria-label="Template library example">
+        <a class="aa-tab" href="/dashboard/templates?library=mine">
+          My templates
+        </a>
+        <a class="aa-tab" href="/dashboard/templates?library=builtin" aria-current="page">
+          Built-in templates
+        </a>
+      </nav>
+      <p class="aa-hint">
+        Library tabs are native page links: Tab then Enter, with selection kept in the URL. Cards
+        contain image, title and tags; descriptions remain in previews.
+      </p>
+      <div class="aa-grid aa-grid--2">
+        <Card
+          title="Card"
+          description="Default, raised, empty, and error states are content patterns on the same primitive."
+          footer={
+            <ButtonRow>
+              <Button
+                variant="primary"
+                size="sm"
+                dataAttrs={specimenToastData(
+                  'Card action specimen. Production cards wire a real action.'
+                )}
+              >
+                Continue
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                dataAttrs={specimenToastData(
+                  'Card cancel specimen. Production cards close or reset state.'
+                )}
+              >
+                Cancel
+              </Button>
+            </ButtonRow>
+          }
+        >
+          <p class="aa-hint">
+            Use cards for grouped forms, setup steps, and dashboard side panels.
+          </p>
+        </Card>
+        <Card
+          title="Table"
+          description="Scrolls horizontally without widening the page, and says so — but only when there is something past the edge."
+          raised
+        >
+          <Table
+            id="style-guide-artifact-rows"
+            caption="Artifact rows"
+            columns={['Title', 'Type', 'Share state', 'Updated', 'Views']}
+            rows={[
+              ['Weekly Ops Report', <Badge tone="accent">md</Badge>, 'Shared', '{relative}', '142'],
+              ['Launch Notes', <Badge tone="info">html</Badge>, 'Private', 'Yesterday', '0'],
+              [
+                'Incident Retro',
+                <Badge tone="warn">md</Badge>,
+                'Password protected',
+                'Aug 25',
+                '38',
+              ],
+            ]}
+          />
+          <div class="aa-usage">
+            The region is focusable, named from its caption, and carries an inline-end fade plus a
+            hint whenever <code>scrollWidth &gt; clientWidth</code> — measured, never assumed, and
+            re-measured on resize. A table that fits shows neither.
+          </div>
+        </Card>
+        {tableColumnPrioritySection()}
+      </div>
     </div>
   );
 }

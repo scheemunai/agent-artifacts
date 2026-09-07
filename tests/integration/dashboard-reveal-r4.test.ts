@@ -83,7 +83,9 @@ describe('B-C5 · a revealed panel is somewhere the browser actually goes', () =
     const listing = await (
       await ctx.app.request('/dashboard/templates', { headers: { Cookie: cookie } })
     ).text();
-    expect(listing).toMatch(/href="\/dashboard\/templates\?preview=[^"]*#template-preview"/);
+    expect(listing).toMatch(
+      /href="\/dashboard\/templates\?library=builtin&amp;preview=[^"]*#template-preview"/
+    );
 
     const revealed = await (
       await ctx.app.request(`/dashboard/templates?preview=${report.id}`, {
@@ -126,6 +128,6 @@ describe('B-C6 · what can be opened can be closed', () => {
 
     const panel = html.split('<section id="template-preview"')[1] ?? '';
     expect(panel).toContain('Close preview');
-    expect(panel).toContain('href="/dashboard/templates"');
+    expect(panel).toContain('href="/dashboard/templates?library=builtin"');
   });
 });

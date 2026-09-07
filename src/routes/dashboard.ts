@@ -672,6 +672,14 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
       DashboardTemplatesPage({
         account: accountView(session.account),
         templates,
+        library:
+          routeContext.req.query('library') === 'mine' ||
+          (!routeContext.req.query('library') &&
+            routeContext.req.query('notice') === 'template_promoted')
+            ? 'mine'
+            : routeContext.req.query('library') === 'builtin'
+              ? 'builtin'
+              : undefined,
         previewTemplate: await getTemplatePreview(
           services,
           session.account.id,
