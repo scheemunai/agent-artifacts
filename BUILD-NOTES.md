@@ -807,3 +807,74 @@ three new important-style diagnostics. The three local note-margin overrides pre
 base/tablet/mobile caution spacing, including the existing inline Verify note margin. They are
 inventoried rather than suppressed or “fixed” by changing approved CSS. No global configuration,
 runtime, schema, billing, dependencies, sandbox or launch settings change.
+
+## Accepted final editorial templates — Astra integration
+
+Adopts the accepted Astra Daily Digest newspaper, Interview Notes quote spread, Case Study evidence
+ledger and Launch Announcement dark/light poster. The immutable original batch is
+`aa-template-revamp-1788686289312/batch-01-editorial/`; rejected inherited-Sol material is not adopted.
+The first fifteen redesigned templates remain unchanged. This is a separate final integration PR,
+not deployment authorization; all nineteen are only live after the later reviewed rollout.
+
+Daily and Interview are exact accepted source files. Case adds one first-line, file-local
+`noRedundantRoles` compatibility directive. Launch adds one **element-local** `useSemanticElements`
+directive immediately before its existing named CODE region. Nothing else in any template changes:
+CSS, titles, body elements, roles, scopes, IDs, links, SVG, meters and command descendants are exact.
+Canonical SHA-256:
+- Daily: `500f1619164f01ec4aa19a6c1e00277696b50cf3a711463800b22f128a010129`
+- Interview: `146ebab1a80f985196bf788ad5d7ab4fc564dec5c72ec0c4f7b9df154a2a9691`
+- Case: `bda5f8984424f791f6707dc0565c198a6607fcd98f41d851eaed001e2151b007`
+- Launch: `c50f7b44e6e2193126e085fa2b3d3b89266d5dfbb5760dd11633de51fd26fa19`
+
+Case's explicit inventory is one table, seven rows, four columnheaders and twenty-one cells. Four
+native `th scope="col"` headers continue to associate by column with five complete value/meter rows;
+the footer cell spans four columns. The exception is bounded by regression assertions, not permission
+for future unrelated roles. [MDN's display accessibility note](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/display#tables)
+warns that changing table display can affect accessibility in some browsers. Launch preserves its
+one named CODE scrolling region and native Chromium keyboard behavior. No other rule suppression or
+global configuration change is authorized. Eight paired sandbox PNGs/accessibility trees and native
+relationships match the accepted candidates; Chromium evidence does not certify Safari/Firefox or
+screen-reader navigation.
+
+Original content parity accounts for307 text nodes,303 retained after four already-approved decorative
+quote-mark removals in Interview, and170 numeric occurrences. All substantive text and keyed story,
+quote, ledger, feature and availability records remain; code/SVG/meter/link data are exact. No factual
+correction is invented for Case's existing baseline-period wording. Integration adds no content delta.
+Canonical thumbnails use the unchanged generator: Daily1600, Interview1440, Case1280, Launch1440.
+Descriptions name the actual compositions; no other PNG or catalog contract changes.
+
+### Explicitly approved viewer runtime exception
+
+The required twelve-story Daily fixture exposed the existing12000px auto-height ceiling through the
+real locally published artifact viewer, reporter and opaque sandbox. At390px it measures11456px
+closed and12316px with the six-item archive open; at320px,13757px and14745px. Previously the outer frame
+stopped at12000px (all content remained reachable through nested scrolling). The template is not
+shortened or redesigned to conceal this runtime limit.
+
+Only `src/ui/client/viewer.js` changes: `FRAME_MAX_HEIGHT`12000→32768 and its explanatory comment,
+retiring obsolete approximately3000px template-budget advice. Exact approved source SHA-256:
+`43142918625f52d55ac08c0659dcc3eb05e286cf4637199636ac33e391bc1cd4`. This is a bounded operating choice
+with headroom above the14745px fixture, **not** a universal maximum, future-proof promise or browser
+resource-safety proof; the previous test's permissive40000 upper bound is not its justification.
+Matched sender, message type, finite/positive checks, rounding,48px floor and nested-scroll fallback
+remain unchanged. No reporter, CSP, origin, sandbox permissions, dependencies or external assets change.
+
+Regression tests use the actual built repository asset, never a substituted green candidate. The
+Daily open/close test fails before at320/390 and passes afterward, with all twelve stories, six archive
+entries, reachable footer and stable closed/open/closed sizes. The unit test now asserts32768 exactly.
+Existing nine guard controls remain; added at/just-above boundary and real65536px synthetic content
+prove clamping plus usable keyboard/nested scrolling. Ordinary80→160→24px content tests resizing and
+the48px floor. A separate fresh two-origin cloud-mode proof checks byte-exact served viewer asset,
+real published fixture source, both phone widths and settled message counts. No production fixtures.
+
+Lint:34 errors→0 via only the two comments.41warnings comprise40 exact prior warnings and one Case
+mobile `.l-chg display:grid!important` override that preserves the selected grid against generic cell
+`display:block`. It is inventoried, not rewritten merely to quiet warnings. New unit assertions cover
+the two bounded exceptions; browser tests protect native associations, exact data-meter rows, Launch
+keyboard scrolling and the real viewer. Existing tests/frameworks are extended, not replaced.
+
+[Final integrated review](https://anacreon.ai/downloads/aa-template-revamp-1788686289312/integrated-batch01/final/index.html)
+separates fresh final checks, applied-asset viewer proof and final sandbox checks from reused,
+unchanged-source16main/48boundary/no-JS/growth/contrast/fallback evidence. Private fixture databases,
+authentication, logs and backup material are excluded. No analytics, customer/financial data,
+launch, billing, schema, infrastructure or unrelated runtime behavior changes.

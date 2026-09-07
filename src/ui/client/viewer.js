@@ -43,18 +43,13 @@ const FRAME_MIN_HEIGHT = 48;
  * on ordinary product output is not a circuit breaker, it is a layout constraint wearing one's
  * clothes.
  *
- * 12000 is chosen to sit far above real documents and far below anything that hurts: a 12000px
- * iframe is an ordinary long page to lay out and paint, because painting is viewport-bound and
- * scrolls are virtualised, while the runaway cases this guards against are orders of magnitude
- * past it. Our own templates carry a tighter design budget of ~3000px, which is a rule about
- * making good pages and is enforced by nobody but the person writing one.
- *
- * Above the cap the old behaviour is exactly what should happen, and it is now the rare case
- * rather than the normal one: the frame is clamped to 12000px and the document scrolls inside it.
- * Nothing is hidden and nothing is truncated — the reader scrolls the frame instead of the page for
- * the remainder. That degradation is deliberate; the alternative is trusting an unbounded number.
+ * 32768 preserves auto-height for the approved long Daily fixture, including its archive
+ * (14745px at320px wide), while retaining a finite circuit breaker against runaway reports.
+ * This is not a template design budget: content may grow naturally, without font reductions,
+ * hidden stories or a prose-height target. Larger reports retain the existing nested-scroll
+ * fallback rather than asking the browser to lay out an unbounded number.
  */
-const FRAME_MAX_HEIGHT = 12_000;
+const FRAME_MAX_HEIGHT = 32_768;
 let contentHash = boot.initialContent?.content_hash || null;
 let contentRequestInFlight = false;
 let stopped = false;

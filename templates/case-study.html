@@ -1,156 +1,23 @@
+<!-- biome-ignore-all lint/a11y/noRedundantRoles: Explicit table roles retain semantics when mobile CSS uses block/grid display. -->
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Northwind Freight cut invoice disputes by 71% in one quarter</title>
-<!--
-  Agent Artifacts template · research / case-study
-  VOICE  editorial serif (ui-serif, Charter, Iowan Old Style, Georgia); mono for labels and figures
-  SCHEME warm paper #f0eae0 · rust accent #a8452a · petrol data hue #2c5670
+<!-- Astra independent redesign from frozen baseline. System fonts; no external dependencies. Rewriting: remove empty sections; never collapse previously visible content or execute sample commands. Voice and provenance: see notes.md. --><style>* ,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%;color-scheme:light}body{margin:0;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}h1,h2,h3,p,dl,dd,figure,blockquote{margin:0}h1,h2,h3{line-height:1.15}ul,ol{margin:0;padding:0;list-style:none}a{color:inherit;text-underline-offset:.22em}a:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid currentColor;outline-offset:4px}p,li,dd,h1,h2,h3,figcaption{overflow-wrap:anywhere}section,article,figure,nav,aside,main,header,footer{min-width:0}b,strong{font-weight:700}cite{font-style:normal}
+:root{--paper:#f8f4ec;--ink:#292723;--muted:#635b50;--line:#c7beb0;--rust:#90472d;--tint:#eee4d6;--data:#2c5670;--track:#d6cec1;--sans:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",sans-serif;--serif:Georgia,"Times New Roman",serif}body{background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.65}.wrap{max-width:1312px;margin:auto;padding:40px 40px 48px}.lab{font:700 12px/1.5 var(--sans);text-transform:uppercase;letter-spacing:.1em}.eyebrow{display:block;color:var(--rust);margin-bottom:18px}.spread{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.1fr);gap:48px;border-top:5px solid var(--ink);padding-top:24px}.ttl{font-family:var(--sans);font-size:clamp(32px,3.5vw,48px);line-height:1.03;letter-spacing:-.045em}.hero{margin-top:28px}.hero__fig{font:700 clamp(74px,9vw,122px)/.95 var(--sans);letter-spacing:-.06em;color:var(--rust)}.hero__cap{margin-top:15px;max-width:43ch;font-size:17px;line-height:1.6}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 22px;margin-top:25px;font:14px/1.5 var(--sans)}.facts div{border-top:1px solid var(--line);padding-top:9px}.facts dt{color:var(--muted)}.facts dd{font-weight:700;margin-top:3px}.evidence{min-width:0}.ledger{width:100%;table-layout:fixed;border-collapse:collapse;font:16px/1.5 var(--sans);text-align:left}.ledger caption{text-align:left;font-size:13px;line-height:1.6;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding-bottom:20px;color:var(--muted)}.ledger th{font-size:12px;font-weight:700;padding:0 8px 10px 0;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.ledger th:first-child{width:39%}.ledger th:last-child{width:20%}.ledger td{padding:16px 10px 16px 0;border-top:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}.ledger td:last-child{padding-right:0}.l-what{font-weight:600}.l-before{color:var(--muted);font-variant-numeric:tabular-nums}.l-after{font-weight:700;font-variant-numeric:tabular-nums}.l-chg b{font-size:16px;color:var(--data)}.meter{display:grid;height:7px;margin-top:10px;background:var(--track);border-radius:4px;overflow:hidden}.meter i{display:block;background:var(--data);border-radius:4px}.ledger tfoot td{font-size:16px;line-height:1.6;color:var(--muted);padding-top:18px;border-top:2px solid var(--ink)}.pq{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:40px;align-items:end;margin-top:34px;border-block:1px solid var(--ink);padding-block:28px}.pq blockquote{font-size:clamp(24px,2.4vw,32px);line-height:1.5;letter-spacing:-.02em;max-width:49ch}.pq figcaption,.kicker figcaption{font:16px/1.6 var(--sans);color:var(--muted)}.two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:48px;margin-top:36px}.h-sec{border-bottom:1px solid var(--line);padding-bottom:12px;color:var(--rust)}.body{margin-top:20px;max-width:64ch}.body p+p{margin-top:16px}.body h3{font:700 24px/1.2 var(--sans);letter-spacing:-.02em;margin:28px 0 14px}.rail{min-width:0}.snag{background:var(--tint);padding:26px}.snag h2{color:var(--rust);padding-bottom:14px;border-bottom:1px solid var(--line)}.snag p{margin-top:18px;font-size:17px;line-height:1.65}.kicker{padding:24px 0;border-bottom:1px solid var(--line);margin-top:10px}.kicker blockquote{font-size:24px;line-height:1.5}.kicker figcaption{margin-top:18px}.sec{margin-top:36px}.next{margin-top:18px;list-style:disc;padding-left:22px;color:var(--muted)}.next li+li{margin-top:14px}.next strong{color:var(--ink)}.colophon{font:16px/1.6 var(--sans);color:var(--muted);border-top:2px solid var(--ink);padding-top:24px;margin-top:36px}
+@media(max-width:1024px){.spread{grid-template-columns:1fr;gap:30px}.spread header{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:25px 40px}.ttl{font-size:42px}.hero{margin:0}.facts{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr));margin:0}.pq{grid-template-columns:minmax(0,1fr);gap:20px}.two{gap:30px}}
+@media(max-width:680px){.wrap{padding:24px 18px 32px}.spread header{display:block}.ttl{font-size:36px;max-width:24ch}.hero{margin-top:25px}.hero__fig{font-size:96px}.facts{margin-top:24px;grid-template-columns:repeat(2,minmax(0,1fr));font-size:16px}.ledger,.ledger caption,.ledger tbody,.ledger tfoot{display:block;width:100%}.ledger thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.ledger caption{font-size:13px;padding-bottom:14px}.ledger tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 20px;border-top:1px solid var(--line);padding:18px 0}.ledger td{display:block;padding:0;border:0;min-width:0}.l-what{grid-column:1/-1;font-size:18px}.l-before::before,.l-after::before,.l-chg::before{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:400;color:var(--muted);margin-bottom:3px}.l-before::before{content:"Before"}.l-after::before{content:"After"}.l-chg{grid-column:1/-1;display:grid!important;grid-template-columns:1fr auto;align-items:center;gap:0 20px}.l-chg::before{content:"Change"}.l-chg .meter{grid-column:1/-1;margin-top:8px}.ledger tfoot tr{display:block}.ledger tfoot td{padding-top:18px}.two{display:block}.rail{margin-top:28px}.snag{padding:24px 20px}.pq{margin-top:28px;padding-block:24px}.pq blockquote{font-size:27px}.body,.snag p,.next{font-size:17px;line-height:1.65}.sec{margin-top:30px}}
 
-  REWRITING THIS ARTIFACT
-  · The hero figure is ONE number — the outcome the customer would repeat out loud.
-    Say what it is measured against right under it, or it is a poster, not evidence.
-  · The ledger is the spine: the same metrics before and after, from the customer's own
-    system. Never invent a row you cannot source.
-  · Keep one honest paragraph about what went wrong or what it cost. A case study with
-    no friction in it reads as marketing and nobody believes the rest.
-  · DELETE, don't empty. One quote instead of two? Remove the second. No ledger?
-    Remove it. Never a heading with nothing under it.
-  · Never pin the root to the viewport height, and never give html or body a
-    percentage height; no fixed or sticky positioning. The host frame measures this
-    document and does not scroll.
-  · Nothing external: no web fonts, images, scripts or stylesheets.
--->
-<style>
-*,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-:root{
---bg:#f0eae0;--paper:#fffdf9;--ink:#231e1a;--muted:#5b5249;--subtle:#72685f;
---line:#e2d9cc;--line2:#cfc3b3;--rust:#a8452a;--rust-soft:#fbf0e9;--rust-line:#e8c6b5;
---data:#2c5670;--track:#ddd5c8;
---serif:ui-serif,Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;
---mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
---s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.5rem;--s6:2rem;--s7:2.75rem;--s8:4rem}
-body{margin:0;padding:var(--s7) var(--s5) var(--s8);background:var(--bg);color:var(--ink);
-font-family:var(--serif);font-size:1.0625rem;line-height:1.58;-webkit-font-smoothing:antialiased}
-h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.012em;font-weight:600}
-p{margin:0}ul,ol{margin:0;padding:0;list-style:none}
-.wrap{max-width:62rem;margin-inline:auto}
-.lab,.ledger caption{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.12em;
-text-transform:uppercase}
-.h-sec{padding-bottom:var(--s2);border-bottom:1px solid var(--line2);color:var(--subtle)}
-
-/* MASTHEAD — a display figure is the hero. Nothing else on the page is this size. */
-.eyebrow{color:var(--rust)}
-.ttl{max-width:22ch;margin-top:var(--s3);font-size:clamp(1.75rem,4.2vw,2.625rem);
-letter-spacing:-.022em;line-height:1.13}
-.hero{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:var(--s3) var(--s5);
-align-items:center;margin-top:var(--s5);padding:var(--s5) 0;
-border-top:2px solid var(--ink);border-bottom:1px solid var(--line2)}
-.hero__fig{color:var(--rust);font-family:var(--mono);font-size:clamp(3.5rem,11vw,5.5rem);
-font-weight:700;letter-spacing:-.045em;line-height:.88;font-variant-numeric:tabular-nums}
-.hero__cap{max-width:34ch;color:var(--muted);font-size:1.0625rem;line-height:1.42}
-.hero__cap b{color:var(--ink);font-weight:600}
-.facts{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);margin:var(--s4) 0 0;
-color:var(--muted);font-size:.8125rem}
-.facts div{display:flex;gap:.4em}
-.facts dt{color:var(--subtle)}
-.facts dd{margin:0;color:var(--ink);font-weight:600}
-
-/* PULL QUOTE — second-largest thing on the page */
-.pq{margin:var(--s6) 0 0;padding-left:var(--s5);border-left:3px solid var(--rust)}
-.pq blockquote{margin:0;max-width:40ch;font-size:clamp(1.25rem,2.6vw,1.75rem);line-height:1.32;
-letter-spacing:-.014em}
-.pq figcaption{margin-top:var(--s3);color:var(--subtle);font-size:.875rem}
-.pq figcaption b{color:var(--ink);font-weight:600}
-
-/* LEDGER — the before/after spine */
-.ledger{width:100%;margin-top:var(--s4);border-collapse:collapse;text-align:left;font-size:.9375rem}
-.ledger caption{text-align:left;padding-bottom:var(--s2);margin-bottom:var(--s3);
-border-bottom:1px solid var(--line2);color:var(--subtle)}
-.ledger th{padding:0 var(--s4) var(--s2) 0;color:var(--subtle);font-family:var(--mono);
-font-size:.6875rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
-.ledger td{padding:var(--s3) var(--s4) var(--s3) 0;border-top:1px solid var(--line);
-vertical-align:baseline}
-.l-what{color:var(--ink);width:38%}
-.l-before{color:var(--muted);font-family:var(--mono);font-size:.875rem;
-font-variant-numeric:tabular-nums;white-space:nowrap}
-.l-after{color:var(--ink);font-family:var(--mono);font-size:1rem;font-weight:600;
-font-variant-numeric:tabular-nums;white-space:nowrap}
-.l-chg{width:26%;min-width:7rem}
-.l-chg b{display:block;color:var(--data);font-family:var(--mono);font-size:.8125rem;font-weight:600;
-font-variant-numeric:tabular-nums}
-.meter{display:grid;height:.375rem;margin-top:.35rem;border-radius:99px;background:var(--track);
-overflow:hidden}
-.meter i{border-radius:99px;background:var(--data)}
-.ledger tfoot td{border-top:1px solid var(--line2);color:var(--subtle);font-size:.8125rem;
-line-height:1.45}
-
-/* NARRATIVE */
-.sec{margin-top:var(--s6)}
-.body{max-width:64ch;margin-top:var(--s4)}
-.body p+p{margin-top:var(--s3)}
-.body h3{margin-top:var(--s5);font-size:1.0625rem}
-.body h3:first-child{margin-top:0}
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(18rem,100%),1fr));gap:var(--s6);
-margin-top:var(--s6)}
-.snag{padding:var(--s5);border:1px solid var(--rust-line);border-radius:.75rem;
-background:var(--rust-soft)}
-.snag h2{color:var(--rust)}
-.snag>p{margin-top:var(--s3);font-size:1em;line-height:1.5}
-.next{margin-top:var(--s4)}
-.next li{position:relative;padding-left:var(--s5);color:var(--muted);font-size:.9375rem;line-height:1.45}
-.next li+li{margin-top:var(--s2)}
-.next li::before{content:"";position:absolute;top:.58rem;left:var(--s2);width:.3125rem;height:.3125rem;
-border-radius:99px;background:var(--rust)}
-.next strong{color:var(--ink);font-weight:600}
-.rail{display:grid;align-content:start;gap:var(--s5)}
-.kicker{margin:0;padding:var(--s5);border:1px solid var(--line2);border-radius:.75rem;
-background:var(--paper)}
-.kicker blockquote{margin:0;max-width:52ch;font-size:1.1875rem;line-height:1.38}
-.kicker figcaption{margin-top:var(--s2);color:var(--subtle);font-size:.8125rem}
-.kicker figcaption b{color:var(--ink);font-weight:600}
-.colophon{margin-top:var(--s5);padding-top:var(--s3);border-top:1px solid var(--line);
-color:var(--subtle);font-size:.8125rem;line-height:1.5}
-
-@media (max-width:44rem){
-/* ledger -> card. caption MUST be re-declared: an anonymous table box collapses it. */
-.ledger,.ledger caption,.ledger tbody,.ledger tfoot,.ledger tr,.ledger td{display:block}
-.ledger thead{display:none}
-.ledger caption{margin-bottom:0}
-.ledger tbody tr{display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;
-gap:.1rem var(--s2);padding:var(--s3) 0;border-top:1px solid var(--line)}
-.ledger td{padding:0;border-top:0;width:auto}
-.l-what{grid-column:1/-1;grid-row:1}
-.l-before{grid-column:1;grid-row:2;margin-top:.2rem}
-.l-before::after{content:"→";margin-left:.45em;color:var(--line2)}
-.l-after{grid-column:2;grid-row:2;margin-top:.2rem}
-.l-chg{grid-column:3;grid-row:2;min-width:0;margin-top:.2rem;justify-self:end;text-align:right}
-.l-chg .meter{display:none}
-.ledger tfoot td{padding-top:var(--s3);border-top:1px solid var(--line2)}
-}
-@media (max-width:34rem){
-:root{--s5:1.125rem;--s6:1.5rem;--s7:1.625rem;--s8:2rem}
-body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.5}
-.ttl{line-height:1.1}
-.hero{grid-template-columns:minmax(0,1fr);gap:var(--s2);padding:var(--s4) 0}
-.hero__cap{font-size:1rem}
-.pq{padding-left:var(--s4)}
-.snag{padding:var(--s4)}
-.kicker{padding:var(--s4)}
-.kicker blockquote{font-size:1.0625rem}
-.two{gap:var(--s5)}
-.body p,.next li,.snag>p{line-height:1.45}
-}
+.exclusions{font:16px/1.6 var(--sans);border-top:1px solid var(--line);padding-top:14px;margin-top:14px;color:var(--muted)}
 </style>
 </head>
 <body>
-<div class="wrap">
+<main class="wrap">
 
-  <header>
-    <span class="lab eyebrow">Case study · Freight &amp; logistics</span>
+  <span class="lab eyebrow">Case study · Freight &amp; logistics</span>
+    <div class="spread"><header>
     <h1 class="ttl">Northwind Freight cut invoice disputes by 71% in one quarter</h1>
     <div class="hero">
       <p class="hero__fig">71%</p>
@@ -165,39 +32,40 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.5}
     </dl>
   </header>
 
-  <figure class="pq">
+  <section class="evidence" aria-labelledby="ld">
+    <table class="ledger" role="table">
+      <caption id="ld">Before and after · Q2 2025 baseline vs Q2 2026</caption>
+      <thead><tr role="row"><th scope="col" role="columnheader">Metric</th><th scope="col" role="columnheader">Before</th><th scope="col" role="columnheader">After</th>
+        <th scope="col" role="columnheader">Change</th></tr></thead>
+      <tbody>
+        <tr role="row"><td class="l-what" role="cell">Invoices disputed</td><td class="l-before" role="cell">19.4%</td>
+          <td class="l-after" role="cell">5.6%</td>
+          <td class="l-chg" role="cell"><b>−71%</b><span class="meter" aria-hidden="true"><i style="width:29%"></i></span></td></tr>
+        <tr role="row"><td class="l-what" role="cell">Clerk hours spent on disputes</td><td class="l-before" role="cell">854 / mo</td>
+          <td class="l-after" role="cell">179 / mo</td>
+          <td class="l-chg" role="cell"><b>−79%</b><span class="meter" aria-hidden="true"><i style="width:21%"></i></span></td></tr>
+        <tr role="row"><td class="l-what" role="cell">Days sales outstanding</td><td class="l-before" role="cell">61 days</td>
+          <td class="l-after" role="cell">43 days</td>
+          <td class="l-chg" role="cell"><b>−30%</b><span class="meter" aria-hidden="true"><i style="width:70%"></i></span></td></tr>
+        <tr role="row"><td class="l-what" role="cell">Time to resolve one dispute</td><td class="l-before" role="cell">22 min</td>
+          <td class="l-after" role="cell">16 min</td>
+          <td class="l-chg" role="cell"><b>−27%</b><span class="meter" aria-hidden="true"><i style="width:73%"></i></span></td></tr>
+        <tr role="row"><td class="l-what" role="cell">Unrecovered accessorial write-offs</td><td class="l-before" role="cell">$310K / yr</td>
+          <td class="l-after" role="cell">$88K / yr</td>
+          <td class="l-chg" role="cell"><b>−72%</b><span class="meter" aria-hidden="true"><i style="width:28%"></i></span></td></tr>
+      </tbody>
+      <tfoot><tr role="row"><td colspan="4" role="cell">Bars show the after figure as a share of the before figure —
+        shorter is better. Every row is pulled from Northwind's TMS and billing ledger, not from
+        our own telemetry.</td></tr></tfoot>
+    </table>
+  <p class="exclusions">Two branches still run a manual accessorial log and are excluded from the figures.</p>
+    </section>
+
+  </div><figure class="pq">
     <blockquote>“We never had a disputes problem. We had a problem where nobody could see the weight
       ticket and the invoice at the same time.”</blockquote>
     <figcaption><b>Priya Raman</b>, VP Finance, Northwind Freight</figcaption>
   </figure>
-
-  <section class="sec" aria-labelledby="ld">
-    <table class="ledger">
-      <caption id="ld">Before and after · Q2 2025 baseline vs Q2 2026</caption>
-      <thead><tr><th scope="col">Metric</th><th scope="col">Before</th><th scope="col">After</th>
-        <th scope="col">Change</th></tr></thead>
-      <tbody>
-        <tr><td class="l-what">Invoices disputed</td><td class="l-before">19.4%</td>
-          <td class="l-after">5.6%</td>
-          <td class="l-chg"><b>−71%</b><span class="meter"><i style="width:29%"></i></span></td></tr>
-        <tr><td class="l-what">Clerk hours spent on disputes</td><td class="l-before">854 / mo</td>
-          <td class="l-after">179 / mo</td>
-          <td class="l-chg"><b>−79%</b><span class="meter"><i style="width:21%"></i></span></td></tr>
-        <tr><td class="l-what">Days sales outstanding</td><td class="l-before">61 days</td>
-          <td class="l-after">43 days</td>
-          <td class="l-chg"><b>−30%</b><span class="meter"><i style="width:70%"></i></span></td></tr>
-        <tr><td class="l-what">Time to resolve one dispute</td><td class="l-before">22 min</td>
-          <td class="l-after">16 min</td>
-          <td class="l-chg"><b>−27%</b><span class="meter"><i style="width:73%"></i></span></td></tr>
-        <tr><td class="l-what">Unrecovered accessorial write-offs</td><td class="l-before">$310K / yr</td>
-          <td class="l-after">$88K / yr</td>
-          <td class="l-chg"><b>−72%</b><span class="meter"><i style="width:28%"></i></span></td></tr>
-      </tbody>
-      <tfoot><tr><td colspan="4">Bars show the after figure as a share of the before figure —
-        shorter is better. Every row is pulled from Northwind's TMS and billing ledger, not from
-        our own telemetry.</td></tr></tfoot>
-    </table>
-  </section>
 
   <div class="two">
     <section aria-labelledby="st">
@@ -228,8 +96,7 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.5}
       <p>The first fortnight was bad. The hold threshold shipped at $10, which held <b>31% of all
         invoices</b> and made the queue worse than the disputes had been. Raising it to $25 on
         23 March dropped holds to 7% and is the single change that made the numbers above possible.</p>
-      <p>Two branches still run a manual accessorial log and are excluded from the figures.</p>
-    </section>
+      </section>
     <figure class="kicker">
       <blockquote>“The first month I kept refreshing the dispute queue because I assumed it was
         broken.”</blockquote>
@@ -254,6 +121,6 @@ body{padding:var(--s5) var(--s4) var(--s8);font-size:.9375rem;line-height:1.5}
     2026; the comparison quarter is April–June 2026. Two of twenty-two branches are excluded.
     Published with permission.</footer>
 
-</div>
+</main>
 </body>
 </html>

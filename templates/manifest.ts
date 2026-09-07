@@ -4,21 +4,23 @@ export const starterTemplateManifest = [
         "slug": "daily-digest",
         "category": "meetings",
         "name": "Daily digest",
-        "description": "Many items condensed with an index rail: a jump index and today's themes on the left, per-item cards with a TL;DR on the right, and the long tail collapsed to one line each.",
+        "description": "A newspaper-style daily desk: a complete story index beside four open, ruled articles with relevance, summaries and evidence, followed by a native six-item archive.",
         "type": "html",
         "content_file": "daily-digest.html",
         "thumbnail": "/assets/template-thumbs/daily-digest.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1600
       },
       {
         "slug": "interview-notes",
         "category": "meetings",
         "name": "Interview notes",
-        "description": "One conversation, quotes-led. Who they are, what they said in a timestamped pull quote, and your reading kept visibly separate. For user research and hiring debriefs.",
+        "description": "A voice-and-interpretation spread: a broad serif quotation beside the participant identity, then paired verbatim evidence and analyst readings with timed quotes and owned next actions.",
         "type": "html",
         "content_file": "interview-notes.html",
         "thumbnail": "/assets/template-thumbs/interview-notes.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1440
       },
       {
         "slug": "meeting-recap",
@@ -94,7 +96,7 @@ export const starterTemplateManifest = [
         "slug": "case-study",
         "category": "research",
         "name": "Case Study",
-        "description": "A customer outcome told with the customer's own numbers: one display figure and what it is measured against, a before-and-after ledger with magnitude bars, the situation that caused it, an honest account of what the change cost, and quotes from the people who lived it.",
+        "description": "An evidence spread: the customer outcome opposite five before/after metric records, followed by serif customer voices, the operational story and an equally prominent honest-cost section.",
         "type": "html",
         "content_file": "case-study.html",
         "thumbnail": "/assets/template-thumbs/case-study.png",
@@ -179,11 +181,12 @@ export const starterTemplateManifest = [
         "slug": "launch-announcement",
         "category": "releases",
         "name": "Launch announcement",
-        "description": "The friendly end of the releases family: an inverted black masthead with the headline claim and the facts strip, one lead feature with a diagram, two supporting ones, beta numbers, three steps to try it, and a plain-spoken availability table.",
+        "description": "A dark launch poster pairs the headline and update links with an offline-flow diagram, then shifts to a light beta-evidence strip, open feature rows and a practical trial sequence.",
         "type": "html",
         "content_file": "launch-announcement.html",
         "thumbnail": "/assets/template-thumbs/launch-announcement.png",
-        "slots": []
+        "slots": [],
+        "thumbnail_viewport": 1440
       },
       {
         "slug": "migration-guide",

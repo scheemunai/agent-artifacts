@@ -146,3 +146,70 @@ for (const [slug, expectedRows, expectedCells, expectedReferences] of [
     ).toBe(true);
   });
 }
+
+test('Case Study keeps native column associations and complete value/meter records in its sandbox', async ({
+  page,
+}) => {
+  await page.goto(`${cloudOrigin}/templates/case-study`);
+  await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts');
+  await expect(page.locator('iframe')).toHaveAttribute(
+    'src',
+    `${sandboxOrigin}/templates/case-study/frame`
+  );
+  const frame = page.frameLocator('iframe');
+  const table = frame.getByRole('table');
+  await expect(table.getByRole('row')).toHaveCount(7);
+  await expect(table.getByRole('columnheader')).toHaveText(['Metric', 'Before', 'After', 'Change']);
+  await expect(table.locator('tfoot td')).toHaveAttribute('colspan', '4');
+  await expect(table.getByRole('cell')).toHaveCount(21);
+  const associations = () =>
+    table.evaluate((element) => {
+      if (!(element instanceof HTMLTableElement)) throw new Error('Missing native table');
+      return [...element.querySelectorAll('tbody td')].map((cell) => {
+        if (!(cell instanceof HTMLTableCellElement)) throw new Error('Missing native cell');
+        const header = element.tHead?.rows[0]?.cells[cell.cellIndex];
+        return Boolean(
+          header &&
+            header.tagName === 'TH' &&
+            header.scope === 'col' &&
+            header.textContent?.trim() &&
+            cell.parentElement?.closest('table') === element
+        );
+      });
+    });
+  expect(await associations()).toEqual(Array(20).fill(true));
+  // A missing scope must break this same relationship check; restore only the disposable DOM.
+  const first = table.locator('thead th').first();
+  await first.evaluate((element) => element.removeAttribute('scope'));
+  expect((await associations()).every(Boolean)).toBe(false);
+  await first.evaluate((element) => element.setAttribute('scope', 'col'));
+  expect((await associations()).every(Boolean)).toBe(true);
+  const rows = await table.locator('tbody tr').evaluateAll((elements) =>
+    elements.map((row) => ({
+      values: [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()),
+      meter: row.querySelector<HTMLElement>('.meter i')?.style.width,
+    }))
+  );
+  expect(rows).toEqual([
+    { values: ['Invoices disputed', '19.4%', '5.6%', '−71%'], meter: '29%' },
+    { values: ['Clerk hours spent on disputes', '854 / mo', '179 / mo', '−79%'], meter: '21%' },
+    { values: ['Days sales outstanding', '61 days', '43 days', '−30%'], meter: '70%' },
+    { values: ['Time to resolve one dispute', '22 min', '16 min', '−27%'], meter: '73%' },
+    {
+      values: ['Unrecovered accessorial write-offs', '$310K / yr', '$88K / yr', '−72%'],
+      meter: '28%',
+    },
+  ]);
+  for (const cell of await table.locator('tbody td').all()) {
+    const text = (await cell.textContent())?.trim() ?? '';
+    await expect(cell).toHaveAccessibleName(
+      new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+    );
+  }
+  const tree = await table.ariaSnapshot();
+  expect(tree).toContain('columnheader');
+  expect(tree).toContain('cell');
+  expect(await frame.locator('html').evaluate((element) => element.scrollWidth <= innerWidth)).toBe(
+    true
+  );
+});

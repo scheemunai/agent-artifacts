@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 const source = (slug: string) =>
   readFileSync(new URL(`../../templates/${slug}.html`, import.meta.url), 'utf8');
 
-// These four responsive tables intentionally retain explicit roles when CSS changes their display.
+// These five responsive tables intentionally retain explicit roles when CSS changes their display.
 // Bound the exception to the known table inventory, rather than silencing future unrelated roles.
 describe('responsive template table semantics', () => {
   it('uses four native scoped Postmortem row headers, not interactive roles on td', () => {
@@ -24,6 +24,7 @@ describe('responsive template table semantics', () => {
       1,
     ],
     ['postmortem', { table: 1, rowgroup: 2, row: 5, columnheader: 5, rowheader: 4, cell: 16 }, 1],
+    ['case-study', { table: 1, row: 7, columnheader: 4, cell: 21 }, 0],
     ['meeting-recap', { table: 1, rowgroup: 2, row: 7, columnheader: 4, cell: 24 }, 0],
     [
       'decision-brief',
@@ -50,4 +51,16 @@ describe('responsive template table semantics', () => {
       ); // The two operational examples also have one unchanged named SVG image.
     });
   }
+});
+
+// Launch is not a table: only its one named scrolling code region gets this separate exception.
+it('limits Launch to one element-local semantic compatibility comment', () => {
+  const html = source('launch-announcement');
+  expect(html.match(/biome-ignore[^\n]*/g)).toEqual([
+    'biome-ignore lint/a11y/useSemanticElements: The accepted named code region keeps its exact code component and native keyboard scrolling. -->',
+  ]);
+  expect(html).toContain(
+    'scrolling. -->\n          <code class="cmd" role="region" aria-label="Command"><b>fieldnote</b> sites pull --week current</code>'
+  );
+  expect(html.match(/role="region"/g)).toHaveLength(1);
 });
