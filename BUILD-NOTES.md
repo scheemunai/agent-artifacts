@@ -757,3 +757,53 @@ when the production privacy salt correctly rotates. This one test now fixes
 tomorrow/rotation coverage and all production analytics code remain unchanged.
 The unchanged-base failure and corrected fourteen-test pass are recorded in the
 review; no runtime clock, customer data, analytics behavior or financial change.
+
+## Accepted technical templates — Astra integration
+
+Adopts the parent's accepted Batch04 compositions: Changelog / Release Ledger, Migration guide /
+Conversion Workbench, and Runbook / Operator's Bench. gpt-6-astra is the sole integrator. The
+immutable acceptance bundle is
+`aa-template-revamp-1788686289312/batch-04-technical/bundle.json` (SHA-256
+`bd219cc78d9f71c984ed4c49a1744a8c55d25d0213c5a934ecf4e85227b7c886`).
+Integration evidence is published under
+`https://anacreon.ai/downloads/aa-template-revamp-1788686289312/integrated-batch04/`.
+
+Changelog and Migration guide are exact accepted files, including CSS and reader-facing titles.
+Runbook has precisely one authorized copy correction: “Only once the check below has been clean
+for five minutes.” becomes “Only once the verification check has been clean for five minutes.”
+The complete Verify block stays between the four-step ordered list and the list starting at5.
+Every other byte is unchanged. No sample commands are executed; no production instructions,
+credentials, customer records or financial behavior are modified by these inert examples.
+
+Canonical SHA-256:
+- Changelog: `77ff080efe080fc40813e626c7e8d217bd9d5e31d25b7fdeec8e539ef9bda124`
+- Migration guide: `f903fe929606e0538cd66a5ca3f316055a5b17edd808f3b6d2c66bc0431d8606`
+- Runbook: `64f9d4322e821044456be0a4ebd798339a9eb52d1ef16982759eba6995c965c7`
+  (accepted `bc6270a80eb633b43f5e48afb65800563f76b3c6e19364cde3906d50547633cc`
+  plus the one sentence above).
+
+All262 original text nodes,147 numeric occurrences and49 keyed record groups are compared with
+only that explicit expected sentence change. The11 original pre blocks and every command/output
+descendant remain exact; no SVG or meter exists in this batch. The existing Changelog patch-count
+mismatch and Migration guide documentation link are preserved, not “corrected” by inventing facts.
+Historical preview comments remain as acceptance provenance, not an indication that canonical files
+are unapproved. There is no document-height cap.
+
+The unchanged thumbnail generator uses1280px for Changelog and Migration guide, showing the version
+slab/breaking actions and actual code conversion pairs. Runbook uses1920px so its whole precondition
+rail, Stop panel and opening command/output records enter the crop; the explicit trade-off is smaller
+text and wider gutters at gallery scale. All output remains1000×625. Descriptions match these actual
+compositions. Other template sources, PNGs and catalog fields remain untouched.
+
+Native sections name locally scrolling code, with no explicit role/tabindex or lint suppression.
+Chromium keyboard tests exercise native region focus, ArrowRight panning, Enter disclosures, and
+footer reachability inside the real app sandbox. Cross-engine auto-focus and screen-reader
+navigation are not certified. Unit tests protect the Runbook order/copy and original pre descendants,
+including negative controls; e2e coverage runs through the existing seven viewport projects.
+
+Lint has zero errors.40warnings comprise30 unchanged outside this batch and10 in the accepted
+Runbook CSS, replacing7 legacy Runbook warnings: seven descending-specificity diagnostics plus
+three new important-style diagnostics. The three local note-margin overrides preserve the selected
+base/tablet/mobile caution spacing, including the existing inline Verify note margin. They are
+inventoried rather than suppressed or “fixed” by changing approved CSS. No global configuration,
+runtime, schema, billing, dependencies, sandbox or launch settings change.
