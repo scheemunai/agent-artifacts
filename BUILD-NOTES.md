@@ -919,8 +919,17 @@ to the self-hosted DataBull instance. The tag stays direct rather than adding an
 Cloudflare or first-party proxy to this origin.
 
 The required release gate exposed advisories that were already present in the unchanged lockfile,
-including one critical sanitizer advisory. The same change therefore advances Hono, Zod,
-isomorphic-dompurify and Nodemailer to their patched releases, and pins transitive `source-map-js`
-to its patched release. The full unit/integration suite is the compatibility check for those
-updates. A pre-existing unused `Date.now()` local in the template-seed test is also removed so
-Biome can reach that typecheck; it never influenced the test or production behavior.
+including one critical sanitizer advisory. The same change therefore advances Hono, Zod and
+Nodemailer to their patched releases, pins isomorphic-dompurify to the latest Node-22.14-compatible
+line while resolving patched DOMPurify, and pins transitive `source-map-js` to its patched release.
+The full unit/integration suite is the compatibility check for those updates. A pre-existing unused
+`Date.now()` local in the template-seed test is also removed so Biome can reach that typecheck; it
+never influenced the test or production behavior.
+
+The compatibility pin is operational, not aesthetic. The first production attempt used
+isomorphic-dompurify 4.6.0, whose jsdom 30 / undici 8 chain requires a newer Node 22 minor than the
+production host's 22.14.0 and crashed at import while binding its Zstandard decompressor. Production
+was restored to the previous commit and environment immediately. Version 3.19.0 keeps jsdom 29 /
+undici 7, whose declared floor includes Node 22.14, while still resolving DOMPurify 3.4.17 with the
+critical sanitizer fix. That exact production Node minor is why the wrapper is not simply set to
+the newest release.
