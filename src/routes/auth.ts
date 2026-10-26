@@ -6,6 +6,7 @@ import type { Logger } from '../logger.js';
 import { AuthError, type AuthService, normalizeEmail } from '../services/auth.js';
 import { hasConfiguredMail, type MailService } from '../services/mail.js';
 import { SESSION_COOKIE_NAME, type SessionService } from '../services/sessions.js';
+import { configuredDatabullSiteId } from '../ui/analytics.js';
 import {
   EmailChangeExpiredPage,
   EmailChangeInterstitialPage,
@@ -153,7 +154,13 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
     if (result.account) {
       setDashboardRequestPrincipal(context, result.account.id);
     }
-    return context.redirect('/dashboard', 303);
+    // The account id is the only identity DataBull receives. The query carries no identity; it is
+    // merely a one-render instruction, and the dashboard derives the id from the signed session.
+    const destination =
+      result.account && configuredDatabullSiteId(options.config)
+        ? '/dashboard?identify=1'
+        : '/dashboard';
+    return context.redirect(destination, 303);
   });
 
   app.get('/auth/change-email', (context) => {

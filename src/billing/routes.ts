@@ -1,7 +1,9 @@
 import type { Hono } from 'hono';
+import { parse as parseCookie } from 'hono/utils/cookie';
 import Stripe from 'stripe';
 import type { AppConfig, BillingConfig } from '../config.js';
 import type { Logger } from '../logger.js';
+import { configuredDatabullSiteId } from '../ui/analytics.js';
 import { type BillingInterval, isBillingInterval } from './plans.js';
 import type { BillingStore } from './store.js';
 import { handleStripeEvent } from './webhook.js';
@@ -146,6 +148,10 @@ export function registerBillingDashboardRoutes(
         customerId,
         priceId,
         interval,
+        attribution: checkoutAttribution(
+          parseCookie(context.req.header('cookie') ?? ''),
+          ctx.config
+        ),
       });
 
       if (!session.url) {
@@ -213,7 +219,13 @@ export function registerBillingDashboardRoutes(
  */
 async function createCheckoutSession(
   ctx: BillingDashboardContext,
-  input: { accountId: string; customerId: string; priceId: string; interval: BillingInterval }
+  input: {
+    accountId: string;
+    customerId: string;
+    priceId: string;
+    interval: BillingInterval;
+    attribution: Record<string, string>;
+  }
 ): Promise<Stripe.Checkout.Session> {
   const base: Stripe.Checkout.SessionCreateParams = {
     mode: 'subscription',
@@ -223,8 +235,9 @@ async function createCheckoutSession(
     // puts account_id on the SUBSCRIPTION, so every later customer.subscription.* event can be
     // resolved even if the customer lookup somehow fails.
     client_reference_id: input.accountId,
-    subscription_data: { metadata: { account_id: input.accountId } },
-    success_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=success`,
+    subscription_data: { metadata: { account_id: input.accountId, ...input.attribution } },
+    ...(Object.keys(input.attribution).length > 0 ? { metadata: input.attribution } : {}),
+    success_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=cancelled`,
     allow_promotion_codes: true,
 
@@ -267,6 +280,36 @@ async function createCheckoutSession(
       idempotencyKey: `${idempotencyKey}:no-tos`,
     });
   }
+}
+
+/**
+ * Best-effort browser-to-Stripe attribution. A cookie is untrusted request input, so values Stripe
+ * would reject are omitted rather than allowed to break checkout. Each field is independent: a
+ * visitor id without a session id is still useful, and a missing peer never becomes an empty value.
+ */
+function checkoutAttribution(
+  cookies: Record<string, string>,
+  config: AppConfig
+): Record<string, string> {
+  if (!configuredDatabullSiteId(config)) {
+    return {};
+  }
+
+  const metadata: Record<string, string> = {};
+  const visitorId = stripeMetadataValue(cookies.datacheap_visitor_id);
+  const sessionId = stripeMetadataValue(cookies.datacheap_session_id);
+  if (visitorId) {
+    metadata.databull_visitor_id = visitorId;
+  }
+  if (sessionId) {
+    metadata.databull_session_id = sessionId;
+  }
+  return metadata;
+}
+
+/** Stripe metadata values accept at most 500 characters; analytics must never block payment. */
+function stripeMetadataValue(value: string | undefined): string | null {
+  return value && value.length <= 500 ? value : null;
 }
 
 /** Stripe reports the missing Dashboard setting as a plain invalid_request, so match on the text. */

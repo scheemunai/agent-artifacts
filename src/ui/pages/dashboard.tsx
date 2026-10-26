@@ -138,6 +138,8 @@ export interface DashboardStatsPageProps {
   recent: DashboardArtifactListItem[];
   extensionNavItems?: DashboardNavItem[] | undefined;
   notice?: DashboardNotice | undefined;
+  /** A successful magic-link sign-in asks the loaded tracker to identify this internal id once. */
+  identifyUserId?: string | undefined;
 }
 
 /**
@@ -155,6 +157,7 @@ export function DashboardStatsPage({
   recent,
   extensionNavItems = [],
   notice,
+  identifyUserId,
 }: DashboardStatsPageProps) {
   const shape = RANGE_SHAPES[stats.range];
   const readerChange = percentChange(stats.totals.readers, stats.previous.readers);
@@ -167,6 +170,7 @@ export function DashboardStatsPage({
       active="overview"
       extensionNavItems={extensionNavItems}
       {...(notice ? { notice } : {})}
+      {...(identifyUserId ? { identifyUserId } : {})}
     >
       {/* The names the rest of the dashboard already uses. This header shipped as
           `aa-page-header` + `aa-kicker` — two classes no stylesheet defines — around a bare `<h1>`,
@@ -482,6 +486,8 @@ export interface DashboardArtifactPageProps {
   promoteError?: string | null | undefined;
   /** Null when the deployment has no analytics store — self-hosted before the migration runs. */
   stats?: ArtifactStats | null | undefined;
+  /** A server-confirmed publish result for the browser analytics bundle to report. */
+  databullGoal?: 'artifact_published' | undefined;
 }
 
 export function DashboardArtifactPage({
@@ -494,6 +500,7 @@ export function DashboardArtifactPage({
   notice,
   promoteError,
   stats,
+  databullGoal,
 }: DashboardArtifactPageProps) {
   return (
     <DashboardChrome
@@ -502,6 +509,7 @@ export function DashboardArtifactPage({
       active="artifacts"
       notice={notice}
       extensionNavItems={extensionNavItems}
+      {...(databullGoal ? { databullGoal } : {})}
     >
       <div class="aa-stack">
         <section class="aa-section">
@@ -941,13 +949,27 @@ function BillingCard({ billing }: { billing: DashboardBillingView }) {
                 (`src/app.ts`); without them this button is dead no matter where it posts. */}
             <form class="aa-stack" method="post" action="/dashboard/api/billing/checkout">
               <input type="hidden" name="interval" value="monthly" />
-              <Button variant="primary" type="submit">
+              <Button
+                variant="primary"
+                type="submit"
+                dataAttrs={{
+                  'data-dc-goal': 'initiate_checkout',
+                  'data-dc-goal-plan': 'monthly',
+                }}
+              >
                 Upgrade to Pro — {billing.priceMonthly}/month
               </Button>
             </form>
             <form class="aa-stack" method="post" action="/dashboard/api/billing/checkout">
               <input type="hidden" name="interval" value="annual" />
-              <Button variant="secondary" type="submit">
+              <Button
+                variant="secondary"
+                type="submit"
+                dataAttrs={{
+                  'data-dc-goal': 'initiate_checkout',
+                  'data-dc-goal-plan': 'annual',
+                }}
+              >
                 Upgrade yearly — {billing.priceAnnual}/year (2 months free)
               </Button>
             </form>
@@ -1168,6 +1190,8 @@ function DashboardChrome({
   active,
   notice,
   extensionNavItems = [],
+  identifyUserId,
+  databullGoal,
   children,
 }: {
   title: string;
@@ -1175,13 +1199,25 @@ function DashboardChrome({
   active: DashboardSection;
   notice?: DashboardNotice | undefined;
   extensionNavItems?: DashboardNavItem[] | undefined;
+  identifyUserId?: string | undefined;
+  databullGoal?: 'artifact_published' | undefined;
   children: Child;
 }) {
   return (
     <Layout
       title={`${title} · Agent Artifacts`}
       description="Manage Agent Artifacts published by your bots."
+      scripts={['dashboard.js']}
     >
+      {/* No executable data lives inline. The hashed dashboard bundle reads this outcome marker
+          only after the deferred tracker has loaded; an analytics-off render has no marker. */}
+      {identifyUserId || databullGoal ? (
+        <div
+          hidden
+          {...(identifyUserId ? { 'data-dc-identify-user': identifyUserId } : {})}
+          {...(databullGoal ? { 'data-dc-page-goal': databullGoal } : {})}
+        ></div>
+      ) : null}
       {/* Identity belongs to the chrome, not to `main`. It sat in a ~100px band between the app
           header and the page's own header on every screen, which is V2-N7; it is now handed to
           NavShell, which mounts it in the header and in the drawer footer and guarantees exactly
@@ -2007,7 +2043,7 @@ function NewBotDisclosure({
               placeholder="Research assistant"
               optional
             />
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" dataAttrs={{ 'data-dc-goal': 'bot_created' }}>
               Create bot
             </Button>
           </form>

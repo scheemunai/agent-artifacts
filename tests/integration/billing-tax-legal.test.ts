@@ -160,7 +160,10 @@ describe('checkout session tax parameters', () => {
   });
 
   /** Captures what the route asks Stripe for, without any network. */
-  function appWith(createImpl: (params: unknown) => Promise<unknown>) {
+  function appWith(
+    createImpl: (params: unknown) => Promise<unknown>,
+    config: Pick<AppConfig, 'baseUrl' | 'databullSiteId'> = { baseUrl: 'https://app.test' }
+  ) {
     const calls: unknown[] = [];
     const stripe = {
       checkout: {
@@ -177,7 +180,7 @@ describe('checkout session tax parameters', () => {
 
     const app = new Hono();
     registerBillingDashboardRoutes(app as never, {
-      config: { baseUrl: 'https://app.test' } as AppConfig,
+      config: config as AppConfig,
       billing: billingConfig,
       store,
       stripe,
@@ -187,10 +190,14 @@ describe('checkout session tax parameters', () => {
     return { app, calls };
   }
 
-  async function post(app: Hono, interval = 'monthly') {
+  async function post(app: Hono, interval = 'monthly', cookie?: string) {
+    const headers = new Headers({ 'content-type': 'application/x-www-form-urlencoded' });
+    if (cookie) {
+      headers.set('cookie', cookie);
+    }
     return app.request('/dashboard/api/billing/checkout', {
       method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      headers,
       body: new URLSearchParams({ interval }),
     });
   }
@@ -215,6 +222,74 @@ describe('checkout session tax parameters', () => {
     expect((calls[0] as Record<string, unknown>).consent_collection).toEqual({
       terms_of_service: 'required',
     });
+  });
+
+  it('keeps the billing result and Checkout Session id in one valid success URL', async () => {
+    const { app, calls } = appWith(async () => ({ url: 'https://checkout.stripe.com/x' }));
+    await post(app);
+
+    expect((calls[0] as Record<string, unknown>).success_url).toBe(
+      'https://app.test/dashboard/settings?billing=success&session_id={CHECKOUT_SESSION_ID}'
+    );
+  });
+
+  it('copies DataBull visitor and session cookies to the session and subscription', async () => {
+    const { app, calls } = appWith(async () => ({ url: 'https://checkout.stripe.com/x' }), {
+      baseUrl: 'https://app.test',
+      databullSiteId: 'dc_TESTonlyIdNotReal000',
+    });
+    await post(
+      app,
+      'monthly',
+      'datacheap_visitor_id=visitor_test_123; datacheap_session_id=session_test_456'
+    );
+
+    const params = calls[0] as {
+      metadata?: Record<string, string>;
+      subscription_data: { metadata: Record<string, string> };
+    };
+    const attribution = {
+      databull_visitor_id: 'visitor_test_123',
+      databull_session_id: 'session_test_456',
+    };
+    expect(params.metadata).toEqual(attribution);
+    expect(params.subscription_data.metadata).toEqual({ account_id: ACCOUNT_ID, ...attribution });
+  });
+
+  it('omits each missing DataBull cookie instead of sending an empty Stripe field', async () => {
+    const { app, calls } = appWith(async () => ({ url: 'https://checkout.stripe.com/x' }), {
+      baseUrl: 'https://app.test',
+      databullSiteId: 'dc_TESTonlyIdNotReal000',
+    });
+    await post(app, 'monthly', 'datacheap_visitor_id=visitor_only');
+
+    const params = calls[0] as {
+      metadata?: Record<string, string>;
+      subscription_data: { metadata: Record<string, string> };
+    };
+    expect(params.metadata).toEqual({ databull_visitor_id: 'visitor_only' });
+    expect(params.subscription_data.metadata).toEqual({
+      account_id: ACCOUNT_ID,
+      databull_visitor_id: 'visitor_only',
+    });
+    expect(params.metadata?.databull_session_id).toBeUndefined();
+    expect(params.subscription_data.metadata.databull_session_id).toBeUndefined();
+  });
+
+  it('keeps checkout attribution quiet when analytics is off, even if cookies are present', async () => {
+    const { app, calls } = appWith(async () => ({ url: 'https://checkout.stripe.com/x' }));
+    await post(
+      app,
+      'monthly',
+      'datacheap_visitor_id=visitor_ignored; datacheap_session_id=session_ignored'
+    );
+
+    const params = calls[0] as {
+      metadata?: Record<string, string>;
+      subscription_data: { metadata: Record<string, string> };
+    };
+    expect(params.metadata).toBeUndefined();
+    expect(params.subscription_data.metadata).toEqual({ account_id: ACCOUNT_ID });
   });
 
   /**
