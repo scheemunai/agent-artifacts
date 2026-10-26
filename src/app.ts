@@ -281,7 +281,8 @@ const STRIPE_FORM_TARGETS = ['https://checkout.stripe.com', 'https://billing.str
  * event, which looks like working analytics and reports nothing.
  *
  * The FRAME policies in `src/lib/frame-policy.ts` are deliberately untouched. Sandboxed artifact
- * content must not be able to reach datafa.st, and nothing of ours runs in there to want to.
+ * content must not be able to reach the DataBull origin, and nothing of ours runs in there to want
+ * to.
  *
  * `form-action` NAMES STRIPE BECAUSE THE DIRECTIVE IS CHECKED ON EVERY HOP OF A REDIRECT CHAIN,
  * NOT ONLY ON THE URL THE FORM POSTS TO. The billing forms post to `/dashboard/api/billing/*` —

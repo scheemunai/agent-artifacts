@@ -29,8 +29,8 @@ export interface AnalyticsTag {
 }
 
 /** The one third-party origin this feature introduces. Named once so the CSP and the tag agree. */
-export const DATAFAST_ORIGIN = 'https://datafa.st';
-export const DATAFAST_SCRIPT_SRC = `${DATAFAST_ORIGIN}/js/script.js`;
+export const DATABULL_ORIGIN = 'https://databull.subscriptions-972.workers.dev';
+export const DATABULL_SCRIPT_SRC = `${DATABULL_ORIGIN}/js/script.js`;
 
 let current: AnalyticsTag | null = null;
 
@@ -42,14 +42,14 @@ let current: AnalyticsTag | null = null;
  * reports under a host it is not served from is reporting a fiction, and there is no reason to
  * make that possible. An unset or empty site id turns the whole feature off.
  */
-export function configureAnalytics(config: { datafastSiteId?: string; baseUrl: string }): void {
-  const siteId = config.datafastSiteId?.trim();
+export function configureAnalytics(config: { databullSiteId?: string; baseUrl: string }): void {
+  const siteId = config.databullSiteId?.trim();
   if (!siteId) {
     current = null;
     return;
   }
 
-  current = { siteId, domain: new URL(config.baseUrl).host, origin: DATAFAST_ORIGIN };
+  current = { siteId, domain: new URL(config.baseUrl).host, origin: DATABULL_ORIGIN };
 }
 
 /** The tag to render, or `null` when this deployment has analytics off. */

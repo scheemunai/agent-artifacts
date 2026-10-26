@@ -239,7 +239,6 @@ describe('starter template manifest seeding', () => {
     const logger = pino({ enabled: false });
 
     try {
-      const now = Date.now();
       // The shape a production database is actually in: `changelog` and `report` as they were
       // BEFORE the flip — markdown, with the slots they used to take.
       const before = [

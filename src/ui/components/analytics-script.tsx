@@ -1,4 +1,4 @@
-import { analyticsTag, DATAFAST_SCRIPT_SRC } from '../analytics.js';
+import { analyticsTag, DATABULL_SCRIPT_SRC } from '../analytics.js';
 
 /**
  * The analytics tag, or nothing at all.
@@ -18,7 +18,7 @@ export function AnalyticsScript() {
       defer
       data-website-id={tag.siteId}
       data-domain={tag.domain}
-      src={DATAFAST_SCRIPT_SRC}
+      src={DATABULL_SCRIPT_SRC}
     ></script>
   );
 }

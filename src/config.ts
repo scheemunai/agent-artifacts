@@ -118,7 +118,7 @@ const rawEnvSchema = z.object({
   /**
    * Master switch for paid billing. OFF by default, deliberately: a self-hoster and a developer's
    * laptop must never render an upgrade button, never create a Stripe customer, and never mount the
-   * webhook route. Same philosophy as `AA_DATAFAST_SITE_ID` — a hosted-only concern stays inert
+   * webhook route. Same philosophy as `AA_DATABULL_SITE_ID` — a hosted-only concern stays inert
    * unless the operator turns it on.
    *
    * Turning it on requires the full Stripe key set; see `validateModeRequirements`. Half-configured
@@ -172,14 +172,14 @@ const rawEnvSchema = z.object({
   AA_ARTIFACT_PURGE_DAYS: integerFromEnv(30, 1),
   AA_GITHUB_URL: z.preprocess(emptyStringToUndefined, z.url().optional()),
   /**
-   * DataFast site id, for example `dfid_...`. PUBLIC — it is rendered into every visitor's HTML
+   * DataBull website id, for example `dc_...`. PUBLIC — it is rendered into every visitor's HTML
    * and identifies the site, not the account; it is not a credential.
    *
    * Unset or empty means analytics is OFF, which is what keeps development and self-hosting quiet
    * by default: nobody's local instance should be reporting to our dashboard, and no self-hoster
    * should have a third-party script appear in their pages because we shipped ours.
    */
-  AA_DATAFAST_SITE_ID: optionalString(),
+  AA_DATABULL_SITE_ID: optionalString(),
   /**
    * Share path of the artifact the marketing homepage links to and polls, for example
    * `/a/KbLJ0zvyiGadXLHUs2E5Rb`. An artifact id is a row in one database, so the default only
@@ -273,8 +273,8 @@ export interface AppConfig {
   /** Share path of this deployment's hero artifact. Empty means it has none. */
   heroArtifactPath: string;
   githubUrl?: string;
-  /** Public DataFast site id. Absent means no analytics script and no analytics host in the CSP. */
-  datafastSiteId?: string;
+  /** Public DataBull website id. Absent means no analytics script and no analytics host in the CSP. */
+  databullSiteId?: string;
   abuseEmail: string;
   securityEmail: string;
   logLevel: RawEnv['LOG_LEVEL'];
@@ -360,7 +360,7 @@ export function loadConfig(
     artifactPurgeDays: raw.AA_ARTIFACT_PURGE_DAYS,
     heroArtifactPath: raw.AA_HERO_ARTIFACT_PATH.trim(),
     ...(raw.AA_GITHUB_URL ? { githubUrl: raw.AA_GITHUB_URL } : {}),
-    ...(raw.AA_DATAFAST_SITE_ID ? { datafastSiteId: raw.AA_DATAFAST_SITE_ID } : {}),
+    ...(raw.AA_DATABULL_SITE_ID ? { databullSiteId: raw.AA_DATABULL_SITE_ID } : {}),
     abuseEmail: raw.AA_ABUSE_EMAIL,
     securityEmail: raw.AA_SECURITY_EMAIL,
     logLevel: raw.LOG_LEVEL,
