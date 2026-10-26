@@ -72,6 +72,9 @@ describe('dashboard billing card', () => {
     expect(html).not.toContain('checkout.stripe.com');
     expect(html).toContain('name="interval" value="monthly"');
     expect(html).toContain('name="interval" value="annual"');
+    expect(html).toContain('data-dc-goal="initiate_checkout" data-dc-goal-plan="monthly"');
+    expect(html).toContain('data-dc-goal="initiate_checkout" data-dc-goal-plan="annual"');
+    expect(html.match(/data-dc-goal="initiate_checkout"/g)).toHaveLength(2);
   });
 
   it('hides the portal button until the account actually has a Stripe customer', () => {

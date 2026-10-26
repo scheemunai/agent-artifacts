@@ -44,6 +44,7 @@ import {
   SessionService,
 } from '../services/sessions.js';
 import { promoteArtifactToTemplate } from '../services/templates.js';
+import { configuredDatabullSiteId } from '../ui/analytics.js';
 import {
   DashboardArtifactPage,
   DashboardArtifactsPage,
@@ -500,6 +501,9 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         recent: artifacts.slice(0, 3),
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
+        ...(configuredDatabullSiteId(services.config) && routeContext.req.query('identify') === '1'
+          ? { identifyUserId: session.account.id }
+          : {}),
       })
     );
   });
@@ -590,6 +594,10 @@ export function registerHumanRoutes(app: HumanApp, context: HumanRoutesContext):
         extensionNavItems: dashboardNavItems(services, session.account),
         notice: noticeFromQuery(routeContext.req.query('notice')),
         promoteError: routeContext.req.query('promote_error') ?? null,
+        ...(configuredDatabullSiteId(services.config) &&
+        routeContext.req.query('notice') === 'share_created'
+          ? { databullGoal: 'artifact_published' as const }
+          : {}),
       })
     );
   });

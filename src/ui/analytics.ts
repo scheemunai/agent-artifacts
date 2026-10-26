@@ -43,13 +43,24 @@ let current: AnalyticsTag | null = null;
  * make that possible. An unset or empty site id turns the whole feature off.
  */
 export function configureAnalytics(config: { databullSiteId?: string; baseUrl: string }): void {
-  const siteId = config.databullSiteId?.trim();
+  const siteId = configuredDatabullSiteId(config);
   if (!siteId) {
     current = null;
     return;
   }
 
   current = { siteId, domain: new URL(config.baseUrl).host, origin: DATABULL_ORIGIN };
+}
+
+/**
+ * The flag's one interpretation, shared by the tag, browser goals and checkout attribution.
+ *
+ * Those three consumers must turn on and off together. Repeating a truthiness check beside each
+ * one would let whitespace enable Stripe metadata while rendering no tracker, which is a partial
+ * analytics deployment that looks configured and cannot record anything.
+ */
+export function configuredDatabullSiteId(config: { databullSiteId?: string }): string | null {
+  return config.databullSiteId?.trim() || null;
 }
 
 /** The tag to render, or `null` when this deployment has analytics off. */
