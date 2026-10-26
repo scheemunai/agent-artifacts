@@ -3,7 +3,7 @@
  *
  * Counting moved to the page render, which is the only way a reader with JavaScript disabled can be
  * seen at all. That move costs us the strongest filter the JS-based analytics products get for
- * free: a crawler does not run scripts, so it never announces itself to Plausible or DataFast. We
+ * free: a crawler does not run scripts, so it never announces itself to Plausible or DataBull. We
  * see every one of them now, so this table has to do that work explicitly.
  *
  * It is DATA, deliberately. Adding a crawler is a new row, not new logic, and every row is a test

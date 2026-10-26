@@ -907,3 +907,20 @@ Scoped tests include genuine before-fail component/cache controls; no passive mo
 The five-run cold-phone lab uses real loopback HTTP at configured1.6Mbps/150ms latency, not request substitution. Performance is lab evidence, not a physical-phone/deployed-CDN guarantee. Reserved player activation geometry/CLS is separate from initial font swaps in the unchanged page shell. Only Chromium is verified; no perceptual audio audition or Safari/Firefox certification is claimed. Parent must review the exact PR before the existing guarded deployment; homepage remains live and untouched until that separately authorized code rollout.
 
 Pre-review local receipts:1,153 unit/integration tests and338 E2E tests pass, with12 existing skips in each suite and41 exact baseline warning locations/rules. Thirteen clean responsive/boundary cells show zero passive movie requests, one poster/one selected movie and zero player-activation CLS. Five cold-phone full-length trials measured click→first presented frame705.2/697.8/692.4/696.2/696.3ms (median696.3ms, worst705.2ms), no post-first-frame stalls; the first run dropped8 of2,760 frames on the shared lab host, others0. These timings precede only a server-side VTT MIME correction; movie/player/CSS/markup bytes remained equal. Final actual HTTP/native-cue tests verify that correction separately. Eight hero/header/legal/catalog before/after PNG pairs are byte-identical at1440/390 with the same synthetic visible base URL. A separate desktop full-duration/native-volume/mute/fullscreen-entry/exit check passed. No claim of a live deployment is made here.
+
+## DataBull analytics switch
+
+`AA_DATABULL_SITE_ID` replaces the previous <code>AA_DATA&#70;AST_SITE_ID</code> switch. The rename is
+deliberately clean rather than aliased: analytics remains optional and off by default, and one
+deployment must not have two environment variables competing to decide which public website id it
+reports. The one analytics module, both app-origin document shells, the app-origin CSP, and the
+sandbox-origin exclusion are unchanged in shape; only the configured tracker origin and names move
+to the self-hosted DataBull instance. The tag stays direct rather than adding an inapplicable
+Cloudflare or first-party proxy to this origin.
+
+The required release gate exposed advisories that were already present in the unchanged lockfile,
+including one critical sanitizer advisory. The same change therefore advances Hono, Zod,
+isomorphic-dompurify and Nodemailer to their patched releases, and pins transitive `source-map-js`
+to its patched release. The full unit/integration suite is the compatibility check for those
+updates. A pre-existing unused `Date.now()` local in the template-seed test is also removed so
+Biome can reach that typecheck; it never influenced the test or production behavior.

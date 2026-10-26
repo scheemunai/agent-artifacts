@@ -2,13 +2,13 @@ import { renderToString } from 'hono/jsx/dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appOriginCsp } from '../../src/app.js';
 import type { ViewerContentResult, ViewerPageModel } from '../../src/services/viewer.js';
-import { configureAnalytics, DATAFAST_ORIGIN, resetAnalytics } from '../../src/ui/analytics.js';
+import { configureAnalytics, DATABULL_ORIGIN, resetAnalytics } from '../../src/ui/analytics.js';
 import { AnalyticsScript } from '../../src/ui/components/analytics-script.js';
 import { Layout } from '../../src/ui/components/layout.js';
 import { FrameDocument, FrameTerminalDocument } from '../../src/ui/pages/frame-document.js';
 import { ViewerPage } from '../../src/ui/pages/viewer.js';
 
-const SITE_ID = 'dfid_TESTonlyIdNotReal000';
+const SITE_ID = 'dc_TESTonlyIdNotReal000';
 
 afterEach(() => {
   resetAnalytics();
@@ -51,15 +51,19 @@ const viewerModel: ViewerPageModel = {
 };
 
 const enable = () =>
-  configureAnalytics({ datafastSiteId: SITE_ID, baseUrl: 'https://agentartifact.ai' });
+  configureAnalytics({ databullSiteId: SITE_ID, baseUrl: 'https://agentartifact.ai' });
 
 describe('the analytics tag is env-gated', () => {
   it('renders nothing at all when no site id is configured', () => {
     // The default state of a developer's laptop and of every self-host: no third-party script
     // appears in pages because we happened to ship one.
     expect(renderToString(AnalyticsScript()).trim()).toBe('');
-    expect(renderToString(Layout({ title: 'Off', children: 'x' }))).not.toContain('datafa.st');
-    expect(renderToString(ViewerPage({ model: viewerModel }))).not.toContain('datafa.st');
+    expect(renderToString(Layout({ title: 'Off', children: 'x' }))).not.toContain(
+      'databull.subscriptions-972.workers.dev'
+    );
+    expect(renderToString(ViewerPage({ model: viewerModel }))).not.toContain(
+      'databull.subscriptions-972.workers.dev'
+    );
   });
 
   it('renders the tag with the id and the derived domain when one is set', () => {
@@ -68,23 +72,23 @@ describe('the analytics tag is env-gated', () => {
 
     expect(tag).toContain('defer');
     expect(tag).toContain(`data-website-id="${SITE_ID}"`);
-    expect(tag).toContain('src="https://datafa.st/js/script.js"');
+    expect(tag).toContain('src="https://databull.subscriptions-972.workers.dev/js/script.js"');
     // Derived from baseUrl, never hard-coded: a deployment that reports under a host it is not
     // served from is reporting a fiction.
     expect(tag).toContain('data-domain="agentartifact.ai"');
   });
 
   it('derives the domain per deployment rather than naming one', () => {
-    configureAnalytics({ datafastSiteId: SITE_ID, baseUrl: 'https://staging.example.test:8443' });
+    configureAnalytics({ databullSiteId: SITE_ID, baseUrl: 'https://staging.example.test:8443' });
 
     expect(renderToString(AnalyticsScript())).toContain('data-domain="staging.example.test:8443"');
   });
 
   it('treats an empty or blank id as off, not as a value', () => {
-    configureAnalytics({ datafastSiteId: '', baseUrl: 'https://agentartifact.ai' });
+    configureAnalytics({ databullSiteId: '', baseUrl: 'https://agentartifact.ai' });
     expect(renderToString(AnalyticsScript()).trim()).toBe('');
 
-    configureAnalytics({ datafastSiteId: '   ', baseUrl: 'https://agentartifact.ai' });
+    configureAnalytics({ databullSiteId: '   ', baseUrl: 'https://agentartifact.ai' });
     expect(renderToString(AnalyticsScript()).trim()).toBe('');
   });
 });
@@ -99,19 +103,23 @@ describe('both app-origin document shells carry the tag', () => {
     enable();
     const html = renderToString(Layout({ title: 'Dashboard', children: 'x' }));
 
-    expect(html).toContain('src="https://datafa.st/js/script.js"');
+    expect(html).toContain('src="https://databull.subscriptions-972.workers.dev/js/script.js"');
     expect(html).toContain(`data-website-id="${SITE_ID}"`);
     // In the head, so it is discovered before the body is parsed.
-    expect(html.indexOf('datafa.st')).toBeLessThan(html.indexOf('<body'));
+    expect(html.indexOf('databull.subscriptions-972.workers.dev')).toBeLessThan(
+      html.indexOf('<body')
+    );
   });
 
   it('mounts it in ViewerDocument, which builds its own head', () => {
     enable();
     const html = renderToString(ViewerPage({ model: viewerModel }));
 
-    expect(html).toContain('src="https://datafa.st/js/script.js"');
+    expect(html).toContain('src="https://databull.subscriptions-972.workers.dev/js/script.js"');
     expect(html).toContain(`data-website-id="${SITE_ID}"`);
-    expect(html.indexOf('datafa.st')).toBeLessThan(html.indexOf('<body'));
+    expect(html.indexOf('databull.subscriptions-972.workers.dev')).toBeLessThan(
+      html.indexOf('<body')
+    );
   });
 
   it('renders exactly one tag per document', () => {
@@ -121,7 +129,9 @@ describe('both app-origin document shells carry the tag', () => {
       renderToString(Layout({ title: 'Dashboard', children: 'x' })),
       renderToString(ViewerPage({ model: viewerModel })),
     ]) {
-      expect(html.match(/datafa\.st\/js\/script\.js/g) ?? []).toHaveLength(1);
+      expect(
+        html.match(/databull\.subscriptions-972\.workers\.dev\/js\/script\.js/g) ?? []
+      ).toHaveLength(1);
     }
   });
 });
@@ -138,9 +148,9 @@ describe('the sandbox origin never carries the tag', () => {
     const frame = FrameDocument({ content: '<p>Artifact.</p>', title: 'Artifact' });
     const terminal = FrameTerminalDocument({ status: 404, homeUrl: 'https://agentartifact.ai/' });
 
-    expect(frame).not.toContain('datafa.st');
+    expect(frame).not.toContain('databull.subscriptions-972.workers.dev');
     expect(frame).not.toContain(SITE_ID);
-    expect(terminal).not.toContain('datafa.st');
+    expect(terminal).not.toContain('databull.subscriptions-972.workers.dev');
     expect(terminal).not.toContain(SITE_ID);
   });
 });
@@ -151,21 +161,21 @@ describe('the app-origin CSP follows the switch', () => {
 
     expect(csp).toContain("script-src 'self'");
     expect(csp).toContain("connect-src 'self'");
-    expect(csp).not.toContain('datafa.st');
+    expect(csp).not.toContain('databull.subscriptions-972.workers.dev');
   });
 
   it('allows the analytics origin in script-src AND connect-src when on', () => {
-    const csp = appOriginCsp("'self'", DATAFAST_ORIGIN);
+    const csp = appOriginCsp("'self'", DATABULL_ORIGIN);
 
     // Loading the script is only half of it: without connect-src the page fetches the script and
     // then silently drops every event, which looks like working analytics and reports nothing.
-    expect(csp).toContain(`script-src 'self' ${DATAFAST_ORIGIN}`);
-    expect(csp).toContain(`connect-src 'self' ${DATAFAST_ORIGIN}`);
+    expect(csp).toContain(`script-src 'self' ${DATABULL_ORIGIN}`);
+    expect(csp).toContain(`connect-src 'self' ${DATABULL_ORIGIN}`);
   });
 
   it('widens nothing else', () => {
     const off = appOriginCsp("'self'", undefined).split('; ');
-    const on = appOriginCsp("'self'", DATAFAST_ORIGIN).split('; ');
+    const on = appOriginCsp("'self'", DATABULL_ORIGIN).split('; ');
 
     expect(on).toHaveLength(off.length);
     const changed = on.filter((directive, index) => directive !== off[index]);

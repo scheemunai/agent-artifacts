@@ -108,13 +108,17 @@ Artifacts are **private by default**: created with a stable URL only their signe
 
 ### Analytics
 
-`AA_DATAFAST_SITE_ID` turns DataFast on. Unset or empty is off, and off is the default everywhere: no script tag is rendered, and the app-origin CSP keeps `script-src 'self'` / `connect-src 'self'` with no third-party host in it. Setting it does two things together — renders the tag into every app-origin page, and adds `https://datafa.st` to `script-src` **and** `connect-src`. Both directives are needed: allowing only the script produces a page that loads it and then silently drops every event.
+`AA_DATABULL_SITE_ID` turns DataBull on. Unset or empty is off, and off is the default everywhere: no script tag is rendered, and the app-origin CSP keeps `script-src 'self'` / `connect-src 'self'` with no third-party host in it. Setting it does two things together — renders the direct tag into every app-origin page, and adds `https://databull.subscriptions-972.workers.dev` to `script-src` **and** `connect-src`. Both directives are needed: allowing only the script produces a page that loads it and then silently drops every event.
 
 ```env
-AA_DATAFAST_SITE_ID=dfid_yourSiteId
+AA_DATABULL_SITE_ID=dc_yourWebsiteId
 ```
 
 The reported `data-domain` is derived from `BASE_URL`, so a deployment always reports under the host it is actually served from.
+
+Upgrading from the previous tracker? Rename <code>AA_DATA&#70;AST_SITE_ID</code> to
+`AA_DATABULL_SITE_ID`; the old name is no longer read. This is intentionally a clean switch rather
+than a fallback that could leave two different analytics settings in effect.
 
 **It is never applied to the sandbox origin.** Artifact frames (`SANDBOX_ORIGIN`) carry other people's HTML and load nothing of ours; their CSP is unchanged.
 
@@ -687,7 +691,7 @@ Do not open signups until every required item is true.
 - [ ] `SESSION_SECRET` generated, stored in the secret manager, and present in production env.
 - [ ] `AA_CLOUD_MODULE` set if the hosted/cloud extension is required.
 - [ ] `AA_ABUSE_EMAIL` and `AA_SECURITY_EMAIL` point to monitored inboxes.
-- [ ] `AA_DATAFAST_SITE_ID` set on the hosted product only. The id is public (it ships in every page), but leave it unset everywhere else so staging and self-hosts report nothing.
+- [ ] `AA_DATABULL_SITE_ID` set on the hosted product only. The id is public (it ships in every page), but leave it unset everywhere else so staging and self-hosts report nothing.
 - [ ] Rate limits are enabled; `AA_RATE_LIMITS_DISABLED=false`.
 - [ ] No secrets are present in the repo, Docker image, screenshots, or public logs.
 
