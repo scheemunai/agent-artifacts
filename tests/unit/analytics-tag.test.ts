@@ -111,6 +111,17 @@ describe('both app-origin document shells carry the tag', () => {
     );
   });
 
+  it('honors an explicit page-level veto without disabling the rest of Layout', () => {
+    enable();
+    const html = renderToString(
+      Layout({ title: 'Credential in URL', children: 'x', suppressAnalytics: true })
+    );
+
+    expect(html).not.toContain('databull.subscriptions-972.workers.dev');
+    expect(html).not.toContain(SITE_ID);
+    expect(html).toContain('<body');
+  });
+
   it('mounts it in ViewerDocument, which builds its own head', () => {
     enable();
     const html = renderToString(ViewerPage({ model: viewerModel }));

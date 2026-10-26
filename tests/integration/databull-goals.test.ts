@@ -43,6 +43,10 @@ describe('DataBull outcomes rendered by successful dashboard flows', () => {
       headers: { Cookie: cookieFrom(verified) },
     });
     const html = await dashboard.text();
+    // Suppressing analytics on the token-bearing interstitial must not suppress the post-login
+    // landing page where this one-load identify marker is consumed.
+    expect(html).toContain('databull.subscriptions-972.workers.dev/js/script.js');
+    expect(html).toContain(`data-website-id="${SITE_ID}"`);
     expect(html).toContain(`data-dc-identify-user="${account.id}"`);
     expect(html).not.toContain('data-dc-identify-email');
     expect(html).not.toContain('data-dc-identify-name');
