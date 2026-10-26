@@ -237,6 +237,9 @@ async function createCheckoutSession(
     client_reference_id: input.accountId,
     subscription_data: { metadata: { account_id: input.accountId, ...input.attribution } },
     ...(Object.keys(input.attribution).length > 0 ? { metadata: input.attribution } : {}),
+    // The Checkout Session id deliberately remains in this tracked return URL. It is not a
+    // credential without our Stripe secret key, and DataBull uses it as the documented fallback
+    // for linking a sale when the cookie attribution path is unavailable.
     success_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${ctx.config.baseUrl}${BILLING_RETURN_PATH}?billing=cancelled`,
     allow_promotion_codes: true,

@@ -16,9 +16,17 @@ export interface LayoutProps {
   description?: string;
   /** Client bundles by manifest key; the page never handles a URL. */
   scripts?: AssetKey[];
+  /** Explicitly withhold analytics when the document URL itself carries a credential. */
+  suppressAnalytics?: boolean;
 }
 
-export function Layout({ title, description, children, scripts = [] }: LayoutProps) {
+export function Layout({
+  title,
+  description,
+  children,
+  scripts = [],
+  suppressAnalytics = false,
+}: LayoutProps) {
   const stylesheet = stylesheetHref();
   // An asset the build has not produced resolves to undefined and is dropped rather than emitted
   // as a script tag pointing at a 404. Both bundles are progressive enhancement over the rendered
@@ -38,7 +46,7 @@ export function Layout({ title, description, children, scripts = [] }: LayoutPro
           <title>{title}</title>
           <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
           <link rel="stylesheet" href={stylesheet} />
-          <AnalyticsScript />
+          <AnalyticsScript suppressed={suppressAnalytics} />
         </head>
         <body class="aa-page">
           {children}

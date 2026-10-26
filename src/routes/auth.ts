@@ -44,6 +44,19 @@ export interface AuthRoutesOptions {
 
 const genericPasswordError = 'Email or password is incorrect';
 
+/**
+ * Every GET that reads the `token` query parameter lives in this registry. Its pages explicitly
+ * suppress analytics because DataBull reports the full current URL. Keeping the read in the one
+ * registration loop also gives the structural test something enforceable: a new direct token read
+ * fails until it joins this registry, whose rendered pages are all exercised by that test.
+ */
+const tokenQueryPages = [
+  { path: '/auth/verify', render: MagicLinkInterstitialPage },
+  { path: '/auth/change-email', render: EmailChangeInterstitialPage },
+] as const;
+
+export const TOKEN_QUERY_ROUTE_PATHS = tokenQueryPages.map(({ path }) => path);
+
 export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): void {
   app.get('/login', async (context) => {
     const session = await options.sessions.validateContext(context);
@@ -132,10 +145,12 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
     return context.redirect('/dashboard', 303);
   });
 
-  app.get('/auth/verify', (context) => {
-    const token = context.req.query('token') ?? '';
-    return context.html(MagicLinkInterstitialPage({ token }));
-  });
+  for (const page of tokenQueryPages) {
+    app.get(page.path, (context) => {
+      const token = context.req.query('token') ?? '';
+      return context.html(page.render({ token }));
+    });
+  }
 
   app.post('/auth/verify', async (context) => {
     const form = await parseForm(context);
@@ -161,11 +176,6 @@ export function registerAuthRoutes(app: HumanApp, options: AuthRoutesOptions): v
         ? '/dashboard?identify=1'
         : '/dashboard';
     return context.redirect(destination, 303);
-  });
-
-  app.get('/auth/change-email', (context) => {
-    const token = context.req.query('token') ?? '';
-    return context.html(EmailChangeInterstitialPage({ token }));
   });
 
   app.post('/auth/change-email', async (context) => {

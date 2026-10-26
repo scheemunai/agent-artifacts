@@ -124,10 +124,13 @@ export function LoginPage({
 }
 
 export function MagicLinkInterstitialPage({ token }: { token: string }) {
+  // The GET leaves its single-use credential in the address bar. DataBull reports the full URL,
+  // so this document must not load analytics even when the rest of the app does.
   return (
     <Layout
       title="Continue sign-in · Agent Artifacts"
       description="Continue sign-in to Agent Artifacts."
+      suppressAnalytics
     >
       <main class="aa-placeholder">
         <div class="aa-shell aa-shell--narrow">
@@ -220,10 +223,12 @@ export function MagicLinkInvalidPage({ email = '' }: { email?: string }) {
 }
 
 export function EmailChangeInterstitialPage({ token }: { token: string }) {
+  // Like the sign-in interstitial, this GET carries a single-use credential in its URL.
   return (
     <Layout
       title="Confirm email change · Agent Artifacts"
       description="Confirm your Agent Artifacts email change."
+      suppressAnalytics
     >
       <main class="aa-placeholder">
         <div class="aa-shell aa-shell--narrow">
